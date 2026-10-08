@@ -106,12 +106,34 @@ Se usan nombres de modelos de forma descriptiva; **no se usan logos oficiales** 
 nada que sugiera patrocinio. Pendiente: revisar los terminos de uso de cada
 proveedor sobre publicar comparativas.
 
+## Marca y presencia (decidido el 8 de octubre de 2026)
+
+Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe reabrir.
+
+- **Logo:** concepto A, "Duelo" (disco verde = cooperar, disco rojo = traicionar,
+  interseccion dorada = tension). Paleta = la del reproductor. Tipografia: Barlow
+  Condensed (titulos) + Inter (texto). Los colores significan **jugadas**, no modelos.
+- **Nunca** logos de proveedores, ni nombres de modelos en el nombre del canal,
+  usuarios o dominio. Aviso estandar: "Proyecto independiente, sin afiliacion con los
+  proveedores de los modelos".
+- **Idioma:** espanol primero (el prompt, el nombre y los mensajes de las IAs ya lo
+  estan; cambiar el prompt cierra la temporada). El sitio sera multilenguaje despues;
+  los datos de las partidas ya son neutros (C/T).
+- **Redes:** TikTok + YouTube Shorts + Instagram Reels desde el dia 1 (mismo video
+  1080x1920), el sitio como base. Facebook Reels y X despues.
+- **Riesgo de monetizacion:** YouTube no paga contenido "mass-produced or repetitive"
+  (plantillas sin variacion). Cada episodio necesita una capa editorial propia
+  (gancho, historia, comentario) y variedad de juegos; no contar con monetizacion al
+  inicio.
+- **Hashtags:** Instagram permite 5 por publicacion desde dic 2025 y sirven para
+  clasificar, no para ganar alcance. Usar 3 a 5 especificos.
+
 ## Estado actual
 
 Hecho:
 - Motor generico (`arena.js`), prompt unico versionado, RNG con seed
 - Cliente de OpenRouter + registro de contendientes
-- Juego 1: Dilema del Prisionero Negociado (categoria "Traicion y confianza")
+- Juego 1: Dilema del Prisionero Negociado (categoria "Traición y confianza")
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Pipeline probado de punta a punta con estrategias de control
@@ -120,6 +142,8 @@ Pendiente:
 - [ ] **Verificar los IDs de modelo vigentes** en <https://openrouter.ai/models>.
       Los de `src/modelos.js` son de mayo 2026 y cambian cada pocos meses.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
+- [ ] Kit de marca hecho (`marca/`). Falta: plan de contenido, registrar dominio y
+      cuentas, sitio multilenguaje + imagen para links (`marca/exportados/og-1200x630.png`)
 - [ ] Juego 2 en otra categoria (Negociacion o Engano)
 - [ ] Modo "bot escrito" para correr miles de partidas
 - [x] Publicar el sitio — GitHub Pages, <https://gerrypetrucci.github.io/enfrentando-a-las-ias/>.
@@ -162,7 +186,14 @@ pagina en producto, no en archivo de videos.
 
 ## Convenciones del codigo
 
-- Espanol en nombres, comentarios y textos. Sin acentos en el codigo.
+- Espanol en nombres, comentarios y textos. Sin acentos en identificadores,
+  comentarios ni documentacion interna. **Los textos que ve el publico** (video,
+  sitio, nombres de categoria, marca/) **llevan acentos**, tambien en mayusculas
+  (NEGOCIACIÓN, ROMPIÓ): lo exige la ortografia y se ve bien en pantalla.
+- **No acentuar el prompt** (`reglas` y `formatoRespuesta` de cada juego, `src/prompt.js`):
+  es EL CONTRATO. Tocarlo cierra la temporada.
+- El nombre de la categoria se guarda dentro de cada partida y el marcador agrupa por
+  el: cambiarlo despues de tener episodios reales parte el historial en dos.
 - ES modules, Node 20+, **cero dependencias**. Si algo necesita un paquete,
   pensarlo dos veces antes de agregarlo.
 - Sin paso de build: el sitio es HTML estatico que se abre y ya.
