@@ -1,0 +1,34 @@
+/* Base compartida de las plantillas de marca. Los colores son la paleta oficial (ver marca/README.md). */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;600&display=swap');
+
+:root {
+  --noche: #101014;
+  --panel: #17171c;
+  --borde: #2a2a33;
+  --texto: #f2f0ed;
+  --suave: #9a9aa6;
+  --oro: #e0b25c;
+  --traicion: #d8584e;
+  --confianza: #5fa877;
+  --titulo: "Barlow Condensed", Bahnschrift, "Arial Narrow", sans-serif;
+  --cuerpo: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--noche); color: var(--texto); font-family: var(--cuerpo); overflow: hidden; }
+
+.lienzo { position: relative; overflow: hidden; background: var(--noche); }
+
+/* Discos decorativos de fondo: el duelo, muy tenue */
+.disco { position: absolute; border-radius: 50%; opacity: .10; }
+.disco.verde { background: var(--confianza); }
+.disco.rojo  { background: var(--traicion); }
+
+/* Logo horizontal. --u es el diametro de los discos; todo lo demas escala con el. */
+.lockup { display: flex; align-items: center; gap: calc(var(--u) * .24); }
+.lockup img { height: var(--u); width: auto; display: block; }
+.lockup .a { font: 700 calc(var(--u) * .2) / 1 var(--titulo); letter-spacing: .34em; color: var(--oro); margin-bottom: calc(var(--u) * .06); }
+.lockup .b { font: 800 calc(var(--u) * .62) / .95 var(--titulo); color: var(--texto); letter-spacing: .01em; }
+
+.eslogan { font: 600 28px / 1.3 var(--cuerpo); color: var(--suave); }
+.aviso   { font: 400 22px / 1.4 var(--cuerpo); color: #8a8a96; } /* 5.57:1 sobre Noche (el minimo para texto chico es 4.5:1) */

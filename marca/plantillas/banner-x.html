@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Banner X</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 1500x500. La foto de perfil tapa la esquina inferior izquierda, asi que el contenido va a la derecha del centro. */
+  .lienzo { width: 1500px; height: 500px; display: grid; place-items: center;
+            background: radial-gradient(ellipse at 58% 45%, rgba(224,178,92,.10), transparent 62%), var(--noche); }
+  .centro { --u: 130px; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; margin-left: 260px; }
+  .eslogan { font-size: 30px; }
+</style></head>
+<body>
+  <div class="lienzo">
+    <div class="disco verde" style="width:620px;height:620px;left:-300px;top:-60px"></div>
+    <div class="disco rojo"  style="width:620px;height:620px;right:-300px;top:-60px"></div>
+    <div class="centro">
+      <div class="lockup">
+        <img src="../logo/icono-sin-fondo.svg" alt="">
+        <div><div class="a">ENFRENTANDO</div><div class="b">A LAS IAs</div></div>
+      </div>
+      <div class="eslogan">Mismo juego. Mismo prompt. A ver quién gana.</div>
+    </div>
+  </div>
+</body></html>

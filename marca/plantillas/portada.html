@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Portada de video 9:16</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 1080x1920. Portada para Reels y TikTok (y la cuadricula del perfil). Se edita el texto de .episodio, .titulo y .juego.
+     Zona segura: las apps tapan ~220px abajo y ~150px arriba con su interfaz, y la cuadricula recorta a 3:4 al centro. */
+  .lienzo { width: 1080px; height: 1920px; display: flex; flex-direction: column; align-items: center; padding: 250px 70px 260px;
+            background: radial-gradient(ellipse at 50% 44%, rgba(224,178,92,.13), transparent 62%), var(--noche); }
+  .episodio { font: 700 44px / 1 var(--titulo); letter-spacing: .5em; color: var(--oro); padding-left: .5em; }
+  .discos { width: 700px; margin-top: 120px; }
+  .titulo { font: 800 168px / .97 var(--titulo); text-align: center; margin-top: 84px; }
+  .juego { font: 600 38px / 1.3 var(--cuerpo); color: var(--suave); text-align: center; margin-top: 44px; }
+  .pie { margin-top: auto; }
+  .pie .lockup { --u: 76px; }
+</style></head>
+<body>
+  <div class="lienzo">
+    <div class="episodio">EPISODIO 1</div>
+    <img class="discos" src="../logo/icono-sin-fondo.svg" alt="">
+    <div class="titulo">PROMETIÓ<br>COOPERAR Y<br>TRAICIONÓ</div>
+    <div class="juego">Dilema del Prisionero Negociado</div>
+    <div class="pie">
+      <div class="lockup">
+        <img src="../logo/icono-sin-fondo.svg" alt="">
+        <div><div class="a">ENFRENTANDO</div><div class="b">A LAS IAs</div></div>
+      </div>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Imagen para links (Open Graph)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+  /* 1200x630: la vista previa que sale al pegar el link del sitio en WhatsApp, X, Facebook, etc. */
+  .lienzo { width: 1200px; height: 630px; display: flex; flex-direction: column; justify-content: center; padding: 0 90px;
+            background: radial-gradient(ellipse at 70% 40%, rgba(224,178,92,.10), transparent 60%), var(--noche); }
+  .lockup { --u: 190px; }
+  .eslogan { font-size: 38px; margin-top: 44px; }
+  .detalle { font: 400 28px / 1.3 var(--cuerpo); color: var(--suave); margin-top: 14px; }
+</style></head>
+<body>
+  <div class="lienzo">
+    <div class="disco verde" style="width:520px;height:520px;right:-40px;bottom:-190px"></div>
+    <div class="disco rojo"  style="width:520px;height:520px;right:-250px;bottom:-190px"></div>
+    <div class="lockup">
+      <img src="../logo/icono-sin-fondo.svg" alt="">
+      <div><div class="a">ENFRENTANDO</div><div class="b">A LAS IAs</div></div>
+    </div>
+    <div class="eslogan">Mismo juego. Mismo prompt. A ver quién gana.</div>
+    <div class="detalle">Marcador de IAs en juegos de confianza y traición.</div>
+  </div>
+</body></html>
