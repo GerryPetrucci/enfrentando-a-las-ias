@@ -88,10 +88,10 @@ async function cargarDesdeUrl() {
   const nombre = params.get('archivo');
   if (!nombre) { dibujarVacio(); return; }
   try {
-    const r = await fetch('/data/' + nombre);
+    const r = await fetch('data/' + nombre);
     usar(await r.json());
     if (params.get('auto')) reproducir();
-  } catch { dibujarVacio('No pude leer /data/' + nombre); }
+  } catch { dibujarVacio('No pude leer data/' + nombre); }
 }
 
 function usar(datos) {

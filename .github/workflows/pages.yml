@@ -1,0 +1,40 @@
+# Publica el sitio en GitHub Pages: web/ como raiz, mas data/ para que
+# replay.html pueda abrir las partidas con ?archivo=NOMBRE.json.
+name: Publicar sitio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'data/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Armar el sitio
+        run: |
+          mkdir _sitio
+          cp -r web/. _sitio/
+          cp -r data _sitio/data
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _sitio
+      - id: despliegue
+        uses: actions/deploy-pages@v5
