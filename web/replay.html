@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reproductor · Enfrentando a las IAs</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0a0a0c; color: #e8e6e3;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 14px;
+  }
+  #lienzo {
+    background: #111114; border-radius: 10px; max-width: 100%;
+    height: min(86vh, calc((100vw - 28px) * 1.7778));
+    aspect-ratio: 9 / 16; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+  }
+  .barra { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  button, select, label.archivo {
+    background: #1c1c21; color: #e8e6e3; border: 1px solid #33333c;
+    border-radius: 8px; padding: 9px 14px; font-size: 14px; cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover, label.archivo:hover { background: #26262d; }
+  input[type=file] { display: none; }
+  .nota { color: #8b8b96; font-size: 13px; text-align: center; max-width: 560px; line-height: 1.5; }
+  body.limpio .barra, body.limpio .nota { display: none; }
+  body.limpio { background: #000; padding: 0; }
+  body.limpio #lienzo { border-radius: 0; height: 100vh; box-shadow: none; }
+</style>
+</head>
+<body>
+
+<canvas id="lienzo" width="1080" height="1920"></canvas>
+
+<div class="barra">
+  <select id="selPartida"></select>
+  <button id="btnPlay">Reproducir</button>
+  <button id="btnReinicio">Reiniciar</button>
+  <select id="selVel">
+    <option value="1">1x</option>
+    <option value="1.5">1.5x</option>
+    <option value="2">2x</option>
+    <option value="0.75">0.75x</option>
+  </select>
+  <label class="archivo">Abrir JSON<input type="file" id="archivo" accept="application/json"></label>
+  <button id="btnLimpio">Modo grabacion</button>
+</div>
+
+<p class="nota">
+  Para grabar: pulsa <b>Modo grabacion</b> (oculta los controles), captura la ventana con OBS a 1080&times;1920 y dale Espacio para reproducir.
+  Tambien puedes abrir <code>?archivo=NOMBRE.json&amp;limpio=1</code> directo.
+</p>
+
+<script type="module">
+const C = document.getElementById('lienzo');
+const g = C.getContext('2d');
+const W = 1080, H = 1920;
+
+const COL = {
+  fondo:   '#101014',
+  panel:   '#17171c',
+  borde:   '#2a2a33',
+  texto:   '#f2f0ed',
+  suave:   '#9a9aa6',
+  acento:  '#e0b25c',
+  peligro: '#d8584e',
+  bien:    '#5fa877',
+};
+
+const FASES = [
+  { id: 'promesas', ms: 2200 },
+  { id: 'pensando', ms: 900  },
+  { id: 'revelar',  ms: 2000 },
+  { id: 'puntos',   ms: 1400 },
+];
+
+let episodio = null, partida = null, idx = 0;
+let corriendo = false, t0 = 0, tFase = 0, fase = 0, velocidad = 1;
+
+// ---------- carga ----------
+const params = new URLSearchParams(location.search);
+if (params.get('limpio')) document.body.classList.add('limpio');
+
+async function cargarDesdeUrl() {
+  const nombre = params.get('archivo');
+  if (!nombre) { dibujarVacio(); return; }
+  try {
+    const r = await fetch('/data/' + nombre);
+    usar(await r.json());
+    if (params.get('auto')) reproducir();
+  } catch { dibujarVacio('No pude leer /data/' + nombre); }
+}
+
+function usar(datos) {
+  episodio = datos;
+  const sel = document.getElementById('selPartida');
+  sel.innerHTML = '';
+  episodio.partidas.forEach((p, i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = `Partida ${i + 1} — ${p.jugadores.map(j => j.nombre).join(' vs ')}`;
+    sel.appendChild(o);
+  });
+  elegir(0);
+}
+
+function elegir(i) {
+  partida = episodio.partidas[i];
+  reiniciar();
+}
+
+function reiniciar() {
+  corriendo = false; idx = 0; fase = 0; tFase = 0;
+  document.getElementById('btnPlay').textContent = 'Reproducir';
+  pintar(0);
+}
+
+function reproducir() {
+  if (!partida) return;
+  corriendo = !corriendo;
+  document.getElementById('btnPlay').textContent = corriendo ? 'Pausa' : 'Reproducir';
+  if (corriendo) { t0 = performance.now(); requestAnimationFrame(bucle); }
+}
+
+function bucle(t) {
+  if (!corriendo) return;
+  const dt = (t - t0) * velocidad; t0 = t;
+  tFase += dt;
+  const dur = FASES[fase].ms;
+  if (tFase >= dur) {
+    tFase = 0; fase++;
+    if (fase >= FASES.length) {
+      fase = 0; idx++;
+      if (idx >= partida.rondas.length) { corriendo = false; pintarFinal(); document.getElementById('btnPlay').textContent = 'Reproducir'; return; }
+    }
+  }
+  pintar(tFase / dur);
+  requestAnimationFrame(bucle);
+}
+
+// ---------- dibujo ----------
+function fondo() {
+  g.fillStyle = COL.fondo; g.fillRect(0, 0, W, H);
+  const grad = g.createLinearGradient(0, 0, 0, 400);
+  grad.addColorStop(0, 'rgba(224,178,92,.10)');
+  grad.addColorStop(1, 'rgba(224,178,92,0)');
+  g.fillStyle = grad; g.fillRect(0, 0, W, 400);
+}
+
+function texto(str, x, y, { tam = 40, peso = 400, color = COL.texto, align = 'center', alpha = 1 } = {}) {
+  g.save();
+  g.globalAlpha = alpha;
+  g.fillStyle = color;
+  g.textAlign = align;
+  g.textBaseline = 'middle';
+  g.font = `${peso} ${tam}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  g.fillText(str, x, y);
+  g.restore();
+}
+
+function caja(x, y, w, h, r, relleno, borde) {
+  g.beginPath();
+  g.roundRect(x, y, w, h, r);
+  if (relleno) { g.fillStyle = relleno; g.fill(); }
+  if (borde) { g.strokeStyle = borde; g.lineWidth = 3; g.stroke(); }
+}
+
+function envolver(str, max, tam) {
+  g.font = `400 ${tam}px ui-sans-serif, system-ui, sans-serif`;
+  const palabras = String(str || '').split(/\s+/);
+  const lineas = []; let linea = '';
+  for (const p of palabras) {
+    const prueba = linea ? linea + ' ' + p : p;
+    if (g.measureText(prueba).width > max && linea) { lineas.push(linea); linea = p; }
+    else linea = prueba;
+  }
+  if (linea) lineas.push(linea);
+  return lineas.slice(0, 4);
+}
+
+function dibujarVacio(msg) {
+  fondo();
+  texto('ENFRENTANDO A LAS IAs', W / 2, H / 2 - 60, { tam: 62, peso: 800, color: COL.acento });
+  texto(msg || 'Abre un JSON de data/ para reproducir', W / 2, H / 2 + 30, { tam: 34, color: COL.suave });
+}
+
+function encabezado(ronda, total) {
+  texto('ENFRENTANDO A LAS IAs', W / 2, 110, { tam: 46, peso: 800, color: COL.acento });
+  texto(episodio.juego.nombre.toUpperCase(), W / 2, 178, { tam: 30, peso: 600, color: COL.suave });
+  texto(`RONDA ${ronda} / ${total}`, W / 2, 262, { tam: 56, peso: 800 });
+}
+
+function panelJugador(j, x, ancho, { eleccion = null, promesa = null, mensaje = null, roto = false, alpha = 1 } = {}) {
+  const y = 420, alto = 620;
+  g.save(); g.globalAlpha = alpha;
+  caja(x, y, ancho, alto, 28, COL.panel, roto ? COL.peligro : COL.borde);
+
+  // disco con la inicial
+  g.beginPath(); g.arc(x + ancho / 2, y + 108, 62, 0, Math.PI * 2);
+  g.fillStyle = j.color; g.fill();
+  texto(j.inicial || j.nombre[0], x + ancho / 2, y + 110, { tam: 62, peso: 800, color: '#15151a' });
+
+  texto(j.nombre, x + ancho / 2, y + 212, { tam: 42, peso: 700 });
+
+  // promesa que trae de la ronda anterior
+  if (promesa) {
+    texto('PROMETIO', x + ancho / 2, y + 274, { tam: 22, peso: 700, color: COL.suave });
+    texto(promesa === 'C' ? 'COOPERAR' : 'TRAICIONAR', x + ancho / 2, y + 316, {
+      tam: 34, peso: 800, color: promesa === 'C' ? COL.bien : COL.peligro,
+    });
+  } else {
+    texto('SIN PROMESA PREVIA', x + ancho / 2, y + 300, { tam: 24, peso: 600, color: COL.suave });
+  }
+
+  // mensaje
+  if (mensaje) {
+    const lineas = envolver('"' + mensaje + '"', ancho - 70, 26);
+    lineas.forEach((l, i) => texto(l, x + ancho / 2, y + 376 + i * 36, { tam: 26, color: COL.suave }));
+  }
+
+  // la eleccion real
+  const cy = y + 530;
+  if (eleccion) {
+    const esC = eleccion === 'C';
+    caja(x + 50, cy - 56, ancho - 100, 112, 18, esC ? 'rgba(95,168,119,.16)' : 'rgba(216,88,78,.16)', esC ? COL.bien : COL.peligro);
+    texto(esC ? 'COOPERA' : 'TRAICIONA', x + ancho / 2, cy, { tam: 42, peso: 800, color: esC ? COL.bien : COL.peligro });
+  } else {
+    caja(x + 50, cy - 56, ancho - 100, 112, 18, 'rgba(255,255,255,.03)', COL.borde);
+    texto('?', x + ancho / 2, cy, { tam: 54, peso: 800, color: COL.suave });
+  }
+  g.restore();
+}
+
+function marcador(p, hasta) {
+  const acum = hasta >= 0 ? p.rondas[hasta].puntosAcumulados : [0, 0];
+  const max = Math.max(...acum, 1);
+  const y = 1130;
+  texto('PUNTOS', W / 2, y, { tam: 26, peso: 700, color: COL.suave });
+
+  p.jugadores.forEach((j, i) => {
+    const by = y + 70 + i * 120;
+    texto(j.nombre, 80, by + 30, { tam: 32, peso: 600, align: 'left' });
+    const bx = 320, bw = W - 320 - 180;
+    caja(bx, by, bw, 60, 14, 'rgba(255,255,255,.05)');
+    caja(bx, by, Math.max(10, bw * (acum[i] / max)), 60, 14, j.color);
+    texto(String(acum[i]), W - 80, by + 30, { tam: 46, peso: 800, align: 'right' });
+  });
+}
+
+function bandera(str, color, alpha) {
+  caja(90, 1430, W - 180, 110, 20, 'rgba(0,0,0,.45)', color);
+  texto(str, W / 2, 1485, { tam: 38, peso: 800, color, alpha });
+}
+
+function pie() {
+  const j = partida.jugadores;
+  texto(
+    `seed ${partida.seed} · ${j.map(x => x.modelo || x.nombre).join(' · ')}`,
+    W / 2, 1840, { tam: 20, color: '#5d5d68' }
+  );
+  texto('mismo prompt para las dos · metodologia publicada', W / 2, 1878, { tam: 20, color: '#5d5d68' });
+}
+
+function pintar(prog) {
+  if (!partida) return dibujarVacio();
+  const r = partida.rondas[Math.min(idx, partida.rondas.length - 1)];
+  const fid = FASES[fase].id;
+
+  fondo();
+  encabezado(r.ronda, partida.rondas.length);
+
+  const ancho = 460, gap = 40;
+  const x0 = (W - ancho * 2 - gap) / 2;
+
+  const revelado = fid === 'revelar' || fid === 'puntos';
+  partida.jugadores.forEach((j, i) => {
+    panelJugador(j, x0 + i * (ancho + gap), ancho, {
+      eleccion: revelado ? r.jugadas[i] : null,
+      promesa: r.promesasPrevias[i],
+      mensaje: fid === 'promesas' ? (idx > 0 ? partida.rondas[idx - 1].mensajes[i] : null) : null,
+      roto: revelado && r.promesaRota[i],
+      alpha: fid === 'pensando' ? 0.55 + 0.45 * Math.abs(Math.sin(prog * Math.PI * 3)) : 1,
+    });
+  });
+
+  marcador(partida, fid === 'puntos' ? idx : idx - 1);
+
+  if (fid === 'promesas') bandera('NEGOCIACION', COL.acento, 1);
+  else if (fid === 'pensando') bandera('DECIDIENDO...', COL.suave, 1);
+  else if (fid === 'revelar') {
+    const rotos = partida.jugadores.filter((_, i) => r.promesaRota[i]);
+    if (rotos.length === 2) bandera('SE TRAICIONARON LAS DOS', COL.peligro, 1);
+    else if (rotos.length === 1) bandera(`${rotos[0].nombre} ROMPIO SU PROMESA`, COL.peligro, Math.min(1, prog * 4));
+    else bandera('PALABRA CUMPLIDA', COL.bien, 1);
+  } else {
+    bandera(`+${r.pago[0]} / +${r.pago[1]}`, COL.acento, 1);
+  }
+
+  pie();
+}
+
+function pintarFinal() {
+  const p = partida;
+  fondo();
+  texto('RESULTADO FINAL', W / 2, 200, { tam: 46, peso: 800, color: COL.acento });
+
+  const ganador = p.empate ? null : p.jugadores[p.ganador];
+  texto(ganador ? ganador.nombre.toUpperCase() : 'EMPATE', W / 2, 330, {
+    tam: 92, peso: 800, color: ganador ? ganador.color : COL.texto,
+  });
+  texto(p.puntos.join('  —  '), W / 2, 450, { tam: 64, peso: 700 });
+
+  p.jugadores.forEach((j, i) => {
+    const m = p.metricas[i];
+    const y = 640 + i * 400;
+    caja(90, y, W - 180, 330, 24, COL.panel, COL.borde);
+    texto(j.nombre, 140, y + 60, { tam: 40, peso: 700, color: j.color, align: 'left' });
+    texto(`Traiciones: ${m.traiciones} de ${p.rondas.length}`, 140, y + 135, { tam: 32, color: COL.suave, align: 'left' });
+    texto(`Promesas rotas: ${m.promesasRotas} de ${m.promesasHechas}`, 140, y + 195, { tam: 32, color: COL.suave, align: 'left' });
+    const fia = m.fiabilidad === null ? '—' : Math.round(m.fiabilidad * 100) + '%';
+    texto(`Fiabilidad: ${fia}`, 140, y + 255, {
+      tam: 36, peso: 700, align: 'left',
+      color: m.fiabilidad === null ? COL.suave : m.fiabilidad > 0.8 ? COL.bien : COL.peligro,
+    });
+  });
+
+  pie();
+}
+
+// ---------- controles ----------
+document.getElementById('btnPlay').onclick = reproducir;
+document.getElementById('btnReinicio').onclick = reiniciar;
+document.getElementById('selPartida').onchange = (e) => elegir(Number(e.target.value));
+document.getElementById('selVel').onchange = (e) => (velocidad = Number(e.target.value));
+document.getElementById('btnLimpio').onclick = () => document.body.classList.toggle('limpio');
+document.getElementById('archivo').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (f) usar(JSON.parse(await f.text()));
+};
+addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); reproducir(); }
+  if (e.code === 'KeyR') reiniciar();
+});
+
+cargarDesdeUrl();
+</script>
+</body>
+</html>

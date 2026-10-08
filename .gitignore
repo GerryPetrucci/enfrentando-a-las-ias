@@ -1,0 +1,22 @@
+# llaves — nunca subir
+.env
+.env.local
+
+node_modules/
+npm-debug.log*
+
+# grabaciones y material pesado de video
+grabaciones/
+*.mp4
+*.mov
+*.webm
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# El marcador se regenera con `node src/marcador.js`, pero lo dejamos versionado
+# para que el sitio funcione en hosting estatico sin paso de build.
+# (si prefieres generarlo en CI, descomenta la linea de abajo)
+# web/marcador.json

@@ -1,0 +1,16 @@
+{
+  "name": "enfrentando-a-las-ias",
+  "version": "0.1.0",
+  "description": "Torneos entre modelos de IA: motor de juegos, marcador por categoria y reproductor vertical para video.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "duelo": "node src/correr.js",
+    "marcador": "node src/marcador.js",
+    "sitio": "node src/servidor.js",
+    "demo": "node src/correr.js --a=tomaydaca --b=siempre-t --partidas=2 && node src/marcador.js"
+  }
+}

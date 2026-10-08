@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enfrentando a las IAs — Marcador</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --fondo: #0b0b0e; --panel: #15151a; --borde: #26262f;
+    --texto: #f0eeeb; --suave: #8f8f9c; --acento: #e0b25c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+  }
+  .envoltura { max-width: 900px; margin: 0 auto; padding: 32px 20px 80px; }
+  header { padding: 40px 0 28px; border-bottom: 1px solid var(--borde); margin-bottom: 36px; }
+  h1 { margin: 0 0 8px; font-size: clamp(30px, 7vw, 48px); letter-spacing: -0.02em; }
+  h1 span { color: var(--acento); }
+  .sub { color: var(--suave); margin: 0; font-size: 16px; }
+  h2 { font-size: 22px; margin: 44px 0 6px; }
+  .juegos { color: var(--suave); font-size: 14px; margin: 0 0 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: right; color: var(--suave); font-weight: 600; font-size: 12px;
+       text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px; border-bottom: 1px solid var(--borde); }
+  th:first-child, td:first-child { text-align: left; }
+  td { padding: 13px 10px; border-bottom: 1px solid var(--borde); text-align: right; }
+  .quien { display: flex; align-items: center; gap: 11px; }
+  .punto { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .modelo { color: var(--suave); font-size: 12px; font-family: ui-monospace, monospace; }
+  .destacado { font-weight: 700; font-size: 17px; }
+  .base { opacity: .62; }
+  .etiqueta { font-size: 10px; border: 1px solid var(--borde); border-radius: 4px;
+              padding: 1px 5px; color: var(--suave); margin-left: 7px; vertical-align: 1px; }
+  ul.eps { list-style: none; padding: 0; margin: 16px 0 0; }
+  ul.eps li { padding: 14px 0; border-bottom: 1px solid var(--borde); display: flex;
+              justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: baseline; }
+  ul.eps a { color: var(--acento); text-decoration: none; }
+  ul.eps a:hover { text-decoration: underline; }
+  .meta { color: var(--suave); font-size: 13px; font-family: ui-monospace, monospace; }
+  .aviso { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px;
+           padding: 18px 20px; margin-top: 48px; color: var(--suave); font-size: 14px; }
+  .aviso b { color: var(--texto); }
+  .vacio { color: var(--suave); padding: 40px 0; }
+  code { font-family: ui-monospace, monospace; background: var(--panel); padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <header>
+    <h1>Enfrentando a las <span>IAs</span></h1>
+    <p class="sub">Mismo juego, mismo prompt, mismo seed. A ver quien gana.</p>
+  </header>
+  <main id="app"><p class="vacio">Cargando marcador…</p></main>
+  <div class="aviso">
+    <b>Como se mide.</b> Todas las IAs reciben un prompt identico, publicado en el repositorio.
+    Cada duelo se corre varias veces alternando posiciones, con seed fijo para que cualquiera
+    reproduzca el resultado. Los modelos cambian con el tiempo: cada tabla es una foto del momento,
+    no un veredicto permanente. Las filas marcadas <span class="etiqueta">base</span> son estrategias
+    clasicas que sirven de control, no son IAs.
+  </div>
+</div>
+
+<script type="module">
+const app = document.getElementById('app');
+
+function fila(f) {
+  const fia = f.fiabilidad === null ? '—' : Math.round(f.fiabilidad * 100) + '%';
+  const esBase = f.tipo === 'bot';
+  return `<tr class="${esBase ? 'base' : ''}">
+    <td>
+      <div class="quien">
+        <span class="punto" style="background:${f.color}"></span>
+        <span>
+          ${f.nombre}${esBase ? '<span class="etiqueta">base</span>' : ''}
+          ${f.modelo ? `<br><span class="modelo">${f.modelo}</span>` : ''}
+        </span>
+      </div>
+    </td>
+    <td class="destacado">${f.puntosPorPartida}</td>
+    <td>${f.victorias}–${f.empates}–${f.derrotas}</td>
+    <td>${fia}</td>
+    <td>${f.traiciones}</td>
+  </tr>`;
+}
+
+function categoria(c) {
+  return `<section>
+    <h2>${c.nombre}</h2>
+    <p class="juegos">${c.juegos.join(' · ')}</p>
+    <table>
+      <thead><tr>
+        <th>Contendiente</th><th>Pts/partida</th><th>V–E–D</th><th>Fiabilidad</th><th>Traiciones</th>
+      </tr></thead>
+      <tbody>${c.tabla.map(fila).join('')}</tbody>
+    </table>
+  </section>`;
+}
+
+try {
+  const d = await (await fetch('marcador.json?t=' + Date.now())).json();
+  if (!d.categorias.length) throw new Error('vacio');
+  app.innerHTML =
+    d.categorias.map(categoria).join('') +
+    `<h2>Episodios</h2><ul class="eps">${d.episodios.map(e => `
+      <li>
+        <span><a href="replay.html?archivo=${encodeURIComponent(e.archivo)}">${e.enfrentamiento}</a>
+          — ${e.juego.nombre}</span>
+        <span class="meta">${e.fecha.slice(0, 10)} · seed ${e.seedBase} · ${e.partidas} partida(s)</span>
+      </li>`).join('')}</ul>`;
+} catch {
+  app.innerHTML = `<p class="vacio">Todavia no hay resultados.<br><br>
+    Corre un duelo con <code>node src/correr.js --a=tomaydaca --b=siempre-t</code>
+    y luego <code>node src/marcador.js</code>.</p>`;
+}
+</script>
+</body>
+</html>
