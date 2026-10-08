@@ -122,7 +122,10 @@ Pendiente:
 - [ ] Primer duelo real con modelos y grabar el episodio 1
 - [ ] Juego 2 en otra categoria (Negociacion o Engano)
 - [ ] Modo "bot escrito" para correr miles de partidas
-- [ ] Publicar el sitio (es estatico: Netlify, Vercel o GitHub Pages)
+- [x] Publicar el sitio — GitHub Pages, <https://gerrypetrucci.github.io/enfrentando-a-las-ias/>.
+      Se despliega solo (`.github/workflows/pages.yml`) en cada push a `main` que
+      toque `web/` o `data/`. Para publicar un episodio: commitear `data/*.json` y
+      el `web/marcador.json` regenerado.
 - [x] Subir el repo a GitHub — publico, <https://github.com/GerryPetrucci/enfrentando-a-las-ias>
 
 ## Por que el Dilema del Prisionero fue el primer juego
