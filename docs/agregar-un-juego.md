@@ -39,7 +39,7 @@ todas, y ahi esta la discusion.
 
 | Categoria | Juegos baratos de programar |
 |---|---|
-| Traicion y confianza | Dilema del prisionero negociado (ya esta), juego de la confianza |
+| Traición y confianza | Dilema del prisionero negociado (ya esta), juego de la confianza |
 | Negociacion | Reparto de un pastel, subasta a ciegas, ultimatum |
 | Engano | Mentiroso, adivina quien miente, poker simplificado |
 | Recursos | Blotto (reparte tropas en frentes), carrera por un recurso que se agota |

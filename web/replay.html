@@ -46,12 +46,12 @@
     <option value="0.75">0.75x</option>
   </select>
   <label class="archivo">Abrir JSON<input type="file" id="archivo" accept="application/json"></label>
-  <button id="btnLimpio">Modo grabacion</button>
+  <button id="btnLimpio">Modo grabación</button>
 </div>
 
 <p class="nota">
-  Para grabar: pulsa <b>Modo grabacion</b> (oculta los controles), captura la ventana con OBS a 1080&times;1920 y dale Espacio para reproducir.
-  Tambien puedes abrir <code>?archivo=NOMBRE.json&amp;limpio=1</code> directo.
+  Para grabar: pulsa <b>Modo grabación</b> (oculta los controles), captura la ventana con OBS a 1080&times;1920 y dale Espacio para reproducir.
+  También puedes abrir <code>?archivo=NOMBRE.json&amp;limpio=1</code> directo.
 </p>
 
 <script type="module">
@@ -150,13 +150,19 @@ function fondo() {
   g.fillStyle = grad; g.fillRect(0, 0, W, 400);
 }
 
-function texto(str, x, y, { tam = 40, peso = 400, color = COL.texto, align = 'center', alpha = 1 } = {}) {
+// `maxAncho`: si el texto no cabe, reduce la letra hasta que quepa (nombres largos).
+function texto(str, x, y, { tam = 40, peso = 400, color = COL.texto, align = 'center', alpha = 1, maxAncho = 0 } = {}) {
   g.save();
   g.globalAlpha = alpha;
   g.fillStyle = color;
   g.textAlign = align;
   g.textBaseline = 'middle';
-  g.font = `${peso} ${tam}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  const fuente = (t) => `${peso} ${t}px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+  g.font = fuente(tam);
+  if (maxAncho) {
+    const ancho = g.measureText(str).width;
+    if (ancho > maxAncho) g.font = fuente((tam * maxAncho) / ancho);
+  }
   g.fillText(str, x, y);
   g.restore();
 }
@@ -207,7 +213,7 @@ function panelJugador(j, x, ancho, { eleccion = null, promesa = null, mensaje = 
 
   // promesa que trae de la ronda anterior
   if (promesa) {
-    texto('PROMETIO', x + ancho / 2, y + 274, { tam: 22, peso: 700, color: COL.suave });
+    texto('PROMETIÓ', x + ancho / 2, y + 274, { tam: 22, peso: 700, color: COL.suave });
     texto(promesa === 'C' ? 'COOPERAR' : 'TRAICIONAR', x + ancho / 2, y + 316, {
       tam: 34, peso: 800, color: promesa === 'C' ? COL.bien : COL.peligro,
     });
@@ -242,8 +248,8 @@ function marcador(p, hasta) {
 
   p.jugadores.forEach((j, i) => {
     const by = y + 70 + i * 120;
-    texto(j.nombre, 80, by + 30, { tam: 32, peso: 600, align: 'left' });
     const bx = 320, bw = W - 320 - 180;
+    texto(j.nombre, 80, by + 30, { tam: 32, peso: 600, align: 'left', maxAncho: bx - 80 - 20 });
     caja(bx, by, bw, 60, 14, 'rgba(255,255,255,.05)');
     caja(bx, by, Math.max(10, bw * (acum[i] / max)), 60, 14, j.color);
     texto(String(acum[i]), W - 80, by + 30, { tam: 46, peso: 800, align: 'right' });
@@ -261,7 +267,7 @@ function pie() {
     `seed ${partida.seed} · ${j.map(x => x.modelo || x.nombre).join(' · ')}`,
     W / 2, 1840, { tam: 20, color: '#5d5d68' }
   );
-  texto('mismo prompt para las dos · metodologia publicada', W / 2, 1878, { tam: 20, color: '#5d5d68' });
+  texto('mismo prompt para las dos · metodología publicada', W / 2, 1878, { tam: 20, color: '#5d5d68' });
 }
 
 function pintar(prog) {
@@ -288,12 +294,12 @@ function pintar(prog) {
 
   marcador(partida, fid === 'puntos' ? idx : idx - 1);
 
-  if (fid === 'promesas') bandera('NEGOCIACION', COL.acento, 1);
+  if (fid === 'promesas') bandera('NEGOCIACIÓN', COL.acento, 1);
   else if (fid === 'pensando') bandera('DECIDIENDO...', COL.suave, 1);
   else if (fid === 'revelar') {
     const rotos = partida.jugadores.filter((_, i) => r.promesaRota[i]);
     if (rotos.length === 2) bandera('SE TRAICIONARON LAS DOS', COL.peligro, 1);
-    else if (rotos.length === 1) bandera(`${rotos[0].nombre} ROMPIO SU PROMESA`, COL.peligro, Math.min(1, prog * 4));
+    else if (rotos.length === 1) bandera(`${rotos[0].nombre} ROMPIÓ SU PROMESA`, COL.peligro, Math.min(1, prog * 4));
     else bandera('PALABRA CUMPLIDA', COL.bien, 1);
   } else {
     bandera(`+${r.pago[0]} / +${r.pago[1]}`, COL.acento, 1);

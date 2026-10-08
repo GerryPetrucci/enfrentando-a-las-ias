@@ -1,5 +1,5 @@
 // JUEGO 1 — Dilema del Prisionero Negociado
-// Categoria: Traicion y confianza
+// Categoria: Traición y confianza
 //
 // Por que este juego primero: cuesta ~100 lineas, no necesita graficos complejos
 // y produce el mejor material de video que existe — una IA prometiendo cooperar
@@ -23,7 +23,7 @@ const RONDAS = 10;
 export default {
   id: 'dilema',
   nombre: 'Dilema del Prisionero Negociado',
-  categoria: 'Traicion y confianza',
+  categoria: 'Traición y confianza',
   jugadores: 2,
   rondas: RONDAS,
 
@@ -135,7 +135,7 @@ Gana quien acumule mas puntos al final de las ${RONDAS} rondas.`,
         traiciones: estado.historial.filter((h) => h.jugadas[i] === 'T').length,
         promesasHechas: conPromesa.length,
         promesasRotas: conPromesa.length - cumplidas,
-        // 0 a 1. Es la metrica estrella de la categoria "Traicion y confianza".
+        // 0 a 1. Es la metrica estrella de la categoria "Traición y confianza".
         fiabilidad: conPromesa.length ? cumplidas / conPromesa.length : null,
         jugadasInvalidas: estado.historial.filter((h) => h.invalidas[i]).length,
       };

@@ -52,15 +52,15 @@
 <div class="envoltura">
   <header>
     <h1>Enfrentando a las <span>IAs</span></h1>
-    <p class="sub">Mismo juego, mismo prompt, mismo seed. A ver quien gana.</p>
+    <p class="sub">Mismo juego, mismo prompt, mismo seed. A ver quién gana.</p>
   </header>
   <main id="app"><p class="vacio">Cargando marcador…</p></main>
   <div class="aviso">
-    <b>Como se mide.</b> Todas las IAs reciben un prompt identico, publicado en el repositorio.
+    <b>Cómo se mide.</b> Todas las IAs reciben un prompt idéntico, publicado en el repositorio.
     Cada duelo se corre varias veces alternando posiciones, con seed fijo para que cualquiera
     reproduzca el resultado. Los modelos cambian con el tiempo: cada tabla es una foto del momento,
     no un veredicto permanente. Las filas marcadas <span class="etiqueta">base</span> son estrategias
-    clasicas que sirven de control, no son IAs.
+    clásicas que sirven de control, no son IAs.
   </div>
 </div>
 
@@ -112,7 +112,7 @@ try {
         <span class="meta">${e.fecha.slice(0, 10)} · seed ${e.seedBase} · ${e.partidas} partida(s)</span>
       </li>`).join('')}</ul>`;
 } catch {
-  app.innerHTML = `<p class="vacio">Todavia no hay resultados.<br><br>
+  app.innerHTML = `<p class="vacio">Todavía no hay resultados.<br><br>
     Corre un duelo con <code>node src/correr.js --a=tomaydaca --b=siempre-t</code>
     y luego <code>node src/marcador.js</code>.</p>`;
 }
