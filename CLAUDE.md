@@ -119,6 +119,8 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 - **Nunca** logos de proveedores, ni nombres de modelos en el nombre del canal,
   usuarios o dominio. Aviso estandar: "Proyecto independiente, sin afiliacion con los
   proveedores de los modelos".
+- **Regla editorial publica:** las jugadas no se retocan; lo que se ve es lo que
+  registro el motor (esta prometido en la descripcion del canal de YouTube).
 - **Idioma:** espanol primero (el prompt, el nombre y los mensajes de las IAs ya lo
   estan; cambiar el prompt cierra la temporada). El sitio sera multilenguaje despues;
   los datos de las partidas ya son neutros (C/T).
