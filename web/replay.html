@@ -52,6 +52,7 @@
 <p class="nota">
   Para grabar: pulsa <b>Modo grabación</b> (oculta los controles), captura la ventana con OBS a 1080&times;1920 y dale Espacio para reproducir.
   También puedes abrir <code>?archivo=NOMBRE.json&amp;limpio=1</code> directo.
+  Para un clip: <code>&amp;partida=2&amp;ronda=7&amp;hasta=7&amp;vel=0.75&amp;razon=1</code>.
 </p>
 
 <script type="module">
@@ -84,6 +85,24 @@ let corriendo = false, t0 = 0, tFase = 0, fase = 0, velocidad = 1;
 const params = new URLSearchParams(location.search);
 if (params.get('limpio')) document.body.classList.add('limpio');
 
+// Parametros para grabar clips (todos opcionales):
+//   partida=2   partida del archivo (1 = la primera)
+//   ronda=7     empieza en la ronda 7          hasta=7   termina en la ronda 7
+//   vel=0.75    velocidad                      razon=1   muestra la "razon" de cada IA (alarga la revelacion)
+const MOSTRAR_RAZON = !!params.get('razon');
+const RONDA_INICIO = Math.max(1, Number(params.get('ronda')) || 1);
+const RONDA_FIN = Number(params.get('hasta')) || 0;
+if (MOSTRAR_RAZON) FASES[2].ms = 4800; // tiempo para leer
+velocidad = Number(params.get('vel')) || 1;
+{
+  const selVel = document.getElementById('selVel');
+  if ([...selVel.options].some((o) => Number(o.value) === velocidad)) selVel.value = String(velocidad);
+}
+
+function ultimaRonda() {
+  return RONDA_FIN ? Math.min(RONDA_FIN, partida.rondas.length) : partida.rondas.length;
+}
+
 async function cargarDesdeUrl() {
   const nombre = params.get('archivo');
   if (!nombre) { dibujarVacio(); return; }
@@ -104,7 +123,10 @@ function usar(datos) {
     o.textContent = `Partida ${i + 1} — ${p.jugadores.map(j => j.nombre).join(' vs ')}`;
     sel.appendChild(o);
   });
-  elegir(0);
+  const pedida = Number(params.get('partida')) - 1;
+  const inicial = pedida >= 0 && pedida < episodio.partidas.length ? pedida : 0;
+  sel.value = String(inicial);
+  elegir(inicial);
 }
 
 function elegir(i) {
@@ -113,7 +135,8 @@ function elegir(i) {
 }
 
 function reiniciar() {
-  corriendo = false; idx = 0; fase = 0; tFase = 0;
+  corriendo = false; fase = 0; tFase = 0;
+  idx = partida ? Math.min(RONDA_INICIO, partida.rondas.length) - 1 : 0;
   document.getElementById('btnPlay').textContent = 'Reproducir';
   pintar(0);
 }
@@ -134,7 +157,14 @@ function bucle(t) {
     tFase = 0; fase++;
     if (fase >= FASES.length) {
       fase = 0; idx++;
-      if (idx >= partida.rondas.length) { corriendo = false; pintarFinal(); document.getElementById('btnPlay').textContent = 'Reproducir'; return; }
+      if (idx >= ultimaRonda()) {
+        corriendo = false;
+        document.getElementById('btnPlay').textContent = 'Reproducir';
+        // Un clip (hasta=N) se queda en el ultimo cuadro; la partida completa cierra con el resultado.
+        if (ultimaRonda() < partida.rondas.length) { idx = ultimaRonda() - 1; fase = FASES.length - 1; pintar(1); }
+        else pintarFinal();
+        return;
+      }
     }
   }
   pintar(tFase / dur);
@@ -174,7 +204,8 @@ function caja(x, y, w, h, r, relleno, borde) {
   if (borde) { g.strokeStyle = borde; g.lineWidth = 3; g.stroke(); }
 }
 
-function envolver(str, max, tam) {
+// Parte el texto en lineas de ancho `max`. Si pasa de `maxLineas`, corta y deja "…" en la ultima.
+function envolver(str, max, tam, maxLineas = 4) {
   g.font = `400 ${tam}px ui-sans-serif, system-ui, sans-serif`;
   const palabras = String(str || '').split(/\s+/);
   const lineas = []; let linea = '';
@@ -184,7 +215,10 @@ function envolver(str, max, tam) {
     else linea = prueba;
   }
   if (linea) lineas.push(linea);
-  return lineas.slice(0, 4);
+  if (lineas.length <= maxLineas) return lineas;
+  const corte = lineas.slice(0, maxLineas);
+  corte[maxLineas - 1] = corte[maxLineas - 1].replace(/\s+\S+$/, '') + '…';
+  return corte;
 }
 
 function dibujarVacio(msg) {
@@ -197,6 +231,25 @@ function encabezado(ronda, total) {
   texto('ENFRENTANDO A LAS IAs', W / 2, 110, { tam: 46, peso: 800, color: COL.acento });
   texto(episodio.juego.nombre.toUpperCase(), W / 2, 178, { tam: 30, peso: 600, color: COL.suave });
   texto(`RONDA ${ronda} / ${total}`, W / 2, 262, { tam: 56, peso: 800 });
+}
+
+// Aviso de contenido generado por IA, visible en todo el video (los terminos de uso de los proveedores
+// piden que nadie pueda pasarlo por alto). Solo aparece si juega un modelo; las estrategias de control no son IA.
+function etiquetaIA() {
+  const ias = partida.jugadores.filter((j) => j.tipo === 'modelo');
+  if (!ias.length) return null;
+  const que = MOSTRAR_RAZON ? 'JUGADAS, MENSAJES Y RAZONES' : 'JUGADAS Y MENSAJES';
+  if (ias.length === partida.jugadores.length) return `${que} GENERADOS POR IA`;
+  return `${que} DE ${ias.map((j) => j.nombre.toUpperCase()).join(' Y ')} GENERADOS POR IA`;
+}
+
+function dibujarEtiquetaIA(y) {
+  const str = etiquetaIA();
+  if (!str) return;
+  g.font = '700 26px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const w = Math.min(W - 100, g.measureText(str).width + 64);
+  caja((W - w) / 2, y - 28, w, 56, 28, 'rgba(224,178,92,.10)', COL.acento);
+  texto(str, W / 2, y + 1, { tam: 26, peso: 700, color: COL.acento, maxAncho: w - 48 });
 }
 
 function panelJugador(j, x, ancho, { eleccion = null, promesa = null, mensaje = null, roto = false, alpha = 1 } = {}) {
@@ -261,13 +314,27 @@ function bandera(str, color, alpha) {
   texto(str, W / 2, 1485, { tam: 38, peso: 800, color, alpha });
 }
 
+// Lo que cada IA dijo en su campo "razon" (el rival nunca lo ve). Solo con ?razon=1.
+// Si la respuesta fue invalida, se muestra eso: los fallos no se esconden.
+function cajaRazon(x, ancho, r, i) {
+  const y = 1566, alto = 238;
+  const invalida = !!(r.invalidas && r.invalidas[i]);
+  const color = invalida ? COL.peligro : COL.suave;
+  caja(x, y, ancho, alto, 20, COL.panel, invalida ? COL.peligro : COL.borde);
+  texto(invalida ? 'RESPUESTA INVÁLIDA' : 'RAZÓN', x + 30, y + 32, { tam: 20, peso: 700, color, align: 'left' });
+  const contenido = invalida
+    ? (r.errores && r.errores[i] ? 'Error de API: se usó la jugada por defecto.' : 'No devolvió una jugada válida: se usó la jugada por defecto.')
+    : '"' + ((r.razones && r.razones[i]) || 'Sin razón.') + '"';
+  envolver(contenido, ancho - 60, 25, 5).forEach((l, k) => texto(l, x + 30, y + 78 + k * 33, { tam: 25, color: COL.texto, align: 'left' }));
+}
+
 function pie() {
   const j = partida.jugadores;
   texto(
     `seed ${partida.seed} · ${j.map(x => x.modelo || x.nombre).join(' · ')}`,
-    W / 2, 1840, { tam: 20, color: '#5d5d68' }
+    W / 2, 1840, { tam: 22, color: '#8a8a96' }
   );
-  texto('mismo prompt para las dos · metodología publicada', W / 2, 1878, { tam: 20, color: '#5d5d68' });
+  texto('mismo prompt para las dos · metodología publicada', W / 2, 1878, { tam: 22, color: '#8a8a96' });
 }
 
 function pintar(prog) {
@@ -277,6 +344,7 @@ function pintar(prog) {
 
   fondo();
   encabezado(r.ronda, partida.rondas.length);
+  dibujarEtiquetaIA(352);
 
   const ancho = 460, gap = 40;
   const x0 = (W - ancho * 2 - gap) / 2;
@@ -298,12 +366,16 @@ function pintar(prog) {
   else if (fid === 'pensando') bandera('DECIDIENDO...', COL.suave, 1);
   else if (fid === 'revelar') {
     const rotos = partida.jugadores.filter((_, i) => r.promesaRota[i]);
-    if (rotos.length === 2) bandera('SE TRAICIONARON LAS DOS', COL.peligro, 1);
+    // Ronda 1: nadie ha prometido nada todavia, asi que no hay palabra que cumplir ni romper.
+    if (r.promesasPrevias.every((p) => p === null)) bandera('ARRANCA EL DUELO', COL.acento, 1);
+    else if (rotos.length === 2) bandera('SE TRAICIONARON LAS DOS', COL.peligro, 1);
     else if (rotos.length === 1) bandera(`${rotos[0].nombre} ROMPIÓ SU PROMESA`, COL.peligro, Math.min(1, prog * 4));
     else bandera('PALABRA CUMPLIDA', COL.bien, 1);
   } else {
     bandera(`+${r.pago[0]} / +${r.pago[1]}`, COL.acento, 1);
   }
+
+  if (MOSTRAR_RAZON && revelado) partida.jugadores.forEach((_, i) => cajaRazon(x0 + i * (ancho + gap), ancho, r, i));
 
   pie();
 }
@@ -318,6 +390,7 @@ function pintarFinal() {
     tam: 92, peso: 800, color: ganador ? ganador.color : COL.texto,
   });
   texto(p.puntos.join('  —  '), W / 2, 450, { tam: 64, peso: 700 });
+  dibujarEtiquetaIA(560);
 
   p.jugadores.forEach((j, i) => {
     const m = p.metricas[i];

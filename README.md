@@ -49,6 +49,20 @@ Estrategias de control (gratis): `tomaydaca`, `siempre-c`, `siempre-t`, `azar`.
 El reproductor tambien acepta un JSON arrastrado desde el disco, por si quieres
 revisar una partida sin levantar el servidor.
 
+Para grabar un clip en vez de la partida entera, se agregan parametros a la URL
+(todos opcionales): `partida=2` (cual partida del archivo), `ronda=7` y `hasta=7`
+(de que ronda a cual; el clip se queda en el ultimo cuadro), `vel=0.75` (velocidad)
+y `razon=1` (muestra lo que cada IA dijo en su campo `razon`, que el rival nunca ve;
+si una respuesta fue invalida, lo dice).
+
+```
+http://localhost:4321/replay.html?archivo=NOMBRE.json&limpio=1&partida=2&ronda=7&hasta=7&vel=0.75&razon=1
+```
+
+Cuando juega un modelo, el video muestra una etiqueta fija "JUGADAS Y MENSAJES
+GENERADOS POR IA" (si hay un bot de control de por medio, nombra solo al modelo).
+No se quita: es una regla que sale de los terminos de uso de los proveedores.
+
 ## Que hay adentro
 
 ```
