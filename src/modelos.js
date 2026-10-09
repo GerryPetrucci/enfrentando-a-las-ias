@@ -43,6 +43,17 @@ export const CONTENDIENTES = {
 
 const URL_OPENROUTER = 'https://openrouter.ai/api/v1/chat/completions';
 
+// Mensaje corto y sin datos de la cuenta. Lo que se guarda en data/ es publico: los errores
+// quedan dentro de cada partida, y las respuestas de error de OpenRouter pueden traer un user_id.
+function mensajeDeError(json, cuerpo) {
+  const crudo = json?.error?.message ?? cuerpo;
+  return String(crudo)
+    .replace(/"?user_id"?\s*[:=]\s*"?[\w-]+"?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
 export async function llamarModelo({
   modelo,
   sistema,
@@ -78,15 +89,25 @@ export async function llamarModelo({
         }),
       });
 
-      if (!respuesta.ok) {
-        const cuerpo = await respuesta.text();
-        throw new Error(`OpenRouter ${respuesta.status}: ${cuerpo.slice(0, 300)}`);
-      }
+      const cuerpo = await respuesta.text();
+      let json = null;
+      try { json = JSON.parse(cuerpo); } catch { /* el cuerpo no es JSON */ }
 
-      const json = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(`OpenRouter ${respuesta.status}: ${mensajeDeError(json, cuerpo)}`);
+      }
+      // OpenRouter a veces contesta 200 con un error adentro (el proveedor fallo a media respuesta).
+      if (json?.error) throw new Error(`OpenRouter: ${mensajeDeError(json, cuerpo)}`);
+
+      const eleccion = json?.choices?.[0];
+      if (eleccion?.finish_reason === 'error') {
+        throw new Error('El proveedor interrumpió la respuesta con un error (finish_reason=error).');
+      }
       return {
-        texto: json.choices?.[0]?.message?.content ?? '',
-        uso: json.usage ?? null,
+        texto: eleccion?.message?.content ?? '',
+        uso: json?.usage ?? null,
+        // "length" = el modelo se quedo sin max_tokens (tipico de los que razonan antes de contestar).
+        finishReason: eleccion?.finish_reason ?? null,
       };
     } catch (err) {
       ultimoError = err;

@@ -322,8 +322,9 @@ function cajaRazon(x, ancho, r, i) {
   const color = invalida ? COL.peligro : COL.suave;
   caja(x, y, ancho, alto, 20, COL.panel, invalida ? COL.peligro : COL.borde);
   texto(invalida ? 'RESPUESTA INVÁLIDA' : 'RAZÓN', x + 30, y + 32, { tam: 20, peso: 700, color, align: 'left' });
+  const motivo = r.errores && r.errores[i];
   const contenido = invalida
-    ? (r.errores && r.errores[i] ? 'Error de API: se usó la jugada por defecto.' : 'No devolvió una jugada válida: se usó la jugada por defecto.')
+    ? (motivo ? motivo.replace(/\.?$/, '.') + ' Se usó la jugada por defecto.' : 'No devolvió una jugada válida: se usó la jugada por defecto.')
     : '"' + ((r.razones && r.razones[i]) || 'Sin razón.') + '"';
   envolver(contenido, ancho - 60, 25, 5).forEach((l, k) => texto(l, x + 30, y + 78 + k * 33, { tam: 25, color: COL.texto, align: 'left' }));
 }

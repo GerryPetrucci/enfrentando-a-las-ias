@@ -26,12 +26,24 @@ export function agenteModelo(clave) {
     modelo: c.modelo,
     versionPrompt: VERSION_PROMPT,
     async jugar({ juego, vista }) {
-      const { texto, uso } = await llamarModelo({
+      const { texto, uso, finishReason } = await llamarModelo({
         modelo: c.modelo,
         sistema: construirSistema(juego),
         usuario: construirUsuario(vista),
       });
-      return { respuesta: extraerJSON(texto), crudo: texto, uso };
+      const respuesta = extraerJSON(texto);
+      // Sin jugada utilizable se lanza el motivo: la arena lo guarda en errores y el video lo muestra,
+      // en vez de dejar solo "invalida" (y que parezca que el modelo eligio cooperar).
+      if (!respuesta) {
+        throw new Error(
+          finishReason === 'length'
+            ? 'Respuesta cortada por max_tokens (finish_reason=length): el modelo se quedó sin espacio antes de dar su jugada.'
+            : texto
+              ? 'La respuesta no traía un JSON válido.'
+              : 'La respuesta llegó vacía.'
+        );
+      }
+      return { respuesta, crudo: texto, uso };
     },
   };
 }
