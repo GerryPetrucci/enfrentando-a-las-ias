@@ -144,8 +144,11 @@ Hecho:
 - Pipeline probado de punta a punta con estrategias de control
 
 Pendiente:
-- [ ] **Verificar los IDs de modelo vigentes** en <https://openrouter.ai/models>.
-      Los de `src/modelos.js` son de mayo 2026 y cambian cada pocos meses.
+- [x] IDs de modelo verificados el 9 de octubre de 2026 (gama media vigente de cada
+      proveedor; DeepSeek V3.2 porque las V4 razonan sin limite y se cortan). Parametros
+      de llamada iguales para todas (temperatura 0.7, max_tokens 2000) y congelados
+      junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
+      volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
 - [ ] Kit de marca hecho (`marca/`). Falta: plan de contenido, registrar dominio y
       cuentas, sitio multilenguaje + imagen para links (`marca/exportados/og-1200x630.png`)

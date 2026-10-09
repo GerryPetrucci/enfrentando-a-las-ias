@@ -45,10 +45,13 @@ dice no hacer.
 
 ## 5. La version del modelo es parte del resultado
 
-Cada partida guarda el ID exacto del modelo (`anthropic/claude-sonnet-4.5`, etc.)
+Cada partida guarda el ID exacto del modelo (`anthropic/claude-sonnet-5.5`, etc.)
 y la fecha. Los modelos se actualizan cada pocos meses, asi que **el marcador es
 una foto del momento, no un veredicto permanente.** Eso no es una debilidad del
 formato: es el motivo por el que puedes hacer temporadas.
+
+Los parametros de llamada (temperatura 0.7 y 2000 tokens maximos) son iguales para
+todas las IAs y se congelan junto con el prompt.
 
 ## 6. Alcance de las afirmaciones
 

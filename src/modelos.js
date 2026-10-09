@@ -4,6 +4,11 @@
 // temporada, verifica los vigentes en https://openrouter.ai/models y actualiza
 // este archivo. La version exacta se guarda en cada resultado para que el
 // marcador siempre diga "con que version se midio".
+//
+// Verificados el 9 de octubre de 2026 contra el catalogo de OpenRouter: cada IA es la
+// version de gama media vigente de su proveedor, y las cinco respondieron una ronda real.
+// Los parametros de llamada (temperatura, max_tokens) son iguales para todas y se
+// congelan junto con el prompt: cambiarlos a mitad de temporada tambien parte los resultados.
 
 import { cargarEnv } from './env.js';
 cargarEnv();
@@ -11,31 +16,32 @@ cargarEnv();
 export const CONTENDIENTES = {
   claude: {
     nombre: 'Claude',
-    modelo: 'anthropic/claude-sonnet-4.5',
+    modelo: 'anthropic/claude-sonnet-5.5',
     color: '#D4753E',
     inicial: 'C',
   },
   gpt: {
     nombre: 'GPT',
-    modelo: 'openai/gpt-4.1',
+    modelo: 'openai/gpt-6.1-sol',
     color: '#2E9E83',
     inicial: 'G',
   },
   gemini: {
     nombre: 'Gemini',
-    modelo: 'google/gemini-2.5-pro',
+    modelo: 'google/gemini-3.8-flash',
     color: '#4A7FD4',
     inicial: 'M',
   },
   llama: {
     nombre: 'Llama',
-    modelo: 'meta-llama/llama-3.3-70b-instruct',
+    modelo: 'meta-llama/llama-4-maverick',
     color: '#8B5FBF',
     inicial: 'L',
   },
   deepseek: {
     nombre: 'DeepSeek',
-    modelo: 'deepseek/deepseek-chat',
+    // V3.2 y no V4: las V4 razonan sin limite y se cortaban hasta con 2000 tokens (probado el 9 oct 2026).
+    modelo: 'deepseek/deepseek-v3.2',
     color: '#C94F6D',
     inicial: 'D',
   },
@@ -58,7 +64,9 @@ export async function llamarModelo({
   modelo,
   sistema,
   usuario,
-  maxTokens = 500,
+  // Holgado a proposito: los modelos que razonan gastan tokens antes de contestar y, con 500,
+  // varios se quedaban sin espacio y no llegaban a dar su jugada.
+  maxTokens = 2000,
   temperatura = 0.7,
   reintentos = 2,
 }) {
