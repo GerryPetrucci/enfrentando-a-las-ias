@@ -81,7 +81,7 @@ Resumen de una revisión hecha el 8 de octubre de 2026. **No es asesoría legal*
 - **Nombres:** se pueden usar de forma descriptiva ("en esta partida jugó Claude"). No pueden formar parte del nombre del canal, los usuarios ni el dominio, y no se debe sugerir patrocinio.
 - **Aviso estándar** (cuando haya espacio): *Proyecto independiente, sin afiliación con los proveedores de los modelos.*
 - **Cada IA se identifica con un disco de color y su inicial**, como en el reproductor. Los colores actuales de `src/modelos.js` se parecen a los de cada proveedor; conviene cambiarlos a una gama propia.
-- **Pendiente:** revisar los términos de uso de cada proveedor sobre publicar comparativas.
+- **Términos de uso (revisados el 9 de octubre de 2026):** de ahí salen tres reglas. Las jugadas, mensajes y razones se presentan **como generados por IA**, con aviso visible en el video y en la descripción. **Cada partida se revisa a mano** antes de publicarse. Las salidas de los modelos **no se usan para entrenar** otros modelos. Se vuelven a revisar antes de monetizar y cada 3 meses.
 
 Fuentes: [Anthropic](https://www.anthropic.com/legal/trademark-guidelines) · [OpenAI](https://openai.com/brand/) · [Google](https://about.google/brand-resource-center/brand-elements) · [licencia de Llama](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/blob/main/LICENSE.txt).
 

@@ -103,8 +103,11 @@ Se dice: *"en este juego, con estas reglas, en estas 8 partidas, gano X"*.
 No se dice: *"X es la mejor IA"*.
 
 Se usan nombres de modelos de forma descriptiva; **no se usan logos oficiales** ni
-nada que sugiera patrocinio. Pendiente: revisar los terminos de uso de cada
-proveedor sobre publicar comparativas.
+nada que sugiera patrocinio. Terminos de uso de los proveedores revisados el 9 de
+octubre de 2026; de ahi salen tres reglas: lo que producen las IAs se presenta como
+**generado por IA** con aviso visible, **cada partida se revisa a mano** antes de
+publicarse, y las salidas **no se usan para entrenar** otros modelos. Repetir la
+revision antes de monetizar y cada 3 meses.
 
 ## Marca y presencia (decidido el 8 de octubre de 2026)
 
@@ -136,6 +139,8 @@ Hecho:
 - Juego 1: Dilema del Prisionero Negociado (categoria "Traición y confianza")
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
+- Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA
+  visible (`razon=1`) y etiqueta fija de contenido generado por IA
 - Pipeline probado de punta a punta con estrategias de control
 
 Pendiente:
