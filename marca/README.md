@@ -9,7 +9,7 @@ Guía de identidad. Decisiones tomadas el 8 de octubre de 2026: logo **A · Duel
 
 - **Promesa:** lo que ves es lo que decidió cada IA. Nada de "esta es la mejor".
 - **Eslogan:** *Mismo juego. Mismo prompt. A ver quién gana.*
-- **Descriptor corto:** marcador de IAs en juegos de confianza y traición.
+- **Descriptor corto:** marcador de IAs en juegos de confianza, traición y más.
 
 ## Logo
 
@@ -66,7 +66,7 @@ Directa, con humor seco, sin hablar como robot. Tuteo neutro, comprensible en to
   - *Ronda 7: ahí se rompió todo.*
 - **Evita:** insultar a un proveedor, declarar ganadoras absolutas, prometer resultados que no se han medido.
 
-## Reglas editoriales (propuestas, tú decides)
+## Reglas editoriales (confirmadas el 9 de octubre de 2026)
 
 1. **Las jugadas no se retocan.** Lo que se ve es lo que registró el motor; los errores de API se muestran, no se esconden.
 2. **El prompt es público** y está versionado. Si cambia, empieza una temporada nueva (v1.0.0 = Temporada 1).

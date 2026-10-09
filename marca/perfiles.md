@@ -7,8 +7,9 @@ Textos listos para copiar. Los límites de caracteres son los que conozco y pued
 | | |
 |---|---|
 | **Nombre** | Enfrentando a las IAs |
-| **Usuario** | `@enfrentandoalasias` (18 caracteres, cabe en todas) |
-| **Alternativas si está ocupado** | `@enfrentandoias` · `@iasenfrentadas` · `@enfrentandoalasias_` |
+| **Usuario** | `@enfrentandoalasias` (18 caracteres: cabe en YouTube, TikTok e Instagram, **pero no en X**, que acepta máximo 15) |
+| **Usuario en X** | `@enfrentandoias` (14 caracteres) |
+| **Alternativas si está ocupado** | En X: `@iasenfrentadas` (14) · `@enfrentando_ias` (15). En las demás: `@enfrentandoias` |
 | **Foto de perfil** | [`exportados/avatar-1080.png`](exportados/avatar-1080.png), la misma en todas |
 | **Enlace** | `https://gerrypetrucci.github.io/enfrentando-a-las-ias/` hasta tener dominio propio |
 | **Correo** | Uno solo para todas las cuentas, distinto del personal si es posible |
@@ -17,9 +18,9 @@ Textos listos para copiar. Los límites de caracteres son los que conozco y pued
 
 ## Bios en español
 
-**TikTok** (límite 80 · 72):
+**TikTok** (límite 80 · 77):
 ```
-IA contra IA en juegos de confianza y traición. Mismo prompt para todas.
+IA contra IA en juegos de confianza, traición y más. Mismo prompt para todas.
 ```
 
 **Instagram** (límite 150 · 130):
@@ -27,14 +28,14 @@ IA contra IA en juegos de confianza y traición. Mismo prompt para todas.
 Ponemos a las IAs a jugar entre sí y llevamos el marcador. Mismo juego, mismo prompt, metodología pública. Proyecto independiente.
 ```
 
-**X** (límite 160 · 152):
+**X** (límite 160 · 157):
 ```
-IA contra IA en juegos de confianza y traición. Mismo juego, mismo prompt, marcador público. Proyecto independiente, sin afiliación con los proveedores.
+IA contra IA en juegos de confianza, traición y más. Mismo juego, mismo prompt, marcador público. Proyecto independiente, sin afiliación con los proveedores.
 ```
 
-**Facebook, texto de presentación** (límite 101 · 79; para cuando se agregue):
+**Facebook, texto de presentación** (límite 101 · 84; para cuando se agregue):
 ```
-IA contra IA en juegos de confianza y traición. Mismo prompt, marcador público.
+IA contra IA en juegos de confianza, traición y más. Mismo prompt, marcador público.
 ```
 
 **YouTube, descripción del canal** (límite 1000):
@@ -52,11 +53,11 @@ Proyecto independiente, sin afiliación con los proveedores de los modelos. Sus 
 
 ## Bios en inglés (para cuando se abra la versión en inglés)
 
-**TikTok** (80 · 66): `AI vs AI in trust-and-betrayal games. Same prompt for every model.`
+**TikTok** (80 · 75): `AI vs AI in games of trust, betrayal and more. Same prompt for every model.`
 
 **Instagram** (150 · 108): `We make AIs play each other and keep score. Same game, same prompt, public methodology. Independent project.`
 
-**X** (160 · 142): `AI vs AI in trust-and-betrayal games. Same game, same prompt, public scoreboard. Independent project, not affiliated with the model providers.`
+**X** (160 · 151): `AI vs AI in games of trust, betrayal and more. Same game, same prompt, public scoreboard. Independent project, not affiliated with the model providers.`
 
 ## Lista al crear cada cuenta
 
@@ -72,6 +73,6 @@ Proyecto independiente, sin afiliación con los proveedores de los modelos. Sus 
 | Red | Usuario | Creada |
 |---|---|---|
 | TikTok | | |
-| YouTube | | |
+| YouTube | @enfrentandoalasias | 9 oct 2026 |
 | Instagram | | |
 | X | | |
