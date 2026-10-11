@@ -8,7 +8,7 @@ import { porId } from './catalogo.js';
 
 const objetoTxt = (o) => (o && o.restan > 0 ? `${o.nombre} (ayuda ${o.restan} situacion${o.restan === 1 ? '' : 'es'} mas)` : 'ninguno');
 
-// t viene de tentacionDe: acompanado es la sorteada; solo, un botin (la oferta no se muestra sin a quien delatar)
+// t viene de tentacionDe: acompanado es la sorteada; solo, un botin (la oferta del guardia no se muestra si el companero ya no esta)
 function textoTentacion(t) {
   if (t.tipo === 'botin') {
     return `${t.objeto} esta a la vista. Solo uno puede tomarlo: da ${t.valor} puntos y ayuda en las ${TURNOS_OBJETO} situaciones siguientes, pero hace ruido y sube la alarma. Para tomarlo pon "aprovechar": true.`;
@@ -22,12 +22,12 @@ function lineaHistorial(reg, i, E) {
     const j = reg.jugadas[s];
     if (!j) return `${sujeto} fuera (${E.salio[s] ? 'escapo' : 'capturado'})`;
     const extras = [
-      reg.tentacion?.tomo === s ? 'tomo el objeto' : reg.tentacion?.delataron.includes(s) ? 'delato' : null,
+      reg.tentacion?.tomo === s ? 'tomo el objeto' : reg.tentacion?.delataron.includes(s) ? 'hablo con el guardia' : null,
       reg.salieron?.[s] ? 'escapo por su cuenta' : null,
     ].filter(Boolean).map((x) => ` +${x}`).join('');
     return `${sujeto} ${j.postura}/${j.metodo}${extras} -> ${reg.resultados[s]}${reg.promesaRota[s] ? rota : ''}`;
   };
-  return `${reg.ronda}. ${reg.situacion.corto}: ${parte(i, 'tu', ' (rompiste tu promesa)')}; ${parte(1 - i, 'companero', ' (rompio su promesa)')}`;
+  return `${reg.ronda}. ${reg.situacion.corto}: ${parte(i, 'tu', ' (no cumpliste tu promesa)')}; ${parte(1 - i, 'companero', ' (no cumplio su promesa)')}`;
 }
 
 export function vistaTexto(E, i) {

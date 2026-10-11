@@ -109,7 +109,11 @@ serie con asientos rotados (mismas situaciones y mismos dados). **Estado:** moto
 escena del reproductor (segunda especificacion) y la primera corrida con modelos. **Reglas de puntaje (10 de octubre de 2026):** los
 extras de botin y delacion solo cuentan si escapas (capturado vale 0 en total) y la delacion solo agrava al delatado si ya estaba
 herido; el prompt lo dice asi. Balance con bots cerrado ese dia: escapan los dos 48 %, el traidor gana al leal 57 % y a toma y daca
-58 % de las partidas decididas (`privado/prototipos/herramientas/fuga-balance.mjs`).
+58 % de las partidas decididas (`privado/prototipos/herramientas/fuga-balance.mjs`). **Vocabulario suave (11 de octubre de 2026):** el prompt,
+la vista y la narracion evitan las palabras duras (delatar, abandonar, traicion): la oferta del guardia es "contarle al guardia lo que
+planea el companero", quien queda atras "se queda atras" y el bot `traidor` se muestra como "Por su cuenta"; los identificadores
+internos no cambian (los lee el marcador). **Escena del reproductor (decidido el 11 de octubre de 2026):** episodio de ~2.5 minutos
+que se segmenta en piezas cortas para Reels y TikTok (9:16 y 16:9 sobre la hoja maestra 4K).
 
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
@@ -118,8 +122,8 @@ leyendo una partida ya guardada, asi que la voz se genera **antes** de grabar y 
 sale completo en una sola toma, sin post-produccion de audio, y la linea de tiempo se exporta para poder re-doblarlo en otro idioma.
 Nada de voz en tiempo real. Hay dos capas de texto: los **hechos** (los escribe el codigo, siempre verdaderos) y el **comentario** (la
 capa editorial; nunca cambia ni oculta una jugada). La voz se declara como contenido generado por IA donde la plataforma lo pida y
-no imita a ninguna persona real. Motor de voz: sin elegir (se prueban 2-3 y se revisan sus terminos de uso antes de publicar, como con
-los proveedores de modelos). Detalle y pasos en `privado/planes/plan-voz-narradora.md`. **Estado:** decidido, sin implementar.
+no imita a ninguna persona real. Motor de voz: **gratuito** (decidido por el usuario el 11 de octubre de 2026); falta elegir cual (se prueban 2-3 y se revisan
+sus licencias antes de publicar: gratis no siempre significa libre para uso comercial). Detalle y pasos en `privado/planes/plan-voz-narradora.md`. **Estado:** decidido, sin implementar.
 
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
@@ -156,7 +160,8 @@ media (comparten color).
 4 partidas, tope $0.10): 16 de 16 respuestas validas (12 por lote y 4 normales), 0 errores de API, gasto informado $0.0158; el mismo
 turno en vivo tambien dio 4 de 4 validas. Espera del turno 1: Flash-Lite 6 min, Haiku 12 min, **Luna 7.7 h**. Cada turno espera al lote
 mas lento, asi que una serie de 30 turnos con Luna adentro puede tardar dias: para series largas por lote conviene dejarla fuera o
-usar juegos de pocos turnos (La Fuga tiene 9). Falta la serie completa (paso 6 de la tarea 8 de `privado/planes/plan-lote-openrouter.md`).
+usar juegos de pocos turnos (La Fuga tiene 9). La serie completa (paso 6 de la tarea 8 de `privado/planes/plan-lote-openrouter.md`) **se salto por decision del usuario el 11 de octubre
+de 2026: el costo de una partida entera NO esta confirmado** (solo se midio el turno 1; los prompts crecen en los turnos tardios).
 
 ### No desarrollar juegos: desarrollar una arena
 
@@ -289,8 +294,8 @@ Pendiente:
       de 2026; antes 2000) y congelados junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
       volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
-- [ ] Serie completa por lote (paso 6 de la tarea 8 del plan del lote): los ensayos de 1 turno ya se hicieron (10 y 11 de octubre de
-      2026); falta decidir si se corre, con que modelos (Luna tarda horas por turno) y el visto bueno del usuario para gastar
+- [x] Serie completa por lote (paso 6 de la tarea 8 del plan del lote): **saltada por el usuario el 11 de octubre de 2026**; los
+      ensayos de 1 turno ya se hicieron (10 y 11 de octubre). Costo de una partida entera: no confirmado
 - [ ] Kit de marca hecho (`marca/`). Falta: plan de contenido, registrar dominio y
       cuentas, sitio multilenguaje + imagen para links (`marca/exportados/og-1200x630.png`)
 - [ ] Juego 2: **Guerra de territorios**, de 2 a 5 reinos, con alianzas y traiciones, **control

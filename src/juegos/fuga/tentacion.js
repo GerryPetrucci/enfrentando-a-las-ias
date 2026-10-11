@@ -1,6 +1,6 @@
 // La tentacion efectiva de una situacion. Acompanado es la que sorteo estado.js. Solo (su companero fue capturado o ya escapo
 // por su cuenta) sale mucho mas botin: es la compensacion de quedarse atras (enmienda del 10 de octubre de 2026). La oferta del
-// guardia no tiene sentido sin a quien delatar, asi que en solitario se vuelve un botin. Es una funcion pura: usa los numeros
+// guardia no tiene sentido sin a quien contarle, asi que en solitario se vuelve un botin. Es una funcion pura: usa los numeros
 // sorteados de antemano en el estado (botinSolo) y no toca el rng.
 
 import { porId } from './catalogo.js';

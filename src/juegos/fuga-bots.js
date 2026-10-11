@@ -10,12 +10,12 @@ const mejorMetodo = (E) => porId.get(E.situaciones[E.ronda].id).mejor;
 const base = (extra) => ({ postura: 'ayudar', metodo: 'sigilo', aprovechar: false, promesa: 'ayudar', mensaje: '', razon: 'bot de control', ...extra });
 
 // Siempre ayuda y nunca compite con su companero por una tentacion; si se queda solo (lo capturaron o escapo), toma el botin:
-// sin companero no hay a quien traicionar (enmienda del 10 de octubre de 2026).
+// sin companero no hay con quien competir por una tentacion (enmienda del 10 de octubre de 2026).
 export function leal(E) {
   return base({ postura: 'ayudar', metodo: mejorMetodo(E), aprovechar: esSolo(E), promesa: 'ayudar', mensaje: 'Confia en mi.' });
 }
 
-// Promete ayudar y se separa siempre; aprovecha toda tentacion.
+// Promete ayudar y se separa siempre (en el marcador: "Por su cuenta"); aprovecha toda tentacion.
 export function traidor(E) {
   return base({ postura: 'separarse', metodo: mejorMetodo(E), aprovechar: true, promesa: 'ayudar', mensaje: 'Cuenta conmigo.' });
 }
@@ -37,7 +37,7 @@ export const BOTS = { leal, traidor, tomaydaca, azar };
 // Como se muestran en el marcador y el video (texto publico: lleva acentos si hace falta). Los colores son de control, no de una IA.
 export const INFO_BOTS = {
   leal: { nombre: 'Leal', color: '#6FA86F' },
-  traidor: { nombre: 'Traidor', color: '#B8544A' },
+  traidor: { nombre: 'Por su cuenta', color: '#B8544A' },
   tomaydaca: { nombre: 'Toma y Daca', color: '#5A8FB8' },
   azar: { nombre: 'Al azar', color: '#9C8FB8' },
 };

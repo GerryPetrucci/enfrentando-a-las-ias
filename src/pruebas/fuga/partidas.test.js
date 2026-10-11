@@ -116,7 +116,7 @@ test('el marcador lee la categoria nueva, sus puntos y sus traiciones sin conoce
   assert.equal(traidor.partidas, 2);
   assert.ok(traidor.traiciones >= 2);
   assert.equal(typeof traidor.puntosPorPartida, 'number');
-  assert.equal(m.episodios[0].enfrentamiento, 'Leal vs Traidor');
+  assert.equal(m.episodios[0].enfrentamiento, 'Leal vs Por su cuenta');
 });
 
 test('un modelo caido no tumba la partida: juega la jugada neutra y el error queda registrado', async () => {

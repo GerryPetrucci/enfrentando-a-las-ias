@@ -76,9 +76,9 @@ test('cuenta el botin y la oferta del guardia, y cuando nadie los toma', () => {
   assert.equal(botin(null), 'Nadie se atreve a tomar un alambre.');
   assert.equal(botin(0, 'una mochila abandonada', 'ronda'), '{0} se queda con una mochila abandonada.');
   const oferta = (delataron) => narrarRonda(ctx({ def: 'ronda', tentacion: { tipo: 'oferta', tomo: null, delataron } })).at(-1).texto;
-  assert.equal(oferta([0]), '{0} acepta la oferta del guardia y delata a su compañero.');
+  assert.equal(oferta([0]), '{0} acepta la oferta del guardia y le cuenta lo que planea su compañero.');
   assert.equal(oferta([]), 'Nadie acepta la oferta del guardia.');
-  assert.equal(oferta([0, 1]), '{0} acepta la oferta del guardia y delata a su compañero. {1} acepta la oferta del guardia y delata a su compañero.');
+  assert.equal(oferta([0, 1]), '{0} acepta la oferta del guardia y le cuenta lo que planea su compañero. {1} acepta la oferta del guardia y le cuenta lo que planea su compañero.');
 });
 
 test('avisa cuando cambia el nivel de alerta y cuando la confianza se rompe o crece', () => {
@@ -147,7 +147,7 @@ test('el epilogo cuenta al que escapo antes, al abandonado que salio despues y r
   E.puntos = [PUNTOS.escapeSolo, PUNTOS.escapeAbandonado];
   let t = textos(narrarEpilogo(E));
   assert.equal(t[0], '{0} escapó por su cuenta a mitad de camino.');
-  assert.equal(t[1], '{1}, abandonado, siguió solo y logró salir.');
+  assert.equal(t[1], '{1}, que se quedó atrás, siguió solo y logró salir.');
   assert.ok(t.includes(`Lo que ninguno sabía: salir solo valía ${PUNTOS.escapeSolo} puntos.`));
   assert.ok(t.includes(`Y quien se quedaba atrás y aun así lograba salir cobraba ${PUNTOS.escapeAbandonado}.`));
   assert.match(t.at(-1), /Gana \{1\}\.$/);
@@ -178,4 +178,22 @@ test('el epilogo avisa de los extras que pierde quien es capturado', () => {
   assert.equal(t[1], 'Se pierden los extras de {0} (3 puntos): no logró salir.');
   E.perdidos = [0, 0];
   assert.ok(!textos(narrarEpilogo(E)).some((x) => x.includes('extras')), 'sin extras perdidos no se menciona nada');
+});
+
+test('la narracion publica no usa palabras duras: nadie delata, abandona ni suelta a nadie', () => {
+  const dura = /delat|abandon|traici|traidor|suelta a/i;
+  const todas = [];
+  for (const postura of POSTURAS) {
+    for (const resultado of ['limpio', 'tropezo', 'cayo']) {
+      todas.push(...textos(narrarRonda(ctx({ jugadas: [jug({ postura }), jug({ postura: 'separarse' })], resultados: [resultado, 'limpio'] }))));
+    }
+  }
+  todas.push(...textos(narrarRonda(ctx({ def: 'ronda', tentacion: { tipo: 'oferta', tomo: null, delataron: [0, 1] } }))));
+  const E = nuevoEstado();
+  E.fin = true;
+  E.finales = ['anticipada', 'abandonado'];
+  E.puntos = [PUNTOS.escapeSolo, PUNTOS.escapeAbandonado];
+  todas.push(...textos(narrarEpilogo(E)));
+  assert.ok(todas.length > 20);
+  for (const t of todas) assert.doesNotMatch(t, dura, t);
 });

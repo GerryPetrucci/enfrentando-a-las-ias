@@ -14,7 +14,7 @@ const POSTURA = {
   ayudar: (n) => `${n} ayuda a su compañero`,
   avanzar: (n) => `${n} sigue adelante junto a su compañero`,
   sacrificarse: (n) => `${n} se ofrece a cargar con el riesgo`,
-  separarse: (n) => `${n} suelta a su compañero y se lanza solo`,
+  separarse: (n) => `${n} toma su propio camino y se adelanta`,
 };
 const METODO = { sigilo: 'en silencio', fuerza: 'a la fuerza', engano: 'con un engaño', esperar: 'esperando el momento justo' };
 const METODO_NOMBRE = { sigilo: 'el sigilo', fuerza: 'la fuerza', engano: 'el engaño', esperar: 'esperar' };
@@ -55,7 +55,7 @@ export function narrarRonda({ E, num, sit, def, jugadas, fallos, resultados, ten
   } else if (tentacion?.tipo === 'oferta') {
     agregar('consecuencia', tentacion.delataron.length === 0
       ? 'Nadie acepta la oferta del guardia.'
-      : tentacion.delataron.map((i) => `{${i}} acepta la oferta del guardia y delata a su compañero.`).join(' '));
+      : tentacion.delataron.map((i) => `{${i}} acepta la oferta del guardia y le cuenta lo que planea su compañero.`).join(' '));
   }
 
   const antes = nivelAlerta(alarmaAntes), ahora = nivelAlerta(E.alarma);
@@ -84,7 +84,7 @@ export function narrarEpilogo(E) {
     for (const i of [0, 1]) {
       const f = E.finales[i];
       if (f === 'anticipada') agregar(`{${i}} escapó por su cuenta a mitad de camino.`);
-      else if (f === 'abandonado') agregar(`{${i}}, abandonado, siguió solo y logró salir.`);
+      else if (f === 'abandonado') agregar(`{${i}}, que se quedó atrás, siguió solo y logró salir.`);
       else agregar(`{${i}} no logra salir.`);
     }
   }

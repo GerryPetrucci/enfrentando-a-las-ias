@@ -87,7 +87,7 @@ test('la vista no filtra lo oculto con agentes variados: separaciones, salidas, 
   assert.ok(conSalida > 5 && conCaptura > 5 && solitario > 20, `cobertura: salidas ${conSalida}, capturas ${conCaptura}, rondas en solitario ${solitario}`);
 });
 
-test('el historial es compacto y dice como le fue a cada uno, que prometio el companero y si rompio su promesa', () => {
+test('el historial es compacto y dice como le fue a cada uno, que prometio el companero y si no cumplio su promesa', () => {
   const E = nuevoEstado();
   forzar(E, 'celda');
   ronda(E, { postura: 'ayudar', metodo: 'sigilo', promesa: 'ayudar', mensaje: 'vamos' }, { postura: 'separarse', metodo: 'fuerza', promesa: 'ayudar' });
@@ -97,8 +97,8 @@ test('el historial es compacto y dice como le fue a cada uno, que prometio el co
   const v0 = vistaTexto(E, 0), v1 = vistaTexto(E, 1);
   assert.match(v0, /HISTORIAL/);
   assert.ok(v0.includes('1. cerradura: tu ayudar/sigilo -> limpio; companero separarse/fuerza -> limpio'));
-  assert.ok(v0.includes('2. camara: tu ayudar/sigilo -> limpio; companero avanzar/sigilo -> limpio (rompio su promesa)'));
-  assert.ok(v1.includes('2. camara: tu avanzar/sigilo -> limpio (rompiste tu promesa); companero ayudar/sigilo -> limpio'));
+  assert.ok(v0.includes('2. camara: tu ayudar/sigilo -> limpio; companero avanzar/sigilo -> limpio (no cumplio su promesa)'));
+  assert.ok(v1.includes('2. camara: tu avanzar/sigilo -> limpio (no cumpliste tu promesa); companero ayudar/sigilo -> limpio'));
   // lo que el companero dejo dicho para esta situacion (la ronda 2 no dejo promesa ni mensaje)
   assert.ok(v0.includes('Tu companero te prometio para esta situacion: nada'));
   assert.ok(v0.includes('Mensaje de tu companero: (ninguno)'));

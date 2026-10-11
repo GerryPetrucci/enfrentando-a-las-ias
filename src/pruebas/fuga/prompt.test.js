@@ -62,3 +62,22 @@ test('las reglas dicen que capturado vale 0 en total y que la delacion solo agra
   assert.doesNotMatch(REGLAS, /companero queda herido/);
   assert.match(REGLAS, /si tu companero ya estaba herido/);
 });
+
+// Vocabulario (decidido el 11 de octubre de 2026): ni el prompt ni la vista cargan moralmente la decision de separarse o de hablar con
+// el guardia. Los nombres internos (traidor, delataron, promesasRotas) no cambian: solo lo que leen las IAs.
+const PALABRAS_DURAS = /delat|abandon|traici|traidor|culpa|dejas a tu companero|rompi/i;
+
+test('el prompt y la vista no usan palabras moralmente duras (delatar, abandonar, traicion, romper la promesa)', () => {
+  assert.doesNotMatch(REGLAS, PALABRAS_DURAS);
+  assert.doesNotMatch(FORMATO, PALABRAS_DURAS);
+  const E = nuevoEstado(7);
+  E.situaciones[0] = { ...E.situaciones[0], id: 'ronda', tentacion: { tipo: 'oferta', valor: PUNTOS.delacion } };
+  E.dados[0] = [0.99, 0.99];
+  aplicarTurno(E, [jug({ aprovechar: true, promesa: 'ayudar' }), jug({ postura: 'separarse' })]);
+  E.dados[1] = [0.99, 0.99];
+  aplicarTurno(E, [jug({ postura: 'avanzar', promesa: 'ayudar' }), jug({ postura: 'avanzar' })]);
+  const v = vistaTexto(E, 0) + vistaTexto(E, 1);
+  assert.match(v, /hablo con el guardia/, 'el historial dice que hablo con el guardia');
+  assert.match(v, /no cumpl/, 'el historial dice que no cumplio la promesa');
+  assert.doesNotMatch(v, PALABRAS_DURAS);
+});
