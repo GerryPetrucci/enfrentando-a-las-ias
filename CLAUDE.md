@@ -14,7 +14,9 @@
   implementacion y plan de juegos (`privado/planes/`), plan de contenido (`privado/contenido/`), terminos de uso de los
   proveedores (`privado/terminos/`) y prototipos con sus herramientas de balance (`privado/prototipos/`). Su inventario esta en
   `privado/inventario-conocimiento.md`. `src/pruebas/privado.test.js` falla si git llegara a rastrear algo ahi.
-- **Respaldo de `privado/`:** todavia no tiene copia fuera de este equipo (pendiente: repo privado de GitHub o copia periodica).
+- **Respaldo de `privado/` (hecho el 11 de octubre de 2026):** `privado/` tiene su propio repo git (anidado; el repo publico lo ignora) subido a un repo
+  **PRIVADO** de GitHub, `GerryPetrucci/enfrentando-a-las-ias-privado`. Para refrescar la copia despues de cambiar specs o planes:
+  `git -C privado add -A && git -C privado commit -m "respaldo" && git -C privado push`. Nunca publicar ese repo ni subir `.env`.
 - **Memoria de Claude:** la de este proyecto vive junto al repo y solo guarda punteros y preferencias; las decisiones van aqui
   o en `privado/`.
 - La llave de OpenRouter solo esta en `.env` (ignorado): nunca se lee ni se pega en el chat.
