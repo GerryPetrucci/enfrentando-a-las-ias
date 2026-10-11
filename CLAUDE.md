@@ -163,8 +163,9 @@ Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rond
 **con nombres y personajes propios y las mismas reglas**; nunca el nombre, el arte ni la estetica de ningun programa. Cada juego
 respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion expresa) y sigue el flujo de siempre (catalogo, spec,
 plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
-`privado/planes/plan-juegos-de-concurso.md`. **Estado:** catalogo hecho; falta que el usuario apruebe el orden y fije las reglas
-completas del primer juego.
+`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con dos juegos hechos (El numero solitario y Subasta de tiempo); las reglas de los otros tres
+(Duda y apuesta, Triple dado, Mayor o menor) estan guardadas en `privado/planes/reglas-oleada-1.md` con su analisis de encaje; el usuario elige con
+cual seguir.
 
 **Sin torneo general (decidido el 11 de octubre de 2026):** cada juego se evalua por si mismo, para evitar complejidad. No hay un
 meta-juego que encadene los juegos ni fichas que pasen de uno a otro. En su lugar, **al final de cada juego (o de su serie)** se evaluan las
