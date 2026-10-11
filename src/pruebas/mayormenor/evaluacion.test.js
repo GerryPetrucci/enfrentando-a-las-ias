@@ -13,14 +13,34 @@ import { evaluarSerie, fraseLectura, fraseAudacia, fraseProvecho, fraseConstanci
 const agentes = (claves) => claves.map((c) => resolverAgente(c, mayormenor));
 const partida = (seed, claves) => correrPartida({ juego: mayormenor, agentes: agentes(claves), seed });
 
-test('fraseLectura: sin apuestas, normal, alta y baja segun los umbrales', () => {
+test('fraseLectura: sin apuestas, normal, alta y baja segun los umbrales, y solo si la muestra no es ruido', () => {
   assert.equal(fraseLectura(0, 0).valor, null);
-  assert.equal(fraseLectura(5, 10).notable, false);
-  const alta = fraseLectura(7, 10);
-  assert.match(alta.frase, /leyó bien las cartas que faltaban \(7 de 10 apuestas\)/);
+  assert.equal(fraseLectura(10, 20).notable, false);
+  const alta = fraseLectura(16, 20);
+  assert.match(alta.frase, /leyó bien las cartas que faltaban \(16 de 20 apuestas\)/);
   assert.equal(alta.notable, true);
-  assert.match(fraseLectura(3, 10).frase, /falló más de lo normal/);
+  assert.match(fraseLectura(4, 20).frase, /falló más de lo normal/);
   assert.ok(UMBRALES.lecturaAlta > 0.5 && UMBRALES.lecturaBaja < 0.5);
+});
+
+test('fraseLectura: pasar el umbral con pocas apuestas es ruido de la moneda, no habilidad: no es notable y lo dice', () => {
+  // 11 aciertos de 15 (0.73) pasa el umbral, pero tirando una moneda sale ~12 % de las veces
+  const chica = fraseLectura(11, 15);
+  assert.equal(chica.notable, false);
+  assert.match(chica.frase, /11 de 15 apuestas: muestra todavía chica para decir más/);
+  assert.equal(chica.valor, 0.733);
+  assert.equal(fraseLectura(14, 20).notable, false, '14 de 20 (0.70) tampoco se aleja lo suficiente de la mitad');
+  assert.equal(fraseLectura(5, 15).notable, false);
+});
+
+test('una serie de 2 partidas con un bot que apuesta una moneda casi nunca recibe una lectura "notable" por pura suerte', async () => {
+  let notables = 0, series = 0;
+  for (let seed = 1; seed <= 100; seed++) {
+    const ev = evaluarSerie([await partida(seed, ['azar', 'prudente']), await partida(seed, ['prudente', 'azar'])]);
+    series++;
+    if (ev.jugadores.find((j) => j.id === 'azar').caracteristicas.lectura.notable) notables++;
+  }
+  assert.ok(notables / series < 0.15, `${notables} de ${series} series con lectura notable por puro azar`);
 });
 
 test('fraseAudacia: apuesta fuerte, juega seguro o con medida; cuenta las veces que lo apuesta todo', () => {

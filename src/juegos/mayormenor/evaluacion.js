@@ -20,8 +20,14 @@ export function fraseLectura(aciertos, apuestas) {
   if (!apuestas) return { valor: null, frase: 'no hubo apuestas propias con resultado que medir', notable: false };
   const t = aciertos / apuestas;
   const cuenta = `${aciertos} de ${apuestas} apuestas`;
-  if (t >= UMBRALES.lecturaAlta) return { valor: redondeo(t), frase: `leyó bien las cartas que faltaban (${cuenta})`, notable: true };
-  if (t <= UMBRALES.lecturaBaja) return { valor: redondeo(t), frase: `falló más de lo normal (${cuenta})`, notable: true };
+  if (t >= UMBRALES.lecturaAlta || t <= UMBRALES.lecturaBaja) {
+    // tirando una moneda tambien se acierta cerca de la mitad, con mucho vaiven si hay pocas apuestas: solo es habilidad lo que se aleja de 0.5
+    // mas de 1.96 errores estandar (prueba binomial al 95 %)
+    if (Math.abs(t - 0.5) <= (1.96 * 0.5) / Math.sqrt(apuestas)) return { valor: redondeo(t), frase: `${cuenta}: muestra todavía chica para decir más`, notable: false };
+    return t >= UMBRALES.lecturaAlta
+      ? { valor: redondeo(t), frase: `leyó bien las cartas que faltaban (${cuenta})`, notable: true }
+      : { valor: redondeo(t), frase: `falló más de lo normal (${cuenta})`, notable: true };
+  }
   return { valor: redondeo(t), frase: `acertó lo normal (${cuenta})`, notable: false };
 }
 

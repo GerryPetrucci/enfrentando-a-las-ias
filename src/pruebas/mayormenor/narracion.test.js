@@ -48,8 +48,6 @@ test('carta igual: nadie gana y la apuesta se devuelve, con comentario para la v
 test('los disparadores de comentario: todo, regalar la ronda, perder buena parte y pasar al frente', () => {
   const todo = narrarRonda({ ...base(), apuesta: 10, todo: true });
   assert.ok(todo.some((l) => l.tipo === 'comentario' && /lo apuesta todo/.test(l.texto)));
-  const regala = narrarRonda({ ...base(), carta: 0, veredicto: 'menor', acierto: false, ganaActivo: 0, ganaPredictor: -3, fichas: [10, 7] });
-  assert.ok(regala.some((l) => l.tipo === 'comentario' && /regala la ronda/.test(l.texto)));
   const golpe = narrarRonda({ ...base(), carta: 0, veredicto: 'menor', acierto: false, ganaActivo: 0, apuesta: 6, ganaPredictor: -6, fichas: [10, 4] });
   assert.ok(golpe.some((l) => l.tipo === 'comentario' && /buena parte de sus fichas/.test(l.texto)));
   const frente = narrarRonda({ ...base(), fichasAntes: [10, 12], fichas: [13, 12] });
@@ -58,6 +56,19 @@ test('los disparadores de comentario: todo, regalar la ronda, perder buena parte
   assert.ok(!sinCambio.some((l) => /pasa al frente/.test(l.texto)), 'ya iba arriba');
   const desdeEmpate = narrarRonda({ ...base(), fichasAntes: [10, 10], fichas: [13, 10] });
   assert.ok(!desdeEmpate.some((l) => /pasa al frente/.test(l.texto)), 'salir de un empate no es una remontada');
+});
+
+test('"regala la ronda" solo si todo apuntaba a mayor y el predictor acerto con menor; si el predictor cayo, es una trampa; si la mano apuntaba a menor, no hay comentario', () => {
+  const mano = [0, 6, 7, 8, 9, 10]; // casi toda la mano supera al crupier (5): lo esperado era jugar alto
+  const regala = narrarRonda({ ...base(), manoAntes: mano, lado: 'menor', carta: 0, veredicto: 'menor', acierto: true, ganaActivo: 0, ganaPredictor: 3, fichas: [10, 13] });
+  assert.ok(regala.some((l) => l.tipo === 'comentario' && /regala la ronda/.test(l.texto)));
+  const trampa = narrarRonda({ ...base(), manoAntes: mano, lado: 'mayor', carta: 0, veredicto: 'menor', acierto: false, ganaActivo: 0, ganaPredictor: -3, fichas: [10, 7] });
+  assert.ok(trampa.some((l) => l.tipo === 'comentario' && /juega bajo a propósito y \{1\} cae/.test(l.texto)));
+  assert.ok(!trampa.some((l) => /regala la ronda/.test(l.texto)), 'una trampa que funciona no es un regalo');
+  const esperado = narrarRonda({ ...base(), manoAntes: [0, 1, 2, 3, 4, 6], lado: 'menor', carta: 0, veredicto: 'menor', acierto: true, ganaActivo: 0, ganaPredictor: 3, fichas: [10, 13] });
+  assert.ok(!esperado.some((l) => /regala la ronda|a propósito/.test(l.texto)), 'jugar bajo con una mano que apuntaba a menor es lo esperado');
+  const empatada = narrarRonda({ ...base(), manoAntes: [0, 1, 2, 3, 4, 6, 7, 8, 9, 10], lado: 'menor', carta: 0, veredicto: 'menor', acierto: true, ganaActivo: 0, ganaPredictor: 3, fichas: [10, 13] });
+  assert.ok(!empatada.some((l) => /regala la ronda|a propósito/.test(l.texto)), 'con la mano repartida no se sabe que era lo esperado');
 });
 
 test('una respuesta reemplazada no se cuenta como decision de la IA', () => {

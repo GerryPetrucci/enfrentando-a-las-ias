@@ -45,8 +45,12 @@ export function narrarRonda({
   // comentarios para la voz
   if (!reemplazadas[predictor] && todo) agregar('comentario', `${p} lo apuesta todo.`);
   if (veredicto === 'igual') agregar('comentario', 'Carta igual: la apuesta se devuelve y la ronda no mueve las fichas.');
-  if (!reemplazadas[activo] && veredicto === 'menor' && manoAntes.some((c) => c > crupier)) {
-    agregar('comentario', `${a} juega una carta baja pudiendo ganar fichas: regala la ronda.`);
+  // "todo apuntaba a mayor" = a la mano del activo le quedaban mas cartas por encima del crupier que por debajo (la mano es publica)
+  const arriba = manoAntes.filter((c) => c > crupier).length, abajo = manoAntes.filter((c) => c < crupier).length;
+  if (!reemplazadas[activo] && veredicto === 'menor' && arriba > abajo) {
+    agregar('comentario', acierto === false
+      ? `${a} juega bajo a propósito y ${p} cae.`
+      : `${a} juega una carta baja pudiendo ganar fichas: regala la ronda.`);
   }
   if (acierto === false && apuesta * 2 >= fichasAntes[predictor]) agregar('comentario', `${p} pierde buena parte de sus fichas de golpe.`);
   const antes = lider(fichasAntes), despues = lider(fichas);
