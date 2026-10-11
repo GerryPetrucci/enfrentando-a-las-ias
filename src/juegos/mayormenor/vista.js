@@ -8,18 +8,28 @@ import { crupierDeRonda, crupierFaltan } from './estado.js';
 
 const lista = (xs) => (xs.length ? xs.join(' ') : '(ninguna)');
 
+// Una jugada que puso el juego por una respuesta ilegal se marca [reemplazo]: no la eligio el jugador.
 function lineaHistorial(h) {
   const p = 1 - h.activo;
-  const carta = `jugo ${h.carta} (${h.veredicto}${h.ganaActivo ? `, +${h.ganaActivo}` : ''})`;
+  const marca = (s) => (h.reemplazadas?.[s] ? ' [reemplazo]' : '');
+  const carta = `jugo ${h.carta} (${h.veredicto}${h.ganaActivo ? `, +${h.ganaActivo}` : ''})${marca(h.activo)}`;
   const apuesta = h.acierto === null ? 'se devuelve' : h.acierto ? `acierta (+${h.apuesta})` : `falla (-${h.apuesta})`;
-  return `R${h.ronda} (activo J${h.activo + 1}): crupier ${h.crupier}, ${carta} | J${p + 1} aposto ${h.apuesta} a ${h.lado}: ${apuesta}`;
+  return `R${h.ronda} (activo J${h.activo + 1}): crupier ${h.crupier}, ${carta} | J${p + 1} aposto ${h.apuesta} a ${h.lado}${marca(p)}: ${apuesta}`;
 }
 
 export function vistaTexto(E, i) {
   const r = E.ronda, a = activoDe(r), rival = 1 - i;
+  // Terminada la partida no hay carta de esta ronda: E.ronda es la ultima jugada y el mazo ya no tiene "siguiente" que mostrar.
+  if (E.fin) {
+    return [
+      `PARTIDA TERMINADA (${r === 1 ? 'se jugo 1 ronda' : `se jugaron ${r} rondas`} de ${RONDAS})`,
+      `Tus fichas: ${E.fichas[i]} | Fichas del rival: ${E.fichas[rival]}`,
+    ].join('\n');
+  }
   const restan = RONDAS - r;
   const L = [];
   L.push(`RONDA ${r} DE ${RONDAS} (${restan === 0 ? 'es la ultima' : `despues de esta quedan ${restan}`})`);
+  L.push(`Eres el Jugador ${i + 1} (en el historial apareces como J${i + 1})`);
   L.push(a === i
     ? 'Tu papel: JUGADOR ACTIVO (juegas una carta boca abajo)'
     : 'Tu papel: PREDICTOR (apuestas si la carta oculta de tu rival sera mayor o menor)');

@@ -41,6 +41,12 @@ test('las reglas dicen lo que deben: jugadores, cartas, fichas, mazos del crupie
   assert.match(REGLAS, /salen de la banca/);
   assert.match(REGLAS, /No puedes apostar 0/);
   assert.match(REGLAS, /apuestas todas/);
+  assert.match(REGLAS, /SI TU RESPUESTA NO SIRVE/);
+  assert.match(REGLAS, /una carta que no tienes, una apuesta de 0 o con decimales, un lado que no sea "mayor" o "menor"/);
+  assert.match(REGLAS, /el juego juega por ti/);
+  assert.match(REGLAS, /una carta tuya al azar/);
+  assert.match(REGLAS, /apuesta de 1 ficha a un lado sorteado/);
+  assert.match(REGLAS, /\[reemplazo\]/);
   assert.match(REGLAS, /No ves lo que tu rival decide en la misma ronda/);
   assert.match(REGLAS, /ni el orden en que saldran las cartas del crupier/);
   assert.match(REGLAS, /o antes, si alguien se queda sin fichas/);

@@ -102,11 +102,12 @@ export function aplicarTurno(E, respuestas) {
   E.mano[a] = manoAntes.filter((c) => c !== carta);
   E.jugadas[a].push(carta);
   E.crupierSalidas[a].push(crupier);
-  E.historial.push({ ronda: r, activo: a, crupier, carta, lado, apuesta, veredicto, acierto, ganaActivo, ganaPredictor });
+  const reemplazadas = motivos.map((m) => m !== null); // jugadas que puso el juego por una respuesta ilegal (publico: el historial las marca)
+  E.historial.push({ ronda: r, activo: a, crupier, carta, lado, apuesta, veredicto, acierto, ganaActivo, ganaPredictor, reemplazadas });
 
   const narracion = narrarRonda({
     E, ronda: r, activo: a, predictor: p, crupier, carta, lado, apuesta, todo, veredicto, acierto, ganaActivo, ganaPredictor,
-    reemplazadas: motivos.map((m) => m !== null), fichas: [...E.fichas], fichasAntes, manoAntes,
+    reemplazadas, fichas: [...E.fichas], fichasAntes, manoAntes,
   });
 
   const sinFichas = E.fichas.some((f) => f === 0);

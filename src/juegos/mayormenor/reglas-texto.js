@@ -21,6 +21,9 @@ COMO ES UNA RONDA (el activo y el predictor deciden a la vez y en secreto)
 LA APUESTA
 Apuestas un numero entero de fichas, de 1 hasta las que tengas. No puedes apostar 0. Si pides mas fichas de las que tienes, apuestas todas.
 
+SI TU RESPUESTA NO SIRVE
+Si tu respuesta no se entiende o no es legal (una carta que no tienes, una apuesta de 0 o con decimales, un lado que no sea "mayor" o "menor"), el juego juega por ti: si eres el activo, una carta tuya al azar; si eres el predictor, una apuesta de 1 ficha a un lado sorteado. Queda anotado como respuesta invalida y el historial marca esa jugada con [reemplazo].
+
 QUE SE VE Y QUE NO
 Ves las fichas de los dos, las cartas que te quedan y las que le quedan a tu rival, las cartas del crupier que ya salieron de los dos mazos y todo lo que paso en las rondas anteriores. No ves lo que tu rival decide en la misma ronda que tu (la carta del activo y la apuesta del predictor), ni el orden en que saldran las cartas del crupier.
 

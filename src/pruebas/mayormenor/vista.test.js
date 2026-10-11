@@ -11,7 +11,7 @@ import { activoDe, RONDAS } from '../../juegos/mayormenor/constantes.js';
 import { crupierDeRonda } from '../../juegos/mayormenor/estado.js';
 import { aplicarTurno } from '../../juegos/mayormenor/turno.js';
 import { normalizarRespuesta } from '../../juegos/mayormenor/ordenes.js';
-import { nuevoEstado, ronda } from './ayudas.js';
+import { nuevoEstado, ronda, fijarCrupier } from './ayudas.js';
 
 test('al empezar: ronda, papel, carta del crupier, fichas, manos, mazos del crupier, instruccion y ningun historial', () => {
   const E = nuevoEstado(4);
@@ -33,6 +33,44 @@ test('al empezar: ronda, papel, carta del crupier, fichas, manos, mazos del crup
   assert.ok(v0.includes('AHORA: eres el jugador activo: responde "carta"'));
   assert.ok(v1.includes('AHORA: eres el predictor: responde "lado"'));
   assert.ok(v1.includes('de 1 a 10'));
+});
+
+test('la vista dice quien eres: "Eres el Jugador N" en la segunda linea, para leer el historial (J1 / J2)', () => {
+  const E = nuevoEstado();
+  assert.equal(vistaTexto(E, 0).split('\n')[1], 'Eres el Jugador 1 (en el historial apareces como J1)');
+  assert.equal(vistaTexto(E, 1).split('\n')[1], 'Eres el Jugador 2 (en el historial apareces como J2)');
+});
+
+test('el historial marca con [reemplazo] las jugadas que puso el juego por una respuesta ilegal, las de los dos', () => {
+  const E = nuevoEstado();
+  fijarCrupier(E, 5);
+  E.azar[0].carta = 0; // el activo (asiento 0) no responde: el juego le juega la primera carta de su mano
+  aplicarTurno(E, [null, normalizarRespuesta({ lado: 'mayor', fichas: 2 })]);
+  E.azar[1].lado = 0.2; // el predictor (asiento 0, ronda 2) responde mal: 1 ficha al lado sorteado ("mayor")
+  ronda(E, { crupier: 5, carta: 2, lado: 'quizas', fichas: 0 });
+  for (const i of [0, 1]) {
+    const v = vistaTexto(E, i);
+    assert.ok(v.includes('R1 (activo J1): crupier 5, jugo 0 (menor) [reemplazo] | J2 aposto 2 a mayor: falla (-2)'), v);
+    assert.ok(v.includes('R2 (activo J2): crupier 5, jugo 2 (menor) | J1 aposto 1 a mayor [reemplazo]: falla (-1)'), v);
+  }
+});
+
+test('despues del final la vista no revela la carta siguiente del crupier ni muestra "undefined"', () => {
+  const E = nuevoEstado(1);
+  E.fichas = [10, 2];
+  ronda(E, { crupier: 5, carta: 2, lado: 'mayor', fichas: 2 }); // fin anticipado: la siguiente carta del mazo nunca salio
+  assert.equal(E.fin, true);
+  for (const i of [0, 1]) {
+    const v = vistaTexto(E, i);
+    assert.match(v, /^PARTIDA TERMINADA \(se jugo 1 ronda de 18\)/);
+    assert.doesNotMatch(v, /Carta del crupier|undefined|NaN|AHORA/);
+  }
+  assert.ok(vistaTexto(E, 0).includes('Tus fichas: 10 | Fichas del rival: 0'));
+  const F = nuevoEstado(2);
+  F.ronda = RONDAS;
+  ronda(F, { crupier: 5, carta: 5, lado: 'mayor', fichas: 1 });
+  assert.match(vistaTexto(F, 0), /^PARTIDA TERMINADA \(se jugaron 18 rondas de 18\)/);
+  assert.doesNotMatch(vistaTexto(F, 1), /Carta del crupier|undefined/);
 });
 
 test('la carta de esta ronda no aparece entre las que "faltan" de su mazo (ya se conoce)', () => {

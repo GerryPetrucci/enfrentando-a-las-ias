@@ -55,9 +55,14 @@ test('fraseProvecho: exprime cada ronda, regala rondas o aprovecha lo normal; av
   assert.equal(fraseProvecho(0, 0, 0).valor, null);
   assert.match(fraseProvecho(30, 9, 0).frase, /exprime cada ronda: 3\.3 fichas por ronda como activo/);
   const baja = fraseProvecho(4, 9, 3);
-  assert.match(baja.frase, /regala rondas: 0\.4 fichas por ronda como activo \(jugó 3 cartas que no superaba al crupier\)/);
+  assert.match(baja.frase, /regala rondas: 0\.4 fichas por ronda como activo \(jugó 3 cartas que no superaban al crupier\)/);
   assert.equal(baja.notable, true);
   assert.equal(fraseProvecho(15, 9, 0).notable, false);
+});
+
+test('fraseProvecho: la concordancia de las cartas que no superaban al crupier (una carta superaba, varias superaban)', () => {
+  assert.match(fraseProvecho(5, 9, 1).frase, /\(jugó 1 carta que no superaba al crupier\)/);
+  assert.match(fraseProvecho(5, 9, 2).frase, /\(jugó 2 cartas que no superaban al crupier\)/);
 });
 
 test('fraseProvecho: ganar lo minimo seguro (1 ficha por ronda, como el prudente) no es "regalar rondas"; jugar a no ganar si lo es', () => {
@@ -66,7 +71,7 @@ test('fraseProvecho: ganar lo minimo seguro (1 ficha por ronda, como el prudente
   assert.match(seguro.frase, /aprovecha lo normal/);
   assert.equal(seguro.notable, false);
   const regala = fraseProvecho(5, 9, 6);
-  assert.match(regala.frase, /regala rondas: 0\.6 fichas por ronda como activo \(jugó 6 cartas que no superaba al crupier\)/);
+  assert.match(regala.frase, /regala rondas: 0\.6 fichas por ronda como activo \(jugó 6 cartas que no superaban al crupier\)/);
   assert.equal(regala.notable, true);
 });
 
@@ -77,6 +82,9 @@ test('fraseConstancia: termina arriba, abajo o a media tabla, con el resumen de 
   assert.equal(arriba.notable, true);
   assert.match(fraseConstancia({ ...base, victorias: 0, derrotas: 4, puntosPorPartida: 0 }).frase, /termina abajo/);
   assert.equal(fraseConstancia({ ...base, puntosPorPartida: 2 }).notable, false);
+  const parejo = fraseConstancia({ ...base, victorias: 2, derrotas: 2, puntosPorPartida: 2 });
+  assert.match(parejo.frase, /^termina parejo: 2 victorias, 0 empates y 2 derrotas en 4 partidas/);
+  assert.doesNotMatch(parejo.frase, /media tabla/, 'en un duelo de dos no hay tabla: una victoria y una derrota quedan parejas');
 });
 
 test('una serie de bots: cinco caracteristicas por IA, destacadas y un comentario con aviso de que no es un ranking general', async () => {
@@ -122,6 +130,27 @@ test('un modelo caido: la obediencia es notable y no se inventan lecturas ni aud
   assert.equal(c.caracteristicas.lectura.valor, null);
   assert.equal(c.caracteristicas.audacia.valor, null);
   assert.equal(c.caracteristicas.provecho.valor, null);
+});
+
+test('registros incompletos o jugadores sin nombre ni id no dejan "NaN" ni "undefined" en el texto ni en los numeros', () => {
+  const rondaRota = { activo: 0, invalidas: [false, false], fichas: [10, 10] }; // sin apuesta, carta, crupier ni fichasAntes
+  const p = {
+    jugadores: [{ id: 'x' }, { color: '#888888' }],
+    metricas: [{ puntos: 2, puesto: 'empata', ordenesValidas: 1, ordenesTotal: 1 }, {}],
+    rondas: [rondaRota, { ...rondaRota, activo: 1 }],
+  };
+  const ev = evaluarSerie([p, p]);
+  assert.equal(ev.jugadores.length, 2);
+  assert.doesNotMatch(ev.comentario.map((c) => c.texto).join('\n'), /NaN|undefined/);
+  for (const j of ev.jugadores) {
+    assert.doesNotMatch([j.id, j.nombre, ...j.destacadas].join('\n'), /NaN|undefined/);
+    for (const c of Object.values(j.caracteristicas)) {
+      assert.ok(c.valor === null || Number.isFinite(c.valor), `valor no finito: ${c.valor}`);
+      assert.doesNotMatch(c.frase, /NaN|undefined/);
+    }
+  }
+  assert.equal(ev.jugadores.find((j) => j.id === 'x').nombre, 'x', 'sin nombre se usa el id');
+  assert.equal(ev.jugadores.find((j) => j.id !== 'x').nombre, 'Jugador 2', 'sin nombre ni id se usa el asiento');
 });
 
 test('las partidas cortadas y la basura no entran y nunca lanza', async () => {

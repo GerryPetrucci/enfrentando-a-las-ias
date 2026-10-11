@@ -44,22 +44,25 @@ export function fraseProvecho(fichas, rondas, sinSuperar) {
   if (!rondas) return { valor: null, frase: 'no hubo rondas propias como activo que medir', notable: false };
   const v = fichas / rondas;
   const cuenta = `${dec(v)} fichas por ronda como activo`;
-  const regalos = sinSuperar ? ` (jugó ${plural(sinSuperar, 'carta', 'cartas')} que no superaba al crupier)` : '';
+  const regalos = sinSuperar ? ` (jugó ${plural(sinSuperar, 'carta', 'cartas')} que no ${sinSuperar === 1 ? 'superaba' : 'superaban'} al crupier)` : '';
   if (v >= UMBRALES.provechoAlto) return { valor: redondeo(v), frase: `exprime cada ronda: ${cuenta}${regalos}`, notable: true };
   if (v <= UMBRALES.provechoBajo) return { valor: redondeo(v), frase: `regala rondas: ${cuenta}${regalos}`, notable: true };
   return { valor: redondeo(v), frase: `aprovecha lo normal: ${cuenta}${regalos}`, notable: false };
 }
 
 export function fraseConstancia({ partidas, victorias, empates, derrotas, puntosPorPartida, arriba, rondas }) {
-  const lugar = puntosPorPartida >= UMBRALES.puntosArriba ? 'arriba' : puntosPorPartida <= UMBRALES.puntosAbajo ? 'abajo' : 'a media tabla';
+  // en un duelo de dos no hay "tabla": una victoria y una derrota (2.0 puntos) quedan parejas
+  const lugar = puntosPorPartida >= UMBRALES.puntosArriba ? 'arriba' : puntosPorPartida <= UMBRALES.puntosAbajo ? 'abajo' : 'parejo';
   const pctArriba = rondas ? Math.round((100 * arriba) / rondas) : 0;
   const cuenta = `${plural(victorias, 'victoria', 'victorias')}, ${plural(empates, 'empate', 'empates')} y ${plural(derrotas, 'derrota', 'derrotas')} en ${plural(partidas, 'partida', 'partidas')}; iba arriba en fichas ${pctArriba} % de las rondas`;
-  return { valor: redondeo(puntosPorPartida, 2), frase: `termina ${lugar}: ${cuenta}`, notable: lugar !== 'a media tabla' };
+  return { valor: redondeo(puntosPorPartida, 2), frase: `termina ${lugar}: ${cuenta}`, notable: lugar !== 'parejo' };
 }
 
 const PRIORIDAD = ['constancia', 'obediencia', 'lectura', 'provecho', 'audacia'];
-const vacioDe = (j) => ({
-  id: j.id, nombre: j.nombre, partidas: 0, validas: 0, total: 0, puntos: 0, victorias: 0, empates: 0, derrotas: 0, rondas: 0, arriba: 0,
+// Un jugador sin id se identifica por su asiento; sin nombre se usa el id, y sin id el asiento: nunca "undefined" en el texto.
+const claveDe = (j, s) => j.id ?? `asiento-${s}`;
+const vacioDe = (j, s) => ({
+  id: claveDe(j, s), nombre: j.nombre ?? j.id ?? `Jugador ${s + 1}`, partidas: 0, validas: 0, total: 0, puntos: 0, victorias: 0, empates: 0, derrotas: 0, rondas: 0, arriba: 0,
   elegidasApuesta: 0, fraccion: 0, todo: 0, conResultado: 0, aciertos: 0, elegidasActivo: 0, fichasActivo: 0, sinSuperar: 0,
 });
 
@@ -72,7 +75,7 @@ export function evaluarSerie(partidas) {
   for (const p of buenas) {
     p.jugadores.forEach((j, s) => {
       if (!j) return;
-      const a = por.get(j.id) ?? vacioDe(j);
+      const a = por.get(claveDe(j, s)) ?? vacioDe(j, s);
       const m = p.metricas[s] ?? {};
       a.partidas++;
       a.validas += m.ordenesValidas ?? 0;
@@ -81,23 +84,26 @@ export function evaluarSerie(partidas) {
       if (m.puesto === 'gana') a.victorias++;
       else if (m.puesto === 'empata') a.empates++;
       else if (m.puesto === 'pierde') a.derrotas++;
-      por.set(j.id, a);
+      por.set(claveDe(j, s), a);
     });
     for (const r of p.rondas) {
       if (!r) continue;
       p.jugadores.forEach((j, s) => {
         if (!j) return;
-        const a = por.get(j.id);
+        const a = por.get(claveDe(j, s));
         a.rondas++;
         if (r.fichas?.[s] > r.fichas?.[1 - s]) a.arriba++;
         if (r.invalidas?.[s] !== false) return; // solo jugadas que eligio la IA
         if (r.activo === s) {
+          if (!Number.isFinite(r.ganaActivo)) return; // un registro sin lo ganado no mide nada
           a.elegidasActivo++;
-          a.fichasActivo += r.ganaActivo ?? 0;
+          a.fichasActivo += r.ganaActivo;
           if (r.carta <= r.crupier) a.sinSuperar++;
         } else {
+          const antes = r.fichasAntes?.[s];
+          if (!Number.isFinite(r.apuesta) || !Number.isFinite(antes) || antes <= 0) return; // un registro sin apuesta ni fichas no mide nada
           a.elegidasApuesta++;
-          a.fraccion += r.apuesta / (r.fichasAntes?.[s] || 1);
+          a.fraccion += r.apuesta / antes;
           if (r.apostoTodo) a.todo++;
           if (r.acierto === true || r.acierto === false) {
             a.conResultado++;
