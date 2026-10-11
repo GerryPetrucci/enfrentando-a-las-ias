@@ -65,15 +65,21 @@
 </div>
 
 <script type="module">
+import { fondoCSS } from './paleta.js';
 const app = document.getElementById('app');
 
-function fila(f) {
-  const fia = f.fiabilidad === null ? '—' : Math.round(f.fiabilidad * 100) + '%';
+// Juegos que ya tienen reproductor vertical (replay.html). Los demas se listan sin enlace hasta que lo tengan.
+const REPRODUCTORES = ['dilema'];
+
+const porcentaje = (x) => (x === null || x === undefined ? '—' : Math.round(x * 100) + '%');
+
+function fila(f, conObediencia) {
+  const fia = porcentaje(f.fiabilidad);
   const esBase = f.tipo === 'bot';
   return `<tr class="${esBase ? 'base' : ''}">
     <td>
       <div class="quien">
-        <span class="punto" style="background:${f.color}"></span>
+        <span class="punto" style="background:${fondoCSS(f.id, f.color)}"></span>
         <span>
           ${f.nombre}${esBase ? '<span class="etiqueta">base</span>' : ''}
           ${f.modelo ? `<br><span class="modelo">${f.modelo}</span>` : ''}
@@ -84,20 +90,36 @@ function fila(f) {
     <td>${f.victorias}–${f.empates}–${f.derrotas}</td>
     <td>${fia}</td>
     <td>${f.traiciones}</td>
+    ${conObediencia ? `<td>${porcentaje(f.obediencia)}</td>` : ''}
   </tr>`;
 }
 
 function categoria(c) {
+  // La obediencia (% de órdenes válidas) solo la miden los juegos con órdenes en texto, como la Guerra de territorios.
+  const conObediencia = c.tabla.some((f) => f.obediencia !== null && f.obediencia !== undefined);
   return `<section>
     <h2>${c.nombre}</h2>
     <p class="juegos">${c.juegos.join(' · ')}</p>
     <table>
       <thead><tr>
-        <th>Contendiente</th><th>Pts/partida</th><th>V–E–D</th><th>Fiabilidad</th><th>Traiciones</th>
+        <th>Contendiente</th><th>Pts/partida</th><th>V–E–D</th><th>Fiabilidad</th><th>Traiciones</th>${conObediencia ? '<th>Obediencia</th>' : ''}
       </tr></thead>
-      <tbody>${c.tabla.map(fila).join('')}</tbody>
+      <tbody>${c.tabla.map((f) => fila(f, conObediencia)).join('')}</tbody>
     </table>
   </section>`;
+}
+
+function episodio(e) {
+  const nombre = REPRODUCTORES.includes(e.juego.id)
+    ? `<a href="replay.html?archivo=${encodeURIComponent(e.archivo)}">${e.enfrentamiento}</a>`
+    : e.enfrentamiento;
+  const serie = e.serie ? ` · serie de ${e.serie.partidas}` : '';
+  return `
+      <li>
+        <span>${nombre}
+          — ${e.juego.nombre}</span>
+        <span class="meta">${e.fecha.slice(0, 10)} · seed ${e.seedBase} · ${e.partidas} partida(s)${serie}</span>
+      </li>`;
 }
 
 try {
@@ -105,12 +127,7 @@ try {
   if (!d.categorias.length) throw new Error('vacio');
   app.innerHTML =
     d.categorias.map(categoria).join('') +
-    `<h2>Episodios</h2><ul class="eps">${d.episodios.map(e => `
-      <li>
-        <span><a href="replay.html?archivo=${encodeURIComponent(e.archivo)}">${e.enfrentamiento}</a>
-          — ${e.juego.nombre}</span>
-        <span class="meta">${e.fecha.slice(0, 10)} · seed ${e.seedBase} · ${e.partidas} partida(s)</span>
-      </li>`).join('')}</ul>`;
+    `<h2>Episodios</h2><ul class="eps">${d.episodios.map(episodio).join('')}</ul>`;
 } catch {
   app.innerHTML = `<p class="vacio">Todavía no hay resultados.<br><br>
     Corre un duelo con <code>node src/correr.js --a=tomaydaca --b=siempre-t</code>

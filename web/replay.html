@@ -71,6 +71,21 @@ const COL = {
   bien:    '#5fa877',
 };
 
+// Colores de las IAs: salen de la paleta global (paleta.js) por id, asi todos los juegos las pintan igual.
+// Si la paleta no carga o la IA no esta en ella (estrategias base), se usa el color que trae el resultado.
+let PAL = null;
+const paletaLista = import('./paleta.js').then((m) => { PAL = m; }).catch(() => {});
+const colorIA = (j) => (PAL ? PAL.colorDe(j.id, j.color) : j.color);
+const textoIA = (j) => (PAL ? PAL.textoDe(j.id, j.color) : j.color);
+// Relleno para canvas: color liso, o franjas diagonales de sus colores si la IA es multicolor (Gemini).
+function tintaIA(j, x, y, w, h) {
+  const m = PAL?.franjasDe(j.id);
+  if (!m) return colorIA(j);
+  const q = g.createLinearGradient(x, y, x + w, y + h);
+  m.forEach((c, i) => q.addColorStop(i / (m.length - 1), c));
+  return q;
+}
+
 const FASES = [
   { id: 'promesas', ms: 2200 },
   { id: 'pensando', ms: 900  },
@@ -108,7 +123,9 @@ async function cargarDesdeUrl() {
   if (!nombre) { dibujarVacio(); return; }
   try {
     const r = await fetch('data/' + nombre);
-    usar(await r.json());
+    const datos = await r.json();
+    await paletaLista;
+    usar(datos);
     if (params.get('auto')) reproducir();
   } catch { dibujarVacio('No pude leer data/' + nombre); }
 }
@@ -259,7 +276,7 @@ function panelJugador(j, x, ancho, { eleccion = null, promesa = null, mensaje = 
 
   // disco con la inicial
   g.beginPath(); g.arc(x + ancho / 2, y + 108, 62, 0, Math.PI * 2);
-  g.fillStyle = j.color; g.fill();
+  g.fillStyle = tintaIA(j, x + ancho / 2 - 62, y + 46, 124, 124); g.fill();
   texto(j.inicial || j.nombre[0], x + ancho / 2, y + 110, { tam: 62, peso: 800, color: '#15151a' });
 
   texto(j.nombre, x + ancho / 2, y + 212, { tam: 42, peso: 700 });
@@ -304,7 +321,7 @@ function marcador(p, hasta) {
     const bx = 320, bw = W - 320 - 180;
     texto(j.nombre, 80, by + 30, { tam: 32, peso: 600, align: 'left', maxAncho: bx - 80 - 20 });
     caja(bx, by, bw, 60, 14, 'rgba(255,255,255,.05)');
-    caja(bx, by, Math.max(10, bw * (acum[i] / max)), 60, 14, j.color);
+    caja(bx, by, Math.max(10, bw * (acum[i] / max)), 60, 14, tintaIA(j, bx, by, bw, 60));
     texto(String(acum[i]), W - 80, by + 30, { tam: 46, peso: 800, align: 'right' });
   });
 }
@@ -388,7 +405,7 @@ function pintarFinal() {
 
   const ganador = p.empate ? null : p.jugadores[p.ganador];
   texto(ganador ? ganador.nombre.toUpperCase() : 'EMPATE', W / 2, 330, {
-    tam: 92, peso: 800, color: ganador ? ganador.color : COL.texto,
+    tam: 92, peso: 800, color: ganador ? textoIA(ganador) : COL.texto,
   });
   texto(p.puntos.join('  —  '), W / 2, 450, { tam: 64, peso: 700 });
   dibujarEtiquetaIA(560);
@@ -397,7 +414,7 @@ function pintarFinal() {
     const m = p.metricas[i];
     const y = 640 + i * 400;
     caja(90, y, W - 180, 330, 24, COL.panel, COL.borde);
-    texto(j.nombre, 140, y + 60, { tam: 40, peso: 700, color: j.color, align: 'left' });
+    texto(j.nombre, 140, y + 60, { tam: 40, peso: 700, color: textoIA(j), align: 'left' });
     texto(`Traiciones: ${m.traiciones} de ${p.rondas.length}`, 140, y + 135, { tam: 32, color: COL.suave, align: 'left' });
     texto(`Promesas rotas: ${m.promesasRotas} de ${m.promesasHechas}`, 140, y + 195, { tam: 32, color: COL.suave, align: 'left' });
     const fia = m.fiabilidad === null ? '—' : Math.round(m.fiabilidad * 100) + '%';

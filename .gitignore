@@ -10,6 +10,7 @@ grabaciones/
 *.mp4
 *.mov
 *.webm
+*.mkv
 
 .DS_Store
 Thumbs.db
@@ -20,3 +21,11 @@ Thumbs.db
 # para que el sitio funcione en hosting estatico sin paso de build.
 # (si prefieres generarlo en CI, descomenta la linea de abajo)
 # web/marcador.json
+
+# partidas de practica (modelos gratis y calibracion): el sitio copia toda la carpeta data/, asi que no se versionan.
+# Para subir una a proposito: git add -f data/pruebas/ARCHIVO.json
+data/pruebas/
+
+# conocimiento privado del proyecto (spec, planes, plan de contenido, terminos, prototipos): NUNCA se sube.
+# src/pruebas/privado.test.js falla si esta regla desaparece o si git rastrea algo aqui.
+privado/

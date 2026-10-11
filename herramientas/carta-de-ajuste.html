@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Carta de ajuste - hoja maestra 3840x2160</title>
+<!--
+  Carta de ajuste para probar la grabacion multiformato en OBS ANTES de tener la escena real.
+  Uso: fuente "Navegador" en OBS, marcar "Archivo local" y elegir este archivo; ancho 3840, alto 2160, FPS 30.
+  Dibuja la hoja maestra con cada formato en su lugar, la zona segura, el recorte 4:5 y marcas de sincronia:
+    - esquinas de colores (rojo, verde, azul, blanco): tras recortar, cada archivo debe mostrar las cuatro en SUS esquinas;
+    - barra que cruza cada region cada 2 s: debe ir en la misma posicion en los tres archivos al mismo instante;
+    - cuadrito que alterna blanco/negro en cada cuadro: si en la grabacion se ve dos cuadros iguales seguidos, se perdio un cuadro;
+    - contador de cuadros y tiempo con milisegundos.
+  La geometria vive en herramientas/formatos.mjs; src/pruebas/carta.test.js comprueba que este bloque JSON sea identico.
+-->
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="3840" height="2160"></canvas>
+<script id="geometria" type="application/json">
+{
+  "hoja": {
+    "ancho": 3840,
+    "alto": 2160,
+    "fps": 30
+  },
+  "formatos": {
+    "9x16": {
+      "ancho": 1080,
+      "alto": 1920,
+      "x": 0,
+      "y": 0,
+      "uso": "TikTok, Reels, Shorts y Facebook Reels"
+    },
+    "4x5": {
+      "ancho": 1080,
+      "alto": 1350,
+      "x": 0,
+      "y": 284,
+      "uso": "Instagram (feed): recorte central del 9x16 (2 px menos arriba que abajo)"
+    },
+    "16x9": {
+      "ancho": 1920,
+      "alto": 1080,
+      "x": 1080,
+      "y": 0,
+      "uso": "YouTube, X, Facebook y el sitio"
+    }
+  },
+  "zonaSegura": {
+    "x": 60,
+    "y": 285,
+    "ancho": 890,
+    "alto": 1215
+  }
+}
+</script>
+<script>
+(() => {
+  const G = JSON.parse(document.getElementById('geometria').textContent);
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const t0 = performance.now();
+  let n = 0;
+
+  const dosDig = (v) => String(v).padStart(2, '0');
+  const tiempo = (ms) => dosDig(Math.floor(ms / 60000)) + ':' + dosDig(Math.floor(ms / 1000) % 60) + '.' + String(Math.floor(ms) % 1000).padStart(3, '0');
+
+  function texto(t, x, y, tam, color, alinear) {
+    ctx.font = 'bold ' + tam + 'px sans-serif';
+    ctx.fillStyle = color;
+    ctx.textAlign = alinear || 'left';
+    ctx.fillText(t, x, y);
+  }
+
+  function region(clave, titulo, t) {
+    const f = G.formatos[clave];
+    ctx.fillStyle = '#1b2330';
+    ctx.fillRect(f.x, f.y, f.ancho, f.alto);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#4da3ff';
+    ctx.strokeRect(f.x + 4, f.y + 4, f.ancho - 8, f.alto - 8);
+    // esquinas de colores
+    const c = 60;
+    [[f.x, f.y, '#ff2d2d'], [f.x + f.ancho - c, f.y, '#2dff2d'], [f.x, f.y + f.alto - c, '#2d5bff'], [f.x + f.ancho - c, f.y + f.alto - c, '#ffffff']]
+      .forEach(([x, y, col]) => { ctx.fillStyle = col; ctx.fillRect(x, y, c, c); });
+    // barra de sincronia: cruza la region cada 2 s
+    const bx = f.x + ((t / 2000) % 1) * (f.ancho - 40);
+    ctx.fillStyle = '#ffd400';
+    ctx.fillRect(bx, f.y + 120, 40, f.alto - 240);
+    // pelota
+    const px = f.x + f.ancho / 2 + Math.sin(t / 700) * (f.ancho / 2 - 120);
+    const py = f.y + f.alto / 2 + Math.cos(t / 530) * (f.alto / 2 - 220);
+    ctx.fillStyle = '#ff7a00';
+    ctx.beginPath(); ctx.arc(px, py, 50, 0, Math.PI * 2); ctx.fill();
+    // textos
+    const cx = f.x + f.ancho / 2;
+    texto(titulo, cx, f.y + 110, f.ancho > 1500 ? 64 : 52, '#ffffff', 'center');
+    texto(f.ancho + ' x ' + f.alto, cx, f.y + 190, 44, '#9bb0c9', 'center');
+    texto('cuadro ' + n, cx, f.y + f.alto / 2 - 40, 84, '#ffffff', 'center');
+    texto(tiempo(t), cx, f.y + f.alto / 2 + 60, 84, '#ffffff', 'center');
+    // cuadrito que alterna en cada cuadro (detecta cuadros perdidos o repetidos)
+    ctx.fillStyle = n % 2 ? '#ffffff' : '#000000';
+    ctx.fillRect(f.x + 80, f.y + f.alto - 220, 60, 60);
+  }
+
+  function guias(t) {
+    const v = G.formatos['9x16'], ig = G.formatos['4x5'], z = G.zonaSegura;
+    // recorte 4:5: dos lineas amarillas
+    ctx.setLineDash([24, 16]);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#ffd400';
+    ctx.beginPath(); ctx.moveTo(v.x, ig.y); ctx.lineTo(v.x + v.ancho, ig.y); ctx.moveTo(v.x, ig.y + ig.alto); ctx.lineTo(v.x + v.ancho, ig.y + ig.alto); ctx.stroke();
+    texto('recorte 4:5 (Instagram)', v.x + 24, ig.y + 44, 36, '#ffd400');
+    // zona segura: rectangulo verde
+    ctx.strokeStyle = '#2dff8a';
+    ctx.strokeRect(z.x, z.y, z.ancho, z.alto);
+    ctx.setLineDash([]);
+    texto('ZONA SEGURA', z.x + z.ancho / 2, z.y + z.alto - 24, 40, '#2dff8a', 'center');
+  }
+
+  function cuadro() {
+    const t = performance.now() - t0;
+    n += 1;
+    ctx.fillStyle = '#101418';
+    ctx.fillRect(0, 0, G.hoja.ancho, G.hoja.alto);
+    region('9x16', 'VERTICAL 9:16 - TikTok, Reels, Shorts', t);
+    region('16x9', 'HORIZONTAL 16:9 - YouTube, X, sitio', t);
+    guias(t);
+    texto('hoja maestra ' + G.hoja.ancho + ' x ' + G.hoja.alto + ' @ ' + G.hoja.fps + ' fps - carta de ajuste', 1080 + 60, 1080 + 90, 40, '#6b7c93');
+    requestAnimationFrame(cuadro);
+  }
+  requestAnimationFrame(cuadro);
+})();
+</script>
+</body>
+</html>
