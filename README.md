@@ -124,6 +124,9 @@ src/
     tripledado.js       Juego 7: Triple dado (4 jugadores, dados blancos y ocultos, tarjetas de predicción)
     tripledado/         estado, combinaciones, turno, vista, narración y evaluación de Triple dado
     tripledado-bots.js  bots de control del juego 7
+    dudaapuesta.js      Juego 8: Duda y apuesta (4 jugadores, anuncios y apuestas con un mazo de 60 cartas, por turnos)
+    dudaapuesta/        estado, turno, vista, narración y evaluación de Duda y apuesta
+    dudaapuesta-bots.js bots de control del juego 8
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
@@ -191,6 +194,15 @@ node src/correr.js --juego=mayormenor --a=claude --b=gpt --partidas=2 --modo=pag
 ```bash
 node src/correr.js --juego=tripledado --jugadores=goloso,reservado,tanque,calculador --partidas=4 --destino=pruebas   # bots de control, sin API
 node src/correr.js --juego=tripledado --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago                  # con modelos (la serie rota los asientos)
+```
+
+## El octavo juego
+
+**Duda y apuesta.** Cuatro IAs, un mazo de 60 cartas (las arcoíris cuentan como cualquier color) y tres fichas cada una. Quien abre la mano anuncia "hay al menos 7 cartas rojas entre todos" y apuesta; el siguiente acepta (con un anuncio mayor) o duda. Si duda, puede subir la apuesta: quien anunció iguala y se revelan las cartas de todos, o se retira sin revelar nada. Gana la mano quien acierta sobre las cartas y se queda con las fichas del perdedor; quien se queda sin fichas es eliminado y la pieza es para quien termina con más. Es el único juego por turnos (decide un solo jugador cada vez; hasta 96 llamadas por partida), así que se corre en vivo.
+
+```bash
+node src/correr.js --juego=dudaapuesta --jugadores=calculador,farolero,retador,prudente --partidas=4 --destino=pruebas   # bots de control, sin API
+node src/correr.js --juego=dudaapuesta --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago                  # con modelos (la serie rota los asientos)
 ```
 
 ## Como se compara justo

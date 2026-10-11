@@ -175,6 +175,21 @@ buscan puntos y se lleva la pieza el 67 %; con rivales que tambien lo intentan l
 que volver a medir. **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
 `privado/spec/triple-dado-diseno.md`, plan en `privado/planes/plan-tripledado-motor.md`).
 
+### Juego 8: Duda y apuesta (decidido el 11 de octubre de 2026)
+
+Cuatro IAs, un mazo de 60 cartas (10 de cada uno de cinco colores y 10 arcoiris, que cuentan como cualquier color) y **una sola eliminacion**. Es **el unico juego por turnos**: un turno es
+una decision de un solo jugador (`activos` devuelve solo a quien le toca) y cuesta una llamada. Cada mano, quien abre anuncia "hay al menos N cartas de un color entre todos" y apuesta; el siguiente
+**acepta** (haciendo un anuncio mayor) o **duda**; quien duda puede subir la apuesta y quien anuncio **iguala** (se revelan las cartas de todos: gana quien anuncio si hay al menos lo anunciado) o
+**se retira** (pierde lo apostado y no se revela nada). Cada jugador tiene **3 fichas de juego** (su vida), 4 fichas de espacio y 5 espacios para cartas (espacios = fichas de espacio + 1: perder
+una ficha de espacio es perder una carta). Maximo 4 anuncios por mano; nunca se apuesta mas de lo que tiene quien responde; al terminar las manos 15, 20... todos pagan una ficha a la banca; la
+partida termina cuando alguien se queda sin fichas de juego o tras la mano 16. Puntos del marcador: pieza 4 (mas fichas en solitario), sobrevive 2, eliminado 0. Categoria nueva **"Engaño y deducción"**.
+**No tiene regla oculta**: lo secreto son las cartas de los demas hasta que se revelan. **Hasta 96 turnos (= llamadas) por partida**: en este juego el limite de 30 turnos se cuenta en llamadas por
+ser secuencial; se corre **en vivo**. Las **fichas iniciales (3; respaldo 4)** son una sola constante (`FICHAS` en `src/juegos/dudaapuesta/constantes.js`) que se vuelve a medir con modelos. Bots de
+control: `azar`, `calculador`, `farolero`, `retador`, `prudente`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, ojo para dudar, farol, riesgo y constancia). **Hallazgos con
+5,000 partidas de bots:** el `retador` (duda en cuanto puede) gana la pieza el 95 % contra bots que suben anuncios, porque aceptar obliga a subir; con 4 `azar` el asiento que abre la mano 1 gana la pieza
+el 24 % contra 16-19 % de los demas (la serie rota los asientos); 12-24 % de las partidas quedan sin pieza por empate en fichas; una partida entre calculadores dura ~6 manos (21 llamadas). **Estado:**
+motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/duda-y-apuesta-diseno.md`, plan en `privado/planes/plan-dudaapuesta-motor.md`).
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -192,8 +207,8 @@ Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rond
 **con nombres y personajes propios y las mismas reglas**; nunca el nombre, el arte ni la estetica de ningun programa. Cada juego
 respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion expresa) y sigue el flujo de siempre (catalogo, spec,
 plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
-`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con cuatro juegos hechos (El numero solitario, Subasta de tiempo, Mayor o menor y Triple dado); queda
-Duda y apuesta (se juega con 4: termina al quedar 3; todos empiezan con las mismas piezas), con sus reglas y decisiones en `privado/planes/reglas-oleada-1.md`.
+`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** la oleada 1 esta completa: El numero solitario, Subasta de tiempo, Mayor o menor, Triple dado y Duda y apuesta (motor, bots, evaluacion y pruebas;
+faltan las pruebas con modelos y las escenas). La oleada 2 se elige entre el catalogo de `privado/planes/plan-juegos-de-concurso.md`.
 
 **Sin torneo general (decidido el 11 de octubre de 2026):** cada juego se evalua por si mismo, para evitar complejidad. No hay un
 meta-juego que encadene los juegos ni fichas que pasen de uno a otro. En su lugar, **al final de cada juego (o de su serie)** se evaluan las
@@ -354,6 +369,8 @@ Hecho:
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/mayor-o-menor-diseno.md`)
 - Juego 7: **Triple dado** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/triple-dado-diseno.md`)
+- Juego 8: **Duda y apuesta** (categoria "Engaño y deducción"): motor por turnos, bots de control, narracion guardada en los datos, evaluacion y pruebas listos; faltan la
+  prueba con modelos y la escena del reproductor (diseno en `privado/spec/duda-y-apuesta-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA
