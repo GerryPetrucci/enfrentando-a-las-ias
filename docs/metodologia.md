@@ -140,4 +140,4 @@ del crupier. En cada ronda el jugador activo (que juega una carta boca abajo) y 
 antes de que el predictor apueste, es equivalente a que sean simultáneos, y por eso la arena pide las dos respuestas en el mismo turno. El orden de los dos mazos del crupier
 y las jugadas de reemplazo se sortean al crear la partida con el seed (una serie de dos partidas con los asientos invertidos repite el mismo mundo), y la `vista` solo
 lee de esos mazos la carta de la ronda en curso; una prueba reordena el futuro del crupier y exige que la vista de cada jugador no cambie. Una respuesta ilegal se
-reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.
+reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde: el prompt lo cuenta y el historial que ven los dos la marca como [reemplazo]. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.
