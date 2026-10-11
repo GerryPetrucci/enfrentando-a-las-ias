@@ -131,6 +131,21 @@ punteria y constancia, con frases por umbrales fijos, y un comentario del result
 `docs/agregar-un-juego.md`). **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
 `privado/spec/numero-solitario-diseno.md`, plan en `privado/planes/plan-solitario-motor.md`).
 
+### Juego 5: Subasta de tiempo (decidido el 11 de octubre de 2026)
+
+Cinco IAs (el original tiene seis), cada una con un banco de 10 minutos (600.0 segundos) y 19 subastas. En cada subasta todas responden cuantos
+segundos mantienen su apuesta (0 = retirarse). **Todas las apuestas se pagan** (salen del banco, ganes o pierdas); gana la apuesta mas alta y
+recibe una ficha; si dos o mas **empatan en la apuesta mas alta** (a la decima) la subasta se anula y el tiempo se pierde igual; si todos se
+retiran nadie gana. Quien agota su banco ya no apuesta (no cuesta llamadas); pedir mas de lo que queda es apostar todo el banco; una respuesta
+ilegible equivale a retirarse y se mide como fallo. Al final, mas fichas = pieza (desempata el tiempo que conservas; si tambien empatan, nadie la
+obtiene) y menos fichas = eliminado (desempata quien conserva menos tiempo; si tambien empatan, nadie). Puntos del marcador: pieza 4, sobrevive 2,
+eliminado 0. **Informacion oculta, no regla oculta:** nadie ve el banco ni las apuestas de los demas (solo se anuncia quien gana); el prompt lo dice,
+la `vista` no lo filtra (prueba de no interferencia) y el publico lo ve despues de cada subasta (`oculto`). Una subasta = un turno de la arena:
+**19 turnos y hasta 95 llamadas** (sin excepcion), en vivo. Categoria "Estrategia de eliminación" (la misma de El numero solitario). Bots de control:
+`retirado`, `parejo`, `azar`, `gastador`, `cuentagotas`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, ritmo de gasto,
+prudencia, eficiencia y constancia). **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor
+(diseno en `privado/spec/subasta-tiempo-diseno.md`, plan en `privado/planes/plan-subasta-motor.md`).
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -304,6 +319,8 @@ Hecho:
   listos; faltan la escena del reproductor y la primera corrida con modelos (diseno en `privado/spec/fuga-diseno.md`)
 - Juego 4: **El numero solitario** (categoria "Estrategia de eliminación"): motor, bots de control, narracion guardada en los datos y
   pruebas listos; faltan la prueba con modelos y la escena del reproductor (diseno en `privado/spec/numero-solitario-diseno.md`)
+- Juego 5: **Subasta de tiempo** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
+  prueba con modelos y la escena del reproductor (diseno en `privado/spec/subasta-tiempo-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA

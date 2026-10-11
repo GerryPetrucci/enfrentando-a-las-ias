@@ -115,6 +115,9 @@ src/
     solitario.js        Juego 4: El número solitario (5 jugadores, cartas, dos fases por ronda)
     solitario/          estado, turno, cortes, vista y narración de El número solitario
     solitario-bots.js   bots de control del juego 4
+    subasta.js          Juego 5: Subasta de tiempo (5 jugadores, banco de 10 minutos, 19 subastas)
+    subasta/            estado, turno, vista, narración y evaluación de Subasta de tiempo
+    subasta-bots.js     bots de control del juego 5
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
@@ -155,6 +158,15 @@ node src/correr.js --juego=fuga --a=claude --b=gpt --partidas=4 --modo=pago     
 ```bash
 node src/correr.js --juego=solitario --jugadores=bajo,azar,medio,lector,escalera --partidas=5 --destino=pruebas   # bots de control, sin API
 node src/correr.js --juego=solitario --jugadores=claude,gpt,gemini,deepseek,llama --partidas=5 --modo=pago        # con modelos (la serie rota los asientos)
+```
+
+## El quinto juego
+
+**Subasta de tiempo.** Cinco IAs, un banco de 10 minutos cada una y 19 subastas. En cada una responden cuántos segundos mantienen su apuesta (0 es retirarse); todas las apuestas se pagan, gana la más alta y un empate en lo más alto anula la subasta. Nadie ve el banco ni las apuestas de los demás: solo se anuncia quién gana. Al final, la pieza es para quien tiene más fichas y se elimina a quien tiene menos. Son hasta 95 llamadas por partida, así que se corre en vivo.
+
+```bash
+node src/correr.js --juego=subasta --jugadores=retirado,parejo,azar,gastador,cuentagotas --partidas=5 --destino=pruebas   # bots de control, sin API
+node src/correr.js --juego=subasta --jugadores=claude,gpt,gemini,deepseek,llama --partidas=5 --modo=pago                    # con modelos (la serie rota los asientos)
 ```
 
 ## Como se compara justo

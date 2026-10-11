@@ -123,3 +123,12 @@ puntaje por puesto) y la vista solo calla lo que los demás deciden a la vez. Lo
 se pueden reproducir), no dependen de lo que decidan las IAs, y en el registro queda su efecto: la jugada marcada como inválida con su motivo
 y el criterio de desempate que se usó. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
 dos turnos y 90 llamadas por partida, por eso este juego se corre en vivo y no por lote.
+
+## 13. Información oculta sin regla oculta: la Subasta de tiempo
+
+La Subasta de tiempo no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve el banco ni las apuestas de los demás. Lo que sí es
+secreto durante la partida es esa información, y es el corazón del juego. La `vista` solo muestra lo propio (banco, apuestas y fichas) y lo público
+(las fichas de todos y quién ganó cada subasta); una prueba cambia el banco y las apuestas ajenas y exige que la vista de cada jugador no cambie. Después
+de cada subasta el público sí ve cuánto apostó cada uno (queda en `oculto` de cada registro). El tiempo se guarda en décimas enteras para no
+arrastrar errores de decimales. Una respuesta ilegible equivale a retirarse y se mide como fallo (obediencia), no se esconde. Cada subasta es un turno:
+hasta 95 llamadas por partida, por eso se corre en vivo y no por lote.
