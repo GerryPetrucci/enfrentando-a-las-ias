@@ -4,6 +4,7 @@ import conquista from './conquista.js';
 import fuga from './fuga.js';
 import solitario from './solitario.js';
 import subasta from './subasta.js';
+import mayormenor from './mayormenor.js';
 
 export const JUEGOS = {
   [dilema.id]: dilema,
@@ -11,6 +12,7 @@ export const JUEGOS = {
   [fuga.id]: fuga,
   [solitario.id]: solitario,
   [subasta.id]: subasta,
+  [mayormenor.id]: mayormenor,
 };
 
 export function obtenerJuego(id) {
