@@ -2,11 +2,13 @@
 import dilema from './dilema.js';
 import conquista from './conquista.js';
 import fuga from './fuga.js';
+import solitario from './solitario.js';
 
 export const JUEGOS = {
   [dilema.id]: dilema,
   [conquista.id]: conquista,
   [fuga.id]: fuga,
+  [solitario.id]: solitario,
 };
 
 export function obtenerJuego(id) {
