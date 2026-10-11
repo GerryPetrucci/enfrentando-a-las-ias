@@ -42,7 +42,7 @@ test('las reglas dicen lo que deben: dados, tarjetas de una sola vez, orden, com
   assert.match(REGLAS, /el 6 y el 1 no son consecutivos/);
   assert.match(REGLAS, /escalera 4-5-6 supera a 3-4-5/);
   assert.match(REGLAS, /doble 5-5-3 supera a 5-5-2/);
-  assert.match(REGLAS, /dado BLANCO de mayor valor entre los que le quedan sin gastar/);
+  assert.match(REGLAS, /dado BLANCO de mayor valor entre los que le quedan sin gastar despues de esta jugada/, 'los dados de esta jugada ya no cuentan para el desempate');
   assert.match(REGLAS, /los ocultos sin usar no cuentan/);
   assert.match(REGLAS, /1\.o lugar 6, 2\.o 3, 3\.o 1, 4\.o 0/);
   assert.match(REGLAS, /\(6 \+ 3\) \/ 2 = 4\.5 cada uno/);
@@ -69,11 +69,25 @@ test('ni el prompt ni la vista usan palabras duras (decision del 11 de octubre d
   assert.doesNotMatch(vistaTexto(E, 0), PALABRAS_DURAS);
 });
 
-test('el prompt completo en el peor caso (ronda 4, enfrentamiento 3, con 11 enfrentamientos y 3 cierres de historial) cabe en el tope de tokens de Claude', () => {
-  const { E } = jugarConBots(5, simples, { hasta: 15 });
+// El peor caso REAL no es una partida limpia: es la del jugador cuyas respuestas fallan siempre (todas las lineas del historial llevan " [reemplazo]").
+// Se mide el prompt completo que recibiria en la ronda 4, enfrentamiento 3, con 11 enfrentamientos y 3 cierres de historial.
+const basura = () => ({ tarjeta: 'x', dados: ['b0'], razon: 'basura' });
+const MARGEN_TOKENS = 100; // si el peor caso real se acerca a menos que esto del tope, cualquier cambio a la vista rompe el presupuesto
+function tokensDelPeorCaso(politicas) {
+  const { E } = jugarConBots(5, politicas, { hasta: 15 });
   assert.deepEqual([E.ronda, E.fase, E.enfrentamiento], [4, 'jugada', 3]);
-  const total = construirSistema(JUEGO).length + construirUsuario(vistaTexto(E, 0)).length;
-  const tokens = total / CARACTERES_POR_TOKEN;
+  return (construirSistema(JUEGO).length + construirUsuario(vistaTexto(E, 0)).length) / CARACTERES_POR_TOKEN;
+}
+
+test('el prompt completo en el peor caso (partida limpia) cabe en el tope de tokens de Claude', () => {
+  const tokens = tokensDelPeorCaso(simples);
   assert.ok(tokens > 600, `sospechosamente corto: ${tokens}`);
   assert.ok(tokens <= TOPE_TOKENS_ENTRADA, `entrada de ${Math.round(tokens)} tokens (tope ${TOPE_TOKENS_ENTRADA}): acortar REGLAS o las lineas de historial`);
+});
+
+test('el prompt completo en el peor caso REAL (todas las jugadas y tarjetas de reemplazo, con " [reemplazo]" en cada linea) cabe en el tope con margen', () => {
+  const tokens = tokensDelPeorCaso([basura, basura, basura, basura]);
+  const limpio = tokensDelPeorCaso(simples);
+  assert.ok(tokens > limpio, 'las marcas de reemplazo alargan la vista');
+  assert.ok(tokens <= TOPE_TOKENS_ENTRADA - MARGEN_TOKENS, `entrada de ${Math.round(tokens)} tokens (tope ${TOPE_TOKENS_ENTRADA}, margen ${MARGEN_TOKENS}): acortar REGLAS o las lineas de historial`);
 });

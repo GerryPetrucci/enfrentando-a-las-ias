@@ -148,7 +148,8 @@ Triple dado no esconde ninguna regla: el prompt cuenta todo, incluido que los da
 Una partida alterna dos tipos de turno (predicción y enfrentamiento) en el mismo juego; la predicción de la ronda 4 no se pregunta, porque a cada jugador solo le queda una tarjeta
 (cada una se usa una vez), así que ese turno no cuesta llamadas (60 por partida en vez de 64). Todos los dados de las cuatro rondas y los reemplazos se sortean al crear la partida
 con el seed (una serie de cuatro partidas con los asientos rotados repite los mismos dados por asiento). Los repartos por empate dan tercios y mitades (tres empatados cobran 3.33),
-así que los puntos se guardan como enteros en docenas de punto y solo se convierten a decimales al mostrarlos: la frontera de una tarjeta (MORE empieza en exactamente 7) no depende de errores
+así que los puntos se guardan como enteros en doceavos de punto y solo se convierten a decimales al mostrarlos: la frontera de una tarjeta (MORE empieza en exactamente 7) no depende de errores
 de coma flotante. La `vista` solo muestra de los dados ocultos ajenos los que ya se usaron (su valor se revela al comparar) y en la fase de predicción ningún dado; una prueba cambia los dados
 no lanzados, los ocultos ajenos sin usar y las tarjetas ajenas en curso y exige que la vista de cada jugador no cambie. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano,
-se mide como fallo (obediencia) y el historial que ven los dos la marca como [reemplazo].
+se mide como fallo (obediencia) y el historial que ven los cuatro la marca como [reemplazo]. El registro guarda los puntos de cada enfrentamiento de dos formas: decimales para mostrar
+(3 × 3.33 = 9.99) y doceavos enteros exactos (`puntosD`, `puntosRondaD`) para cualquier cuenta.

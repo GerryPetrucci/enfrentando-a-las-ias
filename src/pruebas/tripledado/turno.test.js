@@ -83,6 +83,19 @@ test('un enfrentamiento: categorias, puntos 6 / 3 / 1 / 0 en docenos, dados gast
   assert.doesNotMatch(JSON.stringify(reg), /NaN|undefined/);
 });
 
+test('el registro de un enfrentamiento trae los valores exactos (doceavos), el dado que decidio el desempate y que ocultos siguen sin usar', () => {
+  const E = enPrimerEnfrentamiento();
+  escenarioBasico(E);
+  const reg = enfrentamiento(E, [['b1', 'b2', 'rojo'], ...PRIMEROS.slice(1)]);
+  assert.deepEqual(reg.puntosD, [36, 72, 0, 12], 'doceavos exactos: los decimales de "puntos" (3.33) no suman 10 justo');
+  assert.deepEqual(reg.puntosRondaD, [36, 72, 0, 12]);
+  assert.deepEqual(reg.desempate, [2, 2, 3, 6], 'el dado blanco mas alto que le sobra a cada uno (J1 gasto b1, b2 y el rojo: le sobra el 2 de b3)');
+  assert.deepEqual(reg.oculto.sinUsar, [['azul'], ['rojo', 'azul'], ['rojo', 'azul'], ['rojo', 'azul']], 'J1 uso su rojo: solo le queda el azul');
+  const sig = enfrentamiento(E, PRIMEROS.map((_, s) => disponibles(E, s).slice(0, 3)));
+  assert.deepEqual(sig.puntosRondaD.length, 4);
+  assert.equal(sig.puntosRondaD[1], 72 + sig.puntosD[1], 'puntosRondaD acumula la ronda');
+});
+
 test('un dado oculto usado se gasta, se cuenta y su valor se revela en el registro', () => {
   const E = enPrimerEnfrentamiento();
   escenarioBasico(E);

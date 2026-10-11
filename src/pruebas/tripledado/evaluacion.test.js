@@ -69,6 +69,10 @@ test('fraseConstancia: termina arriba, abajo o a media tabla, con el resumen de 
   const base = { partidas: 4, piezas: 3, medios: 1, eliminados: 0 };
   const arriba = fraseConstancia({ ...base, puntosPorPartida: 3.5 });
   assert.match(arriba.frase, /termina arriba: 3 piezas, 1 en medio y 0 eliminados en 4 partidas/);
+  // el puesto tras cada ronda: en cuantos cierres de ronda iba arriba en puntos acumulados (empatado arriba cuenta)
+  const conPuesto = fraseConstancia({ ...base, puntosPorPartida: 3.5, arriba: 9, rondas: 16 });
+  assert.match(conPuesto.frase, /en 4 partidas; iba arriba tras 9 de 16 rondas$/);
+  assert.doesNotMatch(arriba.frase, /iba arriba/, 'sin datos de rondas no se inventa nada');
   assert.equal(arriba.notable, true);
   assert.match(fraseConstancia({ partidas: 4, piezas: 0, medios: 1, eliminados: 3, puntosPorPartida: 0.5 }).frase, /termina abajo/);
   const media = fraseConstancia({ ...base, puntosPorPartida: 2 });
@@ -85,6 +89,10 @@ test('una serie de bots: cinco caracteristicas por IA, destacadas y un comentari
     assert.equal(j.partidas, 4);
     assert.ok(j.destacadas.length >= 1 && j.destacadas.length <= 3);
     assert.equal(j.caracteristicas.obediencia.valor, 1);
+    const m = j.caracteristicas.constancia.frase.match(/iba arriba tras (\d+) de (\d+) rondas/);
+    assert.ok(m, 'la constancia dice en cuantas rondas iba arriba');
+    assert.equal(Number(m[2]), 16, '4 partidas x 4 rondas');
+    assert.ok(Number(m[1]) <= 16);
   }
   const textos = ev.comentario.map((c) => c.texto);
   assert.match(textos[0], /En estas 4 partidas de Triple dado, con estas reglas/);

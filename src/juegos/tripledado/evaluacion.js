@@ -10,8 +10,8 @@ import { JUGADORES } from './constantes.js';
 import { plural, redondeo, fraseObediencia, comentarioDeSerie, buenasDe } from '../../evaluacion-comun.js';
 
 export const UMBRALES = {
-  muestraMinima: 8, // tarjetas propias minimas (en una serie de 4 partidas hay 12) para hablar de puntería
-  // Calibrados con 5,000 partidas y 400 series de bots (privado/prototipos/herramientas/tripledado-balance.mjs). Puntería base de quien tira una moneda: 0.25, asi que con
+  muestraMinima: 8, // tarjetas propias minimas (en una serie de 4 partidas hay 12) para hablar de punteria
+  // Calibrados con 5,000 partidas y 400 series de bots (privado/prototipos/herramientas/tripledado-balance.mjs). Punteria base de quien tira una moneda: 0.25, asi que con
   // 12 tarjetas por serie 1 acierto o menos sale por pura suerte a ~16 % de las series; solo cero aciertos (3 %) o 8 o mas (0.3 %) se destacan.
   punteriaAlta: 0.6, punteriaBaja: 0.05, // aciertos / tarjetas propias
   // Enfrentamiento medio (1 a 3) en que usa sus ocultos: el azar promedia 2.0 y el goloso (que los usa cuando ayudan) 2.2 +- 0.2; el reservado y el calculador, 3.0.
@@ -56,9 +56,11 @@ export function fraseOcultos({ partidas, elegidasEnfr, ocultos, sumaPos }) {
   return { valor: redondeo(prom), frase: `reparte los ocultos (${detalle})`, notable: false };
 }
 
-export function fraseConstancia({ partidas, piezas, medios, eliminados, puntosPorPartida }) {
+// arriba / rondas = en cuantos cierres de ronda iba arriba en puntos acumulados (empatado arriba cuenta), de cuantos cierres hubo; sin cierres no se dice nada.
+export function fraseConstancia({ partidas, piezas, medios, eliminados, puntosPorPartida, arriba = 0, rondas = 0 }) {
   const lugar = puntosPorPartida >= UMBRALES.puntosArriba ? 'arriba' : puntosPorPartida <= UMBRALES.puntosAbajo ? 'abajo' : 'a media tabla';
-  const cuenta = `${plural(piezas, 'pieza', 'piezas')}, ${medios} en medio y ${plural(eliminados, 'eliminado', 'eliminados')} en ${plural(partidas, 'partida', 'partidas')}`;
+  const puesto = rondas > 0 ? `; iba arriba tras ${arriba} de ${rondas} rondas` : '';
+  const cuenta = `${plural(piezas, 'pieza', 'piezas')}, ${medios} en medio y ${plural(eliminados, 'eliminado', 'eliminados')} en ${plural(partidas, 'partida', 'partidas')}${puesto}`;
   return { valor: redondeo(puntosPorPartida, 2), frase: `termina ${lugar}: ${cuenta}`, notable: lugar !== 'a media tabla' };
 }
 
@@ -67,7 +69,7 @@ const PRIORIDAD = ['constancia', 'obediencia', 'riesgo', 'punteria', 'ocultos'];
 const claveDe = (j, s) => j.id ?? `asiento-${s}`;
 const vacioDe = (j, s) => ({
   id: claveDe(j, s), nombre: j.nombre ?? j.id ?? `Jugador ${s + 1}`, partidas: 0, validas: 0, total: 0, puntos: 0, piezas: 0, medios: 0, eliminados: 0,
-  predicciones: 0, aciertos: 0, zeroElegido: 0, zeroForzado: 0, ceros: 0, elegidasEnfr: 0, ocultos: 0, sumaPos: 0,
+  predicciones: 0, aciertos: 0, zeroElegido: 0, zeroForzado: 0, ceros: 0, elegidasEnfr: 0, ocultos: 0, sumaPos: 0, rondasArriba: 0, rondasCierre: 0,
 });
 
 export function evaluarSerie(partidas) {
@@ -111,9 +113,16 @@ export function evaluarSerie(partidas) {
           a.sumaPos += o * (r.enfrentamiento ?? 0);
         });
         if (r.cierre) {
+          const acum = Array.isArray(r.cierre.acumulados) && r.cierre.acumulados.every(Number.isFinite) ? r.cierre.acumulados : null;
+          const tope = acum ? Math.max(...acum) : null;
           p.jugadores.forEach((_, s) => {
             const a = de(s);
-            if (!a || !eligio[s]) return;
+            if (!a) return;
+            if (acum && s < acum.length) { // puesto tras cada ronda: iba arriba (empatado arriba cuenta)
+              a.rondasCierre++;
+              if (acum[s] === tope) a.rondasArriba++;
+            }
+            if (!eligio[s]) return;
             a.predicciones++;
             if (r.cierre.aciertos?.[s]) {
               a.aciertos++;
@@ -133,7 +142,7 @@ export function evaluarSerie(partidas) {
       punteria: frasePunteria(a.aciertos, a.predicciones),
       riesgo: fraseRiesgo(a),
       ocultos: fraseOcultos(a),
-      constancia: fraseConstancia({ ...a, puntosPorPartida }),
+      constancia: fraseConstancia({ ...a, puntosPorPartida, arriba: a.rondasArriba, rondas: a.rondasCierre }),
     };
     const notables = PRIORIDAD.filter((k) => caracteristicas[k].notable).slice(0, 3).map((k) => caracteristicas[k].frase);
     return {

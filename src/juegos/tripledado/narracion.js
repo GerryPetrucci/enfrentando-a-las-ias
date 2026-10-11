@@ -14,6 +14,11 @@ const quien = (s) => `{${s}}`;
 const unir = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}`);
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 const pts = (d) => aPuntos(d);
+// el asiento con mas puntos, solo si es uno solo (null si hay empate arriba)
+const liderUnico = (puntos) => {
+  const max = Math.max(...puntos);
+  return puntos.filter((x) => x === max).length === 1 ? puntos.indexOf(max) : null;
+};
 const rngDe = (E, clave) => crearRng((E.semillaNarracion ^ Math.imul(clave + 1, 0x9e3779b1)) >>> 0);
 const asientos = [...Array(JUGADORES).keys()];
 
@@ -54,7 +59,8 @@ export function narrarEnfrentamiento({ E, ronda, k, combos, puntosD, puesto, por
   if (new Set(puesto).size < JUGADORES) agregar('comentario', 'Hay un empate y se reparten los puntos.');
   for (const s of asientos) {
     if (!reemplazadas[s] && combos[s].categoria === 'triple') agregar('comentario', `${quien(s)} saca un triple.`);
-    if (!reemplazadas[s] && porDesempate[s] && puesto[s] === 1) agregar('comentario', `${quien(s)} gana por el dado que le sobraba.`);
+    // solo si hay UN ganador: si varios empatan en el primer lugar nadie "gana" el enfrentamiento
+    if (!reemplazadas[s] && porDesempate[s] && puesto[s] === 1 && primeros.length === 1) agregar('comentario', `${quien(s)} gana por el dado que le sobraba.`);
     if (!reemplazadas[s] && primeros.length === 1 && primeros[0] === s && combos[s].ocultos.length) agregar('comentario', `${quien(s)} usa un dado oculto para ganar el enfrentamiento.`);
   }
   return lineas;
@@ -72,7 +78,7 @@ function cercania(q, tarjeta, totalD) {
 
 // tarjetas[s], totalesD[s] (puntos de los 3 enfrentamientos), aciertos[s], puntosD[s] (con premio). reemplazadas[s] = esa tarjeta la puso el juego por una respuesta
 // ilegal; forzada = la ronda 4, donde solo queda una tarjeta y se pone sola: en los dos casos la IA NO la predijo y la narracion no lo dice como si lo hubiera hecho.
-export function narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas = [], forzada = false }) {
+export function narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas = [], forzada = false, puntosAntesD = null, puntosDespuesD = null }) {
   const lineas = [];
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
   for (const s of asientos) {
@@ -89,6 +95,11 @@ export function narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemp
       const c = cercania(quien(s), tarjetas[s], totalesD[s]);
       if (c) agregar('comentario', c);
     }
+  }
+  // puntos acumulados antes y despues del cierre (docenos): solo es "pasar al frente" si habia un lider unico y ahora hay otro lider unico
+  if (puntosAntesD && puntosDespuesD) {
+    const antes = liderUnico(puntosAntesD), despues = liderUnico(puntosDespuesD);
+    if (antes !== null && despues !== null && antes !== despues) agregar('comentario', `${quien(despues)} pasa al frente.`);
   }
   return lineas;
 }

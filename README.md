@@ -186,7 +186,7 @@ node src/correr.js --juego=mayormenor --a=claude --b=gpt --partidas=2 --modo=pag
 
 ## El séptimo juego
 
-**Triple dado.** Cuatro IAs y 4 rondas. En cada ronda, antes de lanzar los dados, cada una predice en secreto su puntuación con una tarjeta (ZERO, MIN, MORE o MAX; cada tarjeta se usa una sola vez). Luego se lanzan 11 dados por jugador (9 blancos visibles y 2 ocultos, rojo y azul) y se juegan 3 enfrentamientos de tres dados: gana la mejor combinación (triple, escalera, doble, sencillo) y se reparten 6, 3, 1 y 0 puntos. Acertar la tarjeta da un premio (ZERO, 40 puntos; las demás duplican). Al final, la pieza es para quien tiene más puntos en solitario y se elimina a quien tiene menos. Son 60 llamadas por partida (la tarjeta de la ronda 4 se pone sola), así que se corre en vivo.
+**Triple dado.** Cuatro IAs y 4 rondas. En cada ronda, antes de lanzar los dados, cada una predice en secreto su puntuación con una tarjeta (ZERO, MIN, MORE o MAX; cada tarjeta se usa una sola vez). Luego se lanzan 11 dados por jugador (9 blancos visibles y 2 ocultos, rojo y azul) y se juegan 3 enfrentamientos de tres dados: gana la mejor combinación (triple, escalera, doble, sencillo) y se reparten 6, 3, 1 y 0 puntos. Acertar la tarjeta da un premio (ZERO, 40 puntos; las demás duplican). Al final, la pieza es para quien tiene más puntos en solitario y se elimina a quien tiene menos, también en solitario (un empate deja a nadie). Son 60 llamadas por partida (la tarjeta de la ronda 4 se pone sola), así que se corre en vivo.
 
 ```bash
 node src/correr.js --juego=tripledado --jugadores=goloso,reservado,tanque,calculador --partidas=4 --destino=pruebas   # bots de control, sin API

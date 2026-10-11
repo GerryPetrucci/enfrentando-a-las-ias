@@ -143,6 +143,28 @@ test('una tarjeta que puso el juego (reemplazo o la forzada de la ronda 4) no se
   assert.doesNotMatch(f, /predijo/);
 });
 
+test('"gana por el dado que le sobraba" solo si hay UN ganador: si varios empatan en el primer lugar no se dice que "gana"', () => {
+  const lineas = narrarEnfrentamiento(enfr({
+    combos: [combo([4, 4, 4], 'triple'), combo([4, 4, 4], 'triple'), combo([4, 4, 4], 'triple'), combo([2, 1, 1], 'doble')],
+    puntosD: [12, 54, 54, 0], puesto: [3, 1, 1, 4], porDesempate: [true, true, true, false],
+  }));
+  assert.ok(!lineas.some((l) => /gana por el dado que le sobraba/.test(l.texto)));
+  assert.ok(lineas.some((l) => /\{1\} y \{2\} empatan en el primer lugar/.test(l.texto)));
+});
+
+test('el cierre de ronda comenta cuando alguien pasa al frente en los puntos acumulados (solo si habia un lider unico y cambia)', () => {
+  const base = { tarjetas: ['MORE', 'MORE', 'MORE', 'MORE'], totalesD: [108, 108, 108, 108], aciertos: [true, true, true, true], puntosD: [216, 216, 216, 216] };
+  const hay = (extra) => narrarCierreRonda({ ...base, ...extra }).some((l) => l.tipo === 'comentario' && /pasa al frente/.test(l.texto));
+  const despues = [400, 300, 200, 100];
+  assert.equal(hay({ puntosAntesD: [120, 240, 60, 60], puntosDespuesD: despues }), true, 'iba arriba el jugador 2 y ahora va el 1');
+  assert.equal(hay({ puntosAntesD: [300, 240, 60, 60], puntosDespuesD: despues }), false, 'ya iba arriba');
+  assert.equal(hay({ puntosAntesD: [0, 0, 0, 0], puntosDespuesD: despues }), false, 'salir de un empate no es una remontada');
+  assert.equal(hay({ puntosAntesD: [120, 240, 60, 60], puntosDespuesD: [400, 400, 200, 100] }), false, 'empatar arriba no es pasar al frente');
+  assert.equal(hay({}), false, 'sin puntos acumulados no se comenta nada');
+  const t = texto(narrarCierreRonda({ ...base, puntosAntesD: [120, 240, 60, 60], puntosDespuesD: despues }));
+  assert.match(t, /\{0\} pasa al frente/);
+});
+
 test('resolverNombres reemplaza {0} a {3} y tiene respaldo', () => {
   const jugadores = [{ nombre: 'Claude' }, { nombre: 'GPT' }, { nombre: 'Gemini' }, { nombre: 'Llama' }];
   assert.equal(resolverNombres('{0} le gana a {3}.', jugadores), 'Claude le gana a Llama.');

@@ -63,9 +63,13 @@ export function tanque(E, s) {
   return { dados: extremo(E, s, disponibles(E, s), E.tarjetaActual[s] === 'ZERO'), razon };
 }
 
-// Predice MORE (lo mas probable) y cuida los ocultos: los dos primeros enfrentamientos juega la mejor combinacion solo con blancos; el tercero, con todo.
+// Puntos esperados por tarjeta (con premio) entre jugadores que buscan puntos, medidos con 4,000 partidas de golosos: MAX 10.9 > MORE 10.0 > MIN 9.1 > ZERO 8.5.
+const POR_PUNTOS_ESPERADOS = ['MAX', 'MORE', 'MIN', 'ZERO'];
+
+// Predice la tarjeta que mas puntos esperados da entre las que le quedan y cuida los ocultos: los dos primeros enfrentamientos juega la mejor combinacion solo
+// con blancos; el tercero, con todo.
 export function calculador(E, s) {
-  if (E.fase === 'prediccion') return { tarjeta: preferida(E, s, ['MORE', 'MAX', 'MIN', 'ZERO']), razon };
+  if (E.fase === 'prediccion') return { tarjeta: preferida(E, s, POR_PUNTOS_ESPERADOS), razon };
   return { dados: E.enfrentamiento < 3 ? extremo(E, s, blancos(E, s), false) : extremo(E, s, disponibles(E, s), false), razon };
 }
 

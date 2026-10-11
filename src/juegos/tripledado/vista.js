@@ -10,7 +10,8 @@ import { aPuntos } from './combinaciones.js';
 
 const asientos = [...Array(JUGADORES).keys()];
 const pts = (d) => String(aPuntos(d));
-const lista = (xs) => (xs.length ? xs.join(' ') : '(ninguna)');
+// lo que no queda se dice "ninguna" (tarjetas) o "ninguno" (dados), sin parentesis
+const lista = (xs, vacio = 'ninguna') => (xs.length ? xs.join(' ') : vacio);
 const marca = (id) => (id === 'rojo' ? 'r' : id === 'azul' ? 'a' : '');
 const reemplazo = (h, s) => (h.reemplazadas?.[s] ? ' [reemplazo]' : '');
 
@@ -38,13 +39,15 @@ export function vistaTexto(E, i) {
   const L = [];
   L.push(`RONDA ${r} DE ${RONDAS} - ${jugada ? `ENFRENTAMIENTO ${E.enfrentamiento} DE ${ENFRENTAMIENTOS}` : 'PREDICCION (los dados aun no se han lanzado)'}`);
   L.push(`Eres el Jugador ${i + 1} (en el historial apareces como J${i + 1})`);
-  L.push(`Tus tarjetas que te quedan: ${lista(quedan)}${usadas.length ? ` (ya usaste: ${usadas.join(' ')})` : ''}`);
+  // en un enfrentamiento la tarjeta de esta ronda ya esta elegida: las que "te quedan" son las de las rondas siguientes
+  const siguientes = jugada ? quedan.filter((t) => t !== E.tarjetaActual[i]) : quedan;
+  L.push(`${jugada ? 'Tus tarjetas para las rondas siguientes' : 'Tus tarjetas que te quedan'}: ${lista(siguientes)}${usadas.length ? ` (ya usaste: ${usadas.join(' ')})` : ''}`);
   if (jugada) L.push(`Tu tarjeta de esta ronda: ${E.tarjetaActual[i]}`);
   L.push(`PUNTOS ACUMULADOS: ${puntosDeTodos}`);
   if (r > 1) L.push(`TARJETAS YA USADAS: ${asientos.map((s) => `J${s + 1} ${E.tarjetasUsadas[s].join(' ') || '-'}`).join(' | ')}`);
   let disp = [];
   if (jugada) {
-    L.push(`PUNTOS DE ESTA RONDA: ${asientos.map((s) => `J${s + 1} ${pts(E.puntosRonda[s])}${s === i ? ' (tu)' : ''}`).join(' | ')}`);
+    L.push(`PUNTOS DE ESTA RONDA: ${asientos.map((s) => `J${s + 1}${s === i ? ' (tu)' : ''} ${pts(E.puntosRonda[s])}`).join(' | ')}`);
     disp = disponibles(E, i);
     L.push('', `TUS DADOS que no has gastado: ${disp.map((id) => `${id}=${valorDe(E, i, id)}`).join(' ')}`);
     L.push('DADOS DE LOS RIVALES (sus blancos sin gastar y que ocultos les quedan):');
@@ -52,7 +55,7 @@ export function vistaTexto(E, i) {
       if (s === i) continue;
       const blancos = blancosRestantes(E, s).map((id) => valorDe(E, s, id)).sort((a, b) => b - a);
       const ocultos = disponibles(E, s).filter((id) => id === 'rojo' || id === 'azul');
-      L.push(`J${s + 1}: blancos ${lista(blancos)} | ocultos sin usar: ${lista(ocultos)}`);
+      L.push(`J${s + 1}: blancos ${lista(blancos, 'ninguno')} | ocultos sin usar: ${lista(ocultos, 'ninguno')}`);
     }
   }
   if (E.historial.length) {

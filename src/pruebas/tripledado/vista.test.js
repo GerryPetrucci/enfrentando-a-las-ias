@@ -45,6 +45,23 @@ test('el enfrentamiento: tu tarjeta, tus dados con identificador, los blancos de
   assert.doesNotMatch(v, /rojo=6|azul=3|rojo=5|azul=2|rojo=4|azul=4/);
   assert.ok(vistaTexto(E, 0).includes('rojo=6 azul=3'), 'cada uno ve los suyos');
   assert.ok(!v.includes('Tu tarjeta de esta ronda: MORE'), 'ni la tarjeta de los demas');
+  // la tarjeta en curso ya no cuenta entre las que "te quedan": son las de las rondas siguientes
+  assert.ok(v.includes('Tus tarjetas para las rondas siguientes: ZERO MORE MAX'));
+  assert.doesNotMatch(v, /Tus tarjetas que te quedan/);
+});
+
+test('lo que ya no queda se dice "ninguno" o "ninguna", sin parentesis: rival sin blancos ni ocultos, y yo sin tarjetas para las rondas siguientes', () => {
+  const E = enPrimerEnfrentamiento();
+  E.gastados[0] = { blancos: ['b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'b9'], rojo: true, azul: true };
+  assert.ok(vistaTexto(E, 1).includes('J1: blancos ninguno | ocultos sin usar: ninguno'));
+  const F = nuevoEstado();
+  F.ronda = RONDAS;
+  F.fase = 'jugada';
+  F.enfrentamiento = 1;
+  F.tarjetasUsadas = [['ZERO', 'MIN', 'MORE'], ['ZERO', 'MIN', 'MORE'], ['ZERO', 'MIN', 'MORE'], ['ZERO', 'MIN', 'MORE']];
+  F.tarjetaActual = ['MAX', 'MAX', 'MAX', 'MAX'];
+  assert.ok(vistaTexto(F, 0).includes('Tus tarjetas para las rondas siguientes: ninguna'));
+  assert.doesNotMatch(vistaTexto(F, 0), /\(ninguna\)|\(ninguno\)/);
 });
 
 test('despues de un enfrentamiento el historial es publico y compacto, con los puntos y los dados gastados', () => {
@@ -53,7 +70,7 @@ test('despues de un enfrentamiento el historial es publico y compacto, con los p
   const v = vistaTexto(E, 1);
   assert.match(v, /^RONDA 1 DE 4 - ENFRENTAMIENTO 2 DE 3/);
   assert.ok(v.includes('R1E1: J1 5-5-2 +3 | J2 5-4-3 +6 | J3 6-4-1 +0 | J4 2-1-1 +1'));
-  assert.ok(v.includes('PUNTOS DE ESTA RONDA: J1 3 | J2 6 (tu) | J3 0 | J4 1'));
+  assert.ok(v.includes('PUNTOS DE ESTA RONDA: J1 3 | J2 (tu) 6 | J3 0 | J4 1'), 'el "(tu)" va en el mismo lugar que en PUNTOS ACUMULADOS');
   assert.ok(v.includes('TUS DADOS que no has gastado: b4=2 b5=2 b6=2 b7=2 b8=2 b9=2 rojo=1 azul=1'));
   assert.ok(v.includes('J1: blancos 1 1 1 1 1 1 | ocultos sin usar: rojo azul'), 'J1 gasto b1 b2 b3 (5, 5, 2): le quedan seis unos');
 });

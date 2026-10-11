@@ -15,7 +15,7 @@ COMO ES UNA RONDA
 COMBINACIONES (de mejor a peor)
 1. Triple: tres dados iguales (5-5-5). 2. Escalera: tres numeros consecutivos (3-4-5; el 6 y el 1 no son consecutivos). 3. Doble: dos dados iguales (4-4-2). 4. Sencillo: tres distintos sin escalera (1-3-6).
 Dentro de una categoria gana el numero mayor: escalera 4-5-6 supera a 3-4-5; doble 5-5-3 supera a 5-5-2 (primero la pareja, luego el dado suelto); un sencillo se compara del dado mas alto al mas bajo (6-5-2 supera a 6-3-1).
-Si dos combinaciones son iguales, gana quien tenga el dado BLANCO de mayor valor entre los que le quedan sin gastar (los ocultos sin usar no cuentan; si no te queda ningun blanco, vale 0). Si tampoco hay diferencia, empatan.
+Si dos combinaciones son iguales, gana quien tenga el dado BLANCO de mayor valor entre los que le quedan sin gastar despues de esta jugada (los ocultos sin usar no cuentan; si no te queda ningun blanco, vale 0). Si tampoco hay diferencia, empatan.
 
 PUNTOS DE UN ENFRENTAMIENTO
 1.o lugar 6, 2.o 3, 3.o 1, 4.o 0. Los empatados se reparten por igual los puntos de las posiciones que ocupan: dos empatados en el primer lugar reciben (6 + 3) / 2 = 4.5 cada uno.

@@ -21,7 +21,13 @@ test('hay cinco bots, cada uno con nombre publico y color', () => {
 test('cada bot elige su tarjeta preferida en la prediccion, y solo entre las que le quedan', () => {
   const E = nuevoEstado();
   assert.equal(BOTS.goloso(E, 0).tarjeta, 'MORE');
-  assert.equal(BOTS.calculador(E, 0).tarjeta, 'MORE');
+  // el calculador elige por puntos esperados (medidos con 4,000 partidas de golosos: MAX 10.9 > MORE 10.0 > MIN 9.1 > ZERO 8.5), no por el orden del goloso
+  assert.equal(BOTS.calculador(E, 0).tarjeta, 'MAX');
+  E.tarjetasUsadas[0] = ['MAX'];
+  assert.equal(BOTS.calculador(E, 0).tarjeta, 'MORE', 'sin MAX, la siguiente mejor');
+  E.tarjetasUsadas[0] = ['MAX', 'MORE'];
+  assert.equal(BOTS.calculador(E, 0).tarjeta, 'MIN');
+  E.tarjetasUsadas[0] = [];
   assert.equal(BOTS.reservado(E, 0).tarjeta, 'MIN');
   assert.equal(BOTS.tanque(E, 0).tarjeta, 'ZERO');
   assert.equal(BOTS.azar(E, 0, () => 0).tarjeta, 'ZERO');

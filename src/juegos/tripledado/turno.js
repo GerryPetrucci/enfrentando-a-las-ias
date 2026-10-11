@@ -112,6 +112,7 @@ export function cerrarPartida(E) {
 // Tras el tercer enfrentamiento: revela y premia las tarjetas, anota las usadas y prepara la ronda siguiente (o cierra la partida).
 function cerrarRonda(E) {
   const r = E.ronda;
+  const puntosAntesD = [...E.puntos]; // para comentar si alguien pasa al frente
   const tarjetas = [...E.tarjetaActual];
   const totalesD = [...E.puntosRonda];
   const premios = asientos.map((s) => premioRonda(tarjetas[s], totalesD[s]));
@@ -133,7 +134,7 @@ function cerrarRonda(E) {
   // una tarjeta de reemplazo la puso el juego; la de la ronda 4 tampoco la eligio nadie pero no es un reemplazo (solo quedaba una)
   const reemplazadas = E.eligio.map((e) => !e && r !== RONDAS);
   E.historial.push({ tipo: 'cierre', ronda: r, tarjetas, totales: totalesD, aciertos, puntos: puntosD, reemplazadas });
-  const narracion = narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas, forzada: r === RONDAS });
+  const narracion = narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas, forzada: r === RONDAS, puntosAntesD, puntosDespuesD: [...E.puntos] });
   const publico = { tarjetas, totales: dec(totalesD), aciertos, puntos: dec(puntosD), acumulados: dec(E.puntos) };
   let final = null;
   if (r === RONDAS) {
@@ -184,6 +185,10 @@ function turnoEnfrentamiento(E, respuestas) {
     combos: combos.map((c) => ({ dados: c.dados, valores: c.valores, categoria: c.categoria })), puntos: [...rep.puntos], reemplazadas,
   });
   const puntosRonda = dec(E.puntosRonda); // antes de que el cierre los reinicie
+  const puntosRondaD = [...E.puntosRonda];
+  // lo que el reproductor necesita y no se deduce facil: el dado que decidio el desempate y que ocultos siguen sin usar (despues de esta jugada)
+  const desempate = entradas.map((e) => e.desempate);
+  const sinUsar = asientos.map((s) => ['rojo', 'azul'].filter((id) => !E.gastados[s][id]));
   let narracion = narrarEnfrentamiento({ E, ronda: r, k, combos, puntosD: rep.puntos, puesto: rep.puesto, porDesempate: rep.porDesempate, reemplazadas });
   let cierre = null, final = null;
   if (k === ENFRENTAMIENTOS) {
@@ -197,10 +202,12 @@ function turnoEnfrentamiento(E, respuestas) {
   return {
     fase: 'jugada', ronda: r, enfrentamiento: k,
     combos,
+    // "puntos" y "puntosRonda" son decimales para MOSTRAR (3 x 3.33 = 9.99); los exactos son puntosD y puntosRondaD, en doceavos enteros
     puntos: dec(rep.puntos), puesto: rep.puesto, porDesempate: rep.porDesempate, puntosRonda,
+    puntosD: [...rep.puntos], puntosRondaD, desempate,
     cierre,
     ...comunes(true, respuestas, motivos),
-    oculto: { rojos: E.dados[r - 1].map((d) => d.rojo), azules: E.dados[r - 1].map((d) => d.azul) },
+    oculto: { rojos: E.dados[r - 1].map((d) => d.rojo), azules: E.dados[r - 1].map((d) => d.azul), sinUsar },
     final,
     narracion,
   };
