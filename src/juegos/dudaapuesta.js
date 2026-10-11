@@ -11,6 +11,7 @@ import { vistaTexto } from './dudaapuesta/vista.js';
 import { resultadoDe } from './dudaapuesta/resultado.js';
 import { REGLAS, FORMATO } from './dudaapuesta/reglas-texto.js';
 import { JUGADORES, TURNOS } from './dudaapuesta/constantes.js';
+import { evaluarSerie } from './dudaapuesta/evaluacion.js';
 import { BOTS, INFO_BOTS } from './dudaapuesta-bots.js';
 
 export default {
@@ -36,6 +37,8 @@ export default {
   // jugadas[i] = respuesta normalizada (con `error` y `crudo` si los puso la arena); null si no se pregunto (solo se le pregunta a quien le toca).
   aplicar: (E, jugadas) => aplicarTurno(E, jugadas),
   resultado: resultadoDe,
+  // al final de la serie: caracteristicas de cada IA y un comentario del resultado (la consola lo imprime y lo guarda en la serie)
+  evaluar: evaluarSerie,
   // a quien hay que preguntarle: solo al que le toca decidir (es un juego por turnos)
   activos: (E) => {
     const a = Array(JUGADORES).fill(false);
