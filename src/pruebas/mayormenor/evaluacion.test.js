@@ -40,6 +40,16 @@ test('fraseProvecho: exprime cada ronda, regala rondas o aprovecha lo normal; av
   assert.equal(fraseProvecho(15, 9, 0).notable, false);
 });
 
+test('fraseProvecho: ganar lo minimo seguro (1 ficha por ronda, como el prudente) no es "regalar rondas"; jugar a no ganar si lo es', () => {
+  // calibrado con 5,000 partidas de bots: el prudente gana 1.00 por ronda como activo y el contrario 0.55 (juega bajo a proposito)
+  const seguro = fraseProvecho(9, 9, 0);
+  assert.match(seguro.frase, /aprovecha lo normal/);
+  assert.equal(seguro.notable, false);
+  const regala = fraseProvecho(5, 9, 6);
+  assert.match(regala.frase, /regala rondas: 0\.6 fichas por ronda como activo \(jugó 6 cartas que no superaba al crupier\)/);
+  assert.equal(regala.notable, true);
+});
+
 test('fraseConstancia: termina arriba, abajo o a media tabla, con el resumen de partidas y de rondas arriba', () => {
   const base = { partidas: 4, victorias: 3, empates: 0, derrotas: 1, arriba: 40, rondas: 72 };
   const arriba = fraseConstancia({ ...base, puntosPorPartida: 3 });

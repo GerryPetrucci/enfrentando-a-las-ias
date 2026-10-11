@@ -11,7 +11,7 @@ import { plural, redondeo, fraseObediencia, comentarioDeSerie, buenasDe } from '
 export const UMBRALES = {
   lecturaAlta: 0.6, lecturaBaja: 0.4, // apuestas acertadas / apuestas con resultado
   audaciaAlta: 0.5, audaciaBaja: 0.15, // parte de sus fichas que apuesta por ronda
-  provechoAlto: 2.5, provechoBajo: 1.0, // fichas ganadas por ronda como activo
+  provechoAlto: 2.5, provechoBajo: 0.8, // fichas ganadas por ronda como activo (azar 1.67; prudente 1.00; contrario 0.55; temerario > 4)
   puntosArriba: 3, puntosAbajo: 1, // puntos de marcador por partida (el promedio de la mesa es 2.0)
 };
 const dec = (x) => x.toFixed(1);
