@@ -27,7 +27,9 @@ test('frasePunteria: sin tarjetas, muestra chica, alta, baja y normal; solo es n
   assert.match(chica.frase, /muestra todavía chica para decir más/);
   assert.equal(frasePunteria(UMBRALES.muestraMinima, UMBRALES.muestraMinima).notable, true, 'acertar todas con muestra suficiente');
   assert.match(frasePunteria(10, 12).frase, /lee bien su puntuación: acertó 10 de 12 tarjetas/);
-  assert.match(frasePunteria(1, 12).frase, /le cuesta predecir: acertó 1 de 12 tarjetas/);
+  assert.match(frasePunteria(0, 12).frase, /le cuesta predecir: acertó 0 de 12 tarjetas/);
+  // calibrado con 400 series de bots: 1 acierto o menos de 12 le sale por pura suerte a ~16 % de quienes tiran una moneda; solo cero aciertos se destaca
+  assert.equal(frasePunteria(1, 12).notable, false);
   assert.equal(frasePunteria(4, 12).notable, false);
   assert.ok(UMBRALES.punteriaAlta > UMBRALES.punteriaBaja);
 });
@@ -50,6 +52,11 @@ test('fraseOcultos: sin jugadas propias, ninguno, de entrada, al final o reparti
   const reparte = fraseOcultos({ partidas: 4, elegidasEnfr: 48, ocultos: 8, sumaPos: 16 });
   assert.match(reparte.frase, /reparte los ocultos/);
   assert.equal(reparte.notable, false);
+  // calibrado con 400 series: quien usa los ocultos cuando le ayudan (el goloso) promedia 2.2 +- 0.2; eso no es "guardarlos para el final" ni "gastarlos de entrada"
+  assert.equal(fraseOcultos({ partidas: 4, elegidasEnfr: 48, ocultos: 25, sumaPos: 60 }).notable, false, 'promedio 2.4');
+  assert.equal(fraseOcultos({ partidas: 4, elegidasEnfr: 48, ocultos: 25, sumaPos: 40 }).notable, false, 'promedio 1.6');
+  assert.match(fraseOcultos({ partidas: 4, elegidasEnfr: 48, ocultos: 25, sumaPos: 70 }).frase, /guarda los ocultos para el final/);
+  assert.match(fraseOcultos({ partidas: 4, elegidasEnfr: 48, ocultos: 25, sumaPos: 35 }).frase, /gasta los ocultos de entrada/);
 });
 
 test('fraseConstancia: termina arriba, abajo o a media tabla, con el resumen de partidas', () => {
@@ -95,14 +102,19 @@ test('los bots se distinguen: el tanque va por el ZERO en todas sus partidas; el
   assert.match(por('reservado').caracteristicas.riesgo.frase, /guardó el ZERO hasta el final/);
 });
 
-test('un bot que predice al azar casi nunca recibe una punteria "notable" por pura suerte en una serie de 4 partidas', async () => {
-  let notables = 0, series = 0;
-  for (let seed = 1; seed <= 60; seed++) {
+test('por pura suerte casi nunca sale algo "notable": ni la punteria del azar ni los ocultos del goloso; y el reservado SI guarda sus ocultos', async () => {
+  const series = 200;
+  let punteriaAzar = 0, ocultosGoloso = 0, reservadoFinal = 0;
+  for (let seed = 1; seed <= series; seed++) {
     const ev = evaluarSerie(await serie(seed));
-    series++;
-    if (ev.jugadores.find((j) => j.id === 'azar').caracteristicas.punteria.notable) notables++;
+    const c = (id) => ev.jugadores.find((j) => j.id === id).caracteristicas;
+    if (c('azar').punteria.notable) punteriaAzar++;
+    if (c('goloso').ocultos.notable && /para el final|de entrada/.test(c('goloso').ocultos.frase)) ocultosGoloso++;
+    if (/guarda los ocultos para el final/.test(c('reservado').ocultos.frase)) reservadoFinal++;
   }
-  assert.ok(notables / series < 0.15, `${notables} de ${series} series con punteria notable por puro azar`);
+  assert.ok(punteriaAzar / series < 0.08, `${punteriaAzar} de ${series} series con punteria notable por puro azar`);
+  assert.ok(ocultosGoloso / series < 0.08, `${ocultosGoloso} de ${series} series con ocultos notables para un bot que los usa cuando le ayudan`);
+  assert.ok(reservadoFinal / series > 0.95, `solo ${reservadoFinal} de ${series} series reconocen que el reservado guarda los ocultos`);
 });
 
 test('un modelo caido: la obediencia es notable y no se inventan puntería, riesgo ni ocultos con sus reemplazos', async () => {

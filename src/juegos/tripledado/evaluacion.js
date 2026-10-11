@@ -11,8 +11,11 @@ import { plural, redondeo, fraseObediencia, comentarioDeSerie, buenasDe } from '
 
 export const UMBRALES = {
   muestraMinima: 8, // tarjetas propias minimas (en una serie de 4 partidas hay 12) para hablar de puntería
-  punteriaAlta: 0.6, punteriaBaja: 0.15, // aciertos / tarjetas propias (se calibran con los bots: ver la Tarea 9)
-  ocultoTemprano: 1.7, ocultoTarde: 2.3, // enfrentamiento promedio (1 a 3) en que usa sus ocultos
+  // Calibrados con 5,000 partidas y 400 series de bots (privado/prototipos/herramientas/tripledado-balance.mjs). Puntería base de quien tira una moneda: 0.25, asi que con
+  // 12 tarjetas por serie 1 acierto o menos sale por pura suerte a ~16 % de las series; solo cero aciertos (3 %) o 8 o mas (0.3 %) se destacan.
+  punteriaAlta: 0.6, punteriaBaja: 0.05, // aciertos / tarjetas propias
+  // Enfrentamiento medio (1 a 3) en que usa sus ocultos: el azar promedia 2.0 y el goloso (que los usa cuando ayudan) 2.2 +- 0.2; el reservado y el calculador, 3.0.
+  ocultoTemprano: 1.5, ocultoTarde: 2.6,
   puntosArriba: 3, puntosAbajo: 1, // puntos de marcador por partida (el promedio de la mesa es 2.0)
 };
 const dec = (x) => x.toFixed(1);
