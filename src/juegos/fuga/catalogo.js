@@ -31,7 +31,7 @@ export const CATALOGO = [
       fuerza: 'El guardia esta solo y cansado, aunque lleva un garrote en la mano.',
       engano: 'El guardia parece aburrido: quiza se crea una historia sobre una pelea en la cocina.',
     },
-    tentacion: { tipo: 'oferta', texto: 'El guardia te hace un gesto: dice que se hara el distraido si le cuentas lo que planea tu companero.' },
+    tentacion: { tipo: 'oferta', texto: 'El guardia te hace un gesto: quiere saber lo que planea tu companero y sabra agradecerlo.' },
     aperturas: [
       'Una linterna barre el pasillo: el guardia de ronda se acerca.',
       'Los pasos del guardia retumban en el corredor vacío.',
@@ -95,7 +95,7 @@ export const CATALOGO = [
       fuerza: 'La puerta al patio tiene un cerrojo simple, pero hace mucho ruido al abrirse.',
       engano: 'La enfermera creeria que uno de los dos esta enfermo y necesita salir al aire.',
     },
-    tentacion: { tipo: 'oferta', texto: 'La enfermera susurra que los dejaria pasar si le cuentas algo comprometedor de tu companero.' },
+    tentacion: { tipo: 'oferta', texto: 'La enfermera susurra que le interesa cualquier cosa comprometedora sobre tu companero.' },
     aperturas: [
       'La enfermería huele a alcohol y a papel viejo.',
       'Una enfermera cansada revisa expedientes junto a la puerta del patio.',
@@ -144,7 +144,7 @@ export const CATALOGO = [
       fuerza: 'Los presos del patio no avisarian a los guardias si se abren paso con decision.',
       engano: 'Si se mezclan con los presos que hacen ejercicio, nadie notaria a dos mas.',
     },
-    tentacion: { tipo: 'oferta', texto: 'Un guardia del patio te hace una senal: te cubriria el paso a cambio de un chisme sobre tu companero.' },
+    tentacion: { tipo: 'oferta', texto: 'Un guardia del patio te hace una senal: quiere un chisme sobre tu companero y sabra pagarlo.' },
     aperturas: [
       'El patio se extiende bajo los focos como un escenario.',
       'Presos que trotan, guardias que miran: cruzar el patio parece imposible.',
@@ -208,7 +208,7 @@ export const CATALOGO = [
       fuerza: 'Con tanto desorden, un empujon pasaria por una pelea comun.',
       engano: 'Los guardias nuevos no conocen a todos los presos: podrian pasar por trabajadores.',
     },
-    tentacion: { tipo: 'oferta', texto: 'Un guardia recien llegado pide un favor: si le dices algo util sobre tu companero, te abre la reja.' },
+    tentacion: { tipo: 'oferta', texto: 'Un guardia recien llegado pide un favor: quiere que le cuentes algo util sobre tu companero.' },
     aperturas: [
       'Los guardias se cruzan, se saludan, se distraen: es el cambio de turno.',
       'Silbatos, órdenes a medias y papeles que cambian de mano.',
@@ -305,7 +305,7 @@ export const CATALOGO = [
       fuerza: 'Los cables de los reflectores estan a la vista y se pueden cortar.',
       engano: 'Alguien en la torre ignoraria un movimiento si cree que es un animal.',
     },
-    tentacion: { tipo: 'oferta', texto: 'Desde la torre, un guardia ofrece apagar un reflector si le delatas a tu companero.' },
+    tentacion: { tipo: 'oferta', texto: 'Desde la torre, un guardia ofrece pagar por saber algo de tu companero.' },
     aperturas: [
       'Los reflectores pintan de blanco todo el perímetro.',
       'Un reflector se apaga un instante y otro lo reemplaza de inmediato.',
@@ -337,7 +337,7 @@ export const CATALOGO = [
       fuerza: 'El porton esta atascado y se abriria con un empujon fuerte.',
       engano: 'El guardia no mira bien a quienes van en la cabina del camion.',
     },
-    tentacion: { tipo: 'oferta', texto: 'El guardia de la puerta te propone dejarte salir primero si le dices que hara tu companero despues.' },
+    tentacion: { tipo: 'oferta', texto: 'El guardia de la puerta te propone un trato: quiere saber que hara tu companero despues.' },
     aperturas: [
       'Un portón enorme guarda la salida de los vehículos.',
       'Un camión espera su turno; el guardia revisa papeles sin prisa.',
@@ -385,7 +385,7 @@ export const CATALOGO = [
       fuerza: 'La cerradura trasera esta rota y se abre de un tiron.',
       engano: 'Si fingen ser parte de la entrega, el repartidor los dejaria subir.',
     },
-    tentacion: { tipo: 'oferta', texto: 'El guardia de la puerta te susurra que te ayudara a subir primero si delatas a tu companero.' },
+    tentacion: { tipo: 'oferta', texto: 'El guardia de la puerta te susurra que pagara por saber algo de tu companero.' },
     aperturas: [
       'Una camioneta de reparto espera, con la puerta trasera entreabierta.',
       'El repartidor firma un papel y el guardia lo lee con calma.',

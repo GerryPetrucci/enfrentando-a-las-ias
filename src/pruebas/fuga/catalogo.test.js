@@ -63,3 +63,14 @@ test('los multiplicadores de metodo van de mejor a malo, y las fases suben de pe
     assert.ok(FASES[i].peligro[1] >= FASES[i - 1].peligro[1]);
   }
 });
+
+// ---------- hueco que encontro la revision independiente (10 de octubre de 2026) ----------
+test('las ofertas del guardia no prometen ayuda que el motor no da: solo piden informacion sobre el companero', () => {
+  const ofertas = CATALOGO.filter((s) => s.tentacion?.tipo === 'oferta');
+  assert.equal(ofertas.length, 7);
+  for (const s of ofertas) {
+    assert.match(s.tentacion.texto, /companero/, s.id);
+    // aceptar solo suma puntos y baja la confianza: nadie pasa mejor, ni sale antes, por aceptar
+    assert.doesNotMatch(s.tentacion.texto, /cubr|abr[ei]|apag|dejar|pasar|primero|subir|salir|ayud|distra/i, `${s.id} promete un beneficio de juego: ${s.tentacion.texto}`);
+  }
+});

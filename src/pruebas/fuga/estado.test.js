@@ -100,6 +100,6 @@ test('el estado inicial es neutro', () => {
   assert.deepEqual(E.promesas, [null, null]);
   assert.deepEqual(E.mensajes, [null, null]);
   assert.deepEqual(E.historial, []);
-  const cero = { ayudas: 0, sacrificios: 0, separaciones: 0, botines: 0, delaciones: 0, promesasHechas: 0, promesasRotas: 0, invalidas: 0 };
+  const cero = { ayudas: 0, sacrificios: 0, separaciones: 0, botines: 0, delaciones: 0, promesasHechas: 0, promesasRotas: 0, invalidas: 0, ilegibles: 0 };
   assert.deepEqual(E.stats, [cero, cero]);
 });

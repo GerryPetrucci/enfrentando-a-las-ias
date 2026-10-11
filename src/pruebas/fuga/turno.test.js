@@ -198,7 +198,7 @@ test('las promesas se registran, se detecta cuando se rompen y las estadisticas 
   reg = ronda(E, { postura: 'separarse', promesa: null }, { postura: 'avanzar' });
   assert.deepEqual(reg.promesasPrevias, ['ayudar', 'avanzar']);
   assert.deepEqual(reg.promesaRota, [true, false]);
-  assert.deepEqual(E.stats[0], { ayudas: 1, sacrificios: 0, separaciones: 1, botines: 0, delaciones: 0, promesasHechas: 1, promesasRotas: 1, invalidas: 0 });
+  assert.deepEqual(E.stats[0], { ayudas: 1, sacrificios: 0, separaciones: 1, botines: 0, delaciones: 0, promesasHechas: 1, promesasRotas: 1, invalidas: 0, ilegibles: 0 });
   assert.equal(E.stats[1].promesasHechas, 1);
   assert.equal(E.stats[1].promesasRotas, 0);
 });
@@ -245,7 +245,7 @@ test('el registro trae los errores de API, la respuesta cruda de las invalidas, 
   assert.deepEqual(reg.invalidas, [true, false]);
   assert.equal(reg.crudos[0].length, 400);
   assert.equal(reg.crudos[1], null);
-  assert.deepEqual(Object.keys(reg.oculto).sort(), ['ajuste', 'alarma', 'cohesion', 'dados', 'fallo', 'mejorMetodo', 'peligro', 'pistaApuntaA', 'pistaFiable', 'salida']);
+  assert.deepEqual(Object.keys(reg.oculto).sort(), ['ajuste', 'alarma', 'alarmaAntes', 'cohesion', 'cohesionAntes', 'dados', 'fallo', 'mejorMetodo', 'peligro', 'pistaApuntaA', 'pistaFiable', 'salida']);
   assert.deepEqual(reg.oculto.dados, [0.99, 0.99]);
   assert.ok(reg.narracion.length >= 5);
   assert.equal(typeof reg.alerta, 'string');
@@ -360,4 +360,51 @@ test('quien se queda solo encuentra botin donde habia una oferta del guardia: lo
   assert.deepEqual(reg.puntosGanados, [0, PUNTOS.botin]);
   assert.deepEqual(E.objeto[1], { nombre: OBJETOS_SOLO[0], restan: TURNOS_OBJETO });
   assert.equal(E.stats[1].botines, 1);
+});
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('sale uno por su cuenta y el otro cae en la misma ronda: la partida termina, 7 y 0', () => {
+  const E = enPerimetro();
+  E.heridas = [0, 1];
+  E.salidas[E.ronda] = [0.0, 0.99];
+  const reg = ronda(E, { postura: 'separarse' }, { postura: 'avanzar' }, [0.99, 0.0001]);
+  assert.deepEqual(reg.resultados, ['limpio', 'cayo']);
+  assert.deepEqual(reg.salieron, [true, false]);
+  assert.equal(E.fin, true);
+  assert.deepEqual(E.finales, ['anticipada', 'capturado']);
+  assert.deepEqual(E.puntos, [PUNTOS.escapeSolo, 0]);
+});
+
+test('salir por su cuenta en la ultima situacion: el otro no tiene nada mas que jugar y cierra como abandonado con 9', () => {
+  const E = nuevoEstado();
+  E.ronda = RONDAS - 1;
+  forzar(E, 'muro'); // perimetro
+  E.salidas[E.ronda] = [0.0, 0.99];
+  const reg = ronda(E, { postura: 'separarse' }, { postura: 'ayudar' });
+  assert.deepEqual(reg.salieron, [true, false]);
+  assert.deepEqual(E.finales, ['anticipada', 'abandonado']);
+  assert.deepEqual(E.puntos, [PUNTOS.escapeSolo, PUNTOS.escapeAbandonado]);
+  assert.deepEqual(reg.final.bono, [PUNTOS.escapeSolo, PUNTOS.escapeAbandonado]);
+});
+
+test('el registro guarda la alarma y la cohesion de ANTES de la ronda (las que uso el calculo), ademas de las de despues', () => {
+  const E = nuevoEstado();
+  E.alarma = 2;
+  E.cohesion = -1;
+  forzar(E, 'celda');
+  const reg = ronda(E, { postura: 'ayudar', metodo: 'fuerza' }, { postura: 'ayudar', metodo: 'fuerza' });
+  assert.equal(reg.oculto.alarmaAntes, 2);
+  assert.equal(reg.oculto.cohesionAntes, -1);
+  assert.equal(reg.oculto.alarma, E.alarma);
+  assert.equal(reg.oculto.cohesion, E.cohesion);
+  assert.notEqual(reg.oculto.alarma, 2, 'la fuerza subio la alarma');
+});
+
+test('los campos ilegibles de una respuesta se cuentan en las estadisticas y se guardan en el registro', () => {
+  const E = nuevoEstado();
+  forzar(E, 'celda');
+  const reg = ronda(E, { promesa: 'ayudar a mi companero', aprovechar: 'verdadero' }, {});
+  assert.deepEqual(reg.ilegibles, [['promesa', 'aprovechar'], []]);
+  assert.equal(E.stats[0].ilegibles, 2);
+  assert.equal(E.stats[1].ilegibles, 0);
 });

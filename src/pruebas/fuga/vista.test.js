@@ -54,6 +54,39 @@ test('la vista nunca filtra lo oculto: ni peligro, ni dados, ni ajustes, ni alar
   }
 });
 
+// Jugadas variadas (todas las posturas y metodos, promesas, mensajes y botines), para que la partida pase por salidas anticipadas,
+// capturas y estados en solitario: ahi es donde la vista podria filtrar algo si se descuidara.
+test('la vista no filtra lo oculto con agentes variados: separaciones, salidas, capturas y estados en solitario', () => {
+  const POST = ['ayudar', 'avanzar', 'sacrificarse', 'separarse'], MET = ['sigilo', 'fuerza', 'engano', 'esperar'];
+  let conSalida = 0, conCaptura = 0, solitario = 0;
+  for (let seed = 1; seed <= 120; seed++) {
+    const E = nuevoEstado(seed);
+    let n = seed * 7919;
+    const azar = (m) => { n = (n * 1103515245 + 12345) % 2147483648; return Math.floor((n / 2147483648) * m); };
+    while (!E.fin) {
+      const sit = E.situaciones[E.ronda];
+      const dadosOcultos = [...E.dados[E.ronda], ...E.salidas[E.ronda], ...E.botinSolo[E.ronda]];
+      const ocultos = [String(sit.peligro), ...dadosOcultos.map((d) => String(d).slice(0, 8))];
+      if (E.libres[0] !== E.libres[1]) solitario++;
+      for (const i of [0, 1]) {
+        if (!E.libres[i]) continue;
+        const v = vistaTexto(E, i);
+        assert.doesNotMatch(v, /peligro|ajuste|\bdados?\b|fiable|cohesion|escapar solo|salir solo/i, `seed ${seed}`);
+        assert.ok(!v.includes(`${PUNTOS.escapeSolo} puntos`), `seed ${seed}: revela el valor de salir solo`);
+        for (const o of ocultos) assert.ok(!v.includes(o), `seed ${seed}: la vista contiene ${o}`);
+      }
+      const agente = () => jug({
+        postura: POST[azar(4)], metodo: MET[azar(4)], aprovechar: azar(2) === 0, promesa: POST[azar(4)], mensaje: 'hola', razon: 'porque si',
+      });
+      aplicarTurno(E, [E.libres[0] ? agente() : null, E.libres[1] ? agente() : null]);
+    }
+    if (E.salio.some(Boolean)) conSalida++;
+    if (E.finales.includes('capturado')) conCaptura++;
+  }
+  // la prueba solo vale si de verdad paso por esos estados
+  assert.ok(conSalida > 5 && conCaptura > 5 && solitario > 20, `cobertura: salidas ${conSalida}, capturas ${conCaptura}, rondas en solitario ${solitario}`);
+});
+
 test('el historial es compacto y dice como le fue a cada uno, que prometio el companero y si rompio su promesa', () => {
   const E = nuevoEstado();
   forzar(E, 'celda');

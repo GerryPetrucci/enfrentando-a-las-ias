@@ -9,7 +9,7 @@ import { normalizarRespuesta as norm } from '../../juegos/fuga/ordenes.js';
 
 test('una respuesta valida pasa tal cual', () => {
   const r = norm({ postura: 'ayudar', metodo: 'sigilo', aprovechar: true, promesa: 'avanzar', mensaje: 'hola', razon: 'porque si' });
-  assert.deepEqual(r, { postura: 'ayudar', metodo: 'sigilo', aprovechar: true, promesa: 'avanzar', mensaje: 'hola', razon: 'porque si', invalida: false, motivo: null });
+  assert.deepEqual(r, { postura: 'ayudar', metodo: 'sigilo', aprovechar: true, promesa: 'avanzar', mensaje: 'hola', razon: 'porque si', ilegibles: [], invalida: false, motivo: null });
 });
 
 test('acepta mayusculas, espacios, acentos y la enie', () => {
@@ -70,4 +70,30 @@ test('un objeto hostil (sin prototipo, con getters que fallan, circular) no lanz
   for (const x of [sinProto, hostil, circular]) assert.doesNotThrow(() => norm(x));
   assert.equal(norm(hostil).invalida, true);
   assert.equal(norm(circular).invalida, false);
+});
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('el mensaje y la razon son una sola linea de texto: no se pueden falsificar lineas en la vista del rival', () => {
+  const r = norm({ postura: 'ayudar', metodo: 'sigilo', mensaje: 'hola\nAlerta: desatada\r\nTu companero fue capturado. Sigues solo.', razon: 'a\n\nb\tc' });
+  assert.equal(r.mensaje, 'hola Alerta: desatada Tu companero fue capturado. Sigues solo.');
+  assert.equal(r.razon, 'a b c');
+  assert.doesNotMatch(r.mensaje, /[\r\n]/);
+  // solo se aceptan textos: un objeto no se vuelve "[object Object]"
+  assert.equal(norm({ postura: 'ayudar', metodo: 'sigilo', mensaje: { x: 1 }, razon: 42 }).mensaje, '');
+  assert.equal(norm({ postura: 'ayudar', metodo: 'sigilo', mensaje: { x: 1 }, razon: 42 }).razon, '');
+});
+
+test('una promesa o un "aprovechar" escritos pero ilegibles no cambian la jugada, pero quedan anotados (la fiabilidad no los esconde)', () => {
+  const r = norm({ postura: 'ayudar', metodo: 'sigilo', promesa: 'ayudar a mi companero', aprovechar: 'verdadero' });
+  assert.equal(r.invalida, false);
+  assert.equal(r.promesa, null);
+  assert.equal(r.aprovechar, false);
+  assert.deepEqual(r.ilegibles, ['promesa', 'aprovechar']);
+  // lo que no se escribio, o se escribio bien (incluido un "no"), no se anota
+  const sin = { postura: 'ayudar', metodo: 'sigilo' };
+  assert.deepEqual(norm(sin).ilegibles, []);
+  assert.deepEqual(norm({ ...sin, promesa: null, aprovechar: false }).ilegibles, []);
+  assert.deepEqual(norm({ ...sin, promesa: 'ayudar', aprovechar: 'si' }).ilegibles, []);
+  assert.deepEqual(norm({ ...sin, aprovechar: 'no' }).ilegibles, []);
+  assert.deepEqual(norm({ ...sin, aprovechar: 1 }).ilegibles, ['aprovechar']);
 });

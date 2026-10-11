@@ -10,12 +10,13 @@ export function resultadoDe(E) {
     const st = E.stats[i];
     return {
       puntos: E.puntos[i],
-      final: E.finales[i], // 'conjunto' | 'solo' | 'capturado' | null si la partida no termino
+      final: E.finales[i], // 'conjunto' | 'solo' | 'abandonado' | 'anticipada' | 'capturado' | null si la partida no termino
       heridas: E.heridas[i],
       traiciones: st.separaciones + st.delaciones,
       promesasHechas: st.promesasHechas,
       promesasRotas: st.promesasRotas,
       jugadasInvalidas: st.invalidas,
+      camposIlegibles: st.ilegibles,
       ayudas: st.ayudas,
       sacrificios: st.sacrificios,
       separaciones: st.separaciones,

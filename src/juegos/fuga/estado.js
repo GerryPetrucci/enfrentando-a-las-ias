@@ -29,7 +29,7 @@ function instanciar(rng, def, fase) {
   return { id: def.id, fase: fase.id, peligro, ajuste, pistaFiable, apuntaA, tentacion };
 }
 
-const statsVacias = () => ({ ayudas: 0, sacrificios: 0, separaciones: 0, botines: 0, delaciones: 0, promesasHechas: 0, promesasRotas: 0, invalidas: 0 });
+const statsVacias = () => ({ ayudas: 0, sacrificios: 0, separaciones: 0, botines: 0, delaciones: 0, promesasHechas: 0, promesasRotas: 0, invalidas: 0, ilegibles: 0 });
 
 export function crearEstado(rng) {
   const situaciones = [];

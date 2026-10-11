@@ -112,6 +112,7 @@ export function aplicarTurno(E, respuestas) {
     if (!J[i]) continue;
     const st = E.stats[i], j = J[i];
     if (j.invalida) st.invalidas++;
+    st.ilegibles += j.ilegibles?.length ?? 0;
     if (dos) {
       if (j.postura === 'ayudar') st.ayudas++;
       if (j.postura === 'sacrificarse') st.sacrificios++;
@@ -141,6 +142,7 @@ export function aplicarTurno(E, respuestas) {
     mensajes: [...E.mensajes],
     razones: J.map((j) => j?.razon || null),
     invalidas: J.map((j) => (j ? j.invalida : null)),
+    ilegibles: J.map((j) => (j ? j.ilegibles ?? [] : [])), // campos escritos pero ilegibles (promesa, aprovechar)
     errores: [0, 1].map((i) => respuestas[i]?.error ?? null),
     crudos: [0, 1].map((i) => (respuestas[i]?.invalida && typeof respuestas[i].crudo === 'string' ? respuestas[i].crudo.slice(0, LARGO_CRUDO) : null)),
     resultados,
@@ -153,7 +155,7 @@ export function aplicarTurno(E, respuestas) {
     // Lo que las IAs nunca ven (la vista no lo toca) y el publico si: el reproductor lo muestra tal cual.
     oculto: {
       peligro: sit.peligro, ajuste: sit.ajuste, mejorMetodo: def.mejor, pistaFiable: sit.pistaFiable, pistaApuntaA: sit.apuntaA,
-      fallo: fallos, dados: [...E.dados[r]], alarma: E.alarma, cohesion: E.cohesion,
+      fallo: fallos, dados: [...E.dados[r]], alarma: E.alarma, cohesion: E.cohesion, alarmaAntes, cohesionAntes,
       salida: { prob: SALIDA_ANTICIPADA[sit.fase], dados: [...E.salidas[r]] },
     },
     final,
