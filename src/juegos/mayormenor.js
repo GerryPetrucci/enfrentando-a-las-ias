@@ -10,6 +10,7 @@ import { vistaTexto } from './mayormenor/vista.js';
 import { resultadoDe } from './mayormenor/resultado.js';
 import { REGLAS, FORMATO } from './mayormenor/reglas-texto.js';
 import { JUGADORES, RONDAS } from './mayormenor/constantes.js';
+import { evaluarSerie } from './mayormenor/evaluacion.js';
 import { BOTS, INFO_BOTS } from './mayormenor-bots.js';
 
 export default {
@@ -35,6 +36,8 @@ export default {
   // jugadas[i] = respuesta normalizada (con `error` y `crudo` si los puso la arena).
   aplicar: (E, jugadas) => aplicarTurno(E, jugadas),
   resultado: resultadoDe,
+  // al final de la serie: caracteristicas de cada IA y un comentario del resultado (la consola lo imprime y lo guarda en la serie)
+  evaluar: evaluarSerie,
   // a quien hay que preguntarle: a los dos, mientras la partida siga (el activo juega una carta y el predictor apuesta a la vez)
   activos: (E) => [!E.fin, !E.fin],
 };
