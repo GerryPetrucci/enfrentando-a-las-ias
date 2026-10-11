@@ -6,6 +6,19 @@
 >
 > Origen: conversacion en la app de Claude, 8 de octubre de 2026.
 
+## Donde vive que
+
+- **Publico (este repo):** codigo, `CLAUDE.md`, `README.md`, `docs/` (metodologia, como agregar un juego), `marca/` y
+  `herramientas/` (programas chicos que se corren a mano, p. ej. `node herramientas/medir-prompt.mjs`).
+- **Privado (`privado/`, ignorado por git, nunca se sube):** spec y borrador de reglas (`privado/spec/`), planes de
+  implementacion y plan de juegos (`privado/planes/`), plan de contenido (`privado/contenido/`), terminos de uso de los
+  proveedores (`privado/terminos/`) y prototipos con sus herramientas de balance (`privado/prototipos/`). Su inventario esta en
+  `privado/inventario-conocimiento.md`. `src/pruebas/privado.test.js` falla si git llegara a rastrear algo ahi.
+- **Respaldo de `privado/`:** todavia no tiene copia fuera de este equipo (pendiente: repo privado de GitHub o copia periodica).
+- **Memoria de Claude:** la de este proyecto vive junto al repo y solo guarda punteros y preferencias; las decisiones van aqui
+  o en `privado/`.
+- La llave de OpenRouter solo esta en `.env` (ignorado): nunca se lee ni se pega en el chat.
+
 ## Que es esto
 
 **Enfrentando a las IAs**: un canal de videos cortos + un sitio donde modelos de
@@ -51,6 +64,75 @@ Los tres los soporta `src/agentes.js` sin tocar el motor. Hoy esta implementado
 el modo en vivo y las estrategias de control; el modo "bot escrito" esta disenado
 pero falta escribir los bots (ver `docs/agregar-un-juego.md`).
 
+### Gratis o pago: se elige en CADA ejecucion (decidido el 10 de octubre de 2026)
+
+`node src/correr.js ... --modo=gratis|pago` es obligatorio cuando juega algun modelo; no hay valor por
+defecto. `gratis` solo admite los contendientes con `gratis: true` en `src/modelos.js` (hoy
+`nemotron-ultra`, `nemotron-super`, `laguna` y `ling`: $0 por llamada, no tocan el saldo); `pago` admite
+tambien Claude, GPT, Gemini, Llama y DeepSeek. El seguro de verdad esta en `llamarModelo`: sin modo
+pago se niega a llamar a un modelo que gaste credito, aunque otro script lo intente. El resultado guarda
+`modo` en `data/*.json`. Comprar 10 USD solo sube el tope de modelos gratis de 50 a 1,000 por dia
+(20 por minuto siempre); el saldo se gasta unicamente en modo pago. Los resultados de modelos gratis son
+de practica, no de torneo (se saturan, cambian y fallan por infraestructura).
+Los resultados con modelos gratis van a data/pruebas/ (no se versionan ni entran al marcador).
+
+### Razonamiento de los modelos: siempre medio, nunca el maximo (decidido el 9 de octubre de 2026)
+
+Todos los modelos se llaman con el razonamiento en nivel **medio** (`reasoning.effort = "medium"` en OpenRouter) o, si el
+modelo no lo permite, con su valor por defecto. **Nunca el maximo** (`high`, `xhigh`): cuesta mucho mas en los modelos
+caros (el razonamiento oculto se cobra como salida) y no cambia lo que se mide. Es igual para todas las IAs y se congela
+junto con el prompt y los demas parametros de llamada. **Estado: implementado** en `src/parametros.js` (`PARAMETROS` y `cuerpoDeLlamada`). Cada contendiente declara en `src/modelos.js`
+su campo `razonamiento` (`"medium"` si el modelo admite ese nivel, `null` si no tiene niveles) y
+`node herramientas/verificar-modelos.mjs` lo compara con el catalogo de OpenRouter: correrlo antes de cada temporada y antes
+de gastar. Claude Sonnet 5.5 razona en `high` por defecto, por eso se le manda `medium` explicito. Segun el catalogo del 9 de
+octubre de 2026, Claude (Sonnet y Haiku 5.5) y GPT-6 ignoran `temperature`: el 0.7 se manda igual a todos, pero con ellos no
+tiene efecto. Lo que se le mando a cada modelo queda en `parametros` de cada resultado. Medido el 10 de octubre de 2026: con
+`max_tokens` 2000 y razonamiento medio, GPT Luna se corto en 3 de 4 jugadas (el razonamiento se comio 1,919-2,000 tokens). El
+usuario decidio subir `max_tokens` a 4000 (el razonamiento sigue en medio); si aun asi se cortan, se mide y se decide con el
+usuario: no se sube el razonamiento para "darles espacio".
+
+### Juego 3: La Fuga (decidido el 10 de octubre de 2026)
+
+El Dilema era demasiado plano (un bit por ronda, pagos fijos y conocidos, sin azar), asi que se agrego un juego nuevo **al
+lado**: el Dilema se queda como juego de control con sus estrategias clasicas. En **La Fuga**, dos IAs son prisioneros que creen
+que deben escapar juntos y enfrentan 9 situaciones con riesgo oculto; cada ronda eligen una **postura** hacia el companero
+(ayudar, avanzar, sacrificarse, separarse) y un **metodo** (sigilo, fuerza, engano, esperar), y hay tentaciones (un botin, la
+oferta de un guardia) que premian traicionar. **Regla oculta:** si se separan, cada uno puede escapar por su cuenta; las IAs no
+lo saben y el prompt nunca afirma lo contrario (calla). Se publica en `docs/metodologia.md` y el reproductor la muestra.
+Categoria propia ("Lealtad bajo riesgo") porque el marcador promedia los puntos de todos los juegos de una categoria. La
+historia publica la escribe el codigo (sin llamadas extra) y se guarda en los datos junto con lo `oculto` de cada ronda
+(probabilidades reales y dados). Una llamada por IA y situacion: 18 por partida. **Salida anticipada (enmienda del 10 de octubre de 2026):** quien se
+separa y pasa la situacion puede escapar de inmediato por su ruta propia (probabilidad oculta segun la fase) y cobra 7; el que
+queda solo falla algo mas (x1.15) pero encuentra mas botin (la oferta del guardia se vuelve botin) y, si escapa despues, cobra 9.
+Una partida suelta nunca se publica: siempre una
+serie con asientos rotados (mismas situaciones y mismos dados). **Estado:** motor, bots de control y pruebas listos; falta la
+escena del reproductor (segunda especificacion) y la primera corrida con modelos. **Reglas de puntaje (10 de octubre de 2026):** los
+extras de botin y delacion solo cuentan si escapas (capturado vale 0 en total) y la delacion solo agrava al delatado si ya estaba
+herido; el prompt lo dice asi. Balance con bots cerrado ese dia: escapan los dos 48 %, el traidor gana al leal 57 % y a toma y daca
+58 % de las partidas decididas (`privado/prototipos/herramientas/fuga-balance.mjs`).
+
+### Lote (Batch API): mitad de precio, sin prisa (decidido el 9 de octubre de 2026)
+
+Nada de esto es en vivo: la partida se graba con OBS despues. Por eso `node src/correr.js ... --modo=pago --lote --tope=DOLARES`
+manda las jugadas por la Batch API de OpenRouter, con **50% de descuento** (variantes `:batch` del catalogo) a cambio de esperar:
+segun OpenRouter, en el beta la mediana fue de 7 minutos y el 90% terminaba en menos de una hora (el maximo es 24). Las tres banderas son
+obligatorias juntas; sin `--tope` o sin saldo suficiente no sale ningun lote. No cambia el prompt ni los parametros: es el mismo
+texto al mismo modelo. Todas las partidas de la serie corren a la vez, turno por turno, y cada turno es un lote por modelo
+(`src/coordinador-lote.js`); `arena.js` no sabe nada del lote. Los modelos sin variante de lote (Llama, DeepSeek, los gratis) se
+llaman normal dentro de la misma corrida. El tope se revisa antes de cada lote nuevo: si se alcanza, no salen mas lotes y la
+serie incompleta se guarda en `data/pruebas/`. El costo y los tokens vienen por lote, no por peticion: el reparto por reino es
+una aproximacion. Un lote enviado no se reintenta (no hay llave de idempotencia: reenviar cobraria dos veces). Si la corrida se
+interrumpe a media espera, el lote sigue en OpenRouter y se cobra: la consola imprime su id al enviarlo y
+`node herramientas/ver-lote.mjs ID` muestra en que quedo (no retoma la serie).
+
+**Modelos economicos de practica:** `haiku`, `luna` y `flash-lite` (la gama baja de cada proveedor, marcados `practica: true`) para
+ensayar por lote por centavos (~$0.08 por partida de 4 reinos). Sus resultados son de practica, nunca de torneo: la consola los
+manda a `data/pruebas/` y se niega a mandarlos a `--destino=oficial`. No se juegan en la misma partida que su version de gama
+media (comparten color).
+
+**Estado:** implementado y probado con lotes falsos (`npm test`); falta la primera corrida real (tarea 8 de
+`privado/planes/plan-lote-openrouter.md`).
+
 ### No desarrollar juegos: desarrollar una arena
 
 La preocupacion original era que el formato exige desarrollo constante. La
@@ -67,6 +149,25 @@ aparece la traicion — que es el mejor contenido disponible por linea de codigo
 El mismo motor alimenta el sitio (marcador historico) y los videos (reproductor
 vertical 1080x1920 que se captura con OBS). No se escribe codigo aparte para
 video.
+
+### Presupuesto de llamadas (limite duro al disenar un juego)
+
+Los modelos gratis de OpenRouter permiten 20 llamadas por minuto y 50 por dia (1,000 por dia
+si se compraron al menos $10 de creditos, que esos modelos no gastan). Para no perder la "liga
+gratuita", todo juego nuevo cumple: **una llamada por jugador por turno** (ordenes en lote),
+**maximo 30 turnos**, **<= ~100 llamadas por partida de 4 jugadores**, **entrada <= 3,500 y
+salida <= 500 tokens** (medidos con Claude, que cuenta ~1.5 veces mas tokens que los demas modelos
+en espanol; ~7,000 caracteres de entrada), y costo con modelos de pago **<= $0.40 por partida**
+(tope $0.90).
+Mas complejidad cuesta tokens, no llamadas, y esta permitida dentro de esos limites; subir turnos,
+llamadas por turno o jugadores requiere aprobacion expresa. Detalle en `docs/agregar-un-juego.md`.
+**Excepcion aprobada el 9 de octubre de 2026 (solo Guerra de territorios):** entrada <= 4,450 (era 4,200;
+ampliada con aprobacion expresa al medir con las pruebas del plan 1 el peor caso de 5 reinos, con los 4
+rivales mandando mensaje, privado y nota al largo maximo: 4,406) y salida <= 650 tokens, porque con sus 6
+reglas extra (mensajes privados, comercio, edificios, maravilla, honor y nota de plan) el prompt mide 3,681
+tokens en el caso tipico de 5 reinos. Sigue siendo **una llamada por
+jugador por turno**, 30 turnos y <= ~100 llamadas por partida de 4 jugadores; el costo con modelos de
+pago sube a ~$0.44 por partida con la mezcla media (dentro del tope mensual de ~$20).
 
 ## Invariantes de diseno (romper esto rompe el proyecto)
 
@@ -116,6 +217,13 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 - **Logo:** concepto A, "Duelo" (disco verde = cooperar, disco rojo = traicionar,
   interseccion dorada = tension). Paleta = la del reproductor. Tipografia: Barlow
   Condensed (titulos) + Inter (texto). Los colores significan **jugadas**, no modelos.
+- **Color de cada IA (decidido el 10 de octubre de 2026): uno solo, global, para todos los
+  juegos.** Vive en [`web/paleta.js`](web/paleta.js) y se pide por id (`colorDe`, `textoDe`,
+  `franjasDe`, `fondoCSS`); ningun juego ni escena define el color de una IA. Claude naranja
+  `#D97757`, GPT blanco con negro, Gemini multicolor de Google (franjas), DeepSeek azul
+  `#4D6BFE`, Llama magenta `#D946EF` (sin color propio; el azul de Meta se confundia con
+  DeepSeek y con el azul de Gemini). Solo colores, nunca logos. Una IA nueva se agrega
+  en `paleta.js`; `npm test` falla si dos IAs se pueden confundir sobre el mapa.
 - **Nunca** logos de proveedores, ni nombres de modelos en el nombre del canal,
   usuarios o dominio. Aviso estandar: "Proyecto independiente, sin afiliacion con los
   proveedores de los modelos".
@@ -139,22 +247,35 @@ Hecho:
 - Motor generico (`arena.js`), prompt unico versionado, RNG con seed
 - Cliente de OpenRouter + registro de contendientes
 - Juego 1: Dilema del Prisionero Negociado (categoria "Traición y confianza")
+- Juego 3: **La Fuga** (categoria "Lealtad bajo riesgo"): motor, bots de control, narracion guardada en los datos y pruebas
+  listos; faltan la escena del reproductor y la primera corrida con modelos (diseno en `privado/spec/fuga-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA
   visible (`razon=1`) y etiqueta fija de contenido generado por IA
 - Pipeline probado de punta a punta con estrategias de control
+- Arena con jugadores activos, contador de llamadas y ritmo; consola con series de rotación y `data/pruebas/`;
+  marcador con obediencia; prueba de humo gratuita (`src/humo.js`, aún sin correr con modelos reales)
 
 Pendiente:
 - [x] IDs de modelo verificados el 9 de octubre de 2026 (gama media vigente de cada
       proveedor; DeepSeek V3.2 porque las V4 razonan sin limite y se cortan). Parametros
-      de llamada iguales para todas (temperatura 0.7, max_tokens 2000) y congelados
-      junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
+      de llamada iguales para todas (temperatura 0.7, max_tokens 4000 desde el 10 de octubre
+      de 2026; antes 2000) y congelados junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
       volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
+- [ ] Primera corrida real por lote con modelos economicos (tarea 8 del plan del lote): el credito en OpenRouter ya esta cargado
+      (9 de octubre de 2026); falta el visto bueno del usuario para gastar
 - [ ] Kit de marca hecho (`marca/`). Falta: plan de contenido, registrar dominio y
       cuentas, sitio multilenguaje + imagen para links (`marca/exportados/og-1200x630.png`)
-- [ ] Juego 2 en otra categoria (Negociacion o Engano)
+- [ ] Juego 2: **Guerra de territorios**, de 2 a 5 reinos, con alianzas y traiciones, **control
+      tactico** (ordenes por region cada turno), **mapa de pixel art dividido en regiones cuyo
+      tamano crece con los reinos** (26/39/52/65 regiones para 2/3/4/5), recursos aleatorios
+      por region (6 tipos) y siempre un unico ganador (muerte subita al final + desempate).
+      Reglas extra aprobadas (sin llamadas extra): mensajes privados, comercio, edificios,
+      maravilla, honor y nota de plan. Motor y reglas implementados en `src/mapa.js` y `src/juegos/conquista/`
+      con pruebas (plan 1); arena, consola, marcador y prueba de humo listos con bots de control (plan 2);
+      faltan correr la prueba de humo con modelos gratis y la escena del video (plan 3).
 - [ ] Modo "bot escrito" para correr miles de partidas
 - [x] Publicar el sitio — GitHub Pages, <https://gerrypetrucci.github.io/enfrentando-a-las-ias/>.
       Se despliega solo (`.github/workflows/pages.yml`) en cada push a `main` que
@@ -207,3 +328,4 @@ pagina en producto, no en archivo de videos.
 - ES modules, Node 20+, **cero dependencias**. Si algo necesita un paquete,
   pensarlo dos veces antes de agregarlo.
 - Sin paso de build: el sitio es HTML estatico que se abre y ya.
+- Pruebas con `npm test` (`node --test`, archivos `src/pruebas/*.test.js`).

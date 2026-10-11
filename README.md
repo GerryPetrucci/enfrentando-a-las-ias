@@ -27,8 +27,31 @@ antes de conectar modelos de verdad.
 
 ```bash
 cp .env.example .env      # pon tu llave de https://openrouter.ai/keys
-node src/correr.js --juego=dilema --a=claude --b=gpt --partidas=4
+node src/correr.js --juego=dilema --a=claude --b=gpt --partidas=4 --modo=pago
+node src/correr.js --juego=dilema --a=laguna --b=ling --partidas=4 --modo=gratis
 node src/marcador.js
+```
+
+**En cada ejecucion con modelos eliges** `--modo=gratis` (solo modelos gratis, no tocan tu saldo) o
+`--modo=pago` (puede gastar credito). No hay valor por defecto, y sin `--modo=pago` el codigo se niega a
+llamar a un modelo de pago. Las estrategias base (`tomaydaca`, `siempre-t`...) no usan API ni modo.
+
+La **Guerra de territorios** se juega de 2 a 5 jugadores y se corre en serie de rotación (cada jugador pasa por cada asiento; el mapa es el mismo en toda la serie):
+
+```bash
+node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4      # bots de control, sin API
+node src/correr.js --juego=conquista --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago
+node src/humo.js                                                                                      # prueba de humo con 2 modelos gratis
+```
+
+Los resultados con modelos gratis son de práctica y van a `data/pruebas/` (el marcador no los lee; se ven con `node src/marcador.js --data=data/pruebas --salida=marcador-pruebas.json`). `--destino=oficial|pruebas` cambia el destino de una corrida.
+
+Para **ensayar barato**, las jugadas pueden ir por la Batch API de OpenRouter (mitad de precio, tarda de minutos a horas). Exige `--modo=pago` y un `--tope` en dolares; las partidas de la serie corren a la vez y el resultado va a `data/pruebas/`:
+
+```bash
+node src/correr.js --juego=conquista --jugadores=haiku,luna,flash-lite,deepseek --partidas=4 --modo=pago --lote --tope=0.50 --destino=pruebas
+node src/correr.js ... --lote --tope=0.10 --turnos=2     # ensayo minimo: cada partida se corta a 2 turnos
+node herramientas/verificar-modelos.mjs                  # compara src/modelos.js con el catalogo de OpenRouter (no gasta)
 ```
 
 Una sola llave de OpenRouter da acceso a todos los modelos. Los IDs viven en
@@ -36,7 +59,7 @@ Una sola llave de OpenRouter da acceso a todos los modelos. Los IDs viven en
 <https://openrouter.ai/models> antes de grabar una temporada**: cambian cada
 pocos meses.
 
-Contendientes incluidos: `claude`, `gpt`, `gemini`, `llama`, `deepseek`.
+Contendientes incluidos: `claude`, `gpt`, `gemini`, `llama`, `deepseek`. De practica, baratos y por lote: `haiku`, `luna`, `flash-lite`.
 Estrategias de control (gratis): `tomaydaca`, `siempre-c`, `siempre-t`, `azar`.
 
 ## Grabar el video
@@ -68,21 +91,38 @@ No se quita: es una regla que sale de los terminos de uso de los proveedores.
 ```
 src/
   arena.js      el motor: corre una partida, no sabe de que juego se trata
+  limitador.js  reparte las llamadas en el tiempo (tope por minuto de OpenRouter)
+  parametros.js     temperatura, max_tokens y razonamiento medio: iguales para todas las IAs
+  lote.js           cliente de la Batch API de OpenRouter (mitad de precio)
+  coordinador-lote.js  junta las jugadas de cada turno en un lote por modelo
+  ejecutar-serie.js    corre las partidas de una serie, en fila o todas a la vez
+  serie.js      piezas puras de la consola: series de rotacion, modo, destino
   prompt.js     EL CONTRATO: el prompt identico para todas las IAs
   modelos.js    cliente de OpenRouter + registro de contendientes
   agentes.js    modelo en vivo / bot escrito / estrategia clasica
   rng.js        aleatorio con seed (resultados reproducibles)
-  correr.js     CLI del duelo        -> data/*.json
+  correr.js     CLI del duelo o la serie -> data/*.json (data/pruebas/ si es practica)
+  humo.js       prueba de humo gratuita de la Guerra de territorios
   marcador.js   agrega resultados    -> web/marcador.json
   servidor.js   servidor estatico local
   juegos/
     dilema.js   Juego 1: Dilema del Prisionero Negociado
+    conquista.js        Juego 2: Guerra de territorios (de 2 a 5 reinos)
+    conquista-bots.js   bots de control del juego 2
+    fuga.js             Juego 3: La Fuga (dos prisioneros, riesgo oculto)
+    fuga/               catalogo, riesgo, turno, vista y narracion de La Fuga
+    fuga-bots.js        bots de control del juego 3
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
 docs/
   metodologia.md       como se garantiza que la comparacion sea justa
   agregar-un-juego.md  como meter el juego numero 2
+herramientas/
+  medir-prompt.mjs     mide el tamano del prompt de la Guerra de territorios (sin API)
+  verificar-modelos.mjs  compara los modelos de src/modelos.js con el catalogo de OpenRouter (no gasta)
+  ver-lote.mjs           consulta un lote ya enviado: estado, costo y respuestas (no gasta)
+privado/               spec, planes, plan de contenido, terminos, prototipos (NO se sube a git; ver CLAUDE.md)
 ```
 
 ## El primer juego
@@ -95,6 +135,15 @@ Eso vuelve la traicion **medible al cien por ciento**: se compara lo prometido
 contra lo jugado, sin interpretar texto libre. De ahi sale la metrica
 **fiabilidad** de cada modelo, que es la que da sentido a la categoria y el
 titulo al video.
+
+## El tercer juego
+
+**La Fuga.** Dos IAs son prisioneros que planean escapar juntos. En cada una de 9 situaciones eligen a la vez una postura hacia su compañero (ayudar, avanzar, sacrificarse, separarse) y un método para el obstáculo (sigilo, fuerza, engaño, esperar). Cada situación tiene un riesgo **oculto** para las IAs, y la alarma y la confianza entre ellos cambian las probabilidades siguientes. Hay tentaciones (un botín, la oferta de un guardia) que premian traicionar, y una regla que las IAs no conocen: si se separan, pueden escapar por su cuenta. La historia se cuenta sola, ronda por ronda, y queda guardada en los datos.
+
+```bash
+node src/correr.js --juego=fuga --a=leal --b=traidor --partidas=2 --destino=pruebas      # bots de control, sin API
+node src/correr.js --juego=fuga --a=claude --b=gpt --partidas=4 --modo=pago               # con modelos (la serie rota los asientos)
+```
 
 ## Como se compara justo
 

@@ -21,6 +21,11 @@ Cada duelo se corre un numero par de partidas y los asientos se intercambian en
 cada una (`--alternar=no` lo desactiva, pero no deberia usarse para contenido
 publicado). Ninguna IA acumula la ventaja de ir siempre primero.
 
+Con mas de dos jugadores (Guerra de territorios) se corre una **serie de
+rotacion**: en k partidas cada jugador pasa por cada uno de los k asientos, y el
+mapa es el mismo en toda la serie. Por eso las series se corren en multiplos de k;
+la consola avisa si no es asi.
+
 ## 3. Seed publicado
 
 Todo lo aleatorio pasa por un generador con semilla
@@ -50,8 +55,10 @@ y la fecha. Los modelos se actualizan cada pocos meses, asi que **el marcador es
 una foto del momento, no un veredicto permanente.** Eso no es una debilidad del
 formato: es el motivo por el que puedes hacer temporadas.
 
-Los parametros de llamada (temperatura 0.7 y 2000 tokens maximos) son iguales para
-todas las IAs y se congelan junto con el prompt.
+Los parametros de llamada (temperatura 0.7, 4000 tokens maximos y razonamiento en nivel medio, o el valor por defecto del
+modelo si no tiene niveles) son iguales para todas las IAs y se congelan junto con el prompt. Lo que se le mando a cada
+modelo queda en `parametros` de cada resultado. Segun el catalogo de OpenRouter del 9 de octubre de 2026, Claude (Sonnet y
+Haiku 5.5) y GPT-6 ignoran la temperatura: se manda igual a todos, pero con ellos no tiene efecto.
 
 ## 6. Alcance de las afirmaciones
 
@@ -75,3 +82,32 @@ Se usan los nombres de los modelos de forma descriptiva, para decir cual se
 midio. No se usan logos oficiales ni nada que sugiera patrocinio, permiso o
 relacion con esas empresas. Conviene revisar los terminos de uso de cada
 proveedor antes de publicar comparativas de forma sistematica.
+
+## 9. Practica y torneo
+
+Los resultados de la liga gratuita (modelos gratis) y las pruebas de calibracion
+son de **practica**: se guardan aparte (`data/pruebas/`), no entran al marcador y
+no se publican como resultado. Los modelos gratis se saturan, cambian y fallan por
+infraestructura; sirven para probar el formato, no para comparar IAs.
+
+## 10. Lotes
+
+Una serie corrida con `--lote` usa el mismo prompt, los mismos parametros y el mismo modelo que una en vivo; cambia **cuando** se
+contesta (a mitad de precio, de minutos a horas despues). Tres cosas que hay que saber al leer sus datos:
+
+- Todas las partidas de la serie avanzan juntas, turno por turno, en vez de una tras otra. No cambia lo que ve cada IA: cada
+  partida sigue siendo independiente y el mapa es el mismo.
+- OpenRouter informa tokens y costo por lote, no por peticion; el reparto por reino es una aproximacion (partes iguales).
+- Si se alcanza el tope de gasto, la serie queda incompleta y se guarda como practica. Los turnos que no se pudieron pedir
+  quedan anotados como error de API, no escondidos.
+
+## 11. Reglas ocultas
+
+La Fuga tiene una regla que las IAs no conocen: si los prisioneros se separan, cada uno puede escapar por su cuenta (y eso vale
+menos que escapar juntos). El prompt nunca afirma lo contrario: dice que planean salir juntos, que hay detalles de la prision que
+no conocen, y calla sobre lo que pasa si solo uno sale. Se publica aqui y el reproductor la muestra, porque lo que se mide es que
+hacen las IAs creyendo que deben salir juntos. Tambien son ocultos, y quedan guardados en cada ronda (`oculto`): el peligro real
+de cada situacion, que metodo funciona mejor, si la pista decia la verdad y los dados. Las IAs nunca los ven; el publico si,
+despues de cada ronda. Si alguien se separa puede, ademas, escapar de inmediato por su ruta propia (una probabilidad oculta que
+depende de la fase) y deja la partida; quien se queda atras sigue solo, falla algo mas pero encuentra mas botin, y si logra
+escapar despues cobra mas que el que se fue primero.
