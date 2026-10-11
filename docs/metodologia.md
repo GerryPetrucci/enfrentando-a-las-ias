@@ -132,3 +132,12 @@ secreto durante la partida es esa información, y es el corazón del juego. La `
 de cada subasta el público sí ve cuánto apostó cada uno (queda en `oculto` de cada registro). El tiempo se guarda en décimas enteras para no
 arrastrar errores de decimales. Una respuesta ilegible equivale a retirarse y se mide como fallo (obediencia), no se esconde. Cada subasta es un turno:
 hasta 95 llamadas por partida, por eso se corre en vivo y no por lote.
+
+## 14. Decisiones a la vez con papeles distintos: Mayor o menor
+
+Mayor o menor no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve lo que el rival decide en la misma ronda ni el orden en que saldrán las cartas
+del crupier. En cada ronda el jugador activo (que juega una carta boca abajo) y el predictor (que apuesta sin verla) deciden a la vez; como el activo compromete su carta
+antes de que el predictor apueste, es equivalente a que sean simultáneos, y por eso la arena pide las dos respuestas en el mismo turno. El orden de los dos mazos del crupier
+y las jugadas de reemplazo se sortean al crear la partida con el seed (una serie de dos partidas con los asientos invertidos repite el mismo mundo), y la `vista` solo
+lee de esos mazos la carta de la ronda en curso; una prueba reordena el futuro del crupier y exige que la vista de cada jugador no cambie. Una respuesta ilegal se
+reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.

@@ -118,6 +118,9 @@ src/
     subasta.js          Juego 5: Subasta de tiempo (5 jugadores, banco de 10 minutos, 19 subastas)
     subasta/            estado, turno, vista, narración y evaluación de Subasta de tiempo
     subasta-bots.js     bots de control del juego 5
+    mayormenor.js       Juego 6: Mayor o menor (2 jugadores, cartas y apuestas, 18 rondas)
+    mayormenor/         estado, turno, vista, narración y evaluación de Mayor o menor
+    mayormenor-bots.js  bots de control del juego 6
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
@@ -167,6 +170,15 @@ node src/correr.js --juego=solitario --jugadores=claude,gpt,gemini,deepseek,llam
 ```bash
 node src/correr.js --juego=subasta --jugadores=retirado,parejo,azar,gastador,cuentagotas --partidas=5 --destino=pruebas   # bots de control, sin API
 node src/correr.js --juego=subasta --jugadores=claude,gpt,gemini,deepseek,llama --partidas=5 --modo=pago                    # con modelos (la serie rota los asientos)
+```
+
+## El sexto juego
+
+**Mayor o menor.** Dos IAs, 11 cartas del 0 al 10 y 10 fichas cada una, y 18 rondas. El crupier revela una carta de su mazo (cada jugador tiene el suyo, del 1 al 9); el jugador activo juega una carta boca abajo y el predictor apuesta si será mayor o menor, a la vez. Si la carta es mayor, el activo gana la diferencia; el predictor gana o pierde lo apostado; con una carta igual la apuesta se devuelve. Los papeles se alternan y gana quien termina con más fichas, o quien deja al otro sin fichas. Son hasta 36 llamadas por partida, así que se corre en vivo.
+
+```bash
+node src/correr.js --juego=mayormenor --a=contador --b=azar --partidas=2 --destino=pruebas   # bots de control, sin API
+node src/correr.js --juego=mayormenor --a=claude --b=gpt --partidas=2 --modo=pago            # con modelos (la serie invierte los asientos)
 ```
 
 ## Como se compara justo

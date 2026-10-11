@@ -146,6 +146,17 @@ la `vista` no lo filtra (prueba de no interferencia) y el publico lo ve despues 
 prudencia, eficiencia y constancia). **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor
 (diseno en `privado/spec/subasta-tiempo-diseno.md`, plan en `privado/planes/plan-subasta-motor.md`).
 
+### Juego 6: Mayor o menor (decidido el 11 de octubre de 2026)
+
+Dos IAs, 11 cartas del 0 al 10 y 10 fichas cada una, 18 rondas. El crupier tiene dos mazos independientes de 9 cartas (1 al 9), uno por jugador; en cada ronda revela la
+siguiente de **su** mazo, el **jugador activo** juega una carta boca abajo y el **predictor** apuesta de 1 a todas sus fichas a que sera mayor o menor, a la vez. Si la carta es
+mayor, el activo gana la diferencia; el predictor gana o pierde lo apostado (carta igual: la apuesta se devuelve); las fichas salen de la banca. Los papeles se alternan; termina
+en la ronda 18 o antes si alguien queda sin fichas; gana quien tiene mas. Puntos del marcador: ganador 4, perdedor 0, empate 2 y 2. **No tiene regla oculta**: lo secreto es lo que el
+rival decide a la vez y el orden del crupier. Categoria "Estrategia de eliminación". **18 turnos y 36 llamadas** por partida (sin excepcion), en vivo. Bots de control: `azar`,
+`prudente`, `contador`, `temerario`, `contrario`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, lectura, audacia, provecho y constancia). **Estado:** motor,
+bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
+`privado/planes/plan-mayormenor-motor.md`).
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -163,9 +174,9 @@ Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rond
 **con nombres y personajes propios y las mismas reglas**; nunca el nombre, el arte ni la estetica de ningun programa. Cada juego
 respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion expresa) y sigue el flujo de siempre (catalogo, spec,
 plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
-`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con dos juegos hechos (El numero solitario y Subasta de tiempo); las reglas de los otros tres
-(Duda y apuesta, Triple dado, Mayor o menor) estan guardadas en `privado/planes/reglas-oleada-1.md` con su analisis de encaje; el usuario elige con
-cual seguir.
+`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con tres juegos hechos (El numero solitario, Subasta de tiempo y Mayor o menor); quedan Triple dado
+(4 jugadores; cada tarjeta de prediccion se usa una sola vez) y Duda y apuesta (se juega con 4: termina al quedar 3; todos empiezan con las mismas piezas),
+con sus reglas y decisiones en `privado/planes/reglas-oleada-1.md`; el orden acordado es ese.
 
 **Sin torneo general (decidido el 11 de octubre de 2026):** cada juego se evalua por si mismo, para evitar complejidad. No hay un
 meta-juego que encadene los juegos ni fichas que pasen de uno a otro. En su lugar, **al final de cada juego (o de su serie)** se evaluan las
@@ -322,6 +333,8 @@ Hecho:
   pruebas listos; faltan la prueba con modelos y la escena del reproductor (diseno en `privado/spec/numero-solitario-diseno.md`)
 - Juego 5: **Subasta de tiempo** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/subasta-tiempo-diseno.md`)
+- Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
+  prueba con modelos y la escena del reproductor (diseno en `privado/spec/mayor-o-menor-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA
