@@ -111,6 +111,26 @@ extras de botin y delacion solo cuentan si escapas (capturado vale 0 en total) y
 herido; el prompt lo dice asi. Balance con bots cerrado ese dia: escapan los dos 48 %, el traidor gana al leal 57 % y a toma y daca
 58 % de las partidas decididas (`privado/prototipos/herramientas/fuga-balance.mjs`).
 
+### Voz narradora con IA (decidido el 11 de octubre de 2026)
+
+El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
+leyendo una partida ya guardada, asi que la voz se genera **antes** de grabar y la escena espera a que termine cada frase: el video
+sale completo en una sola toma, sin post-produccion de audio, y la linea de tiempo se exporta para poder re-doblarlo en otro idioma.
+Nada de voz en tiempo real. Hay dos capas de texto: los **hechos** (los escribe el codigo, siempre verdaderos) y el **comentario** (la
+capa editorial; nunca cambia ni oculta una jugada). La voz se declara como contenido generado por IA donde la plataforma lo pida y
+no imita a ninguna persona real. Motor de voz: sin elegir (se prueban 2-3 y se revisan sus terminos de uso antes de publicar, como con
+los proveedores de modelos). Detalle y pasos en `privado/planes/plan-voz-narradora.md`. **Estado:** decidido, sin implementar.
+
+### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
+
+Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rondas con la estructura de los concursos de eliminacion
+(decisiones secretas simultaneas, subastas, faroles, roles ocultos, alianzas, fichas como moneda). Se implementan los que se pueda,
+**con nombres y personajes propios y las mismas reglas**; nunca el nombre, el arte ni la estetica de ningun programa. Cada juego
+respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion expresa) y sigue el flujo de siempre (catalogo, spec,
+plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
+`privado/planes/plan-juegos-de-concurso.md`. **Estado:** catalogo hecho; falta que el usuario apruebe el orden y fije las reglas
+completas del primer juego.
+
 ### Lote (Batch API): mitad de precio, sin prisa (decidido el 9 de octubre de 2026)
 
 Nada de esto es en vivo: la partida se graba con OBS despues. Por eso `node src/correr.js ... --modo=pago --lote --tope=DOLARES`
@@ -132,8 +152,11 @@ ensayar por lote por centavos (medido el 10 de octubre de 2026: ~$0.12 por parti
 manda a `data/pruebas/` y se niega a mandarlos a `--destino=oficial`. No se juegan en la misma partida que su version de gama
 media (comparten color).
 
-**Estado:** implementado y probado con lotes falsos (`npm test`); falta la primera corrida real (tarea 8 de
-`privado/planes/plan-lote-openrouter.md`).
+**Estado:** implementado y probado con lotes falsos (`npm test`) y con dos ensayos reales (10 y 11 de octubre de 2026, `conquista`, 1 turno,
+4 partidas, tope $0.10): 16 de 16 respuestas validas (12 por lote y 4 normales), 0 errores de API, gasto informado $0.0158; el mismo
+turno en vivo tambien dio 4 de 4 validas. Espera del turno 1: Flash-Lite 6 min, Haiku 12 min, **Luna 7.7 h**. Cada turno espera al lote
+mas lento, asi que una serie de 30 turnos con Luna adentro puede tardar dias: para series largas por lote conviene dejarla fuera o
+usar juegos de pocos turnos (La Fuga tiene 9). Falta la serie completa (paso 6 de la tarea 8 de `privado/planes/plan-lote-openrouter.md`).
 
 ### No desarrollar juegos: desarrollar una arena
 
@@ -266,8 +289,8 @@ Pendiente:
       de 2026; antes 2000) y congelados junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
       volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
-- [ ] Primera corrida real por lote con modelos economicos (tarea 8 del plan del lote): el credito en OpenRouter ya esta cargado
-      (9 de octubre de 2026); falta el visto bueno del usuario para gastar
+- [ ] Serie completa por lote (paso 6 de la tarea 8 del plan del lote): los ensayos de 1 turno ya se hicieron (10 y 11 de octubre de
+      2026); falta decidir si se corre, con que modelos (Luna tarda horas por turno) y el visto bueno del usuario para gastar
 - [ ] Kit de marca hecho (`marca/`). Falta: plan de contenido, registrar dominio y
       cuentas, sitio multilenguaje + imagen para links (`marca/exportados/og-1200x630.png`)
 - [ ] Juego 2: **Guerra de territorios**, de 2 a 5 reinos, con alianzas y traiciones, **control
