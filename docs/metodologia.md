@@ -119,6 +119,7 @@ escapar despues cobra mas que el que se fue primero.
 
 El número solitario no tiene ninguna regla oculta: el prompt cuenta todo (cartas, fases, anulación, cortes, final, desempates y el
 puntaje por puesto) y la vista solo calla lo que los demás deciden a la vez. Lo único que no se ve de antemano es el azar de reemplazo
-(qué jugada legal se pone si una IA responde mal) y el sorteo de un desempate total; los dos se sortean al crear la partida, no dependen
-de lo que decidan las IAs, y quedan en el registro. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
+(qué jugada legal se pone si una IA responde mal) y el sorteo de un desempate total; los dos se sortean al crear la partida con el seed (así
+se pueden reproducir), no dependen de lo que decidan las IAs, y en el registro queda su efecto: la jugada marcada como inválida con su motivo
+y el criterio de desempate que se usó. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
 dos turnos y 90 llamadas por partida, por eso este juego se corre en vivo y no por lote.

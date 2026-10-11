@@ -85,6 +85,16 @@ test('cuenta el corte, el criterio de desempate y el sorteo', () => {
   assert.ok(corte('fichas').includes('Fin del corte 1: {3} queda a salvo con 7 puntos (desempate por fichas) y sale de la partida.'));
   assert.ok(corte('sorteo').includes('Empate total en el corte: lo decide el sorteo.'));
   assert.ok(!corte('puntos').some((x) => x.includes('sorteo')));
+  assert.ok(corte('ultima victoria').includes('Fin del corte 1: {3} queda a salvo con 7 puntos (desempate por última victoria) y sale de la partida.'), 'el texto publico lleva acento');
+});
+
+test('una marca de reemplazo no se narra como audacia, pero si se cuenta que gano', () => {
+  const base = { parejas: [[1, 5], [2, 6], [3, 7], [4, 8], [3, 6]], marcas: [5, 6, 7, 8, 6], anuladas: [false, true, false, false, true], ganador: 0, numero: 5 };
+  const propia = textos(narrarMarca(ctxMarca({ ...base, reemplazadas: [false, false, false, false, false] })));
+  assert.ok(propia.includes('{0} jugó la carta más alta de su pareja y le salió bien.'));
+  const reemplazo = textos(narrarMarca(ctxMarca({ ...base, reemplazadas: [true, false, false, false, false] })));
+  assert.ok(!reemplazo.some((x) => x.includes('carta más alta')));
+  assert.ok(reemplazo.includes('{0} gana la ronda con el 5: suma 5 puntos y una ficha de victoria.'));
 });
 
 test('el epilogo cuenta quien gana la pieza, quien sobrevive y quien queda fuera', () => {
@@ -122,6 +132,7 @@ test('todas las lineas son texto sano: sin undefined, NaN, marcadores raros ni p
     assert.ok(l.tipo && l.texto && l.texto.trim().length > 3, JSON.stringify(l));
     assert.doesNotMatch(l.texto, /undefined|NaN|null/, l.texto);
     assert.doesNotMatch(l.texto, DURA, l.texto);
+    assert.doesNotMatch(l.texto, /ultima victoria|ultimo corte/, `falta un acento: ${l.texto}`);
     assert.doesNotMatch(l.texto.replace(/\{[0-4]\}/g, ''), /[{}]/, l.texto);
   }
 });

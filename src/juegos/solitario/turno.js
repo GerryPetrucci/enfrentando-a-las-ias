@@ -108,14 +108,15 @@ function faseMarca(E, respuestas) {
     E.ultimaVictoria[ganador] = r;
     puntosGanados[ganador] = numero;
     E.stats[ganador].rondasGanadas++;
-    if (numero === Math.max(...parejas[ganador])) E.stats[ganador].senuelos++;
+    // el senuelo solo cuenta si la IA eligio la marca: una marca de reemplazo la puso el motor
+    if (motivos[ganador] === null && numero === Math.max(...parejas[ganador])) E.stats[ganador].senuelos++;
   }
   const lideresDespues = lideres(E);
 
   // cartas: la jugada se descarta (de todos), la otra queda bloqueada la ronda siguiente
   for (const s of asientos) {
     if (!activos[s]) continue;
-    if (anuladas[s]) E.stats[s].anuladas++;
+    if (anuladas[s] && motivos[s] === null) E.stats[s].anuladas++; // un choque causado por el reemplazo no es suyo
     const jugada = marcas[s];
     E.mano[s] = E.mano[s].filter((c) => c !== jugada);
     E.descartadas[s].push(jugada);
@@ -167,7 +168,9 @@ function faseMarca(E, respuestas) {
     E.fin = true;
   }
 
-  const narracion = narrarMarca({ E, ronda: r, parejas, marcas, anuladas, ganador, numero, lideresAntes, lideresDespues, corte });
+  const narracion = narrarMarca({ E, ronda: r, parejas, marcas, anuladas, ganador, numero, lideresAntes, lideresDespues, corte, reemplazadas: motivos.map((m) => m !== null) });
+  // cartas que podra elegir cada uno en la ronda siguiente (ya con el mazo nuevo si termino el ciclo); null para quien ya no juega
+  const disponiblesAhora = asientos.map((s) => (E.jugando[s] ? disponibles(E, s) : null));
   if (!E.fin) {
     E.ronda++;
     E.fase = 1;
@@ -175,7 +178,7 @@ function faseMarca(E, respuestas) {
   }
   return {
     ronda: r, ciclo: cicloDe(r), fase: 2, parejas, marcas, anuladas, ganador, numero, puntosGanados,
-    puntos: [...E.puntos], fichas: [...E.fichas], descartadas, bloqueadas,
+    puntos: [...E.puntos], fichas: [...E.fichas], descartadas, bloqueadas, disponibles: disponiblesAhora,
     ...comunes(activos, respuestas, motivos),
     corte, final, narracion,
   };

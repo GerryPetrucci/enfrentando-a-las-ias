@@ -15,6 +15,8 @@ const unir = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', '
 const puntos = (n) => `${n} punto${n === 1 ? '' : 's'}`;
 const fichas = (n) => `${n} ficha${n === 1 ? '' : 's'}`;
 const rngDe = (E, ronda, fase) => crearRng((E.semillaNarracion ^ Math.imul(ronda * 2 + fase, 0x9e3779b1)) >>> 0);
+// El criterio de desempate viene del motor sin acentos; en pantalla lleva acento.
+const CRITERIO = { puntos: 'puntos', fichas: 'fichas', 'ultima victoria': 'última victoria', sorteo: 'sorteo' };
 const sentados = (xs) => xs.map((x, s) => (x === null || x === undefined ? -1 : s)).filter((s) => s >= 0);
 
 // Fase 1. `E` esta tal como estaba al empezar la ronda (los puntos son los de antes).
@@ -30,7 +32,8 @@ export function narrarPareja({ E, ronda, parejas }) {
 }
 
 // Fase 2. `corte` = { numero, jugador, puntos, criterio } o null.
-export function narrarMarca({ E, ronda, parejas, marcas, anuladas, ganador, numero, lideresAntes, lideresDespues, corte }) {
+// `reemplazadas[s]` = true si la marca de ese jugador la puso el motor (respuesta ilegal): no se narra como una decision suya.
+export function narrarMarca({ E, ronda, parejas, marcas, anuladas, ganador, numero, lideresAntes, lideresDespues, corte, reemplazadas = [] }) {
   const rng = rngDe(E, ronda, 2);
   const lineas = [];
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
@@ -51,13 +54,13 @@ export function narrarMarca({ E, ronda, parejas, marcas, anuladas, ganador, nume
     agregar('comentario', 'Ronda en blanco: los puntos siguen donde estaban.');
   } else {
     agregar('resultado', `${quien(ganador)} gana la ronda con el ${numero}: suma ${puntos(numero)} y una ficha de victoria.`);
-    if (numero === Math.max(...parejas[ganador])) agregar('comentario', `${quien(ganador)} jugó la carta más alta de su pareja y le salió bien.`);
+    if (!reemplazadas[ganador] && numero === Math.max(...parejas[ganador])) agregar('comentario', `${quien(ganador)} jugó la carta más alta de su pareja y le salió bien.`);
     const yaLider = lideresAntes.length === 1 && lideresAntes[0] === ganador;
     if (!yaLider && lideresDespues.length === 1 && lideresDespues[0] === ganador) agregar('comentario', `${quien(ganador)} toma la delantera.`);
   }
 
   if (corte) {
-    const detalle = corte.criterio === 'puntos' ? '' : ` (desempate por ${corte.criterio})`;
+    const detalle = corte.criterio === 'puntos' ? '' : ` (desempate por ${CRITERIO[corte.criterio] ?? corte.criterio})`;
     agregar('corte', `Fin del corte ${corte.numero}: ${quien(corte.jugador)} queda a salvo con ${puntos(corte.puntos)}${detalle} y sale de la partida.`);
     if (corte.criterio === 'sorteo') agregar('comentario', 'Empate total en el corte: lo decide el sorteo.');
   }

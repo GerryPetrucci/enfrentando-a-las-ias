@@ -283,3 +283,41 @@ test('una partida con las mismas respuestas termina siempre igual y en 24 turnos
   assert.equal(a.puesto.filter((p) => p === 'medio').length, 1);
   assert.equal(a.puesto.filter((p) => p === 'eliminado').length, 1);
 });
+
+// ---------- revision independiente del 11 de octubre de 2026 ----------
+
+test('una marca de reemplazo (la puso el motor, no la IA) no cuenta como senuelo ni se narra como audacia', () => {
+  const E = nuevoEstado();
+  aplicarTurno(E, [[1, 5], [2, 6], [3, 7], [4, 8], [3, 6]].map((p) => pareja(...p)));
+  E.azar[0].marca[0] = 0.9; // el reemplazo del jugador 0 sera la segunda carta de su pareja: el 5
+  const f2 = aplicarTurno(E, [null, marca(6), marca(7), marca(8), marca(6)]);
+  assert.equal(f2.invalidas[0], true);
+  assert.equal(f2.marcas[0], 5);
+  assert.equal(f2.ganador, 0);
+  assert.equal(f2.numero, 5);
+  assert.equal(E.stats[0].senuelos, 0, 'no lo eligio el: no es audacia');
+  assert.equal(E.stats[0].rondasGanadas, 1, 'la victoria si ocurrio y suma');
+  assert.ok(!f2.narracion.some((l) => l.texto.includes('carta más alta')));
+});
+
+test('una marca de reemplazo que choca no cuenta como carta anulada del jugador (el registro si la marca como anulada)', () => {
+  const E = nuevoEstado();
+  aplicarTurno(E, [[1, 5], [1, 4], [2, 6], [3, 7], [4, 8]].map((p) => pareja(...p)));
+  E.azar[0].marca[0] = 0.1; // el reemplazo del jugador 0 sera el 1, que tambien juega el jugador 1
+  const f2 = aplicarTurno(E, [null, marca(1), marca(2), marca(3), marca(4)]);
+  assert.deepEqual(f2.anuladas.slice(0, 2), [true, true]);
+  assert.equal(E.stats[0].anuladas, 0, 'el choque del jugador 0 lo causo el reemplazo');
+  assert.equal(E.stats[1].anuladas, 1);
+});
+
+test('el registro de la fase 2 trae las cartas disponibles de cada jugador para la ronda siguiente (todas tras el reinicio)', () => {
+  const E = nuevoEstado();
+  const [, f2] = ronda(E, EJEMPLO, [1, 1, 2, 4, 5]);
+  assert.deepEqual(f2.disponibles, [[2, 4, 5, 6, 7, 8], [2, 3, 5, 6, 7, 8], [1, 3, 4, 6, 7, 8], [1, 2, 3, 5, 7, 8], [1, 2, 3, 4, 6, 8]]);
+  for (let r = 2; r <= 5; r++) rondaBasica(E);
+  const [, f6] = rondaBasica(E); // termina la ronda 6: mazo nuevo para los que siguen
+  for (let s = 0; s < 5; s++) {
+    if (E.jugando[s]) assert.deepEqual(f6.disponibles[s], CARTAS, `jugador ${s}`);
+    else assert.equal(f6.disponibles[s], null, `jugador ${s} ya no juega`);
+  }
+});
