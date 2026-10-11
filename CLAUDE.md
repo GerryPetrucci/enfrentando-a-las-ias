@@ -115,6 +115,20 @@ planea el companero", quien queda atras "se queda atras" y el bot `traidor` se m
 internos no cambian (los lee el marcador). **Escena del reproductor (decidido el 11 de octubre de 2026):** episodio de ~2.5 minutos
 que se segmenta en piezas cortas para Reels y TikTok (9:16 y 16:9 sobre la hoja maestra 4K).
 
+### Juego 4: El numero solitario (decidido el 11 de octubre de 2026)
+
+Cinco IAs, un mazo de 8 cartas cada una y 12 rondas. Cada ronda tiene dos decisiones simultaneas: primero cada una elige en secreto una
+**pareja** de cartas; se revelan todas las parejas; despues cada una **marca** cual de las dos juega. Si dos o mas juegan el mismo
+numero, esas cartas se anulan; gana la ronda el **menor numero que nadie mas jugo** y recibe puntos iguales al numero y una ficha de
+victoria. La carta jugada se descarta y la otra queda bloqueada una ronda; al terminar la ronda 6 hay mazo nuevo. Al final de las
+rondas 3 y 6 queda a salvo (y sale) el de mas puntos; en la ronda 12 los 3 que quedan: el mejor gana la pieza, el ultimo es eliminado.
+Puntos del marcador: pieza 4, a salvo 3, en medio 2, eliminado 0. **No tiene regla oculta**: lo unico secreto es lo que se decide a la
+vez. Categoria propia ("Estrategia de eliminación"). Cada ronda son **dos turnos** de la arena: **90 llamadas y 24 turnos** por
+partida (dentro del presupuesto, sin excepcion); por lote seria impractico, asi que se corre **en vivo**. Una respuesta ilegal se
+reemplaza por una legal con azar sorteado de antemano y se mide como fallo. Bots de control: `bajo`, `azar`, `medio`, `lector`,
+`escalera`. **Estado:** motor, bots y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
+`privado/spec/numero-solitario-diseno.md`, plan en `privado/planes/plan-solitario-motor.md`).
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -134,6 +148,13 @@ respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion e
 plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
 `privado/planes/plan-juegos-de-concurso.md`. **Estado:** catalogo hecho; falta que el usuario apruebe el orden y fije las reglas
 completas del primer juego.
+
+**Sin torneo general (decidido el 11 de octubre de 2026):** cada juego se evalua por si mismo, para evitar complejidad. No hay un
+meta-juego que encadene los juegos ni fichas que pasen de uno a otro. En su lugar, **al final de cada juego (o de su serie)** se evaluan las
+caracteristicas de las IAs que ese juego mide (por ejemplo, lectura de la mesa, audacia, constancia, obediencia al formato) y se da un
+comentario del resultado segun ellas. Lo escribe el codigo a partir de los datos guardados (sin llamadas extra), nunca cambia ni oculta una
+jugada, y alimenta la capa de comentario de la voz narradora. Las caracteristicas de cada juego se definen en su spec. **Estado:** decidido;
+las de El numero solitario se proponen al terminar su motor.
 
 ### Lote (Batch API): mitad de precio, sin prisa (decidido el 9 de octubre de 2026)
 
@@ -279,6 +300,8 @@ Hecho:
 - Juego 1: Dilema del Prisionero Negociado (categoria "Traición y confianza")
 - Juego 3: **La Fuga** (categoria "Lealtad bajo riesgo"): motor, bots de control, narracion guardada en los datos y pruebas
   listos; faltan la escena del reproductor y la primera corrida con modelos (diseno en `privado/spec/fuga-diseno.md`)
+- Juego 4: **El numero solitario** (categoria "Estrategia de eliminación"): motor, bots de control, narracion guardada en los datos y
+  pruebas listos; faltan la prueba con modelos y la escena del reproductor (diseno en `privado/spec/numero-solitario-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA

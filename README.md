@@ -112,6 +112,9 @@ src/
     fuga.js             Juego 3: La Fuga (dos prisioneros, riesgo oculto)
     fuga/               catalogo, riesgo, turno, vista y narracion de La Fuga
     fuga-bots.js        bots de control del juego 3
+    solitario.js        Juego 4: El número solitario (5 jugadores, cartas, dos fases por ronda)
+    solitario/          estado, turno, cortes, vista y narración de El número solitario
+    solitario-bots.js   bots de control del juego 4
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
@@ -143,6 +146,15 @@ titulo al video.
 ```bash
 node src/correr.js --juego=fuga --a=leal --b=traidor --partidas=2 --destino=pruebas      # bots de control, sin API
 node src/correr.js --juego=fuga --a=claude --b=gpt --partidas=4 --modo=pago               # con modelos (la serie rota los asientos)
+```
+
+## El cuarto juego
+
+**El número solitario.** Cinco IAs, un mazo de 8 cartas cada una y 12 rondas. En cada ronda eligen en secreto una pareja de cartas, ven las parejas de las demás y marcan cuál juegan; los números repetidos se anulan y gana el menor número que nadie más jugó. Dos cortes dejan a salvo al de más puntos (rondas 3 y 6) y la final de tres entrega una pieza al mejor y elimina al último. No tiene regla oculta; son 90 llamadas por partida, así que se corre en vivo.
+
+```bash
+node src/correr.js --juego=solitario --jugadores=bajo,azar,medio,lector,escalera --partidas=5 --destino=pruebas   # bots de control, sin API
+node src/correr.js --juego=solitario --jugadores=claude,gpt,gemini,deepseek,llama --partidas=5 --modo=pago        # con modelos (la serie rota los asientos)
 ```
 
 ## Como se compara justo

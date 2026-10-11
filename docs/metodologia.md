@@ -114,3 +114,11 @@ de cada situacion, que metodo funciona mejor, si la pista decia la verdad y los 
 despues de cada ronda. Si alguien se separa puede, ademas, escapar de inmediato por su ruta propia (una probabilidad oculta que
 depende de la fase) y deja la partida; quien se queda atras sigue solo, falla algo mas pero encuentra mas botin, y si logra
 escapar despues cobra mas que el que se fue primero.
+
+## 12. Juegos sin regla oculta
+
+El número solitario no tiene ninguna regla oculta: el prompt cuenta todo (cartas, fases, anulación, cortes, final, desempates y el
+puntaje por puesto) y la vista solo calla lo que los demás deciden a la vez. Lo único que no se ve de antemano es el azar de reemplazo
+(qué jugada legal se pone si una IA responde mal) y el sorteo de un desempate total; los dos se sortean al crear la partida, no dependen
+de lo que decidan las IAs, y quedan en el registro. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
+dos turnos y 90 llamadas por partida, por eso este juego se corre en vivo y no por lote.
