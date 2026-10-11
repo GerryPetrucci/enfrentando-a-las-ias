@@ -10,7 +10,7 @@
 import { JUGADORES, RONDAS, ENFRENTAMIENTOS, TARJETAS, IDS_BLANCOS } from './constantes.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { disponibles, valorDe } from './estado.js';
-import { evaluarCombinacion, repartirPuntos, premioRonda, distanciaARango, aPuntos } from './combinaciones.js';
+import { evaluarCombinacion, repartirPuntos, premioRonda, aPuntos } from './combinaciones.js';
 import { narrarLanzamiento, narrarEnfrentamiento, narrarCierreRonda } from './narracion.js';
 
 const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida
@@ -115,7 +115,6 @@ function cerrarRonda(E) {
   const tarjetas = [...E.tarjetaActual];
   const totalesD = [...E.puntosRonda];
   const premios = asientos.map((s) => premioRonda(tarjetas[s], totalesD[s]));
-  const distancias = asientos.map((s) => (premios[s].acierto ? 0 : distanciaARango(tarjetas[s], totalesD[s])));
   for (const s of asientos) {
     E.puntos[s] += premios[s].puntos;
     E.puntosBase[s] += totalesD[s];
@@ -134,7 +133,7 @@ function cerrarRonda(E) {
   // una tarjeta de reemplazo la puso el juego; la de la ronda 4 tampoco la eligio nadie pero no es un reemplazo (solo quedaba una)
   const reemplazadas = E.eligio.map((e) => !e && r !== RONDAS);
   E.historial.push({ tipo: 'cierre', ronda: r, tarjetas, totales: totalesD, aciertos, puntos: puntosD, reemplazadas });
-  const narracion = narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, distancias });
+  const narracion = narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas, forzada: r === RONDAS });
   const publico = { tarjetas, totales: dec(totalesD), aciertos, puntos: dec(puntosD), acumulados: dec(E.puntos) };
   let final = null;
   if (r === RONDAS) {

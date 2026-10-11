@@ -36,9 +36,15 @@ test('frasePunteria: sin tarjetas, muestra chica, alta, baja y normal; solo es n
 
 test('fraseRiesgo: guardo el ZERO hasta el final, fue por el ZERO y lo logro, o fue y no lo logro', () => {
   assert.equal(fraseRiesgo({ partidas: 4, predicciones: 0, zeroElegido: 0, ceros: 0 }).valor, null, 'sin tarjetas propias no hay nada que decir');
-  const guardo = fraseRiesgo({ partidas: 4, predicciones: 12, zeroElegido: 0, ceros: 0 });
-  assert.match(guardo.frase, /guardó el ZERO hasta el final/);
+  const guardo = fraseRiesgo({ partidas: 4, predicciones: 12, zeroElegido: 0, zeroForzado: 4, ceros: 0 });
+  assert.match(guardo.frase, /guardó el ZERO hasta el final \(se le puso solo en la ronda 4\)$/);
   assert.equal(guardo.notable, true);
+  assert.match(fraseRiesgo({ partidas: 4, predicciones: 9, zeroElegido: 0, zeroForzado: 3, ceros: 0 }).frase, /guardó el ZERO hasta el final \(se le puso solo en la ronda 4\) en 3 de 4 partidas/);
+  // si el ZERO no fue ni elegido ni el que se pone solo en la ronda 4, lo puso el juego por una respuesta ilegal: no se puede decir que "lo guardo"
+  const delJuego = fraseRiesgo({ partidas: 4, predicciones: 9, zeroElegido: 0, zeroForzado: 0, ceros: 0 });
+  assert.equal(delJuego.valor, null);
+  assert.equal(delJuego.notable, false);
+  assert.match(delJuego.frase, /su ZERO lo puso el juego por una respuesta ilegal/);
   assert.match(fraseRiesgo({ partidas: 4, predicciones: 12, zeroElegido: 4, ceros: 3 }).frase, /fue por el ZERO en 4 de 4 partidas y lo logró 3 veces/);
   assert.match(fraseRiesgo({ partidas: 4, predicciones: 12, zeroElegido: 2, ceros: 0 }).frase, /fue por el ZERO en 2 de 4 partidas y no lo logró/);
   assert.match(fraseRiesgo({ partidas: 4, predicciones: 12, zeroElegido: 1, ceros: 1 }).frase, /lo logró 1 vez/);
@@ -147,6 +153,29 @@ test('registros incompletos o jugadores sin nombre ni id no dejan "NaN" ni "unde
     }
   }
   assert.equal(ev.jugadores.find((j) => j.id === 'x').nombre, 'x', 'sin nombre se usa el id');
+});
+
+test('el ZERO que puso el juego por una respuesta ilegal en la ronda 1 NO se cuenta como "guardado hasta el final"; el que se pone solo en la ronda 4 si', () => {
+  const ronda = (n, tarjetas, invalidas, aciertos) => [
+    { fase: 'prediccion', ronda: n, forzada: false, invalidas, oculto: { tarjetas } },
+    { fase: 'jugada', ronda: n, enfrentamiento: 3, invalidas: [false, false, false, false], combos: [], cierre: { tarjetas, aciertos } },
+  ];
+  const p = {
+    jugadores: ['a', 'b', 'c', 'd'].map((id) => ({ id, nombre: id.toUpperCase() })),
+    metricas: Array(4).fill({ puntos: 2, puesto: 'medio', ordenesValidas: 14, ordenesTotal: 15 }),
+    rondas: [
+      ...ronda(1, ['ZERO', 'MIN', 'MIN', 'MIN'], [true, false, false, false], [false, true, true, true]), // A manda basura y el juego le pone ZERO
+      ...ronda(2, ['MIN', 'MORE', 'MORE', 'MORE'], [false, false, false, false], [true, true, true, true]),
+      ...ronda(3, ['MORE', 'MAX', 'MAX', 'MAX'], [false, false, false, false], [true, true, true, true]),
+      { fase: 'prediccion', ronda: 4, forzada: true, invalidas: [null, null, null, null], oculto: { tarjetas: ['MAX', 'ZERO', 'ZERO', 'ZERO'] } },
+    ],
+  };
+  const ev = evaluarSerie([p]);
+  const riesgo = (id) => ev.jugadores.find((j) => j.id === id).caracteristicas.riesgo;
+  assert.doesNotMatch(riesgo('a').frase, /guardó el ZERO/);
+  assert.match(riesgo('a').frase, /su ZERO lo puso el juego por una respuesta ilegal/);
+  assert.equal(riesgo('a').notable, false);
+  assert.match(riesgo('b').frase, /guardó el ZERO hasta el final \(se le puso solo en la ronda 4\)/);
 });
 
 test('las partidas cortadas y la basura no entran y nunca lanza', async () => {

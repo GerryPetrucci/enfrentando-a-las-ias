@@ -30,12 +30,19 @@ export function frasePunteria(aciertos, predicciones) {
   return { valor: redondeo(t), frase: `acertó ${cuenta}`, notable: false };
 }
 
-// zeroElegido = partidas en que la IA eligio el ZERO (no el que se pone solo en la ronda 4); ceros = ZERO acertados.
-export function fraseRiesgo({ partidas, predicciones, zeroElegido, ceros }) {
+// zeroElegido = partidas en que la IA eligio el ZERO; zeroForzado = partidas en que el ZERO fue la tarjeta que se pone sola en la ronda 4; ceros = ZERO acertados.
+// Cada partida cae en una de tres: lo eligio, le quedo para la ronda 4, o se lo puso el juego por una respuesta ilegal (no se puede decir que "lo guardo").
+export function fraseRiesgo({ partidas, predicciones, zeroElegido, zeroForzado = 0, ceros }) {
   if (!partidas || !predicciones) return { valor: null, frase: 'no hubo tarjetas propias que medir', notable: false };
-  if (!zeroElegido) return { valor: 0, frase: 'guardó el ZERO hasta el final (se le puso solo en la ronda 4)', notable: true };
-  const logro = ceros ? `lo logró ${plural(ceros, 'vez', 'veces')}` : 'no lo logró';
-  return { valor: redondeo(ceros / zeroElegido), frase: `fue por el ZERO en ${zeroElegido} de ${partidas} partidas y ${logro}`, notable: true };
+  if (zeroElegido) {
+    const logro = ceros ? `lo logró ${plural(ceros, 'vez', 'veces')}` : 'no lo logró';
+    return { valor: redondeo(ceros / zeroElegido), frase: `fue por el ZERO en ${zeroElegido} de ${partidas} partidas y ${logro}`, notable: true };
+  }
+  if (zeroForzado) {
+    const cuantas = zeroForzado < partidas ? ` en ${zeroForzado} de ${partidas} partidas` : '';
+    return { valor: 0, frase: `guardó el ZERO hasta el final (se le puso solo en la ronda 4)${cuantas}`, notable: true };
+  }
+  return { valor: null, frase: 'su ZERO lo puso el juego por una respuesta ilegal', notable: false };
 }
 
 // ocultos = dados rojo o azul que uso en enfrentamientos que eligio; sumaPos = suma del numero de enfrentamiento (1 a 3) de cada uno.
@@ -60,7 +67,7 @@ const PRIORIDAD = ['constancia', 'obediencia', 'riesgo', 'punteria', 'ocultos'];
 const claveDe = (j, s) => j.id ?? `asiento-${s}`;
 const vacioDe = (j, s) => ({
   id: claveDe(j, s), nombre: j.nombre ?? j.id ?? `Jugador ${s + 1}`, partidas: 0, validas: 0, total: 0, puntos: 0, piezas: 0, medios: 0, eliminados: 0,
-  predicciones: 0, aciertos: 0, zeroElegido: 0, ceros: 0, elegidasEnfr: 0, ocultos: 0, sumaPos: 0,
+  predicciones: 0, aciertos: 0, zeroElegido: 0, zeroForzado: 0, ceros: 0, elegidasEnfr: 0, ocultos: 0, sumaPos: 0,
 });
 
 export function evaluarSerie(partidas) {
@@ -93,6 +100,7 @@ export function evaluarSerie(partidas) {
         eligio.forEach((e, s) => {
           if (e && tarjetas[s] === 'ZERO' && de(s)) de(s).zeroElegido++;
         });
+        if (r.forzada) tarjetas.forEach((t, s) => { if (t === 'ZERO' && de(s)) de(s).zeroForzado++; }); // la que se pone sola en la ronda 4
       } else if (r.fase === 'jugada') {
         p.jugadores.forEach((_, s) => {
           const a = de(s);

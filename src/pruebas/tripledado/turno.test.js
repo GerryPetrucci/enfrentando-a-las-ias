@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { aplicarTurno, cerrarPartida } from '../../juegos/tripledado/turno.js';
 import { normalizarRespuesta } from '../../juegos/tripledado/ordenes.js';
 import { TARJETAS, RONDAS, TURNOS } from '../../juegos/tripledado/constantes.js';
+import { disponibles } from '../../juegos/tripledado/estado.js';
 import { nuevoEstado, fijarDados, escenarioBasico, prediccion, enfrentamiento, PRIMEROS, politicaSimple, jugarConBots } from './ayudas.js';
 
 const simples = [politicaSimple, politicaSimple, politicaSimple, politicaSimple];
@@ -216,6 +217,23 @@ test('una politica que siempre contesta basura tambien termina: todo es reemplaz
   assert.deepEqual(E.stats.map((st) => st.invalidas), [15, 15, 15, 15]);
   assert.deepEqual(E.stats.map((st) => st.respuestas), [15, 15, 15, 15]);
   assert.equal(registros[12].invalidas[0], null);
+});
+
+test('la narracion del cierre de ronda no atribuye a la IA una tarjeta que puso el juego (reemplazo en la ronda 1; forzada en la ronda 4)', () => {
+  const E = nuevoEstado();
+  E.azar.tarjeta[0] = [0, 0.99, 0.99, 0.99]; // el reemplazo del jugador 1 es la primera tarjeta que le queda: ZERO
+  aplicarTurno(E, [normalizarRespuesta({ tarjeta: 'quizas' }), ...['MIN', 'MIN', 'MIN'].map((t) => normalizarRespuesta({ tarjeta: t }))]);
+  enfrentamiento(E, PRIMEROS);
+  enfrentamiento(E, PRIMEROS.map((_, s) => disponibles(E, s).slice(0, 3)));
+  const reg = enfrentamiento(E, PRIMEROS.map((_, s) => disponibles(E, s).slice(0, 3)));
+  const t = reg.narracion.map((l) => l.texto).join('\n');
+  assert.match(t, /\{0\} no responde bien y el juego le pone ZERO; suma/);
+  assert.doesNotMatch(t, /\{0\} predijo/);
+  assert.match(t, /\{1\} predijo MIN y suma/);
+  const { registros } = jugarConBots(3, simples);
+  const ultimo = registros.at(-1).narracion.map((l) => l.texto).join('\n');
+  assert.match(ultimo, /A \{0\} le queda MAX; suma/, 'la tarjeta de la ronda 4 la puso el juego');
+  assert.doesNotMatch(ultimo, /predijo/);
 });
 
 test('el cierre de la partida: pieza para el mas alto en solitario, eliminado el mas bajo en solitario, y los empates dejan a nadie', () => {

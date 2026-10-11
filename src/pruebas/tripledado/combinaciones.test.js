@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearRng } from '../../rng.js';
 import {
-  evaluarCombinacion, compararClaves, repartirPuntos, aciertaTarjeta, premioRonda, distanciaARango, aPuntos,
+  evaluarCombinacion, compararClaves, repartirPuntos, aciertaTarjeta, premioRonda, brechaDeTarjeta, aPuntos,
 } from '../../juegos/tripledado/combinaciones.js';
 import { DOCEAVOS, TARJETAS, RANGOS } from '../../juegos/tripledado/constantes.js';
 
@@ -136,12 +136,16 @@ test('premios: ZERO paga 40, las demas duplican, y fallar conserva los puntos de
   assert.deepEqual(premioRonda('ZERO', 6), { acierto: false, puntos: 6 });
 });
 
-test('distanciaARango: cuanto le falta a una tarjeta fallida (0 si acierta)', () => {
-  assert.equal(distanciaARango('MORE', 60), 24);
-  assert.equal(distanciaARango('MIN', 84), 1);
-  assert.equal(distanciaARango('ZERO', 6), 6);
-  assert.equal(distanciaARango('MAX', 100), 32);
-  assert.equal(distanciaARango('MORE', 100), 0);
+test('brechaDeTarjeta: cuanto le falta o le sobra a una tarjeta fallida, medido contra el limite REAL (null si acierta o si no hay brecha medible)', () => {
+  assert.deepEqual(brechaDeTarjeta('MORE', 78), { lado: 'abajo', docenos: 6 }, '6.5 puntos: le faltan 0.5 para llegar a 7');
+  assert.deepEqual(brechaDeTarjeta('MAX', 120), { lado: 'abajo', docenos: 12 });
+  assert.deepEqual(brechaDeTarjeta('MIN', 84), { lado: 'arriba', docenos: 0 }, 'suma justo 7: MIN era menos de 7 (no hay un 6.92 que se le escape por 0.08)');
+  assert.deepEqual(brechaDeTarjeta('MIN', 90), { lado: 'arriba', docenos: 6 }, '7.5: se pasa por 0.5');
+  assert.deepEqual(brechaDeTarjeta('MORE', 132), { lado: 'arriba', docenos: 0 }, 'suma justo 11');
+  assert.deepEqual(brechaDeTarjeta('ZERO', 6), { lado: 'arriba', docenos: 6 }, 'a 0.5 de lograr el cero');
+  assert.equal(brechaDeTarjeta('MIN', 0), null, 'MIN pide mas de 0: con 0 no hay una brecha medible');
+  assert.equal(brechaDeTarjeta('MORE', 100), null, 'acierta');
+  assert.equal(brechaDeTarjeta('ZERO', 0), null);
 });
 
 test('aPuntos muestra docenos como decimales de 2 cifras', () => {

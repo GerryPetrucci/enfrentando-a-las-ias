@@ -63,10 +63,19 @@ export function premioRonda(tarjeta, totalD) {
   return { acierto: true, puntos: tarjeta === 'ZERO' ? PREMIO_ZERO * DOCEAVOS : totalD * 2 };
 }
 
-// Cuanto le falta al total para caer en el rango de la tarjeta (docenos; 0 si cae dentro). Sirve para "se queda a un punto".
-export function distanciaARango(tarjeta, totalD) {
-  const [lo, hi] = RANGOS[tarjeta];
-  return totalD < lo ? lo - totalD : totalD > hi ? totalD - hi : 0;
+// Cotas REALES de cada tarjeta en docenos, para medir cuanto se falla. minimo = primer valor que acierta por abajo (null si no hay una cota inferior
+// medible: MIN pide "mas de 0" y ZERO es exactamente 0); tope = primer valor que ya NO acierta por arriba (null si no hay: MAX). OJO: no son los
+// extremos de RANGOS (que estan en la cuadricula interna de docenos): sumar justo 7 puntos esta a 0 de MIN, no "a 0.08".
+const COTAS = { ZERO: { minimo: null, tope: 0 }, MIN: { minimo: null, tope: 84 }, MORE: { minimo: 84, tope: 132 }, MAX: { minimo: 132, tope: null } };
+
+// Cuanto le falta o le sobra a una tarjeta FALLIDA: { lado: 'abajo', docenos } (le falta ese tanto para llegar) o { lado: 'arriba', docenos } (se paso ese tanto
+// del tope; 0 = suma justo el tope). null si acierta o si no hay una brecha medible (MIN con 0 puntos). Sirve para "se queda a un punto".
+export function brechaDeTarjeta(tarjeta, totalD) {
+  if (aciertaTarjeta(tarjeta, totalD)) return null;
+  const { minimo, tope } = COTAS[tarjeta];
+  if (minimo !== null && totalD < minimo) return { lado: 'abajo', docenos: minimo - totalD };
+  if (tope !== null && totalD >= tope) return { lado: 'arriba', docenos: totalD - tope };
+  return null;
 }
 
 // docenos -> puntos con hasta 2 decimales (4.5; 3.33; 0.5). Solo para mostrar o guardar para el publico.

@@ -6,8 +6,8 @@
 // La narracion usa su PROPIO flujo aleatorio (derivado de estado.semillaNarracion): cambiar una frase nunca cambia el juego.
 
 import { crearRng } from '../../rng.js';
-import { RONDAS, ENFRENTAMIENTOS, JUGADORES } from './constantes.js';
-import { aPuntos } from './combinaciones.js';
+import { RONDAS, ENFRENTAMIENTOS, JUGADORES, DOCEAVOS } from './constantes.js';
+import { aPuntos, brechaDeTarjeta } from './combinaciones.js';
 
 const elegir = (rng, lista) => lista[Math.floor(rng() * lista.length)];
 const quien = (s) => `{${s}}`;
@@ -36,13 +36,11 @@ export function narrarEnfrentamiento({ E, ronda, k, combos, puntosD, puesto, por
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
   agregar('apertura', `Enfrentamiento ${k} de ${ENFRENTAMIENTOS}. ${elegir(rng, ['Todos eligen a la vez.', 'Se revelan las combinaciones.', 'Cada uno juega tres dados.'])}`);
   for (const s of asientos) {
-    if (reemplazadas[s]) {
-      agregar('jugada', `${quien(s)} no responde bien: se juegan tres dados al azar.`);
-      continue;
-    }
     const c = combos[s];
-    const oculto = c.ocultos.length ? `, con el dado ${unir(c.ocultos)}` : '';
-    agregar('jugada', `${quien(s)} muestra ${[...c.valores].sort((a, b) => b - a).join('-')}: ${c.categoria}${oculto}.`);
+    const oculto = c.ocultos.length ? `, con ${c.ocultos.length > 1 ? 'los dados' : 'el dado'} ${unir(c.ocultos)}` : '';
+    const dados = `${[...c.valores].sort((a, b) => b - a).join('-')}: ${c.categoria}${oculto}`;
+    // una jugada que puso el juego NO se esconde: la narracion dice con que dados quedo (el registro la tiene completa)
+    agregar('jugada', reemplazadas[s] ? `${quien(s)} no responde bien: el juego le pone ${dados}.` : `${quien(s)} muestra ${dados}.`);
   }
   const primeros = asientos.filter((s) => puesto[s] === 1);
   if (primeros.length === 1) {
@@ -62,19 +60,35 @@ export function narrarEnfrentamiento({ E, ronda, k, combos, puntosD, puesto, por
   return lineas;
 }
 
-// tarjetas[s], totalesD[s] (puntos de los 3 enfrentamientos), aciertos[s], puntosD[s] (con premio), distancias[s] (docenos que le faltaron a una tarjeta fallida).
-export function narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, distancias }) {
+// Cuanto se fallo una tarjeta, dicho contra su limite REAL (no contra la cuadricula interna): "se queda a 0.5 de acertar MORE", "se pasa de MIN por 0.5",
+// "suma justo 7: MIN no llegaba a tanto". null si no hay brecha medible o es de mas de un punto.
+function cercania(q, tarjeta, totalD) {
+  const b = brechaDeTarjeta(tarjeta, totalD);
+  if (!b || b.docenos > DOCEAVOS) return null;
+  if (b.lado === 'abajo') return `${q} se queda a ${pts(b.docenos)} de acertar ${tarjeta}.`;
+  if (tarjeta === 'ZERO') return `${q} se queda a ${pts(b.docenos)} de lograr el ZERO.`;
+  return b.docenos === 0 ? `${q} suma justo ${pts(totalD)}: ${tarjeta} no llegaba a tanto.` : `${q} se pasa de ${tarjeta} por ${pts(b.docenos)}.`;
+}
+
+// tarjetas[s], totalesD[s] (puntos de los 3 enfrentamientos), aciertos[s], puntosD[s] (con premio). reemplazadas[s] = esa tarjeta la puso el juego por una respuesta
+// ilegal; forzada = la ronda 4, donde solo queda una tarjeta y se pone sola: en los dos casos la IA NO la predijo y la narracion no lo dice como si lo hubiera hecho.
+export function narrarCierreRonda({ tarjetas, totalesD, aciertos, puntosD, reemplazadas = [], forzada = false }) {
   const lineas = [];
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
   for (const s of asientos) {
-    const t = tarjetas[s];
-    const suma = `${quien(s)} predijo ${t} y suma ${pts(totalesD[s])}`;
+    const t = tarjetas[s], q = quien(s);
+    const suma = forzada ? `A ${q} le queda ${t}; suma ${pts(totalesD[s])}`
+      : reemplazadas[s] ? `${q} no responde bien y el juego le pone ${t}; suma ${pts(totalesD[s])}`
+        : `${q} predijo ${t} y suma ${pts(totalesD[s])}`;
     if (aciertos[s]) agregar('cierre', t === 'ZERO' ? `${suma}: logra el ZERO y cobra ${pts(puntosD[s])}.` : `${suma}: acierta y duplica: ${pts(puntosD[s])}.`);
     else agregar('cierre', `${suma}: falla y se queda con ${pts(puntosD[s])}.`);
   }
   for (const s of asientos) {
     if (aciertos[s] && tarjetas[s] === 'ZERO') agregar('comentario', `${quien(s)} logra el ZERO: 40 puntos.`);
-    if (!aciertos[s] && distancias[s] > 0 && distancias[s] <= 12) agregar('comentario', `${quien(s)} se queda a ${pts(distancias[s])} de acertar ${tarjetas[s]}.`);
+    if (!aciertos[s]) {
+      const c = cercania(quien(s), tarjetas[s], totalesD[s]);
+      if (c) agregar('comentario', c);
+    }
   }
   return lineas;
 }
