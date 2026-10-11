@@ -159,6 +159,22 @@ rival decide a la vez y el orden del crupier. Categoria "Estrategia de eliminaci
 bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
 `privado/planes/plan-mayormenor-motor.md`).
 
+### Juego 7: Triple dado (decidido el 11 de octubre de 2026)
+
+Cuatro IAs y 4 rondas. En cada ronda cada una predice en secreto su puntuacion con una tarjeta (ZERO, MIN, MORE o MAX; **cada tarjeta se usa una sola vez en la
+partida**) antes de lanzar los dados; se lanzan 11 dados por jugador (9 blancos visibles y 2 ocultos, rojo y azul) y se juegan 3 enfrentamientos de tres dados
+(triple > escalera > doble > sencillo; desempate por el dado blanco que sobra; 6 / 3 / 1 / 0 puntos, con el promedio de las posiciones en los empates). Acertar la
+tarjeta da un premio: ZERO (exactamente 0) paga 40; MIN (mas de 0 y menos de 7), MORE (de 7 a menos de 11) y MAX (11 o mas) duplican; fallar no resta. Al final,
+pieza para el mas alto en solitario y eliminado el mas bajo en solitario (un empate deja a nadie). Puntos del marcador: pieza 4, sobrevive 2, eliminado 0.
+**No tiene regla oculta**: lo secreto es el valor de los dados ocultos sin usar, lo que los demas eligen a la vez y las tarjetas de la ronda en curso. Los puntos se
+guardan como enteros en docenos de punto para que los repartos por empate (3.33, 4.5) sean exactos y una tarjeta no cambie de categoria por coma flotante. Categoria
+"Estrategia de eliminación". **16 turnos y 60 llamadas** por partida (la tarjeta de la ronda 4 se pone sola y no cuesta llamada), sin excepcion, en vivo. Bots de
+control: `azar`, `goloso`, `reservado`, `tanque`, `calculador`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, punteria, riesgo, uso de ocultos y
+constancia). **Hallazgo con 5,000 partidas de bots:** tirarse a proposito por el ZERO (jugar siempre la peor combinacion) lo logra el 79 % de las veces contra rivales que
+buscan puntos y se lleva la pieza el 67 %; con rivales que tambien lo intentan los empates lo vuelven mucho menos fiable. Es lo que dicen las reglas dictadas: con modelos hay
+que volver a medir. **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
+`privado/spec/triple-dado-diseno.md`, plan en `privado/planes/plan-tripledado-motor.md`).
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -176,9 +192,8 @@ Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rond
 **con nombres y personajes propios y las mismas reglas**; nunca el nombre, el arte ni la estetica de ningun programa. Cada juego
 respeta el presupuesto de llamadas (hasta 5 jugadores; mas requiere aprobacion expresa) y sigue el flujo de siempre (catalogo, spec,
 plan, ejecucion, balance con bots, prueba con modelos). El catalogo con la fuente, el orden por oleadas y la nota de autoria viven en
-`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con tres juegos hechos (El numero solitario, Subasta de tiempo y Mayor o menor); quedan Triple dado
-(4 jugadores; cada tarjeta de prediccion se usa una sola vez) y Duda y apuesta (se juega con 4: termina al quedar 3; todos empiezan con las mismas piezas),
-con sus reglas y decisiones en `privado/planes/reglas-oleada-1.md`; el orden acordado es ese.
+`privado/planes/plan-juegos-de-concurso.md`. **Estado (11 de octubre de 2026):** oleada 1 con cuatro juegos hechos (El numero solitario, Subasta de tiempo, Mayor o menor y Triple dado); queda
+Duda y apuesta (se juega con 4: termina al quedar 3; todos empiezan con las mismas piezas), con sus reglas y decisiones en `privado/planes/reglas-oleada-1.md`.
 
 **Sin torneo general (decidido el 11 de octubre de 2026):** cada juego se evalua por si mismo, para evitar complejidad. No hay un
 meta-juego que encadene los juegos ni fichas que pasen de uno a otro. En su lugar, **al final de cada juego (o de su serie)** se evaluan las
@@ -337,6 +352,8 @@ Hecho:
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/subasta-tiempo-diseno.md`)
 - Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/mayor-o-menor-diseno.md`)
+- Juego 7: **Triple dado** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
+  prueba con modelos y la escena del reproductor (diseno en `privado/spec/triple-dado-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA

@@ -121,6 +121,9 @@ src/
     mayormenor.js       Juego 6: Mayor o menor (2 jugadores, cartas y apuestas, 18 rondas)
     mayormenor/         estado, turno, vista, narración y evaluación de Mayor o menor
     mayormenor-bots.js  bots de control del juego 6
+    tripledado.js       Juego 7: Triple dado (4 jugadores, dados blancos y ocultos, tarjetas de predicción)
+    tripledado/         estado, combinaciones, turno, vista, narración y evaluación de Triple dado
+    tripledado-bots.js  bots de control del juego 7
 web/
   index.html    el sitio: marcador por categoria + lista de episodios
   replay.html   reproductor vertical para grabar
@@ -179,6 +182,15 @@ node src/correr.js --juego=subasta --jugadores=claude,gpt,gemini,deepseek,llama 
 ```bash
 node src/correr.js --juego=mayormenor --a=contador --b=azar --partidas=2 --destino=pruebas   # bots de control, sin API
 node src/correr.js --juego=mayormenor --a=claude --b=gpt --partidas=2 --modo=pago            # con modelos (la serie invierte los asientos)
+```
+
+## El séptimo juego
+
+**Triple dado.** Cuatro IAs y 4 rondas. En cada ronda, antes de lanzar los dados, cada una predice en secreto su puntuación con una tarjeta (ZERO, MIN, MORE o MAX; cada tarjeta se usa una sola vez). Luego se lanzan 11 dados por jugador (9 blancos visibles y 2 ocultos, rojo y azul) y se juegan 3 enfrentamientos de tres dados: gana la mejor combinación (triple, escalera, doble, sencillo) y se reparten 6, 3, 1 y 0 puntos. Acertar la tarjeta da un premio (ZERO, 40 puntos; las demás duplican). Al final, la pieza es para quien tiene más puntos en solitario y se elimina a quien tiene menos. Son 60 llamadas por partida (la tarjeta de la ronda 4 se pone sola), así que se corre en vivo.
+
+```bash
+node src/correr.js --juego=tripledado --jugadores=goloso,reservado,tanque,calculador --partidas=4 --destino=pruebas   # bots de control, sin API
+node src/correr.js --juego=tripledado --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago                  # con modelos (la serie rota los asientos)
 ```
 
 ## Como se compara justo

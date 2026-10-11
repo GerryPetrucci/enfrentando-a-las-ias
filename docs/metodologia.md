@@ -141,3 +141,14 @@ antes de que el predictor apueste, es equivalente a que sean simultáneos, y por
 y las jugadas de reemplazo se sortean al crear la partida con el seed (una serie de dos partidas con los asientos invertidos repite el mismo mundo), y la `vista` solo
 lee de esos mazos la carta de la ronda en curso; una prueba reordena el futuro del crupier y exige que la vista de cada jugador no cambie. Una respuesta ilegal se
 reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde: el prompt lo cuenta y el historial que ven los dos la marca como [reemplazo]. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.
+
+## 15. Dos tipos de turno y puntos exactos: Triple dado
+
+Triple dado no esconde ninguna regla: el prompt cuenta todo, incluido que los dados de la ronda se lanzan después de elegir la tarjeta y qué se ve y qué no de los dados ocultos.
+Una partida alterna dos tipos de turno (predicción y enfrentamiento) en el mismo juego; la predicción de la ronda 4 no se pregunta, porque a cada jugador solo le queda una tarjeta
+(cada una se usa una vez), así que ese turno no cuesta llamadas (60 por partida en vez de 64). Todos los dados de las cuatro rondas y los reemplazos se sortean al crear la partida
+con el seed (una serie de cuatro partidas con los asientos rotados repite los mismos dados por asiento). Los repartos por empate dan tercios y mitades (tres empatados cobran 3.33),
+así que los puntos se guardan como enteros en docenas de punto y solo se convierten a decimales al mostrarlos: la frontera de una tarjeta (MORE empieza en exactamente 7) no depende de errores
+de coma flotante. La `vista` solo muestra de los dados ocultos ajenos los que ya se usaron (su valor se revela al comparar) y en la fase de predicción ningún dado; una prueba cambia los dados
+no lanzados, los ocultos ajenos sin usar y las tarjetas ajenas en curso y exige que la vista de cada jugador no cambie. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano,
+se mide como fallo (obediencia) y el historial que ven los dos la marca como [reemplazo].
