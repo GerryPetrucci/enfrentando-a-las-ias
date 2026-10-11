@@ -69,6 +69,7 @@ export function aplicarTurno(E, respuestas) {
   }
 
   // quien gana: la apuesta mas alta si es unica
+  const fichasAntes = [...E.fichas];
   const hechas = apuestas.filter((a) => a !== null);
   const maxima = hechas.length ? Math.max(...hechas) : 0;
   const arriba = maxima > 0 ? asientos.filter((s) => apuestas[s] === maxima) : [];
@@ -87,7 +88,10 @@ export function aplicarTurno(E, respuestas) {
 
   const sec = apuestas.map((a) => (a === null ? null : segundos(a)));
   const bancos = E.bancos.map(segundos);
-  const narracion = narrarSubasta({ E, subasta: n, apuestas: sec, bancos, ganador, sinGanador, empatados: sinGanador === 'empate' ? arriba : [] });
+  const narracion = narrarSubasta({
+    E, subasta: n, apuestas: sec, bancos, ganador, sinGanador, empatados: sinGanador === 'empate' ? arriba : [],
+    reemplazadas: motivos.map((m) => m !== null), fichas: [...E.fichas], fichasAntes,
+  });
 
   E.subasta++;
   const termina = E.subasta > SUBASTAS || E.bancos.every((b) => b === 0);

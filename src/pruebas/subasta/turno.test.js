@@ -201,6 +201,17 @@ test('los errores de API y la respuesta cruda de una respuesta invalida quedan e
   assert.deepEqual(reg.razones.slice(2, 4), ['prueba', 'prueba']);
 });
 
+test('la narracion del registro dice que una respuesta de reemplazo no fue una decision, y los comentarios usan las fichas de antes y de despues', () => {
+  const E = nuevoEstado();
+  const reg = aplicarTurno(E, [null, apuesta(10), apuesta(5), apuesta(0), apuesta(0)]);
+  const t = reg.narracion.map((l) => l.texto);
+  assert.ok(t.includes('{0} no responde bien: se cuenta como retirada.'));
+  assert.ok(t.includes('{3} se retira sin gastar nada.'));
+  E.fichas = [2, 2, 0, 0, 0];
+  const r2 = aplicarTurno(E, [apuesta(0), apuesta(40), apuesta(0), apuesta(0), apuesta(0)]);
+  assert.ok(r2.narracion.some((l) => l.texto === '{1} se adelanta en fichas.'));
+});
+
 test('una partida con las mismas respuestas termina siempre igual, en 19 subastas', () => {
   const jugar = () => {
     const { E, registros } = jugarConBots(11, [0, 1, 2, 3, 4].map((k) => () => ({ apuesta: 10 + 7 * k, razon: 'x' })));

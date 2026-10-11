@@ -22,8 +22,8 @@ const dec = (x) => x.toFixed(1);
 export function fraseRitmo(gastado) {
   if (gastado === null || gastado === undefined) return { valor: null, frase: 'no hubo subastas que medir', notable: false };
   const pct = Math.round(gastado * 100);
-  if (gastado >= UMBRALES.ritmoAlto) return { valor: redondeo(gastado), frase: `gasta rápido: ${pct} % de su banco ya estaba gastado al llegar a la subasta ${MITAD}`, notable: true };
-  if (gastado <= UMBRALES.ritmoBajo) return { valor: redondeo(gastado), frase: `guarda su tiempo: solo ${pct} % de su banco gastado al llegar a la subasta ${MITAD}`, notable: true };
+  if (gastado >= UMBRALES.ritmoAlto) return { valor: redondeo(gastado), frase: `gasta rápido: ${pct} % de su banco ya estaba gastado al terminar la subasta ${MITAD}`, notable: true };
+  if (gastado <= UMBRALES.ritmoBajo) return { valor: redondeo(gastado), frase: `guarda su tiempo: solo ${pct} % de su banco gastado al terminar la subasta ${MITAD}`, notable: true };
   return { valor: redondeo(gastado), frase: `administra el banco (${pct} % gastado a la mitad)`, notable: false };
 }
 
@@ -64,8 +64,10 @@ export function evaluarSerie(partidas) {
 
   const por = new Map();
   for (const p of buenas) {
-    // el banco al llegar a la subasta 10 (o el ultimo conocido, si la partida acabo antes)
+    // el banco al terminar la subasta 10 (o el ultimo conocido, si la partida acabo antes)
     const mitad = p.rondas.find((r) => r.subasta === MITAD) ?? p.rondas.at(-1);
+    // sin ninguna apuesta elegida (por ejemplo, un modelo caido toda la partida) no hay ritmo que medir: serian retiradas inventadas por un fallo
+    const eligio = (s) => p.rondas.some((r) => r.oculto?.apuestas?.[s] != null && r.invalidas?.[s] === false);
     p.jugadores.forEach((j, s) => {
       const a = por.get(j.id) ?? vacioDe(j);
       const m = p.metricas[s] ?? {};
@@ -77,7 +79,7 @@ export function evaluarSerie(partidas) {
       else if (m.puesto === 'medio') a.medios++;
       else if (m.puesto === 'eliminado') a.eliminados++;
       const banco = mitad?.oculto?.bancos?.[s];
-      if (typeof banco === 'number') { a.gastado += (segundos(BANCO) - banco) / segundos(BANCO); a.conRitmo++; }
+      if (typeof banco === 'number' && eligio(s)) { a.gastado += (segundos(BANCO) - banco) / segundos(BANCO); a.conRitmo++; }
       por.set(j.id, a);
     });
     for (const r of p.rondas) {

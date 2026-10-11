@@ -17,7 +17,9 @@ const TODOS = { 2: 'los dos', 3: 'los tres', 4: 'los cuatro', 5: 'los cinco' };
 const rngDe = (E, subasta) => crearRng((E.semillaNarracion ^ Math.imul(subasta, 0x9e3779b1)) >>> 0);
 
 // apuestas[s] y bancos[s] estan en SEGUNDOS (bancos = despues de la subasta); null = ese jugador ya no tenia tiempo y no aposto.
-export function narrarSubasta({ E, subasta, apuestas, bancos, ganador, sinGanador, empatados }) {
+// reemplazadas[s] = true si la apuesta de ese jugador (un 0) la puso el motor porque su respuesta fue ilegible o fallo la API: no se narra como
+// una decision de retirarse. fichas / fichasAntes (opcionales) son las fichas de despues y de antes de esta subasta, para comentar quien se adelanta.
+export function narrarSubasta({ E, subasta, apuestas, bancos, ganador, sinGanador, empatados, reemplazadas = [], fichas = null, fichasAntes = null }) {
   const rng = rngDe(E, subasta);
   const lineas = [];
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
@@ -25,10 +27,14 @@ export function narrarSubasta({ E, subasta, apuestas, bancos, ganador, sinGanado
 
   agregar('apertura', `Subasta ${subasta} de ${SUBASTAS}. ${elegir(rng, ['Todos mantienen el botón oculto.', 'Empieza la cuenta regresiva.', 'Nadie sabe cuánto apuesta el resto.'])}`);
 
-  if (jugaron.length && jugaron.every((s) => apuestas[s] === 0)) {
+  const todosSeRetiran = jugaron.length > 1 && jugaron.every((s) => apuestas[s] === 0 && !reemplazadas[s]);
+  if (todosSeRetiran) {
     agregar('apuesta', 'Todos se retiran sin gastar nada.');
   } else {
-    for (const s of jugaron) agregar('apuesta', apuestas[s] === 0 ? `${quien(s)} se retira sin gastar nada.` : `${quien(s)} aguanta ${seg(apuestas[s])} segundos.`);
+    for (const s of jugaron) {
+      if (reemplazadas[s]) agregar('apuesta', `${quien(s)} no responde bien: se cuenta como retirada.`);
+      else agregar('apuesta', apuestas[s] === 0 ? `${quien(s)} se retira sin gastar nada.` : `${quien(s)} aguanta ${seg(apuestas[s])} segundos.`);
+    }
   }
 
   if (ganador !== null) {
@@ -40,6 +46,14 @@ export function narrarSubasta({ E, subasta, apuestas, bancos, ganador, sinGanado
   }
 
   // comentarios para la voz
+  if (sinGanador === 'empate') agregar('comentario', 'Empate en lo más alto: nadie se lleva la ficha, y todo ese tiempo se pierde.');
+  if (todosSeRetiran) agregar('comentario', 'Nadie quiere pagar: la subasta pasa en blanco.');
+  if (ganador !== null && fichas && fichasAntes) {
+    const tope = Math.max(...fichasAntes);
+    const empatadosArriba = fichasAntes.filter((f) => f === tope).length;
+    const ahoraSolo = fichas.every((f, t) => t === ganador || f < fichas[ganador]);
+    if (tope > 0 && empatadosArriba > 1 && fichasAntes[ganador] === tope && ahoraSolo) agregar('comentario', `${quien(ganador)} se adelanta en fichas.`);
+  }
   for (const s of jugaron) {
     if (apuestas[s] > segundos(BANCO) / 2) agregar('comentario', `${quien(s)} apuesta más de la mitad de su banco inicial en una sola subasta.`);
     if (apuestas[s] > 0 && bancos[s] === 0) agregar('comentario', `${quien(s)} se queda sin tiempo: ya no podrá apostar.`);
@@ -57,10 +71,10 @@ export function narrarEpilogo(E) {
   const lineas = [];
   const agregar = (texto) => lineas.push({ tipo: 'epilogo', texto });
   agregar(f.pieza === null
-    ? 'Nadie gana la pieza: empate total en fichas y tiempo.'
+    ? 'Nadie gana la pieza: los de arriba empatan en fichas y en tiempo.'
     : `${quien(f.pieza)} gana la pieza: ${plural(E.fichas[f.pieza], 'ficha', 'fichas')} y ${seg(segundos(E.bancos[f.pieza]))} segundos de banco.`);
   agregar(f.eliminado === null
-    ? 'Nadie queda eliminado: empate total en fichas y tiempo.'
+    ? 'Nadie queda eliminado: los de abajo empatan en fichas y en tiempo.'
     : `${quien(f.eliminado)} queda eliminado con ${plural(E.fichas[f.eliminado], 'ficha', 'fichas')}.`);
   if (f.criterioPieza === 'tiempo') agregar('Empataron en fichas arriba y desempató el tiempo que conservaban.');
   if (f.criterioEliminado === 'tiempo') agregar('Empataron en fichas abajo y desempató el tiempo que conservaban.');

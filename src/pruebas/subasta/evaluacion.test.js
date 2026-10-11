@@ -22,8 +22,8 @@ async function serie(partidas = 5) {
 }
 
 test('ritmo de gasto: 75 % o mas del banco gastado a la mitad es gastar rapido; 30 % o menos es guardar el tiempo', () => {
-  assert.deepEqual(fraseRitmo(0.75), { valor: 0.75, frase: 'gasta rápido: 75 % de su banco ya estaba gastado al llegar a la subasta 10', notable: true });
-  assert.deepEqual(fraseRitmo(0.3), { valor: 0.3, frase: 'guarda su tiempo: solo 30 % de su banco gastado al llegar a la subasta 10', notable: true });
+  assert.deepEqual(fraseRitmo(0.75), { valor: 0.75, frase: 'gasta rápido: 75 % de su banco ya estaba gastado al terminar la subasta 10', notable: true });
+  assert.deepEqual(fraseRitmo(0.3), { valor: 0.3, frase: 'guarda su tiempo: solo 30 % de su banco gastado al terminar la subasta 10', notable: true });
   assert.deepEqual(fraseRitmo(0.52), { valor: 0.52, frase: 'administra el banco (52 % gastado a la mitad)', notable: false });
   assert.deepEqual(fraseRitmo(null), { valor: null, frase: 'no hubo subastas que medir', notable: false });
 });
@@ -110,7 +110,10 @@ test('un modelo caido no inventa prudencia: sus retiradas por respuesta ilegible
   assert.match(c.caracteristicas.obediencia.frase, /respuestas se tuvieron que reemplazar$/);
   assert.equal(c.caracteristicas.prudencia.valor, null);
   assert.equal(c.caracteristicas.eficiencia.victorias, 0);
+  assert.equal(c.caracteristicas.ritmo.valor, null, 'sin apuestas elegidas no hay ritmo que medir');
+  assert.equal(c.caracteristicas.ritmo.notable, false);
   assert.ok(c.destacadas.some((f) => f.includes('respuestas se tuvieron que reemplazar')));
+  assert.ok(!c.destacadas.some((f) => f.includes('guarda su tiempo')), 'un fallo de infraestructura no es guardar el tiempo');
 });
 
 test('las partidas cortadas no entran y la basura no tumba la evaluacion', () => {
