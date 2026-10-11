@@ -126,7 +126,9 @@ Puntos del marcador: pieza 4, a salvo 3, en medio 2, eliminado 0. **No tiene reg
 vez. Categoria propia ("Estrategia de eliminación"). Cada ronda son **dos turnos** de la arena: **90 llamadas y 24 turnos** por
 partida (dentro del presupuesto, sin excepcion); por lote seria impractico, asi que se corre **en vivo**. Una respuesta ilegal se
 reemplaza por una legal con azar sorteado de antemano y se mide como fallo. Bots de control: `bajo`, `azar`, `medio`, `lector`,
-`escalera`. **Estado:** motor, bots y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
+`escalera`. Al final de cada serie la consola imprime y guarda una **evaluacion** (cinco caracteristicas por IA: obediencia, lectura de la mesa, audacia,
+punteria y constancia, con frases por umbrales fijos, y un comentario del resultado; `evaluar` en el contrato de un juego, ver
+`docs/agregar-un-juego.md`). **Estado:** motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en
 `privado/spec/numero-solitario-diseno.md`, plan en `privado/planes/plan-solitario-motor.md`).
 
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)

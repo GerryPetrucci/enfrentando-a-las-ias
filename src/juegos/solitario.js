@@ -10,6 +10,7 @@ import { vistaTexto } from './solitario/vista.js';
 import { resultadoDe } from './solitario/resultado.js';
 import { REGLAS, FORMATO } from './solitario/reglas-texto.js';
 import { JUGADORES, TURNOS } from './solitario/constantes.js';
+import { evaluarSerie } from './solitario/evaluacion.js';
 import { BOTS, INFO_BOTS } from './solitario-bots.js';
 
 export default {
@@ -35,6 +36,8 @@ export default {
   // jugadas[i] = respuesta normalizada (con `error` y `crudo` si los puso la arena); null para quien ya no juega.
   aplicar: (E, jugadas) => aplicarTurno(E, jugadas),
   resultado: resultadoDe,
+  // al final de la serie: caracteristicas de cada IA y un comentario del resultado (la consola lo imprime y lo guarda en la serie)
+  evaluar: evaluarSerie,
   // a quien hay que preguntarle: solo a los que siguen en juego (quien quedo a salvo no cuesta llamadas)
   activos: (E) => [...E.jugando],
 };

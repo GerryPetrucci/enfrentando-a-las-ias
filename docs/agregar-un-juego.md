@@ -41,6 +41,10 @@ Lo que la consola y la arena usan si el juego lo ofrece (todo opcional):
 - `metricas[i]` con las claves `traiciones`, `promesasHechas`, `promesasRotas`, `jugadasInvalidas` y, si el juego tiene ordenes
   en texto, `ordenesValidas` y `ordenesTotal`: el marcador las suma sin conocer el juego.
 - El registro de cada ronda debe traer `errores: (string|null)[]`, un error de API por jugador.
+- `evaluar(partidas)`: la evaluacion al final de una serie (no hay torneo general: cada juego se evalua por si mismo). Recibe las partidas
+  de la serie y devuelve `{ partidas, jugadores: [{ id, nombre, caracteristicas, destacadas, ... }], comentario: [{ tipo, texto }] }`. La consola
+  imprime el `comentario` y guarda todo en la serie (`evaluacion`); si falla, la serie se guarda igual. Lo calcula el codigo desde los datos
+  (sin llamadas extra), nunca cambia una jugada, y el texto es publico (lleva acentos). Ver `src/juegos/solitario/evaluacion.js`.
 
 Tres reglas que no conviene romper:
 

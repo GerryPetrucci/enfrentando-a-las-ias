@@ -206,6 +206,17 @@ export async function correr(argv, {
     ...(lote ? {} : { alEmpezar: (p) => consola.escribir(`  Partida ${p.n + 1}/${partidas} `), alRegistrar: () => consola.escribir('.') }),
   });
 
+  // Evaluacion al final de la serie (opcional, la ofrece cada juego): caracteristicas de las IAs y un comentario del resultado, calculados
+  // de los datos guardados. Si falla no se pierde la serie: solo se avisa.
+  let evaluacion = null;
+  if (typeof juego.evaluar === 'function') {
+    try {
+      evaluacion = juego.evaluar(resultados);
+    } catch (err) {
+      consola.log(`  ! No se pudo armar la evaluación: ${String(err?.message ?? err).slice(0, 120)}`);
+    }
+  }
+
   const estadisticas = coordinador?.estadisticas() ?? null;
   // Con el tope alcanzado, o con los envios detenidos por un fallo de infraestructura, hay turnos que no se pudieron pedir:
   // esa serie no es un resultado, aunque quede guardada.
@@ -236,6 +247,7 @@ export async function correr(argv, {
     },
     ...(lote ? { lote: estadisticas } : {}),
     ...(turnos !== null ? { turnos } : {}),
+    ...(evaluacion?.partidas ? { evaluacion } : {}),
     partidas: resultados,
   };
 
@@ -247,6 +259,10 @@ export async function correr(argv, {
   const rel = `data/${destino === 'pruebas' ? 'pruebas/' : ''}${etiqueta}.json`;
   consola.log(`\n  Guardado: ${rel}`);
   consola.log(`  Llamadas: ${llamadas}${tokens ? ` · Tokens usados: ${tokens.toLocaleString('es-MX')}` : ''}`);
+  if (evaluacion?.comentario?.length) {
+    consola.log('\n  EVALUACION DE LA SERIE');
+    for (const l of evaluacion.comentario) consola.log(`  ${l.texto}`);
+  }
   if (estadisticas) {
     consola.log(`  Lotes: ${estadisticas.lotes} (${estadisticas.peticiones - estadisticas.sincronas} peticiones) · llamadas normales: ${estadisticas.sincronas} · gasto informado por OpenRouter: ${dolares(estadisticas.gasto)} de ${dolares(tope)}`);
     if (estadisticas.topeAlcanzado) consola.log('  ! Se alcanzo el tope de gasto: faltaron turnos por pedir. Es una serie incompleta; se guardo en pruebas.');
