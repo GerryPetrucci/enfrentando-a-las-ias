@@ -8,6 +8,9 @@
 // alta 0.50 y el valor medio de una victoria 2.78.
 
 import { JUGADORES } from './constantes.js';
+import { plural, redondeo, fraseObediencia, comentarioDeSerie, buenasDe } from '../../evaluacion-comun.js';
+
+export { fraseObediencia }; // las pruebas y otros juegos la piden desde aqui o desde evaluacion-comun.js
 
 export const UMBRALES = {
   choqueBajo: 0.2, choqueAlto: 0.4, // tasa de cartas anuladas
@@ -16,18 +19,8 @@ export const UMBRALES = {
   puntosArriba: 3, puntosAbajo: 1.5, // puntos de marcador por partida (el promedio de la mesa es 2.4)
 };
 
-const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 const dec = (x) => x.toFixed(1);
-const redondeo = (x, d = 3) => +x.toFixed(d);
-const unir = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}`);
 const SIN_RONDAS = 'no jugó rondas propias que medir';
-
-export function fraseObediencia(validas, total) {
-  if (!total) return { valor: null, frase: 'no hubo respuestas que medir', notable: false };
-  const malas = total - validas;
-  if (malas === 0) return { valor: 1, frase: `contestó en formato las ${total} veces`, notable: false };
-  return { valor: redondeo(validas / total), frase: `${malas} de ${total} respuestas se tuvieron que reemplazar`, notable: true };
-}
 
 export function fraseLectura(choques, rondas) {
   if (!rondas) return { valor: null, frase: SIN_RONDAS, notable: false };
@@ -70,9 +63,7 @@ const vacioDe = (j) => ({
 // partidas: las de una serie (lo que guarda la consola en `partidas`). Las cortadas no entran.
 export function evaluarSerie(partidas) {
   const vacia = { partidas: 0, jugadores: [], comentario: [] };
-  if (!Array.isArray(partidas)) return vacia;
-  const buenas = partidas.filter((p) => p && typeof p === 'object' && !p.truncada && Array.isArray(p.jugadores) && p.jugadores.length
-    && Array.isArray(p.rondas) && Array.isArray(p.metricas));
+  const buenas = buenasDe(partidas);
   if (!buenas.length) return vacia;
 
   const por = new Map();
@@ -122,13 +113,5 @@ export function evaluarSerie(partidas) {
   }).sort((x, y) => y.puntosPorPartida - x.puntosPorPartida);
 
   const n = buenas.length;
-  const cima = jugadores.filter((j) => j.puntosPorPartida === jugadores[0].puntosPorPartida);
-  const comentario = [{
-    tipo: 'resumen',
-    texto: `En estas ${plural(n, 'partida', 'partidas')} de El número solitario, con estas reglas, ${unir(cima.map((j) => j.nombre))} ${cima.length === 1 ? 'sumó' : 'suman'} más puntos por partida (${jugadores[0].puntosPorPartida}).`,
-  }];
-  for (const j of jugadores) comentario.push({ tipo: 'jugador', texto: `${j.nombre}: ${j.destacadas.join('; ')}.` });
-  if (n < JUGADORES) comentario.push({ tipo: 'aviso', texto: `Con ${plural(n, 'partida', 'partidas')} (menos de una vuelta completa de asientos) esto es solo una muestra, no un ranking.` });
-  comentario.push({ tipo: 'aviso', texto: 'Esto es lo que pasó en estas partidas; no es un ranking general de las IAs.' });
-  return { partidas: n, jugadores, comentario };
+  return { partidas: n, jugadores, comentario: comentarioDeSerie({ juego: 'El número solitario', jugadores, n, vuelta: JUGADORES }) };
 }

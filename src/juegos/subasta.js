@@ -10,6 +10,7 @@ import { vistaTexto } from './subasta/vista.js';
 import { resultadoDe } from './subasta/resultado.js';
 import { REGLAS, FORMATO } from './subasta/reglas-texto.js';
 import { JUGADORES, SUBASTAS } from './subasta/constantes.js';
+import { evaluarSerie } from './subasta/evaluacion.js';
 import { BOTS, INFO_BOTS } from './subasta-bots.js';
 
 export default {
@@ -35,6 +36,8 @@ export default {
   // jugadas[i] = respuesta normalizada (con `error` y `crudo` si los puso la arena); null para quien ya no tiene tiempo.
   aplicar: (E, jugadas) => aplicarTurno(E, jugadas),
   resultado: resultadoDe,
+  // al final de la serie: caracteristicas de cada IA y un comentario del resultado (la consola lo imprime y lo guarda en la serie)
+  evaluar: evaluarSerie,
   // a quien hay que preguntarle: solo a los que aun tienen banco (quien lo agoto no cuesta llamadas)
   activos: (E) => E.bancos.map((b) => b > 0),
 };
