@@ -1,6 +1,6 @@
 // Cliente de la Batch API de OpenRouter, probado con un OpenRouter FALSO (sin red, sin llave, sin gastar nada).
-// La forma de las respuestas sigue la documentacion oficial de OpenRouter (batch-quickstart) y se confirma con una sonda real
-// (tarea 8 del plan del lote).
+// La forma de las respuestas sigue la documentacion oficial de OpenRouter (batch-quickstart) y ya se confirmo con lotes reales
+// (tarea 8 del plan del lote, 10 de octubre de 2026).
 //
 //   npm test
 
@@ -144,4 +144,27 @@ test('credito lee el saldo de OpenRouter', async () => {
   const cliente = crearClienteLote({ clave: 'k', fetchFn: f.fetchFn, pausa: sinPausa });
   assert.deepEqual(await cliente.credito(), { total: 10, usado: 2.5, restante: 7.5 });
   assert.equal(f.llamadas[0].url, 'https://openrouter.ai/api/v1/credits');
+});
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('esperar sigue sondeando cuando falla la red, el limite de velocidad o el servidor: el lote ya esta enviado y cobrandose', async () => {
+  const cae = new Error('red caida');
+  const f = falso({ get: [cae, cae, cae, cae, cae, respuesta(429, { error: { message: 'lento' } }), respuesta(200, { id: 'lote-1', status: 'completed', results: [] })] });
+  const cliente = crearClienteLote({ clave: 'k', fetchFn: f.fetchFn, pausa: sinPausa });
+  assert.equal((await cliente.esperar('lote-1', { cadaMs: 1 })).status, 'completed');
+  assert.equal(f.llamadas.length, 7);
+});
+
+test('pero un error permanente (llave invalida) se lanza al instante, y un fallo que no se va se rinde al pasar el tiempo maximo', async () => {
+  const g = falso({ get: [respuesta(401, { error: { message: 'llave invalida' } })] });
+  await assert.rejects(crearClienteLote({ clave: 'k', fetchFn: g.fetchFn, pausa: sinPausa }).esperar('lote-1', { cadaMs: 1 }), /401/);
+  assert.equal(g.llamadas.length, 1);
+
+  let t = 0;
+  const h = falso({ get: [new Error('red caida')] });
+  const reloj = crearClienteLote({ clave: 'k', fetchFn: h.fetchFn, pausa: async (ms) => { t += ms; }, ahora: () => t });
+  await assert.rejects(reloj.esperar('lote-1', { cadaMs: 1000, maxMs: 30000 }), /red caida/);
+
+  // sin llave no hay nada que esperar: tampoco se queda sondeando
+  await assert.rejects(crearClienteLote({ clave: '', fetchFn: h.fetchFn, pausa: sinPausa }).esperar('lote-1', { cadaMs: 1 }), /OPENROUTER_API_KEY/);
 });

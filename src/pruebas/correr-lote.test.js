@@ -5,10 +5,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { correr, ErrorDeUso } from '../correr.js';
+import { createHash } from 'node:crypto';
+import { VERSION_PROMPT, construirSistema } from '../prompt.js';
+import conquista from '../juegos/conquista.js';
 import { clienteFalso } from './ayudas-lote.js';
 
 const JUGADA = '{"ordenes": [], "pacto_con": null, "mensaje": "", "privados": [], "razon": "paso el turno"}';
@@ -23,7 +26,11 @@ async function correrAqui(argv, { cliente = clienteFalso({ responder: () => ({ t
   const consola = { log: (...a) => { texto += `${a.join(' ')}\n`; }, escribir: (t) => { texto += t; } };
   try {
     const { ruta, salida } = await correr(argv, { raiz, crearCliente, sincrono, consola });
-    return { ruta, rel: ruta.slice(raiz.length + 1).replaceAll('\\', '/'), datos: JSON.parse(readFileSync(ruta, 'utf8')), salida, texto, cliente };
+    // el registro de lotes (un renglon por evento) se lee antes de borrar la carpeta temporal
+    const carpeta = join(raiz, 'data', 'pruebas');
+    const archivoLog = existsSync(carpeta) ? readdirSync(carpeta).find((f) => f.endsWith('.lotes.jsonl')) : null;
+    const log = archivoLog ? readFileSync(join(carpeta, archivoLog), 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [];
+    return { ruta, rel: ruta.slice(raiz.length + 1).replaceAll('\\', '/'), datos: JSON.parse(readFileSync(ruta, 'utf8')), salida, texto, cliente, log };
   } finally {
     rmSync(raiz, { recursive: true, force: true });
   }
@@ -77,7 +84,7 @@ test('si se alcanza el tope de gasto, la serie incompleta se guarda en pruebas a
   assert.equal(datos.lote.topeAlcanzado, true);
   assert.equal(datos.destino, 'pruebas');
   assert.match(texto, /Se alcanzo el tope de gasto/);
-  assert.ok(cliente.enviados.length < 30 * 4, 'no envio todos los lotes de una partida completa');
+  assert.equal(cliente.enviados.length, 3, 'tras la primera ronda (3 modelos con lote) el gasto ya paso el tope: no sale ningun lote mas');
   const errores = datos.partidas.flatMap((p) => p.rondas.flatMap((r) => r.errores.filter(Boolean)));
   assert.ok(errores.some((e) => /tope de gasto/.test(e)), 'lo que no se pudo pedir queda anotado como error de API');
 });
@@ -128,4 +135,60 @@ test('los modelos economicos de practica van a pruebas por defecto y no se dejan
   assert.equal(datos.destino, 'pruebas');
   assert.equal(rel.startsWith('data/pruebas/'), true);
   await fallaCon([...base, '--destino=oficial'], /practica/, { crearCliente: sinCliente });
+});
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('--lote con valor (--lote=si, --lote=1) es un error de uso: antes se ignoraba y corria en vivo, a precio completo y sin tope', async () => {
+  const base = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--tope=1'];
+  await fallaCon([...base, '--lote=si'], /--lote no lleva valor/);
+  await fallaCon([...base, '--lote=1'], /--lote no lleva valor/);
+  await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--lote=si'], /--lote no lleva valor/);
+});
+
+test('banderas del lote: --ritmo no se combina con --lote, --sondeo solo con --lote y dentro de 1 a 3600 segundos', async () => {
+  const conq = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago'];
+  await fallaCon([...conq, '--lote', '--tope=1', '--ritmo=10'], /--ritmo no se combina con --lote/);
+  await fallaCon([...conq, '--sondeo=20'], /--sondeo solo se usa con --lote/);
+  await fallaCon([...conq, '--lote', '--tope=1', '--sondeo=Infinity'], /--sondeo debe estar entre 1 y 3600/);
+  await fallaCon([...conq, '--lote', '--tope=1', '--sondeo=99999'], /--sondeo debe estar entre 1 y 3600/);
+  await fallaCon([...conq, '--lote', '--tope=1', '--sondeo=0'], /--sondeo/);
+});
+
+test('la primera ronda sale entera, asi que se rechaza una serie cuya primera ronda podria costar mas que el tope', async () => {
+  // 400 partidas x 3 modelos con lote = 1,200 peticiones de golpe: en el peor caso mucho mas que $0.10
+  await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=400', '--modo=pago', '--lote', '--tope=0.10'], /primera ronda envia 1200 peticiones/);
+  // el ensayo minimo de siempre (4 partidas, 3 modelos con lote, tope 0.10) si cabe, e imprime cuantas peticiones lleva la primera ronda
+  const ok = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.10', '--turnos=1'];
+  return correrAqui(ok).then(({ texto }) => assert.match(texto, /primera ronda: 12 peticiones/));
+});
+
+test('cada lote enviado queda anotado en un registro en disco al instante, y sus ids tambien en lo guardado', async () => {
+  const { log, datos } = await correrAqui(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.50', '--turnos=2', '--seed=7']);
+  const enviados = log.filter((e) => e.tipo === 'enviado');
+  assert.equal(enviados.length, 6);
+  assert.ok(enviados.every((e) => /^lote-\d+$/.test(e.id) && e.modelo && e.n === 4 && e.t));
+  assert.equal(log.filter((e) => e.tipo === 'listo').length, 6);
+  assert.deepEqual(datos.lote.ids.map((x) => x.id), enviados.map((e) => e.id));
+});
+
+test('si se pierde el seguimiento de un lote ya enviado, no salen mas, lo dice con el id, y la serie oficial se guarda como practica', async () => {
+  const cliente = clienteFalso({ falloDeEsperar: 'red caida', desdeElLote: 1 });
+  const { datos, texto, log } = await correrAqui(
+    ['--juego=conquista', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.50', '--destino=oficial', '--seed=3'],
+    { cliente },
+  );
+  assert.equal(cliente.enviados.length, 3, 'solo la primera ronda: el seguimiento fallo y no sale ningun lote mas');
+  assert.equal(datos.lote.fallosDeSeguimiento, 3);
+  assert.match(datos.lote.detenido, /lote-/);
+  assert.equal(datos.destino, 'pruebas', 'una serie con rondas perdidas por fallos de infraestructura no es oficial');
+  assert.match(texto, /Envios detenidos/);
+  assert.match(texto, /ver-lote\.mjs lote-1/);
+  assert.ok(log.some((e) => e.tipo === 'aviso' && /lote-1/.test(e.texto)));
+});
+
+test('lo guardado dice con que prompt se midio: version, version de las reglas del juego y huella del prompt completo', async () => {
+  const { datos } = await correrAqui(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1']);
+  assert.equal(datos.prompt.version, VERSION_PROMPT);
+  assert.equal(datos.prompt.reglas, conquista.versionReglas);
+  assert.equal(datos.prompt.hash, createHash('sha256').update(construirSistema(conquista)).digest('hex'));
 });

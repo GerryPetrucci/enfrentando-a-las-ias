@@ -11,6 +11,11 @@ export function clienteFalso({
   sinResultadoPara = () => false,
   saldo = 10,
   falloDeCredito = null,
+  // el lote YA se envio (y se cobra) pero el seguimiento falla: `esperar` lanza este mensaje desde el lote numero `desdeElLote`
+  falloDeEsperar = null,
+  desdeElLote = 1,
+  sinCosto = false,        // el lote termina sin usage.cost
+  resultadosRotos = false, // results trae basura (null) en vez de resultados
 } = {}) {
   const enviados = [], lotes = new Map();
   return {
@@ -28,6 +33,7 @@ export function clienteFalso({
     },
     async esperar(id, { alCambiar = () => {} } = {}) {
       const { modelo, peticiones } = lotes.get(id);
+      if (falloDeEsperar && Number(id.split("-")[1]) >= desdeElLote) throw new Error(falloDeEsperar);
       alCambiar('in_progress');
       const resultados = peticiones.filter((p) => !sinResultadoPara(p)).map((p) => {
         const r = responder(p.cuerpo, modelo);
@@ -39,8 +45,8 @@ export function clienteFalso({
       return {
         id, status: estado,
         request_counts: { total: peticiones.length, completed: ok, failed: resultados.length - ok },
-        usage: { prompt_tokens: 100 * ok, completion_tokens: 50 * ok, total_tokens: 150 * ok, cost: costoPorLote },
-        results: resultados,
+        usage: { prompt_tokens: 100 * ok, completion_tokens: 50 * ok, total_tokens: 150 * ok, ...(sinCosto ? {} : { cost: costoPorLote }) },
+        results: resultadosRotos ? [null] : resultados,
       };
     },
   };

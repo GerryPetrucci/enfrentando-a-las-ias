@@ -101,3 +101,54 @@ test('avisa cada lote enviado y terminado, y lleva la cuenta', async () => {
   assert.equal(est.peticiones, 2);
   assert.deepEqual(Object.keys(est.porModelo).sort(), ['m/a', 'm/b']);
 });
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('si falla el seguimiento de un lote YA enviado, no sale ningun lote nuevo y queda anotado (ese lote sigue cobrandose)', async () => {
+  const cliente = clienteFalso({ falloDeEsperar: 'red caida' });
+  const eventos = [];
+  const c = nuevo(cliente, { alEvento: (e) => eventos.push(e) });
+  await assert.rejects(c.pedir(pet('m/a', 1)), /red caida/);
+  // el turno siguiente NO envia otro lote (antes si lo enviaba: 30 lotes con gasto 0)
+  await assert.rejects(c.pedir(pet('m/a', 2)), /envios detenidos/);
+  await assert.rejects(c.pedir(pet('m/s', 1, { usaLote: false })), /envios detenidos/);
+  assert.equal(cliente.enviados.length, 1);
+  const e = c.estadisticas();
+  assert.equal(e.fallosDeSeguimiento, 1);
+  assert.match(e.detenido, /lote-1/);
+  assert.ok(eventos.some((ev) => ev.tipo === 'aviso' && /lote-1/.test(ev.texto)), 'avisa el id para poder consultarlo despues');
+});
+
+test('un lote que termina sin costo informado se entrega, pero detiene los envios nuevos: el tope no puede vigilar lo que no ve', async () => {
+  const cliente = clienteFalso({ sinCosto: true });
+  const c = nuevo(cliente, { tope: 0.5 });
+  const r = await c.pedir(pet('m/a', 1));
+  assert.equal(r.texto, 'eco:m/a-1');
+  await assert.rejects(c.pedir(pet('m/a', 2)), /costo/);
+  assert.equal(cliente.enviados.length, 1);
+  assert.equal(c.estadisticas().costoNoInformado, 1);
+});
+
+test('un costo que llega como texto se suma como numero, no se concatena', async () => {
+  const c = nuevo(clienteFalso({ costoPorLote: '0.004' }));
+  await c.pedir(pet('m/a', 1));
+  assert.equal(typeof c.estadisticas().gasto, 'number');
+  assert.equal(c.estadisticas().gasto, 0.004);
+});
+
+test('resultados malformados no cuelgan ni tumban el proceso: todas las peticiones rechazan y los envios se detienen', async () => {
+  const c = nuevo(clienteFalso({ resultadosRotos: true }));
+  const espera = new Promise((_, rechazar) => setTimeout(() => rechazar(new Error('colgado: una peticion nunca se resolvio')), 2000));
+  const r = await Promise.race([Promise.allSettled([c.pedir(pet('m/a', 1)), c.pedir(pet('m/a', 2))]), espera]);
+  assert.ok(r.every((x) => x.status === 'rejected'));
+  await assert.rejects(c.pedir(pet('m/a', 3)), /envios detenidos/);
+});
+
+test('las llamadas normales suman al gasto de su modelo, y cada lote enviado queda en la lista de ids', async () => {
+  const cliente = clienteFalso({ costoPorLote: 0.004 });
+  const c = nuevo(cliente, { sincrono: async () => ({ texto: 'x', finishReason: 'stop', uso: { cost: 0.002 } }) });
+  await Promise.all([c.pedir(pet('m/a', 1)), c.pedir(pet('m/s', 1, { usaLote: false }))]);
+  const e = c.estadisticas();
+  assert.equal(+e.porModelo['m/s'].gasto.toFixed(4), 0.002);
+  assert.equal(+e.gasto.toFixed(4), 0.006);
+  assert.deepEqual(e.ids, [{ id: 'lote-1', modelo: 'm/a', n: 1 }]);
+});

@@ -98,8 +98,11 @@ contesta (a mitad de precio, de minutos a horas despues). Tres cosas que hay que
 - Todas las partidas de la serie avanzan juntas, turno por turno, en vez de una tras otra. No cambia lo que ve cada IA: cada
   partida sigue siendo independiente y el mapa es el mismo.
 - OpenRouter informa tokens y costo por lote, no por peticion; el reparto por reino es una aproximacion (partes iguales).
-- Si se alcanza el tope de gasto, la serie queda incompleta y se guarda como practica. Los turnos que no se pudieron pedir
-  quedan anotados como error de API, no escondidos.
+- El tope se compara con el gasto que OpenRouter ya informo, no con lo enviado y aun en espera: el gasto final puede pasar un poco
+  del tope. Si se alcanza, o si un envio o una espera falla, la serie queda incompleta y se guarda como practica. Los turnos que no
+  se pudieron pedir quedan anotados como error de API, no escondidos, y cada evento del lote queda en un registro `.lotes.jsonl`.
+- Una serie es un mundo: todas sus partidas comparten el seed base (en juegos con `mismoSeedEnSerie`, como La Fuga y Guerra de territorios, el escenario
+  es identico en cada partida y solo cambian las decisiones). Para ver mas escenarios se corren varias series con distinto `--seed`.
 
 ## 11. Reglas ocultas
 

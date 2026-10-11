@@ -28,19 +28,26 @@ export function crearClienteLote({
   };
 
   async function pedir(metodo, ruta, cuerpo) {
-    const respuesta = await fetchFn(`${base}${ruta}`, { method: metodo, headers: cabecerasOpenRouter(clave), ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}) });
-    const texto = await respuesta.text();
+    let respuesta, texto;
+    try {
+      respuesta = await fetchFn(`${base}${ruta}`, { method: metodo, headers: cabecerasOpenRouter(clave), ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}) });
+      texto = await respuesta.text();
+    } catch (err) {
+      err.transitorio = true; // fallo de red: no se sabe que paso, y repetir una lectura es seguro (un envio nunca se repite)
+      throw err;
+    }
     let json = null;
     try { json = JSON.parse(texto); } catch { /* el cuerpo no es JSON */ }
     if (!respuesta.ok) {
       const error = new Error(`OpenRouter ${respuesta.status}: ${mensajeDeError(json, texto)}`);
       error.status = respuesta.status;
+      error.transitorio = respuesta.status === 429 || respuesta.status >= 500; // limite de velocidad o servidor: vale la pena reintentar
       throw error;
     }
     return json;
   }
 
-  // Leer es seguro: se reintentan los errores de red, de limite (429) y del servidor (5xx), hasta 3 intentos.
+  // Leer es seguro: se reintentan los errores transitorios (red, limite 429 y servidor 5xx), hasta 3 intentos.
   async function leer(ruta) {
     let ultimo;
     for (let intento = 1; intento <= 3; intento++) {
@@ -48,8 +55,7 @@ export function crearClienteLote({
         return await pedir('GET', ruta);
       } catch (err) {
         ultimo = err;
-        const reintentable = err.status === undefined || err.status === 429 || err.status >= 500;
-        if (!reintentable || intento === 3) throw err;
+        if (!err.transitorio || intento === 3) throw err;
         await pausa(2000 * intento);
       }
     }
@@ -78,7 +84,9 @@ export function crearClienteLote({
     // Consulta cada `cadaMs` hasta un estado final y lo devuelve (completed, failed, expired o cancelled).
     // Un lote recien creado puede dar 404 unos instantes aunque exista (visto el 10 de octubre de 2026: los 3 lotes del ensayo
     // dieron 404 al primer sondeo y 20 s despues estaban in_progress). Durante `graciaMs` se sigue sondeando; pasado ese margen
-    // el 404 es real (id equivocado) y se lanza. Abandonar un lote ya enviado pierde sus resultados pero se cobra igual.
+    // el 404 es real (id equivocado) y se lanza. Abandonar un lote ya enviado pierde sus resultados pero se cobra igual: por eso los
+    // fallos transitorios (red, 429, 5xx) tampoco lo abandonan; se sigue sondeando hasta `maxMs`. Un error permanente (llave
+    // invalida, id inexistente) si se lanza al instante.
     async esperar(id, { cadaMs = 15000, maxMs = 25 * 3600 * 1000, graciaMs = 2 * 60 * 1000, alCambiar = () => {} } = {}) {
       const inicio = ahora();
       let anterior;
@@ -87,7 +95,8 @@ export function crearClienteLote({
         try {
           lote = await this.consultar(id);
         } catch (err) {
-          if (err.status === 404 && ahora() - inicio < graciaMs) { await pausa(cadaMs); continue; }
+          const aunNoSeVe = err.status === 404 && ahora() - inicio < graciaMs;
+          if ((err.transitorio || aunNoSeVe) && ahora() - inicio < maxMs) { await pausa(cadaMs); continue; }
           throw err;
         }
         if (lote.status !== anterior) { alCambiar(lote.status, lote); anterior = lote.status; }

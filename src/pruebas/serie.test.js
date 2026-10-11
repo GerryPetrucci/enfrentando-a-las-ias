@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, rutaLibre, errorDeLote,
+  parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, rutaLibre, errorDeLote, errorDePrimeraRonda, COSTO_MAXIMO_PETICION,
 } from '../serie.js';
 import conquista from '../juegos/conquista.js';
 import dilema from '../juegos/dilema.js';
@@ -123,4 +123,19 @@ test('destinoDe: los modelos economicos de practica van a pruebas por defecto y 
   assert.throws(() => destinoDe({ modo: 'pago', destino: 'oficial', practica: true }), /practica/);
   assert.equal(destinoDe({ modo: 'pago' }), 'oficial', 'sin practica nada cambia');
   assert.equal(destinoDe({ modo: 'pago', destino: 'oficial' }), 'oficial');
+});
+
+// ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
+test('errorDePrimeraRonda: la primera ronda sale entera, asi que se compara su peor caso contra el tope', () => {
+  assert.equal(errorDePrimeraRonda({ lote: false, tope: null, peticiones: 100000 }), null, 'sin --lote no se valida nada');
+  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: 12 }), null);
+  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: Math.floor(0.10 / COSTO_MAXIMO_PETICION) }), null, 'justo en el limite cabe');
+  assert.match(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: 1200 }), /primera ronda envia 1200 peticiones.*--tope=0\.1/);
+});
+
+test('avisosDeSerie: una serie con el mismo seed es UN mundo, no varias muestras independientes', () => {
+  const con = avisosDeSerie({ k: 2, partidas: 4, rotar: true, mismoSeed: true });
+  assert.ok(con.some((a) => /mismo mundo/.test(a) && /--seed/.test(a)));
+  assert.ok(!avisosDeSerie({ k: 2, partidas: 4, rotar: true }).some((a) => /mismo mundo/.test(a)));
+  assert.ok(!avisosDeSerie({ k: 2, partidas: 4, rotar: true, mismoSeed: false }).some((a) => /mismo mundo/.test(a)));
 });

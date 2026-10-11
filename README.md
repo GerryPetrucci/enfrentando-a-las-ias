@@ -46,11 +46,11 @@ node src/humo.js                                                                
 
 Los resultados con modelos gratis son de práctica y van a `data/pruebas/` (el marcador no los lee; se ven con `node src/marcador.js --data=data/pruebas --salida=marcador-pruebas.json`). `--destino=oficial|pruebas` cambia el destino de una corrida.
 
-Para **ensayar barato**, las jugadas pueden ir por la Batch API de OpenRouter (mitad de precio, tarda de minutos a horas). Exige `--modo=pago` y un `--tope` en dolares; las partidas de la serie corren a la vez y el resultado va a `data/pruebas/`:
+Para **ensayar barato**, las jugadas pueden ir por la Batch API de OpenRouter (mitad de precio, tarda de minutos a horas). Exige `--modo=pago` y un `--tope` en dolares; las partidas de la serie corren a la vez. Con los modelos economicos de practica (o si se alcanza el tope) el resultado va a `data/pruebas/`; con modelos de gama media, a `data/` como cualquier serie de pago, asi que usa `--destino=pruebas` para ensayar:
 
 ```bash
 node src/correr.js --juego=conquista --jugadores=haiku,luna,flash-lite,deepseek --partidas=4 --modo=pago --lote --tope=0.50 --destino=pruebas
-node src/correr.js ... --lote --tope=0.10 --turnos=2     # ensayo minimo: cada partida se corta a 2 turnos
+node src/correr.js ... --lote --tope=0.10 --turnos=2     # ensayo minimo: cada partida se corta a 2 turnos (el tope es de gasto confirmado, ver docs/metodologia.md §10)
 node herramientas/verificar-modelos.mjs                  # compara src/modelos.js con el catalogo de OpenRouter (no gasta)
 ```
 

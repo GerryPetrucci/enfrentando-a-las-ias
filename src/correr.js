@@ -31,11 +31,13 @@
 //
 // TURNOS: `--turnos=N` corta cada partida a los N turnos (para practicar barato). Son partidas incompletas: van a pruebas.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 import { obtenerJuego } from './juegos/index.js';
+import { VERSION_PROMPT, construirSistema } from './prompt.js';
 import { resolverAgente, agenteModeloEnLote } from './agentes.js';
 import { CONTENDIENTES, fijarModo } from './modelos.js';
 import { PARAMETROS } from './parametros.js';
@@ -45,7 +47,8 @@ import { crearClienteLote } from './lote.js';
 import { crearCoordinador } from './coordinador-lote.js';
 import { seedDesdeTexto } from './rng.js';
 import {
-  parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, errorDeLote, rutaLibre,
+  parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, errorDeLote,
+  errorDePrimeraRonda, rutaLibre,
 } from './serie.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -89,8 +92,12 @@ export async function correr(argv, {
   const errModo = errorDeModo({ modo, agentes: todos, contendientes: CONTENDIENTES });
   if (errModo) salir(errModo);
 
+  // --lote no lleva valor: "--lote=si" se ignoraba en silencio y corria en vivo, a precio completo y sin tope
+  if (o.lote !== undefined && o.lote !== true) salir('--lote no lleva valor: escribelo solo, sin "=" (por ejemplo --lote --tope=0.50).');
   const lote = o.lote === true;
   if (o.tope !== undefined && !lote) salir('--tope solo se usa con --lote.');
+  if (o.sondeo !== undefined && !lote) salir('--sondeo solo se usa con --lote.');
+  if (lote && o.ritmo !== undefined) salir('--ritmo no se combina con --lote: espaciaria las peticiones y cada una saldria en su propio lote.');
   const tope = o.tope === undefined ? null : numero(o.tope);
   const errLote = errorDeLote({ lote, modo, tope, agentes: todos, contendientes: CONTENDIENTES });
   if (errLote) salir(errLote);
@@ -101,7 +108,7 @@ export async function correr(argv, {
   if (turnos !== null && o.destino === 'oficial') salir('--turnos corta las partidas a la mitad: su resultado es de practica y no puede ir a --destino=oficial.');
 
   const sondeo = o.sondeo === undefined ? 15 : numero(o.sondeo);
-  if (!(sondeo > 0)) salir('--sondeo debe ser un numero mayor que 0 (segundos entre consultas del lote).');
+  if (!(Number.isFinite(sondeo) && sondeo >= 1 && sondeo <= 3600)) salir('--sondeo debe estar entre 1 y 3600 segundos (cada cuanto se pregunta si el lote termino).');
 
   // Los modelos economicos son de practica: su resultado nunca va a data/ (el marcador lo leeria).
   const practica = todos.some((a) => CONTENDIENTES[a.id]?.practica === true);
@@ -117,9 +124,17 @@ export async function correr(argv, {
   const rotar = o.alternar !== 'no';
   const mismoSeed = !!juego.mismoSeedEnSerie;
 
+  // La primera ronda sale entera antes de conocer ningun costo: el tope solo se revisa entre rondas (coordinador-lote.js).
+  const peticionesPrimeraRonda = lote ? partidas * claves.filter((c) => agentesPorClave.get(c).tipo === 'modelo' && CONTENDIENTES[c]?.lote === true).length : 0;
+  const errPrimera = errorDePrimeraRonda({ lote, tope, peticiones: peticionesPrimeraRonda });
+  if (errPrimera) salir(errPrimera);
+
   const ritmo = o.ritmo !== undefined ? Number(o.ritmo) : usaModelos && modo === 'gratis' ? 18 : null;
   if (ritmo !== null && !(ritmo > 0)) salir('--ritmo debe ser un numero mayor que 0 (llamadas por minuto).');
   const limitador = ritmo ? crearLimitador({ porMinuto: ritmo }) : null;
+
+  const fecha = new Date().toISOString().slice(0, 10);
+  const etiquetaBase = `${fecha}-${idJuego}-${claves.join('-vs-')}`;
 
   // Con lote, los modelos que tienen variante de lote piden por el coordinador; los demas siguen llamando normal.
   let coordinador = null;
@@ -135,21 +150,27 @@ export async function correr(argv, {
       salir(`Saldo insuficiente: quedan ${dolares(saldo.restante)} en OpenRouter y --tope=${tope}. Carga credito o baja el tope.`);
     }
     consola.log(`\n  Saldo de OpenRouter: ${dolares(saldo.restante)}`);
+    // Cada lote enviado se anota EN DISCO al instante (un renglon por evento): si la consola se cierra o el equipo se suspende
+    // a las 3 horas, el lote sigue en OpenRouter y se cobra, y aqui quedan sus ids para leerlo con herramientas/ver-lote.mjs.
+    const hora = new Date().toISOString().slice(11, 19).replaceAll(':', '');
+    const rutaLog = resolve(raiz, 'data', 'pruebas', `${etiquetaBase}.${hora}.lotes.jsonl`);
+    mkdirSync(dirname(rutaLog), { recursive: true });
+    consola.log(`  Registro de lotes (se escribe al enviar cada uno): data/pruebas/${basename(rutaLog)}`);
     coordinador = crearCoordinador({
       cliente,
       cadaMs: sondeo * 1000,
       tope,
       ...(sincrono ? { sincrono } : {}),
       alEvento: (e) => {
+        if (e.tipo !== 'estado') appendFileSync(rutaLog, `${JSON.stringify({ t: new Date().toISOString(), ...e })}\n`);
         if (e.tipo === 'enviado') consola.log(`  [lote] enviado ${e.id} · ${e.modelo} · ${e.n} peticion(es)`);
         if (e.tipo === 'listo') consola.log(`  [lote] ${e.modelo}: ${e.estado} en ${e.segundos}s · ${dolares(e.costo)}`);
+        if (e.tipo === 'aviso') consola.log(`  ! ${e.texto}`);
       },
     });
     for (const c of claves) if (agentesPorClave.get(c).tipo === 'modelo') agentesPorClave.set(c, agenteModeloEnLote(c, coordinador));
   }
 
-  const fecha = new Date().toISOString().slice(0, 10);
-  const etiquetaBase = `${fecha}-${idJuego}-${claves.join('-vs-')}`;
   const seedBase = o.seed ? Number(o.seed) : seedDesdeTexto(etiquetaBase);
   const plan = planDeSerie({ claves, partidas, seedBase, rotar, mismoSeed });
 
@@ -161,13 +182,13 @@ export async function correr(argv, {
     const hasta = llamadas ? ` · hasta ~${turnos !== null ? Math.min(llamadas, turnos * k * partidas) : llamadas} llamadas` : '';
     consola.log(
       lote
-        ? `  MODO PAGO POR LOTE: mitad de precio, tarda de minutos a horas · tope ${dolares(tope)}${hasta}`
+        ? `  MODO PAGO POR LOTE: mitad de precio, tarda de minutos a horas · tope ${dolares(tope)} (se revisa entre rondas) · primera ronda: ${peticionesPrimeraRonda} peticiones${hasta}`
         : modo === 'gratis'
           ? `  MODO GRATIS: no gasta credito (tope de OpenRouter: 20 por minuto y 1,000 por dia con 10 USD comprados; 50 por dia sin comprar)${hasta}`
           : `  MODO PAGO: esta ejecucion puede gastar credito de OpenRouter${hasta}`
     );
   }
-  for (const aviso of avisosDeSerie({ k, partidas, rotar })) consola.log(`  ! ${aviso}`);
+  for (const aviso of avisosDeSerie({ k, partidas, rotar, mismoSeed })) consola.log(`  ! ${aviso}`);
   consola.log('');
 
   // En serie se ve avanzar cada partida con puntos ("Partida 2/4 ....  gana X"); en lote todas corren a la vez y cada una
@@ -186,8 +207,9 @@ export async function correr(argv, {
   });
 
   const estadisticas = coordinador?.estadisticas() ?? null;
-  // Con el tope alcanzado hay turnos que no se pudieron pedir: esa serie no es un resultado, aunque quede guardada.
-  if (estadisticas?.topeAlcanzado && destino === 'oficial') destino = 'pruebas';
+  // Con el tope alcanzado, o con los envios detenidos por un fallo de infraestructura, hay turnos que no se pudieron pedir:
+  // esa serie no es un resultado, aunque quede guardada.
+  if ((estadisticas?.topeAlcanzado || estadisticas?.detenido) && destino === 'oficial') destino = 'pruebas';
 
   const carpeta = destino === 'pruebas' ? resolve(raiz, 'data', 'pruebas') : resolve(raiz, 'data');
   const ruta = rutaLibre(resolve(carpeta, `${etiquetaBase}.json`));
@@ -198,6 +220,9 @@ export async function correr(argv, {
     fecha: new Date().toISOString(),
     juego: { id: juego.id, nombre: juego.nombre, categoria: juego.categoria },
     seedBase,
+    // Con que prompt se midio: version global, version de las reglas de este juego y la huella del prompt de sistema completo
+    // (si algo del texto cambia, la huella cambia: dos resultados con huellas distintas no se comparan).
+    prompt: { version: VERSION_PROMPT, reglas: juego.versionReglas ?? null, hash: createHash('sha256').update(construirSistema(juego)).digest('hex') },
     // "gratis" | "pago" | null (solo estrategias base, sin API). Los resultados de modelos gratis son de practica.
     modo: usaModelos ? modo : null,
     destino,
@@ -225,6 +250,8 @@ export async function correr(argv, {
   if (estadisticas) {
     consola.log(`  Lotes: ${estadisticas.lotes} (${estadisticas.peticiones - estadisticas.sincronas} peticiones) · llamadas normales: ${estadisticas.sincronas} · gasto informado por OpenRouter: ${dolares(estadisticas.gasto)} de ${dolares(tope)}`);
     if (estadisticas.topeAlcanzado) consola.log('  ! Se alcanzo el tope de gasto: faltaron turnos por pedir. Es una serie incompleta; se guardo en pruebas.');
+    if (estadisticas.detenido) consola.log(`  ! Envios detenidos: ${estadisticas.detenido}. Es una serie incompleta; se guardo en pruebas.`);
+    if (estadisticas.gasto > tope) consola.log(`  ! El gasto informado (${dolares(estadisticas.gasto)}) paso el tope (${dolares(tope)}): el tope se revisa entre rondas, no durante una.`);
   }
   consola.log(
     destino === 'pruebas'

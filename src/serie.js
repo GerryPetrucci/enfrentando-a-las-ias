@@ -40,8 +40,11 @@ export function planDeSerie({ claves, partidas, seedBase, rotar = true, mismoSee
 }
 
 // Las dos trampas de la tabla: asientos repartidos a medias y asientos sin rotar (docs/metodologia.md, secciones 2 y 7).
-export function avisosDeSerie({ k, partidas, rotar }) {
+export function avisosDeSerie({ k, partidas, rotar, mismoSeed = false }) {
   const avisos = [];
+  if (mismoSeed) {
+    avisos.push(`Todas las partidas de esta serie comparten el mismo mundo (mismo seed): son ${k} combinaciones distintas, no ${partidas} muestras independientes. Para publicar, suma varias series con --seed distintos.`);
+  }
   if (rotar && partidas % k !== 0) {
     avisos.push(`La serie queda desbalanceada: ${partidas} partida(s) con ${k} jugadores no reparten los asientos por igual (usa multiplos de ${k}).`);
   }
@@ -92,16 +95,30 @@ export function rutaLibre(ruta, existe = existsSync) {
 }
 
 // --lote manda las jugadas por la Batch API de OpenRouter: mitad de precio, sin prisa. Devuelve el texto del error, o null si todo
-// esta bien. Exige modo pago y un tope de gasto en dolares (el coordinador deja de enviar lotes nuevos al alcanzarlo, asi una
-// serie larga no gasta mas de lo previsto). `contendientes` es opcional: permite revisar que algun modelo tenga variante de lote.
+// esta bien. Exige modo pago y un tope de gasto en dolares: el coordinador deja de enviar lotes nuevos cuando el gasto informado lo
+// alcanza. OJO: el tope se revisa ANTES de cada lote, no durante; un lote ya enviado se cobra completo y la primera ronda sale
+// entera (ver errorDePrimeraRonda). `contendientes` es opcional: permite revisar que algun modelo tenga variante de lote.
 export function errorDeLote({ lote, modo, tope, agentes, contendientes = null }) {
   if (!lote) return null;
   const modelos = agentes.filter((a) => a.tipo === 'modelo');
   if (!modelos.length) return '--lote solo aplica a modelos: con bots o estrategias base no hay nada que mandar a la API.';
   if (modo !== 'pago') return '--lote gasta credito de OpenRouter: agrega --modo=pago.';
-  if (!(Number.isFinite(tope) && tope > 0)) return '--lote exige --tope=DOLARES (mayor que 0): el gasto maximo de esta ejecucion, por ejemplo --tope=0.50.';
+  if (!(Number.isFinite(tope) && tope > 0)) return '--lote exige --tope=DOLARES (mayor que 0): el gasto a partir del cual ya no se envian lotes nuevos, por ejemplo --tope=0.50.';
   if (contendientes && !modelos.some((a) => contendientes[a.id]?.lote === true)) {
     return 'Ninguno de los modelos tiene variante de lote (:batch): --lote no ahorraria nada. Quitalo o suma un modelo con lote.';
   }
   return null;
+}
+
+// Cota generosa (no un precio) de lo que puede costar UNA peticion por lote en el peor caso: 4000 tokens de salida al precio de
+// lote mas alto del registro (Gemini Flash-Lite, ~$1.25 por millon) mas la entrada. Sirve para que el tope no sea solo una promesa.
+export const COSTO_MAXIMO_PETICION = 0.006;
+
+// La primera ronda de un lote sale ENTERA antes de conocer ningun costo (el tope se revisa entre rondas): si en el peor caso ya
+// cuesta mas que el tope, no tiene sentido empezar. `peticiones` = partidas x modelos con variante de lote.
+export function errorDePrimeraRonda({ lote, tope, peticiones }) {
+  if (!lote || !(peticiones > 0)) return null;
+  const peor = peticiones * COSTO_MAXIMO_PETICION;
+  if (peor <= tope) return null;
+  return `La primera ronda envia ${peticiones} peticiones de golpe y, en el peor caso (~$${COSTO_MAXIMO_PETICION} cada una), podria costar $${peor.toFixed(2)}: mas que --tope=${tope}. El tope se revisa entre rondas, no durante una. Baja --partidas o sube --tope.`;
 }
