@@ -64,6 +64,7 @@ Directa, con humor seco, sin hablar como robot. Tuteo neutro, comprensible en to
   - *Se traicionaron las dos.*
   - *¿Le gana a Toma y Daca?* (el control como vara de medir)
   - *Ronda 7: ahí se rompió todo.*
+  - Para **La Fuga** (vocabulario suave, 11 oct 2026): *[IA] prometió [A] y tomó otro camino.* · *Cada quien por su cuenta.* · *Se quedó atrás y aun así salió.* · *Ronda 7: ahí cambió el plan.* Evitar "traición", "abandonó" y "delató" en los títulos de este juego; en el Dilema, que es literalmente cooperar o traicionar, se conservan.
 - **Evita:** insultar a un proveedor, declarar ganadoras absolutas, prometer resultados que no se han medido.
 
 ## Reglas editoriales (confirmadas el 9 de octubre de 2026)

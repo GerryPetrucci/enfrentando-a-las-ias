@@ -11,6 +11,9 @@
     "duelo": "node src/correr.js",
     "marcador": "node src/marcador.js",
     "sitio": "node src/servidor.js",
+    "humo": "node src/humo.js",
+    "recortar": "node herramientas/recortar-formatos.mjs",
+    "test": "node --test",
     "demo": "node src/correr.js --a=tomaydaca --b=siempre-t --partidas=2 && node src/marcador.js"
   }
 }

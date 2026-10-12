@@ -21,6 +21,11 @@ Cada duelo se corre un numero par de partidas y los asientos se intercambian en
 cada una (`--alternar=no` lo desactiva, pero no deberia usarse para contenido
 publicado). Ninguna IA acumula la ventaja de ir siempre primero.
 
+Con mas de dos jugadores (Guerra de territorios) se corre una **serie de
+rotacion**: en k partidas cada jugador pasa por cada uno de los k asientos, y el
+mapa es el mismo en toda la serie. Por eso las series se corren en multiplos de k;
+la consola avisa si no es asi.
+
 ## 3. Seed publicado
 
 Todo lo aleatorio pasa por un generador con semilla
@@ -50,8 +55,10 @@ y la fecha. Los modelos se actualizan cada pocos meses, asi que **el marcador es
 una foto del momento, no un veredicto permanente.** Eso no es una debilidad del
 formato: es el motivo por el que puedes hacer temporadas.
 
-Los parametros de llamada (temperatura 0.7 y 2000 tokens maximos) son iguales para
-todas las IAs y se congelan junto con el prompt.
+Los parametros de llamada (temperatura 0.7, 4000 tokens maximos y razonamiento en nivel medio, o el valor por defecto del
+modelo si no tiene niveles) son iguales para todas las IAs y se congelan junto con el prompt. Lo que se le mando a cada
+modelo queda en `parametros` de cada resultado. Segun el catalogo de OpenRouter del 9 de octubre de 2026, Claude (Sonnet y
+Haiku 5.5) y GPT-6 ignoran la temperatura: se manda igual a todos, pero con ellos no tiene efecto.
 
 ## 6. Alcance de las afirmaciones
 
@@ -75,3 +82,78 @@ Se usan los nombres de los modelos de forma descriptiva, para decir cual se
 midio. No se usan logos oficiales ni nada que sugiera patrocinio, permiso o
 relacion con esas empresas. Conviene revisar los terminos de uso de cada
 proveedor antes de publicar comparativas de forma sistematica.
+
+## 9. Practica y torneo
+
+Los resultados de la liga gratuita (modelos gratis) y las pruebas de calibracion
+son de **practica**: se guardan aparte (`data/pruebas/`), no entran al marcador y
+no se publican como resultado. Los modelos gratis se saturan, cambian y fallan por
+infraestructura; sirven para probar el formato, no para comparar IAs.
+
+## 10. Lotes
+
+Una serie corrida con `--lote` usa el mismo prompt, los mismos parametros y el mismo modelo que una en vivo; cambia **cuando** se
+contesta (a mitad de precio, de minutos a horas despues). Tres cosas que hay que saber al leer sus datos:
+
+- Todas las partidas de la serie avanzan juntas, turno por turno, en vez de una tras otra. No cambia lo que ve cada IA: cada
+  partida sigue siendo independiente y el mapa es el mismo.
+- OpenRouter informa tokens y costo por lote, no por peticion; el reparto por reino es una aproximacion (partes iguales).
+- El tope se compara con el gasto que OpenRouter ya informo, no con lo enviado y aun en espera: el gasto final puede pasar un poco
+  del tope. Si se alcanza, o si un envio o una espera falla, la serie queda incompleta y se guarda como practica. Los turnos que no
+  se pudieron pedir quedan anotados como error de API, no escondidos, y cada evento del lote queda en un registro `.lotes.jsonl`.
+- Una serie es un mundo: todas sus partidas comparten el seed base (en juegos con `mismoSeedEnSerie`, como La Fuga y Guerra de territorios, el escenario
+  es identico en cada partida y solo cambian las decisiones). Para ver mas escenarios se corren varias series con distinto `--seed`.
+
+## 11. Reglas ocultas
+
+La Fuga tiene una regla que las IAs no conocen: si los prisioneros se separan, cada uno puede escapar por su cuenta (y eso vale
+menos que escapar juntos). El prompt nunca afirma lo contrario: dice que planean salir juntos, que hay detalles de la prision que
+no conocen, y calla sobre lo que pasa si solo uno sale. Se publica aqui y el reproductor la muestra, porque lo que se mide es que
+hacen las IAs creyendo que deben salir juntos. Tambien son ocultos, y quedan guardados en cada ronda (`oculto`): el peligro real
+de cada situacion, que metodo funciona mejor, si la pista decia la verdad y los dados. Las IAs nunca los ven; el publico si,
+despues de cada ronda. Si alguien se separa puede, ademas, escapar de inmediato por su ruta propia (una probabilidad oculta que
+depende de la fase) y deja la partida; quien se queda atras sigue solo, falla algo mas pero encuentra mas botin, y si logra
+escapar despues cobra mas que el que se fue primero.
+
+## 12. Juegos sin regla oculta
+
+El número solitario no tiene ninguna regla oculta: el prompt cuenta todo (cartas, fases, anulación, cortes, final, desempates y el
+puntaje por puesto) y la vista solo calla lo que los demás deciden a la vez. Lo único que no se ve de antemano es el azar de reemplazo
+(qué jugada legal se pone si una IA responde mal) y el sorteo de un desempate total; los dos se sortean al crear la partida con el seed (así
+se pueden reproducir), no dependen de lo que decidan las IAs, y en el registro queda su efecto: la jugada marcada como inválida con su motivo
+y el criterio de desempate que se usó. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
+dos turnos y 90 llamadas por partida, por eso este juego se corre en vivo y no por lote.
+
+## 13. Información oculta sin regla oculta: la Subasta de tiempo
+
+La Subasta de tiempo no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve el banco ni las apuestas de los demás. Lo que sí es
+secreto durante la partida es esa información, y es el corazón del juego. La `vista` solo muestra lo propio (banco, apuestas y fichas) y lo público
+(las fichas de todos y quién ganó cada subasta); una prueba cambia el banco y las apuestas ajenas y exige que la vista de cada jugador no cambie. Después
+de cada subasta el público sí ve cuánto apostó cada uno (queda en `oculto` de cada registro). El tiempo se guarda en décimas enteras para no
+arrastrar errores de decimales. Una respuesta ilegible equivale a retirarse y se mide como fallo (obediencia), no se esconde. Cada subasta es un turno:
+hasta 95 llamadas por partida, por eso se corre en vivo y no por lote.
+
+## 14. Decisiones a la vez con papeles distintos: Mayor o menor
+
+Mayor o menor no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve lo que el rival decide en la misma ronda ni el orden en que saldrán las cartas
+del crupier. En cada ronda el jugador activo (que juega una carta boca abajo) y el predictor (que apuesta sin verla) deciden a la vez; como el activo compromete su carta
+antes de que el predictor apueste, es equivalente a que sean simultáneos, y por eso la arena pide las dos respuestas en el mismo turno. El orden de los dos mazos del crupier
+y las jugadas de reemplazo se sortean al crear la partida con el seed (una serie de dos partidas con los asientos invertidos repite el mismo mundo), y la `vista` solo
+lee de esos mazos la carta de la ronda en curso; una prueba reordena el futuro del crupier y exige que la vista de cada jugador no cambie. Una respuesta ilegal se
+reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde: el prompt lo cuenta y el historial que ven los dos la marca como [reemplazo]. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.
+
+## 15. Dos tipos de turno y puntos exactos: Triple dado
+
+Triple dado no esconde ninguna regla: el prompt cuenta todo, incluido que los dados de la ronda se lanzan después de elegir la tarjeta y qué se ve y qué no de los dados ocultos.
+Una partida alterna dos tipos de turno (predicción y enfrentamiento) en el mismo juego; la predicción de la ronda 4 no se pregunta, porque a cada jugador solo le queda una tarjeta
+(cada una se usa una vez), así que ese turno no cuesta llamadas (60 por partida en vez de 64). Todos los dados de las cuatro rondas y los reemplazos se sortean al crear la partida
+con el seed (una serie de cuatro partidas con los asientos rotados repite los mismos dados por asiento). Los repartos por empate dan tercios y mitades (tres empatados cobran 3.33),
+así que los puntos se guardan como enteros en doceavos de punto y solo se convierten a decimales al mostrarlos: la frontera de una tarjeta (MORE empieza en exactamente 7) no depende de errores
+de coma flotante. La `vista` solo muestra de los dados ocultos ajenos los que ya se usaron (su valor se revela al comparar) y en la fase de predicción ningún dado; una prueba cambia los dados
+no lanzados, los ocultos ajenos sin usar y las tarjetas ajenas en curso y exige que la vista de cada jugador no cambie. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano,
+se mide como fallo (obediencia) y el historial que ven los cuatro la marca como [reemplazo]. El registro guarda los puntos de cada enfrentamiento de dos formas: decimales para mostrar
+(3 × 3.33 = 9.99) y doceavos enteros exactos (`puntosD`, `puntosRondaD`) para cualquier cuenta.
+
+## 16. Un juego por turnos: Duda y apuesta
+
+Duda y apuesta no esconde ninguna regla: el prompt cuenta todo, incluido que las cartas de los demás son secretas hasta que se revelan en un enfrentamiento. Es el único juego del proyecto donde decide **un solo jugador por turno**: la arena le pregunta únicamente a quien le toca (`activos`), así que cada turno es una llamada y una partida cuesta como máximo 96 llamadas (el tope de 16 manos y de 4 anuncios por mano lo garantiza; con bots, unas 21 en promedio). Las cartas de las 16 manos se reparten de antemano por asiento con el seed: una serie de cuatro partidas con los asientos rotados repite las mismas cartas por asiento aunque las decisiones cambien. La `vista` solo muestra las cartas propias; el historial muestra de cada enfrentamiento cuántas cartas del color anunciado tenía cada jugador, y nada de las manos donde alguien se retiró. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano, se mide como fallo (obediencia) y el historial la marca con `*`. Los anuncios que no se cumplen (faroles) se calculan después, desde las cartas guardadas en el registro, para la evaluación; ninguna jugada se cambia.

@@ -25,9 +25,11 @@ No expliques nada fuera del JSON. No uses markdown. Solo el JSON.`;
 }
 
 export function construirUsuario(vista) {
+  // El Dilema entrega un objeto y se muestra como JSON; juegos con mapa entregan ya la vista armada en texto.
+  const estado = typeof vista === 'string' ? vista : JSON.stringify(vista, null, 2);
   return `Estado actual de la partida:
 
-${JSON.stringify(vista, null, 2)}
+${estado}
 
 Tu turno. Responde solo con el JSON.`;
 }
