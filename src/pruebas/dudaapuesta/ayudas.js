@@ -5,7 +5,14 @@ import { normalizarRespuesta } from '../../juegos/dudaapuesta/ordenes.js';
 import { aplicarTurno } from '../../juegos/dudaapuesta/turno.js';
 import { JUGADORES } from '../../juegos/dudaapuesta/constantes.js';
 
-export const nuevoEstado = (seed = 7) => crearEstado(crearRng(seed));
+// Las pruebas con numeros a mano (fichas 3, 2, 1...) parten de 3 fichas por jugador aunque FICHAS cambie (el respaldo es 4): asi cambiar la constante no las rompe.
+// Las que miden el valor real de FICHAS usan crearEstado directamente.
+export const FICHAS_DE_PRUEBA = 3;
+export function nuevoEstado(seed = 7) {
+  const E = crearEstado(crearRng(seed));
+  E.fichas = Array(JUGADORES).fill(FICHAS_DE_PRUEBA);
+  return E;
+}
 
 // Fija las cartas que recibiria un asiento en una mano (siempre 5; solo cuentan las que le dan sus espacios).
 export function fijarCartas(E, s, cartas, mano = E.mano) {

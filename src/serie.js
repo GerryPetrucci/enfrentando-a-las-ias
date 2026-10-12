@@ -55,7 +55,11 @@ export function avisosDeSerie({ k, partidas, rotar, mismoSeed = false }) {
 }
 
 // Tope de llamadas si nadie cae antes: partidas x rondas x jugadores. Solo orienta; la arena cuenta las reales.
-export const estimarLlamadas = (juego, k, partidas) => (juego.rondas ? partidas * juego.rondas * k : null);
+// Un juego por turnos (decide un solo jugador en cada turno) declara `llamadasMax` por partida y no se multiplica por los jugadores.
+export const estimarLlamadas = (juego, k, partidas) => {
+  if (juego.llamadasMax) return partidas * juego.llamadasMax;
+  return juego.rondas ? partidas * juego.rondas * k : null;
+};
 
 // Donde se guarda: los modelos gratis y los economicos de practica (practica: true en src/modelos.js) son practica
 // (data/pruebas/, que el marcador no lee); lo demas es oficial. Un resultado de practica no puede mandarse a oficial ni pidiendolo.
@@ -98,10 +102,12 @@ export function rutaLibre(ruta, existe = existsSync) {
 // esta bien. Exige modo pago y un tope de gasto en dolares: el coordinador deja de enviar lotes nuevos cuando el gasto informado lo
 // alcanza. OJO: el tope se revisa ANTES de cada lote, no durante; un lote ya enviado se cobra completo y la primera ronda sale
 // entera (ver errorDePrimeraRonda). `contendientes` es opcional: permite revisar que algun modelo tenga variante de lote.
-export function errorDeLote({ lote, modo, tope, agentes, contendientes = null }) {
+export function errorDeLote({ lote, modo, tope, agentes, contendientes = null, juego = null }) {
   if (!lote) return null;
   const modelos = agentes.filter((a) => a.tipo === 'modelo');
   if (!modelos.length) return '--lote solo aplica a modelos: con bots o estrategias base no hay nada que mandar a la API.';
+  // un juego por turnos mandaria un lote por cada turno, de uno en uno: hasta 96 esperas seguidas (cada una puede tardar horas)
+  if (juego?.soloEnVivo) return `${juego.nombre} se juega por turnos, de uno en uno (hasta ${juego.llamadasMax ?? juego.rondas} turnos seguidos): no admite --lote porque cada turno esperaria su propio lote. Corre en vivo.`;
   if (modo !== 'pago') return '--lote gasta credito de OpenRouter: agrega --modo=pago.';
   if (!(Number.isFinite(tope) && tope > 0)) return '--lote exige --tope=DOLARES (mayor que 0): el gasto a partir del cual ya no se envian lotes nuevos, por ejemplo --tope=0.50.';
   if (contendientes && !modelos.some((a) => contendientes[a.id]?.lote === true)) {

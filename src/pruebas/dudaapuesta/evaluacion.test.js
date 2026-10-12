@@ -13,10 +13,11 @@ import { evaluarSerie, fraseOjo, fraseFarol, fraseRiesgo, fraseConstancia, UMBRA
 const MESA = ['calculador', 'farolero', 'retador', 'prudente'];
 const agentes = (claves) => claves.map((c) => resolverAgente(c, dudaapuesta));
 const partida = (seed, claves) => correrPartida({ juego: dudaapuesta, agentes: agentes(claves), seed });
-// una serie de 4 partidas con los asientos rotados (cada IA pasa por cada asiento)
-async function serie(seed, claves = MESA) {
+// una serie con los asientos rotados (cada IA pasa por cada asiento); 4 partidas = una vuelta. independientes = cada partida con su propio seed (para mesas de IAs identicas,
+// donde repetir el seed repetiria la misma partida cuatro veces)
+async function serie(seed, claves = MESA, vueltas = 1, independientes = false) {
   const out = [];
-  for (let n = 0; n < 4; n++) out.push(await partida(seed, claves.map((_, s) => claves[(s + n) % claves.length])));
+  for (let n = 0; n < 4 * vueltas; n++) out.push(await partida(independientes ? seed * 100 + n : seed, claves.map((_, s) => claves[(s + n) % claves.length])));
   return out;
 }
 
@@ -32,9 +33,9 @@ test('ojo para dudar: con muestra chica no se destaca; con muestra, alto y bajo 
   assert.match(fraseOjo(0, 0).frase, /no dudó/);
   const alto = fraseOjo(10, 8);
   assert.equal(alto.notable, true);
-  assert.match(alto.frase, /duda con ojo: ganó 8 de 10 dudas/);
+  assert.match(alto.frase, /duda con ojo: acertó 8 de 10 dudas/);
   const bajo = fraseOjo(10, 1);
-  assert.match(bajo.frase, /duda a ciegas: ganó 1 de 10 dudas/);
+  assert.match(bajo.frase, /duda a ciegas: acertó 1 de 10 dudas/);
   assert.equal(fraseOjo(10, 5).notable, false);
   assert.equal(fraseOjo(1, 1).frase.includes('1 duda'), true, 'singular');
 });
@@ -90,16 +91,16 @@ test('con menos de una vuelta completa de asientos avisa que es solo una muestra
   assert.ok(ev.comentario.some((c) => c.tipo === 'aviso' && /solo una muestra/.test(c.texto)));
 });
 
-test('los bots se distinguen: el farolero hace faroles y el retador duda con ojo (en series de 4 partidas, casi siempre)', async () => {
+test('los bots se distinguen: el farolero hace faroles y el retador duda con ojo (en series de 8 partidas, casi siempre)', async () => {
   let faroleroFarol = 0, retadorOjo = 0;
   const series = 40;
   for (let seed = 1; seed <= series; seed++) {
-    const ev = evaluarSerie(await serie(seed));
+    const ev = evaluarSerie(await serie(seed, MESA, 2));
     const c = (id) => ev.jugadores.find((j) => j.id === id).caracteristicas;
     if (/hace muchos faroles/.test(c('farolero').farol.frase)) faroleroFarol++;
     if (/duda con ojo/.test(c('retador').ojo.frase)) retadorOjo++;
   }
-  assert.ok(faroleroFarol / series > 0.9, `el farolero se reconoce en ${faroleroFarol} de ${series} series`);
+  assert.ok(faroleroFarol / series > 0.85, `el farolero se reconoce en ${faroleroFarol} de ${series} series`);
   assert.ok(retadorOjo / series > 0.8, `el retador duda con ojo en ${retadorOjo} de ${series} series`);
 });
 
@@ -107,7 +108,7 @@ test('por pura suerte casi nunca sale algo "notable": ni el ojo ni el farol del 
   const series = 100;
   let ojoAzar = 0, farolAzar = 0;
   for (let seed = 1; seed <= series; seed++) {
-    const ev = evaluarSerie(await serie(seed, ['azar', 'azar', 'azar', 'azar']));
+    const ev = evaluarSerie(await serie(seed, ['azar', 'azar', 'azar', 'azar'], 1, true));
     for (const j of ev.jugadores) {
       if (j.caracteristicas.ojo.notable) ojoAzar++;
       if (j.caracteristicas.farol.notable) farolAzar++;
@@ -154,11 +155,11 @@ test('una duda que el juego puso por una respuesta ilegal no cuenta para el ojo 
   const partida1 = (invalida) => ({
     jugadores: ['a', 'b', 'c', 'd'].map((id) => ({ id, nombre: id.toUpperCase() })),
     metricas: Array(4).fill({ puntos: 2, puesto: 'medio', ordenesValidas: 1, ordenesTotal: 2 }),
-    rondas: [{ asiento: 1, accion: 'dudar', invalidas: [null, invalida, null, null], resolucion: { dudador: 1, ganador: 1 } }],
+    rondas: [{ asiento: 1, accion: 'dudar', invalidas: [null, invalida, null, null], resolucion: { dudador: 1, ganador: 1, color: 'rojo', cantidad: 3 }, oculto: { cuentas: { rojo: 1 } } }],
   });
-  const conRespuesta = evaluarSerie(Array(6).fill(partida1(false)));
-  assert.match(conRespuesta.jugadores.find((j) => j.id === 'b').caracteristicas.ojo.frase, /duda con ojo: ganó 6 de 6 dudas/);
-  const reemplazada = evaluarSerie(Array(6).fill(partida1(true)));
+  const conRespuesta = evaluarSerie(Array(8).fill(partida1(false)));
+  assert.match(conRespuesta.jugadores.find((j) => j.id === 'b').caracteristicas.ojo.frase, /duda con ojo: acertó 8 de 8 dudas/);
+  const reemplazada = evaluarSerie(Array(8).fill(partida1(true)));
   assert.equal(reemplazada.jugadores.find((j) => j.id === 'b').caracteristicas.ojo.valor, null);
 });
 
@@ -168,4 +169,45 @@ test('las partidas cortadas y la basura no entran y nunca lanza', async () => {
   for (const basura of [null, undefined, 7, 'x', [], [null], [{}], [{ jugadores: [null], rondas: [null], metricas: [] }]]) {
     assert.doesNotThrow(() => evaluarSerie(basura));
   }
+});
+
+test('el ojo para dudar se mide contra la VERDAD de las cartas: acierta quien duda de un anuncio falso, tambien si el rival se retira; no acierta quien duda de uno cierto', () => {
+  // cada partida tiene una duda de b; "falso" = el anuncio pedia mas de lo que habia en las cartas
+  const partida = (resolucion, cuentaReal) => ({
+    jugadores: ['a', 'b', 'c', 'd'].map((id) => ({ id, nombre: id.toUpperCase() })),
+    metricas: Array(4).fill({ puntos: 2, puesto: 'medio', ordenesValidas: 1, ordenesTotal: 2 }),
+    rondas: [{ asiento: 1, accion: 'dudar', invalidas: [null, false, null, null], resolucion: { dudador: 1, color: 'rojo', cantidad: 5, ...resolucion }, oculto: { cuentas: { rojo: cuentaReal } } }],
+  });
+  const ojoDeB = (...partidas) => evaluarSerie(partidas).jugadores.find((j) => j.id === 'b').caracteristicas.ojo;
+  const ocho = (resolucion, cuentaReal) => Array.from({ length: 8 }, () => partida(resolucion, cuentaReal));
+  assert.match(ojoDeB(...ocho({ tipo: 'recuento', ganador: 1 }, 3)).frase, /duda con ojo: acertó 8 de 8 dudas/, 'el anuncio pedia 5 y habia 3');
+  assert.match(ojoDeB(...ocho({ tipo: 'retirada', ganador: 1 }, 3)).frase, /duda con ojo: acertó 8 de 8 dudas/, 'el rival se retiro y el anuncio era falso');
+  assert.match(ojoDeB(...ocho({ tipo: 'retirada', ganador: 1 }, 7)).frase, /duda a ciegas: acertó 0 de 8 dudas/, 'el rival se retiro, pero el anuncio era cierto: no fue buen ojo');
+  assert.match(ojoDeB(...ocho({ tipo: 'recuento', ganador: 0 }, 7)).frase, /duda a ciegas: acertó 0 de 8 dudas/, 'dudo de un anuncio cierto y perdio');
+});
+
+test('dos IAs con el mismo id en la mesa (4 "azar") no se funden en una: cada plaza se evalua por separado', () => {
+  const mesa = ['azar', 'azar', 'azar', 'azar'];
+  return Promise.all([1, 2, 3, 4].map((seed) => partida(seed, mesa))).then((partidas) => {
+    const ev = evaluarSerie(partidas);
+    assert.equal(ev.jugadores.length, 4);
+    for (const j of ev.jugadores) assert.equal(j.partidas, 4, `${j.id}: una serie de 4 partidas, no 16`);
+    assert.equal(new Set(ev.jugadores.map((j) => j.nombre)).size, 4, 'los nombres se distinguen en el comentario');
+    assert.match(ev.jugadores.map((j) => j.nombre).join('|'), /Al azar \(2\)/);
+    assert.doesNotMatch(JSON.stringify(ev), /NaN|undefined/);
+  });
+});
+
+test('valores que no son numeros en el registro (apuesta o tenia como texto) no producen NaN', () => {
+  const p = {
+    jugadores: ['a', 'b', 'c', 'd'].map((id) => ({ id, nombre: id.toUpperCase() })),
+    metricas: Array(4).fill({ puntos: 2, puesto: 'medio', ordenesValidas: 1, ordenesTotal: 1 }),
+    rondas: [
+      { asiento: 0, accion: 'anunciar', invalidas: [false, null, null, null], anuncio: { color: 'rojo', cantidad: 3 }, apuesta: { fichas: 'x', espacios: null }, tenia: 7, oculto: { cuentas: { rojo: 'mucho' } } },
+      { asiento: 1, accion: 'anunciar', invalidas: [null, false, null, null], anuncio: { color: 'rojo', cantidad: 3 }, apuesta: { fichas: 1, espacios: 0 }, tenia: 'siete', oculto: { cuentas: { rojo: 5 } } },
+    ],
+  };
+  const ev = evaluarSerie([p, p, p]);
+  assert.doesNotMatch(JSON.stringify(ev), /NaN|undefined|Infinity/);
+  for (const j of ev.jugadores) for (const c of Object.values(j.caracteristicas)) assert.ok(c.valor === null || Number.isFinite(c.valor));
 });

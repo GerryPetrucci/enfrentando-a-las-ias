@@ -6,9 +6,14 @@ import { COLORES, ACCIONES, LARGO_RAZON } from './constantes.js';
 // Solo textos, y en UNA linea: con saltos de linea un modelo podria fabricar renglones falsos en los datos.
 const linea = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 const sinAcentos = (v) => (typeof v === 'string' ? v.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase() : '');
+// Un numero enorme (1e20, 2^60, un texto de 400 digitos) no esta "mal formado": se trata como "lo mas que se pueda" y turno.js lo recorta al maximo permitido.
+const TOPE_NUMERO = 1e9;
 const entero = (v) => {
-  if (typeof v === 'number' && Number.isSafeInteger(v)) return v;
-  if (typeof v === 'string' && /^\s*\d{1,9}\s*$/.test(v)) return parseInt(v, 10);
+  if (typeof v === 'number' && Number.isInteger(v)) return Math.min(v, TOPE_NUMERO);
+  if (typeof v === 'string' && /^\s*\d+\s*$/.test(v)) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(n, TOPE_NUMERO) : TOPE_NUMERO;
+  }
   return NaN;
 };
 

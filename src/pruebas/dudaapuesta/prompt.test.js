@@ -42,16 +42,18 @@ test('las reglas dicen lo que deben: mazo, arcoiris, fichas, anuncio, aceptar, d
   assert.match(REGLAS, /AL MENOS lo anunciado gana quien anuncio/);
   assert.ok(REGLAS.includes(`Maximo ${ANUNCIOS_MAX} anuncios por mano`));
   assert.match(REGLAS, /ni que las que tiene quien te contesta/);
-  assert.match(REGLAS, /Para igualar solo cuenta cuantas fichas pones, no de que tipo/);
+  assert.match(REGLAS, /Para igualar solo cuenta cuantas fichas pones, no de que tipo; las que faltan salen primero de las de juego/);
   assert.match(REGLAS, /Perder una ficha de espacio es perder un espacio/);
   assert.ok(REGLAS.includes(`si ya tienes ${ESPACIOS_MAX}, se vuelve una ficha de juego`));
   assert.match(REGLAS, /"comprar_espacio": true/);
+  assert.match(REGLAS, /al menos 2 fichas de juego \(se comprueba al terminar la mano\)/);
   assert.match(REGLAS, /Al terminar las manos 15, 20, 25\.\.\. cada jugador paga una ficha de juego a la banca/);
   assert.ok(REGLAS.includes(`al terminar la mano ${MANOS}`));
   assert.match(REGLAS, /Gana la pieza quien termina con mas fichas de juego, si es el unico/);
   assert.match(REGLAS, /SI TU RESPUESTA NO SIRVE/);
   assert.match(REGLAS, /el historial marca esa jugada con \*/);
-  assert.match(REGLAS, /No ves las cartas de los demas salvo las que se revelan/);
+  assert.match(REGLAS, /No ves las cartas de los demas; de un enfrentamiento ves cuantas cartas del color anunciado tenia cada jugador/);
+  assert.doesNotMatch(REGLAS, /salvo las que se revelan/, 'la vista no muestra cartas reveladas, solo el conteo');
   assert.ok(REGLAS.includes(`Ganar la pieza ${PUNTOS.pieza}, sobrevivir ${PUNTOS.medio}, ser eliminado ${PUNTOS.eliminado}`));
 });
 
@@ -71,7 +73,7 @@ test('las reglas no dan estrategia: no dicen que jugada conviene', () => {
   assert.doesNotMatch(REGLAS, /te conviene|lo mejor es|siempre debes|nunca debes|recomend|estrategia/i);
 });
 
-// El peor caso del historial: 14 manos terminadas (solo se muestran las ultimas 6 y un resumen), cada una con cuatro anuncios de apuestas largas (2f+1e) marcados con *,
+// El peor caso del historial: 14 manos terminadas (solo se muestran las ultimas 5 y un resumen), cada una con cuatro anuncios de apuestas largas (2f+1e) marcados con *,
 // una duda con subida, la igualada y el conteo; y la decision 5 de la mano 15. No es alcanzable en la practica (cada anuncio de reemplazo apuesta 1f), pero fija una cota.
 function peorCasoSintetico() {
   const ap = (f, e) => ({ fichas: f, espacios: e });
@@ -79,8 +81,8 @@ function peorCasoSintetico() {
     mano: m, inicia: 0,
     cadena: [0, 1, 2, 3].map((a) => ({ asiento: a, color: 'amarillo', cantidad: 10 + a, apuesta: ap(2, 1), reemplazo: true })),
     duda: { asiento: 0, apuesta: ap(3, 1), reemplazo: true }, defensa: { accion: 'igualar', reemplazo: true },
-    resolucion: { tipo: 'recuento', color: 'amarillo', cantidad: 13, cuentas: [5, 5, 5, 5], real: 20, predictor: 3, dudador: 0, ganador: 3, perdedor: 0, movidas: ap(3, 1) },
-    pago: false, compras: [],
+    resolucion: { tipo: 'recuento', color: 'amarillo', cantidad: 13, cuentas: [5, 5, 5, 5], real: 20, predictor: 3, dudador: 0, ganador: 3, perdedor: 0, movidas: ap(3, 1), ganado: ap(3, 1) },
+    pago: false, compras: [0, 1], comprasFallidas: [2, 3], // las lineas de compra (reales pero raras) tambien cuentan en la cota
   });
   const E = nuevoEstado(3);
   E.mano = 15;
@@ -91,7 +93,7 @@ function peorCasoSintetico() {
   return E;
 }
 
-test('el prompt completo en el peor caso sintetico (14 manos largas, solo se muestran 6) cabe en el tope de tokens de Claude con margen', () => {
+test('el prompt completo en el peor caso sintetico (14 manos largas, solo se muestran 5) cabe en el tope de tokens de Claude con margen', () => {
   const tokens = tokensDe(peorCasoSintetico());
   assert.ok(tokens > 2500, `sospechosamente corto: ${tokens}`);
   assert.ok(tokens <= TOPE_TOKENS_ENTRADA - MARGEN_TOKENS, `entrada de ${Math.round(tokens)} tokens (tope ${TOPE_TOKENS_ENTRADA}, margen ${MARGEN_TOKENS}): acortar REGLAS o las lineas de historial`);

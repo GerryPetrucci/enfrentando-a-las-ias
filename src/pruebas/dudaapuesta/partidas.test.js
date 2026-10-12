@@ -144,3 +144,9 @@ test('el marcador lee la categoria, sus puntos y la obediencia sin conocer el ju
   assert.ok(cat.tabla.some((f) => f.obediencia === 1), 'alguien contesto');
   assert.doesNotMatch(JSON.stringify(m), /NaN/);
 });
+
+test('el juego declara su tope de llamadas por partida y que solo se juega en vivo (la consola lo usa para estimar y para negar --lote)', () => {
+  assert.equal(dudaapuesta.llamadasMax, 96);
+  assert.equal(dudaapuesta.llamadasMax, dudaapuesta.rondas, 'una llamada por turno');
+  assert.equal(dudaapuesta.soloEnVivo, true);
+});

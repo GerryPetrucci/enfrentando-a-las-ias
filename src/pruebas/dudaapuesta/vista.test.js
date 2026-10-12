@@ -92,7 +92,7 @@ test('una retirada no revela nada: no hay conteo; y una jugada del juego se marc
   assert.match(w, /1\. J1 anuncia al menos \d+ \w+, apuesta 1f\*/);
 });
 
-test('con mas de 6 manos terminadas se muestran las ultimas 6 y las demas se resumen', () => {
+test('con mas de 5 manos terminadas se muestran las ultimas 5 y las demas se resumen', () => {
   const E = nuevoEstado(5);
   const fns = [BOTS.azar, BOTS.azar, BOTS.azar, BOTS.azar];
   const rngs = fns.map((_, s) => crearRng(100 + s));
@@ -103,9 +103,9 @@ test('con mas de 6 manos terminadas se muestran las ultimas 6 y las demas se res
     aplicarTurno(E, r);
   }
   const v = vistaTexto(E, 0);
-  assert.match(v, /M1-M3 \(resumen\): enfrentamientos ganados J1 \d+ \| J2 \d+ \| J3 \d+ \| J4 \d+/);
-  assert.equal(v.split('\n').filter((l) => /^M\d+:/.test(l)).length, 6);
-  assert.ok(v.includes('\nM4:') && v.includes('\nM9:') && !v.includes('\nM3:'));
+  assert.match(v, /M1-M4 \(resumen\): enfrentamientos ganados J1 \d+ \| J2 \d+ \| J3 \d+ \| J4 \d+/);
+  assert.equal(v.split('\n').filter((l) => /^M\d+:/.test(l)).length, 5);
+  assert.ok(v.includes('\nM5:') && v.includes('\nM9:') && !v.includes('\nM4:'));
 });
 
 test('la compra de un espacio solo se ofrece a quien puede hacerla', () => {
@@ -169,4 +169,44 @@ test('sensibilidad: cambiar las cartas PROPIAS si cambia la vista (la prueba de 
   const antes = vistaTexto(E, 0);
   E.manos[0][0] = ['morado', 'morado', 'morado', 'morado', 'morado'];
   assert.notEqual(vistaTexto(E, 0), antes);
+});
+
+test('la pista de comprar un espacio no sale en la ultima mano, donde no puede surtir efecto', () => {
+  const E = enMano1();
+  E.fichasEspacio[0] = 2;
+  assert.ok(vistaTexto(E, 0).includes('comprar_espacio'));
+  E.mano = 16;
+  assert.ok(!vistaTexto(E, 0).includes('comprar_espacio'));
+});
+
+test('el singular es singular: "1 ficha", "pones 1 ficha mas"', () => {
+  const E = enMano1();
+  E.fichas[0] = 1;
+  E.fichasEspacio[0] = 1;
+  assert.ok(vistaTexto(E, 0).includes('Tienes 1 ficha de juego y 1 de espacio.'));
+  const F = enMano1();
+  anunciar(F, 'rojo', 6, 1);
+  dudar(F, 2);
+  const v = vistaTexto(F, 0);
+  assert.ok(v.includes('(pones 1 ficha mas y se revelan las cartas)'), v);
+  assert.doesNotMatch(v, /\b1 fichas\b/);
+});
+
+test('el historial dice lo que GANA el ganador (una ficha de espacio de mas se vuelve ficha de juego) y marca la compra que no se pudo', () => {
+  const E = enMano1();
+  anunciar(E, 'rojo', 6, 0, 2); // J1 gana 2 fichas de espacio y ya tenia las 4: recibe 2 fichas de juego
+  dudar(E);
+  assert.ok(vistaTexto(E, 3).includes('gana J1 +2f'), vistaTexto(E, 3));
+  const F = enMano1();
+  F.fichasEspacio[0] = 2;
+  F.fichas[0] = 2;
+  anunciar(F, 'rojo', 7, 1, 0, { comprar_espacio: true });
+  dudar(F); // J1 pierde 1 ficha y se queda con 1: no puede comprar
+  assert.ok(vistaTexto(F, 0).includes('| J1 no compro'), vistaTexto(F, 0));
+  assert.ok(!vistaTexto(F, 3).includes('no compro'), 'la peticion que no se pudo cumplir es privada de quien la hizo');
+  const G = enMano1();
+  G.fichasEspacio[0] = 2;
+  anunciar(G, 'rojo', 6, 1, 0, { comprar_espacio: true });
+  dudar(G);
+  assert.ok(vistaTexto(G, 3).includes('| J1 +espacio'), vistaTexto(G, 3));
 });

@@ -72,3 +72,14 @@ test('la razon es texto de una sola linea, recortada a 300 caracteres', () => {
   assert.equal(normalizarRespuesta({ razon: 'x'.repeat(1000) }).razon.length, 300);
   assert.equal(normalizarRespuesta({ razon: 5 }).razon, '');
 });
+
+test('numeros enormes en fichas y espacios no invalidan la respuesta (se recortan despues al maximo permitido); lo negativo, fraccionario o infinito si', () => {
+  for (const v of [1e9, 999999999, 1e20, 2 ** 60, '1000000000', '9'.repeat(400)]) {
+    const r = normalizarRespuesta({ accion: 'anunciar', fichas: v, espacios: v });
+    assert.equal(r.invalida, false, String(v).slice(0, 20));
+    assert.ok(Number.isFinite(r.fichas) && r.fichas >= 1 && Number.isFinite(r.espacios), String(v).slice(0, 20));
+  }
+  for (const v of [-1, 2.5, Infinity, NaN, '1e3', 'mucho', '-4']) assert.equal(normalizarRespuesta({ fichas: v }).invalida, true, String(v));
+  assert.equal(normalizarRespuesta({ cantidad: 1e20 }).cantidad, 1e9, 'una cantidad enorme no es "mal formada": queda fuera de rango en turno.js');
+  assert.equal(normalizarRespuesta({ cantidad: 0 }).invalida, true);
+});

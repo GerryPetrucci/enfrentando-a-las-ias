@@ -138,3 +138,33 @@ test('resolverNombres reemplaza {0} a {3} y tiene respaldo', () => {
   assert.equal(resolverNombres('{1} y {2}', [{ nombre: 'A' }]), 'Jugador 2 y Jugador 3');
   assert.equal(resolverNombres('sin nombres', jugadores), 'sin nombres');
 });
+
+test('el singular es singular en la historia publica: "1 carta roja", "hay 1 roja", "2 cartas azules"', () => {
+  const base = { E: E0, mano: 1, decision: 2, s: 1, accion: 'anunciar', apuesta: ap(1), reemplazo: false, previo: null };
+  assert.match(texto(narrarAnuncio({ ...base, anuncio: { color: 'rojo', cantidad: 1 } })), /al menos 1 carta roja y apuesta 1 ficha\./);
+  assert.match(texto(narrarAnuncio({ ...base, anuncio: { color: 'azul', cantidad: 2 } })), /al menos 2 cartas azules/);
+  assert.match(texto(narrarAnuncio({ ...base, anuncio: { color: 'morado', cantidad: 1 } })), /1 carta morada/);
+  assert.match(texto(narrarAnuncio({ ...base, anuncio: { color: 'verde', cantidad: 1 } })), /1 carta verde/);
+  const res = { tipo: 'recuento', color: 'rojo', cantidad: 1, cuentas: [1, 0, 0, 0], real: 1, predictor: 0, dudador: 1, ganador: 0, perdedor: 1, movidas: ap(1) };
+  assert.match(texto(narrarResolucion({ res })), /hay 1 roja \(/);
+  assert.match(texto(narrarResolucion({ res: { ...res, real: 6, cuentas: [2, 2, 0, 2] } })), /hay 6 rojas \(/);
+});
+
+test('la historia dice lo que GANA el ganador (ganado), no solo lo que puso el perdedor', () => {
+  const res = { tipo: 'recuento', color: 'rojo', cantidad: 6, cuentas: [2, 2, 0, 2], real: 6, predictor: 0, dudador: 1, ganador: 0, perdedor: 1, movidas: ap(0, 2), ganado: ap(2, 0) };
+  assert.match(texto(narrarResolucion({ res })), /\{0\} gana 2 fichas\./);
+  assert.match(texto(narrarResolucion({ res: { ...res, ganado: undefined } })), /\{0\} gana 2 fichas de espacio\./, 'sin ganado (registros viejos) se usa movidas');
+});
+
+test('comentarios nuevos para la voz: aceptar un anuncio que no se cumplia, quedarse con una sola carta, pasar al frente y la compra que no se pudo', () => {
+  const base = { E: E0, mano: 1, decision: 2, s: 1, accion: 'aceptar', anuncio: { color: 'azul', cantidad: 10 }, apuesta: ap(1), reemplazo: false, previo: { asiento: 0 } };
+  const comentarios = (lineas) => lineas.filter((l) => l.tipo === 'comentario').map((l) => l.texto).join(' ');
+  assert.match(comentarios(narrarAnuncio({ ...base, previoFalso: true })), /El anuncio de \{0\} no se cumplía, pero \{1\} lo acepta\./);
+  assert.equal(comentarios(narrarAnuncio({ ...base, previoFalso: false })), '');
+  assert.equal(comentarios(narrarAnuncio({ ...base, previoFalso: true, reemplazo: true })), '', 'si la aceptacion la puso el juego no se le atribuye');
+  const cierre = comentarios(narrarCierreMano({ mano: 3, pago: false, compras: [], fallidas: [1], sinEspacios: [2], alFrente: 3 }));
+  assert.match(cierre, /\{2\} se queda con una sola carta\./);
+  assert.match(cierre, /\{3\} pasa al frente en fichas\./);
+  assert.match(texto(narrarCierreMano({ mano: 3, pago: false, compras: [], fallidas: [1] })), /\{1\} no puede comprar el espacio: ya no le alcanzan las fichas\./);
+  assert.deepEqual(narrarCierreMano({ mano: 3, pago: false, compras: [] }), [], 'sin novedades no hay lineas');
+});

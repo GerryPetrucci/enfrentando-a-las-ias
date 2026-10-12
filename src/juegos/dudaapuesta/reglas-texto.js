@@ -18,20 +18,20 @@ UNA MANO
 3. ENFRENTAMIENTO. Quien duda apuesta al menos lo mismo que el anuncio (si no dices cuanto, igualas). Si apuesta mas, quien anuncio decide: IGUALAR (pone las fichas que faltan) o RETIRARSE.
  - Retirarse: pierde lo que habia apostado (lo gana quien duda) y las cartas no se revelan.
  - Con las apuestas iguales se revelan las cartas de TODOS y se cuenta el color anunciado con las arcoiris. Si hay AL MENOS lo anunciado gana quien anuncio; si hay menos, gana quien duda. El ganador conserva sus fichas y se queda con las que puso el perdedor.
-4. LIMITES. Maximo ${ANUNCIOS_MAX} anuncios por mano: quien contesta al ultimo debe dudar (tambien si el anuncio ya es igual a todas las cartas en juego). Nunca apuestas mas fichas en total (de juego y de espacio) que las que tienes tu ni que las que tiene quien te contesta. Para igualar solo cuenta cuantas fichas pones, no de que tipo.
+4. LIMITES. Maximo ${ANUNCIOS_MAX} anuncios por mano: quien contesta al ultimo debe dudar (tambien si el anuncio ya es igual a todas las cartas en juego). Nunca apuestas mas fichas en total (de juego y de espacio) que las que tienes tu ni que las que tiene quien te contesta. Para igualar solo cuenta cuantas fichas pones, no de que tipo; las que faltan salen primero de las de juego.
 Ejemplo: J1 anuncia "al menos 6 rojas" con 1 ficha y J2 duda con 1 ficha; hay 5 rojas: gana J2 y se queda con la ficha de J1.
 
 FICHAS DE ESPACIO
-Perder una ficha de espacio es perder un espacio: una carta menos desde la mano siguiente. Ganar una te devuelve un espacio; si ya tienes ${ESPACIOS_MAX}, se vuelve una ficha de juego. Para cambiar una ficha de juego por un espacio mas agrega "comprar_espacio": true a cualquier respuesta tuya: vale desde la mano siguiente, con menos de ${ESPACIOS_MAX} espacios y al menos 2 fichas de juego.
+Perder una ficha de espacio es perder un espacio: una carta menos desde la mano siguiente. Ganar una te devuelve un espacio; si ya tienes ${ESPACIOS_MAX}, se vuelve una ficha de juego. Para cambiar una ficha de juego por un espacio mas agrega "comprar_espacio": true a cualquier respuesta tuya: vale desde la mano siguiente, con menos de ${ESPACIOS_MAX} espacios y al menos 2 fichas de juego (se comprueba al terminar la mano).
 
 EL FINAL
-Al terminar las manos ${PAGO_DESDE}, ${PAGO_DESDE + PAGO_CADA}, ${PAGO_DESDE + 2 * PAGO_CADA}... cada jugador paga una ficha de juego a la banca. La partida termina cuando alguien se queda sin fichas de juego (queda eliminado) o al terminar la mano ${MANOS}; ahi es eliminado quien tiene menos fichas de juego (si empatan, el de menos fichas de espacio; si tambien, nadie). Gana la pieza quien termina con mas fichas de juego, si es el unico (si empatan, el de mas fichas de espacio; si tambien, nadie).
+Al terminar las manos ${PAGO_DESDE}, ${PAGO_DESDE + PAGO_CADA}, ${PAGO_DESDE + 2 * PAGO_CADA}... cada jugador paga una ficha de juego a la banca (si esa mano elimina a alguien, no se paga). La partida termina cuando alguien se queda sin fichas de juego (queda eliminado) o al terminar la mano ${MANOS}; ahi es eliminado quien tiene menos fichas de juego (si empatan, el de menos fichas de espacio; si tambien, nadie). Gana la pieza quien termina con mas fichas de juego, si es el unico (si empatan, el de mas fichas de espacio; si tambien, nadie).
 
 SI TU RESPUESTA NO SIRVE
 Si no se entiende o no es legal (accion que no toca ahora, color o cantidad que no valen, apuesta menor que el anuncio), el juego juega por ti un anuncio, una duda o una respuesta al azar y queda anotado como invalida; el historial marca esa jugada con *. Una apuesta de mas se recorta al maximo.
 
 QUE SE VE
-Ves tus cartas, las fichas y espacios de todos, los anuncios y apuestas, y el historial de las manos terminadas (con cuantas cartas del color anunciado tenia cada jugador). No ves las cartas de los demas salvo las que se revelan en un enfrentamiento.
+Ves tus cartas, las fichas y espacios de todos, los anuncios y apuestas, y el historial de las manos terminadas. No ves las cartas de los demas; de un enfrentamiento ves cuantas cartas del color anunciado tenia cada jugador.
 
 TU PUNTAJE
 Ganar la pieza ${PUNTOS.pieza}, sobrevivir ${PUNTOS.medio}, ser eliminado ${PUNTOS.eliminado}.`;

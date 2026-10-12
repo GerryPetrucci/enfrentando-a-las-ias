@@ -6,30 +6,33 @@
 import { JUGADORES, MANOS, ANUNCIOS_MAX, FICHAS_ESPACIO_MAX } from './constantes.js';
 import { cartasDe, espacios, totalCartas, actorDe, puedeAceptar, limiteApuesta } from './estado.js';
 
-const HISTORIAL_VISIBLE = 6; // manos terminadas que se muestran completas; las anteriores se resumen (el peor caso debe caber en el tope de tokens)
+const HISTORIAL_VISIBLE = 5; // manos terminadas que se muestran completas; las anteriores se resumen (el peor caso debe caber en el tope de tokens)
 const asientos = [...Array(JUGADORES).keys()];
 const suma = (ap) => ap.fichas + ap.espacios;
+const fichasDe = (n) => `${n} ${n === 1 ? 'ficha' : 'fichas'}`;
 const reemplazo = (x) => (x?.reemplazo ? '*' : ''); // * = lo puso el juego por una respuesta ilegal
 // 2f / 1e / 1f+1e
 const chip = (ap) => [ap.fichas ? `${ap.fichas}f` : '', ap.espacios ? `${ap.espacios}e` : ''].filter(Boolean).join('+') || '0f';
 
 // M2: J1 6 azul 1f | J2 acepta 7 rojo 1f | J3 duda 2f | J2 iguala | hay 8 (J1 2 J2 3 J3 1 J4 2) | gana J3 +2f
-function lineaMano(h) {
+function lineaMano(h, i) {
   const partes = h.cadena.map((c, k) => `J${c.asiento + 1} ${k ? 'acepta ' : ''}${c.cantidad} ${c.color} ${chip(c.apuesta)}${reemplazo(c)}`);
   partes.push(`J${h.duda.asiento + 1} duda ${chip(h.duda.apuesta)}${reemplazo(h.duda)}`);
   if (h.defensa) partes.push(`J${h.resolucion.predictor + 1} ${h.defensa.accion === 'igualar' ? 'iguala' : 'se retira'}${reemplazo(h.defensa)}`);
   const r = h.resolucion;
   if (r.tipo === 'recuento') partes.push(`hay ${r.real} (${asientos.map((s) => `J${s + 1} ${r.cuentas[s]}`).join(' ')})`);
-  partes.push(`gana J${r.ganador + 1} +${chip(r.movidas)}`);
-  if (h.pago) partes.push('pago a la banca: todos -1f');
-  for (const s of h.compras) partes.push(`J${s + 1} compra un espacio`);
+  partes.push(`gana J${r.ganador + 1} +${chip(r.ganado ?? r.movidas)}`); // lo que RECIBE: una ficha de espacio de mas se vuelve ficha de juego
+  if (h.pago) partes.push('pago: todos -1f');
+  for (const s of h.compras) partes.push(`J${s + 1} +espacio`);
+  // la peticion de comprar que no se pudo cumplir es PRIVADA de quien la hizo (los demas no tienen por que saber que la pidio): solo se la dice a el
+  if (h.comprasFallidas?.includes(i)) partes.push(`J${i + 1} no compro`);
   return `M${h.mano}: ${partes.join(' | ')}`;
 }
 
 // Lo que le toca decidir al jugador i, con los limites exactos de ahora.
 function bloqueDecision(E, i) {
   const ult = E.cadena.at(-1), cartas = totalCartas(E);
-  const tengo = `Tienes ${E.fichas[i]} fichas de juego y ${E.fichasEspacio[i]} de espacio.`;
+  const tengo = `Tienes ${fichasDe(E.fichas[i])} de juego y ${E.fichasEspacio[i]} de espacio.`;
   if (E.fase === 'anuncio') {
     const tope = limiteApuesta(E, i, (i + 1) % JUGADORES);
     return [`ES TU TURNO: abres la mano. accion "anunciar": un color, una cantidad de 1 a ${cartas} y tu apuesta de 1 a ${tope} fichas en total. ${tengo}`];
@@ -46,7 +49,7 @@ function bloqueDecision(E, i) {
   }
   const d = E.duda;
   const falta = suma(d.apuesta) - suma(ult.apuesta);
-  return [`ES TU TURNO: J${d.asiento + 1} dudo de tu anuncio (al menos ${ult.cantidad} ${ult.color}) y subio su apuesta a ${chip(d.apuesta)}; la tuya es ${chip(ult.apuesta)}. ${tengo} Puedes: accion "igualar" (pones ${falta} fichas mas y se revelan las cartas) o accion "retirarse" (pierdes tu apuesta y las cartas no se revelan).`];
+  return [`ES TU TURNO: J${d.asiento + 1} dudo de tu anuncio (al menos ${ult.cantidad} ${ult.color}) y subio su apuesta a ${chip(d.apuesta)}; la tuya es ${chip(ult.apuesta)}. ${tengo} Puedes: accion "igualar" (pones ${fichasDe(falta)} mas y se revelan las cartas) o accion "retirarse" (pierdes tu apuesta y las cartas no se revelan).`];
 }
 
 export function vistaTexto(E, i) {
@@ -65,7 +68,8 @@ export function vistaTexto(E, i) {
   if (E.duda) L.push(`J${E.duda.asiento + 1} duda con ${chip(E.duda.apuesta)}${reemplazo(E.duda)}`);
   if (actorDe(E) === i) {
     L.push(...bloqueDecision(E, i));
-    if (E.fichas[i] >= 2 && E.fichasEspacio[i] < FICHAS_ESPACIO_MAX) L.push('Si quieres, agrega "comprar_espacio": true (pagas 1 ficha de juego y ganas un espacio desde la mano siguiente).');
+    // la pista solo sale si se puede cumplir: en la ultima mano la partida termina y ya no hay "mano siguiente"
+    if (E.mano < MANOS && E.fichas[i] >= 2 && E.fichasEspacio[i] < FICHAS_ESPACIO_MAX) L.push('Si quieres, agrega "comprar_espacio": true (pagas 1 ficha de juego y ganas un espacio desde la mano siguiente).');
   } else {
     L.push(`Espera: decide J${actorDe(E) + 1}.`);
   }
@@ -73,7 +77,7 @@ export function vistaTexto(E, i) {
     const viejas = E.historial.slice(0, -HISTORIAL_VISIBLE), recientes = E.historial.slice(-HISTORIAL_VISIBLE);
     L.push('', 'MANOS TERMINADAS:');
     if (viejas.length) L.push(`M1-M${viejas.length} (resumen): enfrentamientos ganados ${asientos.map((s) => `J${s + 1} ${viejas.filter((h) => h.resolucion.ganador === s).length}`).join(' | ')}`);
-    for (const h of recientes) L.push(lineaMano(h));
+    for (const h of recientes) L.push(lineaMano(h, i));
   }
   return L.join('\n');
 }

@@ -1,4 +1,4 @@
-// JUEGO 8: Duda y apuesta (categoria "Engaño y deducción").
+// JUEGO 8: Duda y apuesta (categoria "Engano y deduccion" en los datos; el nombre publico lleva acentos, abajo).
 // Cuatro jugadores, un mazo de 60 cartas con arcoiris comodin. Cada mano: se anuncia "hay al menos N cartas de un color entre todos" y se apuesta; el siguiente acepta
 // (subiendo el anuncio) o duda, y quien duda puede subir la apuesta; se igualan y se revelan las cartas, o quien anuncio se retira. Gana quien conserva sus fichas: la partida
 // termina cuando alguien se queda sin fichas de juego o tras la mano 16. Es el unico juego secuencial: un turno = una decision de un solo jugador (hasta 96 llamadas).
@@ -26,6 +26,8 @@ export default {
   // Bots de control que la consola acepta por nombre: { id: { nombre, color, fn(estado, asiento, rng) } }
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   rondas: TURNOS, // turnos de la arena (1 por decision): la arena corta una partida que no termina despues de TURNOS + 2
+  llamadasMax: TURNOS, // decide un solo jugador por turno: una partida cuesta como maximo TURNOS llamadas (no TURNOS x jugadores); la consola lo usa para estimar
+  soloEnVivo: true, // por turnos, de uno en uno: no admite --lote (cada turno esperaria su propio lote)
   versionReglas: 'dudaapuesta-1.0.0',
   reglas: REGLAS,
   formatoRespuesta: FORMATO,

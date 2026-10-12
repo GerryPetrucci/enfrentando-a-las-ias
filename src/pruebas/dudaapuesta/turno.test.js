@@ -4,16 +4,18 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { actorDe, cartasDe, totalCartas, espacios } from '../../juegos/dudaapuesta/estado.js';
+import { crearRng } from '../../rng.js';
+import { crearEstado, actorDe, cartasDe, totalCartas, espacios } from '../../juegos/dudaapuesta/estado.js';
 import { aplicarTurno, cerrarPartida } from '../../juegos/dudaapuesta/turno.js';
-import { COLORES, MANOS, MAZO } from '../../juegos/dudaapuesta/constantes.js';
+import { resultadoDe } from '../../juegos/dudaapuesta/resultado.js';
+import { COLORES, MANOS, MAZO, FICHAS } from '../../juegos/dudaapuesta/constantes.js';
 import { nuevoEstado, fijarCartas, escenarioBasico, paso, anunciar, aceptar, dudar, igualar, retirarse } from './ayudas.js';
 
 const enMano1 = () => { const E = nuevoEstado(); escenarioBasico(E); return E; };
 
-test('estado inicial: 4 jugadores con 3 fichas de juego, 4 de espacio y 5 espacios; abre el asiento 1 y es el unico que decide', () => {
-  const E = nuevoEstado();
-  assert.deepEqual(E.fichas, [3, 3, 3, 3]);
+test('estado inicial: 4 jugadores con las fichas de juego de la constante, 4 de espacio y 5 espacios; abre el asiento 1 y es el unico que decide', () => {
+  const E = crearEstado(crearRng(7)); // sin la normalizacion de las ayudas: es el valor real de FICHAS
+  assert.deepEqual(E.fichas, [FICHAS, FICHAS, FICHAS, FICHAS]);
   assert.deepEqual(E.fichasEspacio, [4, 4, 4, 4]);
   assert.deepEqual([0, 1, 2, 3].map((s) => espacios(E, s)), [5, 5, 5, 5]);
   assert.equal(totalCartas(E), 20);
@@ -440,4 +442,93 @@ test('una accion de otra fase se reemplaza y no cambia el estado de forma ilegal
   assert.equal(reg3.invalidas[0], true);
   assert.equal(reg3.motivos[0], 'accion no permitida ahora');
   assert.equal(F.mano, 2, 'la mano se resolvio con la jugada de reemplazo');
+});
+
+test('lo que GANA el ganador (ganado) puede ser distinto de lo que pone el perdedor (movidas): una ficha de espacio de mas se vuelve ficha de juego', () => {
+  const E = enMano1();
+  anunciar(E, 'rojo', 6, 0, 2); // J1 apuesta 2 fichas de espacio; J2 las iguala; hay 6 y gana J1, que ya tiene las 4 fichas de espacio
+  const reg = dudar(E);
+  assert.deepEqual(reg.resolucion.movidas, { fichas: 0, espacios: 2 });
+  assert.deepEqual(reg.resolucion.ganado, { fichas: 2, espacios: 0 }, 'sin lugar para mas espacios, las 2 se vuelven fichas de juego');
+  const F = enMano1();
+  F.fichasEspacio[1] = 3; // J2 tiene 4 espacios: solo cabe una ficha de espacio mas
+  anunciar(F, 'rojo', 7, 0, 2);
+  const reg2 = dudar(F, 0, 2); // hay 6 < 7: gana J2
+  assert.deepEqual(reg2.resolucion.ganado, { fichas: 1, espacios: 1 });
+  const G = enMano1();
+  anunciar(G, 'rojo', 6, 1);
+  assert.deepEqual(dudar(G).resolucion.ganado, { fichas: 1, espacios: 0 }, 'sin fichas de espacio de por medio ganado = movidas');
+});
+
+test('comprar un espacio exige quedarse con al menos 1 ficha de juego: con 2 se compra, con 1 no, y la que no se pudo queda anotada', () => {
+  const con = (fichasJ1) => {
+    const E = enMano1();
+    E.fichasEspacio[0] = 2;
+    E.fichas[0] = fichasJ1;
+    anunciar(E, 'rojo', 7, 1, 0, { comprar_espacio: true });
+    return { E, reg: dudar(E) }; // hay 6 < 7: J1 pierde su ficha apostada
+  };
+  const { E, reg } = con(3); // 3 - 1 = 2: alcanza
+  assert.deepEqual(reg.compras, [0]);
+  assert.deepEqual(reg.comprasFallidas, []);
+  assert.deepEqual([E.fichas[0], E.fichasEspacio[0]], [1, 3], 'queda con 1 ficha de juego y 1 espacio mas');
+  const { E: F, reg: reg2 } = con(2); // 2 - 1 = 1: no alcanza
+  assert.deepEqual(reg2.compras, []);
+  assert.deepEqual(reg2.comprasFallidas, [0], 'la peticion era valida pero no se pudo cumplir: queda anotado');
+  assert.deepEqual([F.fichas[0], F.fichasEspacio[0]], [1, 2]);
+  assert.deepEqual(F.historial[0].comprasFallidas, [0]);
+  assert.match(reg2.narracion.map((l) => l.texto).join(' '), /\{0\} no puede comprar el espacio/);
+});
+
+test('un anuncio que justo se cumple NO cuenta como falso; uno que se pasa por una carta, si', () => {
+  const E = enMano1();
+  anunciar(E, 'rojo', 6, 1); // hay exactamente 6 rojas
+  assert.equal(E.stats[0].anunciosFalsos, 0);
+  const F = enMano1();
+  anunciar(F, 'rojo', 7, 1);
+  assert.equal(F.stats[0].anunciosFalsos, 1);
+  assert.equal(F.stats[0].anuncios, 1);
+});
+
+test('si el pago a la banca deja a los CUATRO en 0 (la mano se juega con fichas de espacio), todos quedan eliminados y nadie recibe puntos', () => {
+  const E = enMano15([1, 1, 1, 1]);
+  E.fichasEspacio = [3, 3, 3, 3];
+  anunciar(E, 'rojo', 1, 0, 1); // J1 apuesta una ficha de espacio; J2 la iguala; gana J1 (hay 5 rojas) y nadie toca sus fichas de juego
+  const reg = dudar(E);
+  assert.equal(reg.pago, true);
+  assert.deepEqual(E.fichas, [0, 0, 0, 0]);
+  assert.deepEqual(E.final.eliminados, [0, 1, 2, 3]);
+  assert.equal(E.final.pieza, null);
+  assert.deepEqual(resultadoDe(E).puntos, [0, 0, 0, 0]);
+  assert.match(resultadoDe(E).epilogo.map((l) => l.texto).join(' '), /Nadie gana la pieza: todos quedan eliminados\./);
+});
+
+test('comentarios para la voz: un anuncio falso que alguien acepta, quedarse con una sola carta, pasar al frente en fichas y una compra que no se pudo', () => {
+  const textos = (reg) => reg.narracion.filter((l) => l.tipo === 'comentario').map((l) => l.texto).join(' ');
+  // 1. J2 acepta un anuncio que no se cumplia (hay 6 rojas y J1 dijo 9)
+  const E = enMano1();
+  anunciar(E, 'rojo', 9, 1);
+  assert.match(textos(aceptar(E, 'azul', 10, 1)), /El anuncio de \{0\} no se cumplía, pero \{1\} lo acepta\./);
+  // pero no si el anuncio era cierto, ni si la aceptacion la puso el juego
+  const F = enMano1();
+  anunciar(F, 'rojo', 5, 1);
+  assert.doesNotMatch(textos(aceptar(F, 'azul', 6, 1)), /lo acepta/);
+  const G = enMano1();
+  anunciar(G, 'rojo', 9, 1);
+  G.azar[G.turno][0] = 0.1; // el reemplazo de este turno: aceptar
+  assert.doesNotMatch(textos(paso(G, null)), /lo acepta/);
+  // 2. J1 pierde su ultima ficha de espacio: se queda con una sola carta
+  const H = enMano1();
+  H.fichasEspacio[0] = 1;
+  anunciar(H, 'rojo', 7, 0, 1);
+  assert.match(textos(dudar(H)), /\{0\} se queda con una sola carta\./);
+  // 3. J1 iba arriba y J2 lo pasa
+  const I = enMano1();
+  I.fichas = [4, 3, 3, 3];
+  anunciar(I, 'rojo', 7, 2);
+  assert.match(textos(dudar(I)), /\{1\} pasa al frente en fichas\./);
+  // salir de un empate no es pasar al frente
+  const J = enMano1();
+  anunciar(J, 'rojo', 7, 1);
+  assert.doesNotMatch(textos(dudar(J)), /pasa al frente/);
 });

@@ -14,6 +14,11 @@ import { narrarAnuncio, narrarDuda, narrarDefensa, narrarResolucion, narrarCierr
 const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida
 const asientos = [...Array(JUGADORES).keys()];
 const suma = (ap) => ap.fichas + ap.espacios;
+// el asiento con mas fichas, solo si es uno solo (null si hay empate arriba)
+const liderUnico = (xs) => {
+  const max = Math.max(...xs);
+  return xs.filter((x) => x === max).length === 1 ? xs.indexOf(max) : null;
+};
 const copia = (ap) => ({ fichas: ap.fichas, espacios: ap.espacios });
 
 // Una apuesta pedida, recortada a lo que tiene s y al tope: primero se quitan fichas de espacio y luego de juego. Una cantidad pedida de mas NO es un error.
@@ -80,12 +85,14 @@ function reemplazo(E) {
 }
 
 // Pasa las fichas que puso el perdedor al ganador. Una ficha de espacio ganada devuelve un espacio (hasta el maximo); si ya esta al maximo, se vuelve ficha de juego.
+// Devuelve lo que RECIBE el ganador (puede diferir de lo que puso el perdedor).
 function mover(E, perdedor, ganador, ap) {
   E.fichas[perdedor] -= ap.fichas;
   E.fichasEspacio[perdedor] -= ap.espacios;
   const sube = Math.min(ap.espacios, FICHAS_ESPACIO_MAX - E.fichasEspacio[ganador]);
   E.fichasEspacio[ganador] += sube;
   E.fichas[ganador] += ap.fichas + (ap.espacios - sube);
+  return { fichas: ap.fichas + (ap.espacios - sube), espacios: sube };
 }
 
 // El desenlace de la mano. apP = la apuesta final de quien anuncio (la que puso al anunciar o la ya completada al igualar).
@@ -100,11 +107,11 @@ function resolver(E, { retirada, apP }) {
     real = cuentas.reduce((a, b) => a + b, 0);
     if (real >= cantidad) { ganador = p; perdedor = d; ap = apD; } else { ganador = d; perdedor = p; ap = apP; }
   }
-  mover(E, perdedor, ganador, ap);
+  const ganado = mover(E, perdedor, ganador, ap);
   for (const x of [p, d]) E.stats[x].manosJugadas++;
   E.stats[ganador].manosGanadas++;
   if (ganador === d && !E.duda.reemplazo) E.stats[d].dudasGanadas++;
-  return { tipo: retirada ? 'retirada' : 'recuento', color, cantidad, cuentas, real, predictor: p, dudador: d, ganador, perdedor, movidas: copia(ap), apuestaPredictor: copia(apP), apuestaDudador: copia(apD) };
+  return { tipo: retirada ? 'retirada' : 'recuento', color, cantidad, cuentas, real, predictor: p, dudador: d, ganador, perdedor, movidas: copia(ap), ganado, apuestaPredictor: copia(apP), apuestaDudador: copia(apD) };
 }
 
 // Pieza para el de mas fichas de juego (desempata la de espacio; si siguen iguales, nadie). Eliminado: quien llego a 0 fichas o, en el tope, el de menos (nadie si empatan).
@@ -137,7 +144,7 @@ function cerrarMano(E, res) {
   const h = E.mano;
   const entrada = {
     mano: h, inicia: E.inicia, cadena: E.cadena.map((c) => ({ ...c })), duda: { ...E.duda }, defensa: E.defensa ? { ...E.defensa } : null,
-    resolucion: res, pago: false, compras: [],
+    resolucion: res, pago: false, compras: [], comprasFallidas: [],
   };
   E.inicia = res.perdedor;
   // Si la mano ya dejo a alguien sin fichas la partida termino ahi: no se cobra el pago (si no, esa persona quedaria con -1 y los de 1 ficha
@@ -152,12 +159,16 @@ function cerrarMano(E, res) {
   if (asientos.some((s) => E.fichas[s] <= 0)) final = cerrarPartida(E, 'eliminacion');
   else if (h >= MANOS) final = cerrarPartida(E, 'tope');
   else {
-    // cambiar una ficha de juego por un espacio: vale desde la mano siguiente, con menos de 5 espacios y quedandote al menos 1 ficha
+    // cambiar una ficha de juego por un espacio: vale desde la mano siguiente, con menos de 5 espacios y quedandote al menos 1 ficha.
+    // Se comprueba AQUI, al cerrar la mano: la que no se puede cumplir queda anotada (comprasFallidas) para que no se pierda sin aviso.
     for (const s of asientos) {
-      if (E.pideEspacio[s] && E.fichas[s] >= 2 && E.fichasEspacio[s] < FICHAS_ESPACIO_MAX) {
+      if (!E.pideEspacio[s]) continue;
+      if (E.fichas[s] >= 2 && E.fichasEspacio[s] < FICHAS_ESPACIO_MAX) {
         E.fichas[s] -= 1;
         E.fichasEspacio[s] += 1;
         entrada.compras.push(s);
+      } else {
+        entrada.comprasFallidas.push(s);
       }
     }
     E.mano++;
@@ -177,6 +188,7 @@ export function aplicarTurno(E, respuestas) {
   const s = actorDe(E);
   const resp = respuestas?.[s] ?? normalizarRespuesta(null);
   const fase = E.fase, mano = E.mano, decision = E.decision, turno = E.turno + 1, tenia = totalFichas(E, s);
+  const fichasAntes = [...E.fichas], espaciosAntes = [...E.fichasEspacio]; // para los comentarios de cierre (quedarse con una carta, pasar al frente)
   // lo que las IAs nunca ven y el publico si: las cartas de todos en esta mano y cuantas cartas cuentan para cada color
   const oculto = { cartas: asientos.map((x) => cartasDe(E, x)), cuentas: Object.fromEntries(COLORES.map((c) => [c, cuentasDe(E, c).reduce((a, b) => a + b, 0)])) };
 
@@ -197,7 +209,8 @@ export function aplicarTurno(E, respuestas) {
       st.anuncios++;
       if (oculto.cuentas[d.anuncio.color] < d.anuncio.cantidad) st.anunciosFalsos++;
     }
-    narracion = narrarAnuncio({ E, mano, decision, s, accion: d.accion, anuncio: d.anuncio, apuesta: d.apuesta, reemplazo: reempl, previo: ult ?? null });
+    const previoFalso = d.accion === 'aceptar' && oculto.cuentas[ult.color] < ult.cantidad; // aceptar un anuncio que no se cumplia
+    narracion = narrarAnuncio({ E, mano, decision, s, accion: d.accion, anuncio: d.anuncio, apuesta: d.apuesta, reemplazo: reempl, previo: ult ?? null, previoFalso });
     E.cadena.push({ asiento: s, ...d.anuncio, apuesta: d.apuesta, reemplazo: reempl });
     E.fase = 'respuesta';
     E.decision++;
@@ -229,7 +242,10 @@ export function aplicarTurno(E, respuestas) {
     narracion = [...narracion, ...narrarResolucion({ res, reemplazos: { anuncio: ult.reemplazo, duda: E.duda.reemplazo, defensa: E.defensa?.reemplazo ?? false } })];
     cierre = cerrarMano(E, res);
     final = cierre.final;
-    narracion = [...narracion, ...narrarCierreMano({ mano, pago: cierre.entrada.pago, compras: cierre.entrada.compras })];
+    const sinEspacios = asientos.filter((x) => espaciosAntes[x] > 0 && E.fichasEspacio[x] === 0);
+    const antes = liderUnico(fichasAntes), despues = liderUnico(E.fichas);
+    const alFrente = antes !== null && despues !== null && antes !== despues ? despues : null;
+    narracion = [...narracion, ...narrarCierreMano({ mano, pago: cierre.entrada.pago, compras: cierre.entrada.compras, fallidas: cierre.entrada.comprasFallidas, sinEspacios, alFrente })];
   }
   E.turno = turno;
 
@@ -244,6 +260,7 @@ export function aplicarTurno(E, respuestas) {
     finMano: res !== null,
     pago: cierre?.entrada.pago ?? false,
     compras: cierre?.entrada.compras ?? [],
+    comprasFallidas: cierre?.entrada.comprasFallidas ?? [],
     fichas: [...E.fichas],
     fichasEspacio: [...E.fichasEspacio],
     // un turno = una decision: solo el asiento que decide tiene razon, invalidez, motivo, error y respuesta cruda (la arena y el marcador esperan un arreglo por jugador)

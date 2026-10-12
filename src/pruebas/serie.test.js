@@ -68,6 +68,11 @@ test('estimarLlamadas es el maximo posible: partidas x rondas x jugadores', () =
   assert.equal(estimarLlamadas({}, 2, 4), null);
 });
 
+test('estimarLlamadas respeta llamadasMax: en un juego por turnos decide un solo jugador, asi que no se multiplica por los jugadores', () => {
+  assert.equal(estimarLlamadas({ rondas: 96, llamadasMax: 96 }, 4, 4), 4 * 96);
+  assert.equal(estimarLlamadas({ rondas: 96 }, 4, 4), 4 * 96 * 4, 'sin llamadasMax se sigue usando rondas x jugadores');
+});
+
 test('destinoDe: los modelos gratis son practica; lo demas es oficial salvo que se pida otra cosa', () => {
   assert.equal(destinoDe({ modo: 'gratis' }), 'pruebas');
   assert.equal(destinoDe({ modo: 'pago' }), 'oficial');
@@ -107,6 +112,15 @@ test('errorDeLote: el lote exige modelos, modo pago y un tope de gasto positivo'
   assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 0, agentes: modelos }), /--tope=/);
   assert.match(errorDeLote({ lote: true, modo: 'pago', tope: NaN, agentes: modelos }), /--tope=/);
   assert.equal(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos }), null);
+});
+
+test('errorDeLote: un juego que solo se juega en vivo (por turnos, de uno en uno) no admite --lote', () => {
+  const modelos = [{ tipo: 'modelo' }, { tipo: 'bot' }];
+  const enVivo = { nombre: 'Duda y apuesta', soloEnVivo: true, rondas: 96 };
+  assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos, juego: enVivo }), /Duda y apuesta.*por turnos.*no admite --lote.*en vivo/);
+  assert.equal(errorDeLote({ lote: false, modo: '', tope: null, agentes: modelos, juego: enVivo }), null, 'sin --lote no se valida nada');
+  assert.equal(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos, juego: { nombre: 'Otro' } }), null);
+  assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 1, agentes: [{ tipo: 'bot' }], juego: enVivo }), /solo aplica a modelos/, 'con bots sigue mandando el mensaje de siempre');
 });
 
 test('errorDeLote: si se le dan los contendientes, exige que alguno tenga variante de lote', () => {

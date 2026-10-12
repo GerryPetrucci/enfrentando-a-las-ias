@@ -99,7 +99,7 @@ export async function correr(argv, {
   if (o.sondeo !== undefined && !lote) salir('--sondeo solo se usa con --lote.');
   if (lote && o.ritmo !== undefined) salir('--ritmo no se combina con --lote: espaciaria las peticiones y cada una saldria en su propio lote.');
   const tope = o.tope === undefined ? null : numero(o.tope);
-  const errLote = errorDeLote({ lote, modo, tope, agentes: todos, contendientes: CONTENDIENTES });
+  const errLote = errorDeLote({ lote, modo, tope, agentes: todos, contendientes: CONTENDIENTES, juego });
   if (errLote) salir(errLote);
   if (usaModelos) fijarModo(modo);
 
