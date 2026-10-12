@@ -39,7 +39,7 @@ function decidir(E, resp) {
   const permitidas = fase === 'anuncio' ? ['anunciar'] : fase === 'respuesta' ? ['aceptar', 'dudar'] : ['igualar', 'retirarse'];
   if (resp.motivo?.includes('sin respuesta')) return { motivo: 'sin respuesta legible' };
   if (resp.malos.includes('accion')) return { motivo: 'accion mal formada' };
-  const accion = resp.accion ?? (fase === 'anuncio' ? 'anunciar' : null); // al abrir la mano la accion se sobreentiende
+  const accion = resp.accion; // sin "accion" la decision es invalida en cualquier fase: seguir el formato es parte de lo que se mide
   if (accion === null) return { motivo: 'sin accion' };
   if (!permitidas.includes(accion)) return { motivo: 'accion no permitida ahora' };
   if (accion === 'igualar' || accion === 'retirarse') return { accion };
@@ -47,7 +47,10 @@ function decidir(E, resp) {
   if (accion === 'dudar') {
     const minimo = suma(ult.apuesta);
     if (resp.fichas === null && resp.espacios === null) return { accion, apuesta: completar(E, s, ult.apuesta, minimo) }; // sin decir cuanto: iguala
-    const apuesta = recortar(E, s, limiteApuesta(E, s, ult.asiento), resp.fichas, resp.espacios);
+    // "para igualar solo cuenta cuantas fichas pones, no de que tipo": el total pedido cuenta, y si faltan las de un tipo se completa con las del otro
+    const tope = limiteApuesta(E, s, ult.asiento);
+    const pedido = Math.min((resp.fichas ?? 0) + (resp.espacios ?? 0), tope);
+    const apuesta = completar(E, s, recortar(E, s, tope, resp.fichas, resp.espacios), pedido);
     return suma(apuesta) < minimo ? { motivo: 'apuesta menor que la del anuncio' } : { accion, apuesta };
   }
   // anunciar o aceptar
@@ -137,7 +140,10 @@ function cerrarMano(E, res) {
     resolucion: res, pago: false, compras: [],
   };
   E.inicia = res.perdedor;
-  if (h >= PAGO_DESDE && (h - PAGO_DESDE) % PAGO_CADA === 0) {
+  // Si la mano ya dejo a alguien sin fichas la partida termino ahi: no se cobra el pago (si no, esa persona quedaria con -1 y los de 1 ficha
+  // serian eliminados "de mas"). Si nadie cayo, el pago puede dejar a varios en 0 a la vez y todos quedan eliminados.
+  const ya = asientos.some((s) => E.fichas[s] <= 0);
+  if (!ya && h >= PAGO_DESDE && (h - PAGO_DESDE) % PAGO_CADA === 0) {
     for (const s of asientos) E.fichas[s] -= 1;
     entrada.pago = true;
   }
@@ -219,7 +225,8 @@ export function aplicarTurno(E, respuestas) {
 
   let cierre = null, final = null;
   if (res) {
-    narracion = [...narracion, ...narrarResolucion({ res })];
+    // que jugadas de esta mano las puso el juego por una respuesta ilegal: el comentario nunca se las atribuye a la IA
+    narracion = [...narracion, ...narrarResolucion({ res, reemplazos: { anuncio: ult.reemplazo, duda: E.duda.reemplazo, defensa: E.defensa?.reemplazo ?? false } })];
     cierre = cerrarMano(E, res);
     final = cierre.final;
     narracion = [...narracion, ...narrarCierreMano({ mano, pago: cierre.entrada.pago, compras: cierre.entrada.compras })];

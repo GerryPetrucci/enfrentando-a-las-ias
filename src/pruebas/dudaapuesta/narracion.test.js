@@ -8,7 +8,7 @@ import {
   textoApuesta, narrarAnuncio, narrarDuda, narrarDefensa, narrarResolucion, narrarCierreMano, narrarEpilogo, resolverNombres,
 } from '../../juegos/dudaapuesta/narracion.js';
 import { cerrarPartida } from '../../juegos/dudaapuesta/turno.js';
-import { nuevoEstado, anunciar, dudar } from './ayudas.js';
+import { nuevoEstado, escenarioBasico, paso, anunciar, dudar } from './ayudas.js';
 
 const texto = (lineas) => lineas.map((l) => l.texto).join(' ');
 const E0 = nuevoEstado();
@@ -63,6 +63,45 @@ test('el desenlace: el conteo por jugador y un comentario segun lo que paso (far
   assert.doesNotMatch(texto(retirada), /hay \d/, 'una retirada no cuenta cartas');
 });
 
+test('lo que puso el juego por una respuesta ilegal nunca se le atribuye a la IA en el comentario: ni la duda "descubierta", ni "prefiere no averiguarlo", ni el farol', () => {
+  const rec = { tipo: 'recuento', color: 'rojo', cantidad: 8, cuentas: [2, 2, 0, 2], real: 6, predictor: 0, dudador: 1, ganador: 1, perdedor: 0, movidas: ap(1) };
+  const comentarios = (res, reemplazos) => narrarResolucion({ res, reemplazos }).filter((l) => l.tipo === 'comentario').map((l) => l.texto).join(' ');
+  // el anuncio perdedor lo puso el juego: no es un farol de {0}
+  assert.doesNotMatch(comentarios(rec, { anuncio: true, duda: false, defensa: false }), /farol|descubre/);
+  assert.match(comentarios(rec, { anuncio: true, duda: false, defensa: false }), /El anuncio que el juego puso por \{0\} no se cumplía\./);
+  // la duda la puso el juego: nadie "descubre" nada
+  assert.doesNotMatch(comentarios(rec, { anuncio: false, duda: true, defensa: false }), /\{1\} lo descubre/);
+  assert.match(comentarios(rec, { anuncio: false, duda: true, defensa: false }), /El anuncio de \{0\} no se cumplía: era un farol\./);
+  // lo de siempre cuando las dos jugadas fueron de las IAs
+  assert.match(comentarios(rec, { anuncio: false, duda: false, defensa: false }), /era un farol y \{1\} lo descubre\./);
+  // el anuncio era cierto y la duda la puso el juego
+  const cierto = { ...rec, cantidad: 4, ganador: 0, perdedor: 1 };
+  assert.doesNotMatch(comentarios(cierto, { duda: true }), /\{1\} dudó/);
+  assert.match(comentarios(cierto, { duda: false }), /\{1\} dudó y el anuncio era cierto\./);
+  // la retirada la puso el juego
+  const retirada = { ...rec, tipo: 'retirada', cuentas: null, real: null, ganador: 1, perdedor: 0 };
+  assert.doesNotMatch(comentarios(retirada, { defensa: true }), /prefiere no averiguarlo/);
+  assert.match(comentarios(retirada, { defensa: false }), /\{0\} prefiere no averiguarlo\./);
+  // sin banderas (como antes) el comportamiento no cambia
+  assert.match(texto(narrarResolucion({ res: rec })), /era un farol y \{1\} lo descubre\./);
+});
+
+test('en una partida real, una duda o una retirada de reemplazo no genera comentarios que se las atribuyan a la IA', () => {
+  const E = nuevoEstado(5);
+  escenarioBasico(E);
+  anunciar(E, 'rojo', 6, 1);
+  dudar(E, 3);
+  const reg = paso(E, null); // la defensa la pone el juego: igualar o retirarse
+  const t = texto(reg.narracion.filter((l) => l.tipo === 'comentario'));
+  assert.doesNotMatch(t, /prefiere no averiguarlo/);
+  const F = nuevoEstado(6);
+  escenarioBasico(F);
+  anunciar(F, 'rojo', 9, 1);
+  F.azar[F.turno][0] = 0.9; // la respuesta de reemplazo de este turno: dudar
+  const reg2 = paso(F, null);
+  assert.doesNotMatch(texto(reg2.narracion.filter((l) => l.tipo === 'comentario')), /lo descubre|dudó y el anuncio era cierto/);
+});
+
 test('el cierre de la mano: el pago a la banca y los espacios comprados', () => {
   assert.deepEqual(narrarCierreMano({ mano: 15, pago: false, compras: [] }), []);
   assert.match(texto(narrarCierreMano({ mano: 15, pago: true, compras: [] })), /Después de la mano 15, cada jugador paga una ficha de juego a la banca\./);
@@ -75,6 +114,8 @@ test('el epilogo: eliminacion de uno o de varios, tope con y sin eliminado, y pi
   assert.match(cierre([0, 0, 4, 2], [4, 4, 4, 4], 'eliminacion'), /\{0\} y \{1\} se quedan sin fichas de juego y quedan eliminados\./);
   assert.match(cierre([3, 2, 4, 1], [4, 4, 4, 4], 'tope'), /Se acaban las 16 manos: \{3\} queda eliminado con menos fichas\./);
   assert.match(cierre([2, 2, 3, 3], [4, 4, 4, 4], 'tope'), /los de abajo empatan en fichas: nadie queda eliminado\. Nadie gana la pieza: los de arriba empatan en fichas\./);
+  assert.match(cierre([0, 0, 0, 0], [4, 4, 4, 4], 'eliminacion'), /Nadie gana la pieza: todos quedan eliminados\./);
+  assert.doesNotMatch(cierre([0, 0, 0, 0], [4, 4, 4, 4], 'eliminacion'), /los de arriba empatan/);
   assert.deepEqual(narrarEpilogo(nuevoEstado()), [], 'sin final no hay epilogo');
 });
 

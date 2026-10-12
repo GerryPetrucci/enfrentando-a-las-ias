@@ -64,24 +64,32 @@ export function narrarDefensa({ p, accion, reemplazo }) {
     : `${quien(p)} se retira${por} y pierde lo que había apostado; las cartas no se revelan.` }];
 }
 
-// El desenlace de la mano. res = lo que devuelve resolver() en turno.js.
-export function narrarResolucion({ res }) {
+// El desenlace de la mano. res = lo que devuelve resolver() en turno.js. reemplazos = { anuncio, duda, defensa }: cuales jugadas de esa mano las puso el juego por una
+// respuesta ilegal. El comentario nunca le atribuye a una IA lo que puso el juego: ni un farol, ni una duda que "descubre", ni una retirada.
+export function narrarResolucion({ res, reemplazos = {} }) {
   const lineas = [];
   const agregar = (tipo, texto) => lineas.push({ tipo, texto });
   const gana = `${quien(res.ganador)} gana ${textoApuesta(res.movidas)}`;
+  const p = quien(res.predictor), d = quien(res.dudador);
   if (res.tipo === 'retirada') {
     agregar('hecho', `${gana} sin que se revelen las cartas.`);
-    agregar('comentario', `${quien(res.predictor)} prefiere no averiguarlo.`);
+    if (!reemplazos.defensa) agregar('comentario', `${p} prefiere no averiguarlo.`);
     return lineas;
   }
   const detalle = asientos.map((s) => `${quien(s)} ${res.cuentas[s]}`).join(', ');
   agregar('hecho', `Se revelan las cartas: hay ${res.real} ${cartas(res.color)} (${detalle}).`);
   agregar('hecho', `${gana}.`);
+  const delAnuncio = reemplazos.anuncio ? `El anuncio que el juego puso por ${p}` : `El anuncio de ${p}`;
   if (res.ganador === res.predictor) {
     if (res.real === res.cantidad) agregar('comentario', `Justo: había exactamente ${res.cantidad}.`);
-    else agregar('comentario', `${quien(res.dudador)} dudó y el anuncio era cierto.`);
+    else if (reemplazos.anuncio || reemplazos.duda) agregar('comentario', `${delAnuncio} era cierto.`);
+    else agregar('comentario', `${d} dudó y el anuncio era cierto.`);
+  } else if (reemplazos.anuncio) {
+    agregar('comentario', `${delAnuncio} no se cumplía.`);
+  } else if (reemplazos.duda) {
+    agregar('comentario', `${delAnuncio} no se cumplía: era un farol.`);
   } else {
-    agregar('comentario', `El anuncio de ${quien(res.predictor)} no se cumplía: era un farol y ${quien(res.dudador)} lo descubre.`);
+    agregar('comentario', `${delAnuncio} no se cumplía: era un farol y ${d} lo descubre.`);
   }
   return lineas;
 }
@@ -104,7 +112,7 @@ export function narrarEpilogo(E) {
     ? `${unir(f.eliminados.map(quien))} se ${f.eliminados.length === 1 ? 'queda' : 'quedan'} sin fichas de juego y ${f.eliminados.length === 1 ? 'queda eliminado' : 'quedan eliminados'}.`
     : `Se acaban las ${MANOS} manos${f.eliminados.length ? `: ${quien(f.eliminados[0])} queda eliminado con menos fichas.` : ' y los de abajo empatan en fichas: nadie queda eliminado.'}`);
   agregar(f.pieza === null
-    ? 'Nadie gana la pieza: los de arriba empatan en fichas.'
+    ? (f.eliminados.length === JUGADORES ? 'Nadie gana la pieza: todos quedan eliminados.' : 'Nadie gana la pieza: los de arriba empatan en fichas.')
     : `${quien(f.pieza)} gana la pieza con ${plural(E.fichas[f.pieza], 'ficha', 'fichas')}.`);
   agregar(`Fichas finales: ${asientos.map((s) => `${quien(s)} ${E.fichas[s]}`).join(', ')}.`);
   return lineas;

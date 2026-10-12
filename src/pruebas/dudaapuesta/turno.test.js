@@ -67,10 +67,12 @@ test('un anuncio ilegal se reemplaza por uno legal y se anota: cantidad 0 o de m
   }
 });
 
-test('la accion se sobreentiende al abrir la mano; en las demas fases hace falta', () => {
+test('sin "accion" la decision es invalida en cualquier fase, tambien al abrir la mano (el spec lo exige: seguir el formato se mide)', () => {
   const E = enMano1();
   const reg = paso(E, { color: 'rojo', cantidad: 4, fichas: 1, razon: 'sin accion' });
-  assert.equal(reg.invalidas[0], false, 'al abrir solo se puede anunciar');
+  assert.equal(reg.invalidas[0], true);
+  assert.equal(reg.motivos[0], 'sin accion');
+  assert.equal(E.cadena[0].reemplazo, true, 'el anuncio lo puso el juego');
   const reg2 = paso(E, { razon: 'sin accion' });
   assert.equal(reg2.invalidas[1], true);
   assert.equal(reg2.motivos[1], 'sin accion');
@@ -273,19 +275,53 @@ test('el pago a la banca: al terminar la mano 15 cada jugador paga una ficha de 
   assert.match(reg2.narracion.map((l) => l.texto).join(' '), /paga una ficha de juego a la banca/);
 });
 
-test('si el pago deja a varios en 0, todos quedan eliminados', () => {
+// mano 15 con cartas conocidas: J1 tiene 5 rojas y los demas ninguna, asi que "al menos 1 roja" se cumple
+function enMano15(fichas) {
   const E = enMano1();
   E.mano = 15;
-  E.fichas = [2, 1, 1, 2];
+  E.fichas = fichas;
   fijarCartas(E, 0, ['rojo', 'rojo', 'rojo', 'rojo', 'rojo'], 15);
-  fijarCartas(E, 1, ['azul', 'azul', 'azul', 'azul', 'azul'], 15);
-  fijarCartas(E, 2, ['azul', 'azul', 'azul', 'azul', 'azul'], 15);
-  fijarCartas(E, 3, ['azul', 'azul', 'azul', 'azul', 'azul'], 15);
-  anunciar(E, 'rojo', 1); // hay 5 rojas
-  dudar(E); // gana J1 (5 >= 1): J2 pone 1 ficha y queda en 0; el pago deja a J3 en 0 y a J1 en 2+1-1
+  for (const s of [1, 2, 3]) fijarCartas(E, s, ['azul', 'azul', 'azul', 'azul', 'azul'], 15);
+  return E;
+}
+
+test('si el pago a la banca deja a varios en 0 a la vez, todos quedan eliminados', () => {
+  const E = enMano15([3, 2, 1, 1]);
+  anunciar(E, 'rojo', 1);
+  const reg = dudar(E); // gana J1: J2 pone 1 ficha (2 -> 1); nadie esta en 0 aun, asi que se cobra el pago: J2, J3 y J4 quedan en 0
+  assert.equal(reg.pago, true);
+  assert.deepEqual(E.fichas, [3, 0, 0, 0], 'J1 4 - 1; los demas pagan su ultima ficha');
   assert.equal(E.fin, true);
-  assert.deepEqual(E.final.eliminados, [1, 2]);
-  assert.deepEqual(E.puesto, ['pieza', 'eliminado', 'eliminado', 'medio']);
+  assert.deepEqual(E.final.eliminados, [1, 2, 3]);
+  assert.deepEqual(E.puesto, ['pieza', 'eliminado', 'eliminado', 'eliminado']);
+});
+
+test('si la mano ya dejo a alguien sin fichas, la partida termina y el pago a la banca no se cobra: nunca hay fichas negativas ni eliminados "de mas"', () => {
+  const E = enMano15([1, 1, 1, 1]);
+  anunciar(E, 'rojo', 1);
+  const reg = dudar(E); // gana J1: J2 pierde su unica ficha y la partida termina ahi
+  assert.equal(reg.pago, false, 'la partida ya habia terminado: no hay a quien cobrar');
+  assert.deepEqual(E.fichas, [2, 0, 1, 1]);
+  assert.ok(E.fichas.every((f) => f >= 0));
+  assert.deepEqual(E.final.eliminados, [1], 'J3 y J4 no pierden nada por lo que le paso a J2');
+  assert.deepEqual(E.puesto, ['pieza', 'eliminado', 'medio', 'medio']);
+  assert.doesNotMatch(reg.narracion.map((l) => l.texto).join(' '), /paga una ficha de juego a la banca/);
+});
+
+test('dudar cuenta fichas EN TOTAL: si no tiene las de juego que pide, se completa con las de espacio y la duda no se invalida', () => {
+  const E = enMano1();
+  E.fichas[1] = 1; // J2: 1 ficha de juego y 4 de espacio
+  anunciar(E, 'rojo', 6, 2);
+  const reg = dudar(E, 2, 0); // pide 2 fichas de juego, tiene 1: pone 1 de juego y 1 de espacio
+  assert.equal(reg.invalidas[1], false, 'el total pedido (2) era legal');
+  assert.deepEqual(reg.apuesta, { fichas: 1, espacios: 1 });
+  assert.equal(reg.resolucion.tipo, 'recuento');
+  const F = enMano1();
+  F.fichas[1] = 1;
+  anunciar(F, 'rojo', 6, 1);
+  const reg2 = dudar(F, 3, 0); // sube a 3: 1 de juego y 2 de espacio
+  assert.equal(reg2.invalidas[1], false);
+  assert.deepEqual(F.duda.apuesta, { fichas: 1, espacios: 2 });
 });
 
 test('quedarse sin fichas de juego termina la partida: eliminado, pieza para el de mas fichas', () => {
