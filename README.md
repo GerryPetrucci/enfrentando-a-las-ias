@@ -212,7 +212,8 @@ Una partida guardada de Duda y apuesta se reproduce como una mesa de casino (fie
 ```bash
 node src/servidor.js   # y abre http://localhost:4321/escena.html?archivo=NOMBRE.json&partida=1&formato=9x16
 node herramientas/capturar-escena.mjs --archivo=NOMBRE.json            # capturas de los momentos clave en 9:16 y 16:9 y revisión de errores de consola
-node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --completa  # reproduce la partida entera a velocidad 8 y comprueba que termina
+node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --completa  # reproduce la partida entera a velocidad 8 (--vel=N) y comprueba que termina y que dura lo que dice su línea de tiempo
+node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --estado    # al repartir cada mano comprueba que no quedó nada de la anterior (sello, anuncio, etiquetas de cámara)
 ```
 
 Parámetros (todos opcionales): `archivo` (en `data/`), `partida`, `mano` y `hasta` (un clip por manos), `formato` (`9x16`, `16x9` o `hoja`: los dos juntos sobre la hoja maestra de 3840×2160), `camara` (0 a 4: a cuántos se les ven las cartas), `vel`, `razon=1` (muestra lo que pensó cada IA), `sonido=0`, `voz`, `auto=1`, `limpio=1`. El botón "Exportar tiempos" guarda `linea-de-tiempo.json` (cuándo empieza cada momento) para re-doblar el video. `mejoresManos(partida, n)` (en `web/casino/linea-de-tiempo-duda.js`) elige por código las manos más interesantes para un clip. Los sonidos son muestras CC0 opcionales con respaldo sintetizado: ver `web/audio/LEEME.md`. Las fuentes de la marca (Barlow Condensed e Inter) se usan si están instaladas en el equipo que graba.
