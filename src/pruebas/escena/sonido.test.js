@@ -24,6 +24,7 @@ test('cada paso de la animacion tiene su efecto: nada suena de mas ni se queda m
   assert.deepEqual(eventosDePaso({ tipo: 'sello', sello: 'cumplido' }), ['gana']);
   assert.deepEqual(eventosDePaso({ tipo: 'sello', sello: 'farol' }), ['pierde']);
   assert.deepEqual(eventosDePaso({ tipo: 'sello', sello: 'retirada' }), ['pierde']);
+  assert.deepEqual(eventosDePaso({ tipo: 'sello', sello: 'incumplido' }), ['pierde']);
   for (const mudo of [{ tipo: 'iguala' }, { tipo: 'pliega' }, { tipo: 'estado' }, { tipo: 'compraFallida' }, { tipo: 'final' }, { tipo: 'raro' }, {}, null, undefined, 7]) {
     assert.deepEqual(eventosDePaso(mudo), [], JSON.stringify(mudo));
   }

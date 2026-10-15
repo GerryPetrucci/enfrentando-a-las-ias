@@ -13,7 +13,7 @@
 //     repartir {asiento, indice, color|null}   (color solo para los asientos de la camara: de los demas, null hasta el recuento)
 //     apuesta {asiento, fichas, espacios} · anuncio {asiento, color, cantidad} · duda {asiento} · iguala {asiento} · pliega {asiento}
 //     revelar {cartas, brillan}   todas las cartas de la mano y cuales cuentan para el color anunciado
-//     contar {color, cantidad, cuentas, real} · sello {sello: farol | cumplido | justo | retirada}
+//     contar {color, cantidad, cuentas, real} · sello {sello: farol | incumplido | cumplido | justo | retirada}   (incumplido: el anuncio lo puso el juego, no hubo farol de nadie)
 //     fichas {de, a, ganado, pierde}   las fichas que RECIBE el ganador (ganado) y lo que pierde el otro (pierde)
 //     pago {} · compra {asiento} · compraFallida {asiento} · estado {fichas, fichasEspacio} · final {final}
 //
@@ -52,12 +52,20 @@ function lineasDeDesenlace(r, resto) {
 }
 
 // oculto.cartas ya trae solo las cartas que cada jugador tenia en juego en ese momento (tantas como sus espacios, 1 a 5), antes de mover las fichas de la mano.
-function pasosDeDesenlace(r) {
+// Que jugadas de la mano las puso el juego por una respuesta ilegal: el ultimo anuncio y la duda (como hace la narracion del motor). Si el anuncio lo puso el juego,
+// no se le puede atribuir a ninguna IA que fuera un farol.
+function reemplazosDeMano(registros) {
+  const ultimoAnuncio = [...registros].reverse().find((r) => r.accion === 'anunciar' || r.accion === 'aceptar');
+  const duda = registros.find((r) => r.accion === 'dudar');
+  return { anuncio: ultimoAnuncio?.invalidas?.[ultimoAnuncio.asiento] === true, duda: duda?.invalidas?.[duda.asiento] === true };
+}
+
+function pasosDeDesenlace(r, reemplazos) {
   const res = r.resolucion;
   const fichas = { tipo: 'fichas', de: res.perdedor, a: res.ganador, ganado: res.ganado ?? res.movidas, pierde: res.movidas };
   if (res.tipo === 'retirada') return [{ tipo: 'sello', sello: 'retirada' }, fichas];
   const visibles = r.oculto?.cartas ?? [];
-  const sello = res.ganador === res.predictor ? (res.real === res.cantidad ? 'justo' : 'cumplido') : 'farol';
+  const sello = res.ganador === res.predictor ? (res.real === res.cantidad ? 'justo' : 'cumplido') : (reemplazos.anuncio ? 'incumplido' : 'farol');
   return [
     { tipo: 'revelar', cartas: visibles, brillan: visibles.map((fila) => fila.map((c) => c === res.color || c === ARCOIRIS)) },
     { tipo: 'contar', color: res.color, cantidad: res.cantidad, cuentas: res.cuentas, real: res.real },
@@ -95,14 +103,20 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
       }))).flat(),
     });
 
+    const reemplazos = reemplazosDeMano(rondas.slice(desde, hasta));
+    // Un comentario dicho en medio de la mano puede adelantar si el anuncio era cierto (p. ej. "no se cumplia, pero lo acepta"): la camara oculta existe para que el
+    // espectador especule hasta el recuento, asi que esos comentarios esperan al desenlace de su mano. Si la partida se corta antes, nunca se dicen.
+    const aplazadas = [];
     for (let i = desde; i < hasta; i++) {
       const r = rondas[i];
       const resto = (r.narracion ?? []).filter((l) => !(i === desde && l.tipo === 'apertura'));
       const accion = r.resolucion ? 1 : resto.length;
-      crear(TIPO_DE_ACCION[r.accion] ?? 'anuncio', i, { asiento: r.asiento, lineas: resto.slice(0, accion), pasos: pasosDeAccion(r), reemplazo: r.invalidas?.[r.asiento] === true });
+      const delMomento = resto.slice(0, accion);
+      aplazadas.push(...delMomento.filter((l) => l.tipo === 'comentario'));
+      crear(TIPO_DE_ACCION[r.accion] ?? 'anuncio', i, { asiento: r.asiento, lineas: delMomento.filter((l) => l.tipo !== 'comentario'), pasos: pasosDeAccion(r), reemplazo: r.invalidas?.[r.asiento] === true });
       if (!r.resolucion) continue;
       const desenlace = lineasDeDesenlace(r, resto);
-      crear(r.resolucion.tipo === 'recuento' ? 'revelado' : 'retirada', i, { asiento: r.resolucion.ganador, lineas: resto.slice(1, 1 + desenlace), pasos: pasosDeDesenlace(r) });
+      crear(r.resolucion.tipo === 'recuento' ? 'revelado' : 'retirada', i, { asiento: r.resolucion.ganador, lineas: [...resto.slice(1, 1 + desenlace), ...aplazadas.splice(0)], pasos: pasosDeDesenlace(r, reemplazos) });
       if (!r.finMano) continue;
       crear('cierre', i, {
         lineas: resto.slice(1 + desenlace),
@@ -160,7 +174,7 @@ export function puntuarManos(partida) {
     const cierre = registros.at(-1);
     const res = registros.find((r) => r.resolucion)?.resolucion;
     const motivos = [];
-    if (res?.tipo === 'recuento' && res.ganador === res.dudador) motivos.push('farol descubierto');
+    if (res?.tipo === 'recuento' && res.ganador === res.dudador && !reemplazosDeMano(registros).anuncio) motivos.push('farol descubierto');
     if (res?.tipo === 'recuento' && res.ganador === res.predictor && res.real === res.cantidad) motivos.push('justo');
     if (res?.tipo === 'retirada') motivos.push('retirada tras subida');
     if (res && res.ganado && res.ganado.fichas + res.ganado.espacios >= 3) motivos.push('apuesta grande');

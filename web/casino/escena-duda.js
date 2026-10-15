@@ -14,7 +14,7 @@ import { crearAzar, seedDeTexto } from './azar.js';
 
 const PLURAL = { rojo: 'rojas', amarillo: 'amarillas', azul: 'azules', verde: 'verdes', morado: 'moradas', arcoiris: 'arcoíris' };
 const SELLOS = {
-  farol: { texto: 'Farol descubierto', clase: 'perder' }, cumplido: { texto: 'Se cumplió', clase: 'ganar' },
+  farol: { texto: 'Farol descubierto', clase: 'perder' }, incumplido: { texto: 'No se cumplió', clase: 'perder' }, cumplido: { texto: 'Se cumplió', clase: 'ganar' },
   justo: { texto: '¡Justo!', clase: 'ganar' }, retirada: { texto: 'Se retiró', clase: 'perder' },
 };
 const ROL = { anuncio: 'Anuncia', acepta: 'Acepta', duda: 'Duda', iguala: 'Iguala', pliega: 'Se retira' };

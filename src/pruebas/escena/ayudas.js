@@ -23,3 +23,11 @@ export async function muchas() {
   }
   return out;
 }
+
+// Una partida con un modelo caido en `asiento` (siempre falla: el juego juega por el), para probar jugadas de reemplazo.
+export async function jugarConCaido(seed, asiento = 0) {
+  const caido = { id: 'caido', nombre: 'Caido', color: '#888888', inicial: 'C', tipo: 'modelo', modelo: 'x/y', async jugar() { throw new Error('HTTP 500'); } };
+  const otros = agentes(['calculador', 'retador', 'prudente']);
+  const lista = [...otros.slice(0, asiento), caido, ...otros.slice(asiento)];
+  return correrPartida({ juego: dudaapuesta, agentes: lista, seed });
+}

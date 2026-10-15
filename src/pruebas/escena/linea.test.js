@@ -11,7 +11,7 @@ import { MANOS } from '../../juegos/dudaapuesta/constantes.js';
 import { construirLineaDeTiempo, puntuarManos, mejoresManos, nombrar, MIN_MS, MANOS_TOPE, conRazones } from '../../../web/casino/linea-de-tiempo-duda.js';
 import { correrPartida } from '../../arena.js';
 import dudaapuesta from '../../juegos/dudaapuesta.js';
-import { jugar, muchas, agentes, CASOS } from './ayudas.js';
+import { jugar, jugarConCaido, muchas, agentes, CASOS } from './ayudas.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
 const porMano = (beats) => beats.reduce((m, b) => m.set(b.mano, [...(m.get(b.mano) ?? []), b]), new Map()); // Map.groupBy pide Node 21 y el proyecto Node 20
@@ -29,7 +29,8 @@ test('cubre todos los registros en orden y no pierde ni repite una sola linea de
     assert.ok(registros.every((r, i) => i === 0 || r >= registros[i - 1]), 'los beats siguen el orden de los registros');
     const esperadas = p.rondas.flatMap((r) => r.narracion).map((l) => nombres(p)(l.texto));
     const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto));
-    assert.deepEqual(dichas, esperadas, `seed ${p.seed}: las lineas dichas no son la narracion guardada`);
+    // los comentarios de las jugadas esperan al desenlace de su mano (otra prueba lo exige): aqui solo importa que no se pierda ni se repita ninguna linea
+    assert.deepEqual([...dichas].sort(), [...esperadas].sort(), `seed ${p.seed}: las lineas dichas no son la narracion guardada`);
     assert.ok(dichas.every((t) => !/\{\d\}/.test(t)), 'ningun {n} sin resolver');
   }
 });
@@ -297,4 +298,59 @@ test('con razones (razon=1): cada jugada trae lo que penso su IA y dura lo que t
   assert.ok(base.every((b) => !('razon' in b)), 'la linea de tiempo original no se modifica');
   for (const basura of [null, undefined, 'x', 7]) assert.deepEqual(conRazones(basura, p), []);
   assert.deepEqual(conRazones(base, null).map((b) => b.id), base.map((b) => b.id), 'sin partida no hay razones pero no lanza');
+});
+
+const TIPOS_ACCION = ['anuncio', 'acepta', 'duda', 'defensa'];
+async function conReemplazos() {
+  const out = [];
+  for (let seed = 1; seed <= 16; seed++) out.push(await jugarConCaido(seed, seed % 4));
+  return out;
+}
+
+test('el sello no le atribuye a nadie un farol que puso el juego: sale "Farol descubierto" solo cuando la narracion del motor tambien dice que era un farol', async () => {
+  const conteo = { farol: 0, incumplido: 0, cumplido: 0, justo: 0 };
+  for (const p of [...await conReemplazos(), ...await muchas()]) {
+    for (const b of construirLineaDeTiempo(p)) {
+      if (b.tipo !== 'revelado') continue;
+      const sello = b.pasos.find((x) => x.tipo === 'sello').sello;
+      conteo[sello]++;
+      assert.equal(sello === 'farol', /era un farol/.test(b.texto), `seed ${p.seed} ${b.id}: sello ${sello} contra "${b.texto}"`);
+      if (sello === 'incumplido') assert.match(b.texto, /no se cumplía/, `${b.id}: ${b.texto}`);
+    }
+  }
+  assert.ok(conteo.incumplido > 0, 'la prueba no vio un anuncio puesto por el juego que no se cumpliera');
+  assert.ok(conteo.farol > 0 && conteo.cumplido > 0, JSON.stringify(conteo));
+});
+
+test('puntuarManos no cuenta como "farol descubierto" un anuncio que puso el juego', async () => {
+  for (const p of await conReemplazos()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const m of puntuarManos(p)) {
+      const reveladoDeLaMano = beats.find((b) => b.mano === m.mano && b.tipo === 'revelado');
+      const esFarol = reveladoDeLaMano?.pasos.some((x) => x.tipo === 'sello' && x.sello === 'farol') ?? false;
+      assert.equal(m.motivos.includes('farol descubierto'), esFarol, `seed ${p.seed} mano ${m.mano}`);
+    }
+  }
+});
+
+test('antes del recuento no se dice nada que adelante si el anuncio era cierto: esos comentarios esperan al desenlace de su mano y no se pierde ninguna linea', async () => {
+  let aplazadas = 0;
+  for (const p of [...await conReemplazos(), ...await muchas()]) {
+    const beats = construirLineaDeTiempo(p);
+    for (const b of beats.filter((x) => TIPOS_ACCION.includes(x.tipo))) {
+      assert.ok(b.lineas.every((l) => l.tipo !== 'comentario'), `${b.id} comenta antes del recuento: ${b.texto}`);
+    }
+    const guardadas = p.rondas.flatMap((r, i) => (r.narracion ?? []).map((l) => ({ ...l, i }))).filter((l) => l.tipo === 'comentario');
+    for (const l of guardadas) {
+      const texto = nombres(p)(l.texto);
+      const registro = p.rondas[l.i];
+      const dondeEstaba = beats.find((b) => b.registro === l.i && b.lineas.some((x) => x.texto === texto));
+      const dondeSeDice = beats.find((b) => b.mano === registro.mano && ['revelado', 'retirada', 'cierre'].includes(b.tipo) && b.lineas.some((x) => x.texto === texto));
+      assert.ok(dondeSeDice, `seed ${p.seed}: el comentario "${texto}" no se dice en el desenlace ni en el cierre de su mano`);
+      if (!['revelado', 'retirada', 'cierre'].includes(dondeEstaba?.tipo)) aplazadas++;
+    }
+    const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto)).sort();
+    assert.deepEqual(dichas, p.rondas.flatMap((r) => r.narracion).map((l) => nombres(p)(l.texto)).sort(), `seed ${p.seed}: se pierde o se repite una linea`);
+  }
+  assert.ok(aplazadas > 0, 'la prueba no vio ningun comentario aplazado');
 });
