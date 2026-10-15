@@ -13,6 +13,9 @@ export const FORMATOS_ESCENA = {
   '16x9': { ancho: 1920, alto: 1080, zona: { x: 96, y: 54, ancho: 1728, alto: 972 } },
 };
 
+// Donde va cada formato dentro de la hoja maestra de 3840x2160 que graba OBS (el 4x5 es un recorte del 9x16: no se dibuja aparte).
+export const POSICION_EN_HOJA = { '9x16': { x: 0, y: 0 }, '16x9': { x: 1080, y: 0 } };
+
 const r = (x, y, ancho, alto) => ({ x, y, ancho, alto });
 
 // Un asiento: la placa (nombre, fichas) arriba y debajo el area de las cartas. Las cartas miden 5:7.
