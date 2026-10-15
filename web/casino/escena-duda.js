@@ -23,8 +23,9 @@ const poner = (nodo, r) => Object.assign(nodo.style, { left: `${r.x}px`, top: `$
 const centro = (r, fx = 0.5) => ({ x: r.x + r.ancho * fx, y: r.y + r.alto / 2 });
 
 class Mesa {
-  constructor(formato, partida, { sfx, razon }) {
+  constructor(formato, partida, { sfx, razon, vel = 1 }) {
     this.formato = formato;
+    this.vel = vel;
     this.partida = partida;
     this.sfx = sfx;
     this.razon = razon;
@@ -65,9 +66,13 @@ class Mesa {
   }
 
   // ---- ayudas ----
-  anim(nodo, frames, opciones) { return nodo.animate(frames, this.rapido ? { ...opciones, duration: 1, delay: 0 } : opciones); }
-  esperar(ms) { return this.rapido || ms <= 0 ? Promise.resolve() : new Promise((ok) => setTimeout(ok, ms)); }
-  programar(ms, fn) { if (this.rapido) fn(); else setTimeout(fn, ms); }
+  // Todos los tiempos de esta clase estan en milisegundos a velocidad 1; vel los acorta por igual (animaciones, esperas y temporizadores).
+  anim(nodo, frames, opciones) {
+    const v = this.vel;
+    return nodo.animate(frames, this.rapido ? { ...opciones, duration: 1, delay: 0 } : { ...opciones, duration: (opciones.duration ?? 0) / v, delay: (opciones.delay ?? 0) / v });
+  }
+  esperar(ms) { return this.rapido || ms <= 0 ? Promise.resolve() : new Promise((ok) => setTimeout(ok, ms / this.vel)); }
+  programar(ms, fn) { if (this.rapido) fn(); else setTimeout(fn, ms / this.vel); }
   sonar(paso) { for (const e of eventosDePaso(paso)) this.sfx[e](); }
   nombre(s) { return this.partida.jugadores[s]?.nombre ?? `Jugador ${s + 1}`; }
   pintarPlaca(s) {
@@ -125,7 +130,13 @@ class Mesa {
     this.mostrarSubtitulos(beat);
     const metodo = { apertura: 'nuevaMano', reparto: 'repartir', anuncio: 'jugada', acepta: 'jugada', duda: 'jugada', defensa: 'jugada', revelado: 'desenlace', retirada: 'desenlace', cierre: 'cerrar', final: 'terminar' }[beat.tipo];
     if (metodo) await this[metodo](beat, ms);
-    await this.esperar(ms - (performance.now() - t0));
+    await this.esperar(ms - (performance.now() - t0) * this.vel); // lo que ya paso, a velocidad 1
+  }
+
+  // Lo que la escena informa de si misma (para la herramienta de capturas): que no quede nada de la mano anterior.
+  estadoVisible() {
+    const opacidad = (nodo) => Number(getComputedStyle(nodo).opacity);
+    return { sello: opacidad(this.sello), anuncio: opacidad(this.anuncio), pastillas: this.raiz.querySelectorAll('.pastilla-camara').length, medallas: this.raiz.querySelectorAll('.medalla').length };
   }
 
   async nuevaMano(beat) {
@@ -134,7 +145,10 @@ class Mesa {
     await this.esperar(320);
     this.asientos.forEach((a) => { a.mano.innerHTML = ''; a.cartas = []; });
     this.vaciarPozo();
-    this.anuncio.style.opacity = 0; this.sello.style.opacity = 0; this.anuncio.innerHTML = '';
+    // Las animaciones con fill:'forwards' le ganan a un estilo en linea: hay que cancelarlas o el sello y el anuncio de la mano anterior siguen visibles.
+    for (const nodo of [this.sello, this.anuncio]) { nodo.getAnimations().forEach((x) => x.cancel()); nodo.style.opacity = 0; }
+    this.anuncio.innerHTML = '';
+    this.asientos.forEach((a) => a.caja.querySelectorAll('.pastilla-camara, .medalla').forEach((x) => x.remove()));
     const r = this.partida.rondas[beat.registro];
     this.asientos.forEach((a, s) => { a.rol = `Jugador ${s + 1}`; a.reemplazo = false; });
     this.fijarEstado(r.fichas, r.fichasEspacio);
@@ -293,7 +307,7 @@ export async function iniciar() {
   const sfx = crearSonido({ activo: params.sonido, azar: crearAzar(seedDeTexto(`sonido:${partida.seed}`)) });
   const mudo = crearSonido({ activo: false });
   const formatos = params.formato === 'hoja' ? ['9x16', '16x9'] : [params.formato];
-  const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon }));
+  const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon, vel: params.vel }));
   const [ancho, alto] = params.formato === 'hoja' ? [3840, 2160] : [mesas[0].L.ancho, mesas[0].L.alto];
   const marco = document.getElementById('marco');
   marco.innerHTML = '';
@@ -319,16 +333,25 @@ export async function iniciar() {
     if (corriendo) return;
     corriendo = true;
     window.escenaTerminada = false;
+    const inicio = performance.now();
     try {
     for (const [i, beat] of beats.entries()) {
       const rapido = detenerEn !== null && i <= Number(detenerEn);
       mesas.forEach((m) => { m.rapido = rapido; });
       const audio = voz?.[beat.id]?.archivo;
-      if (audio && params.sonido) { try { new Audio(audio).play(); } catch { /* sin voz */ } }
-      await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, params.vel))));
-      if (detenerEn !== null && i === Number(detenerEn)) { window.escenaDetenida = true; document.body.dataset.detenida = '1'; corriendo = false; return; }
+      if (audio && params.sonido) {
+        try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
+      }
+      await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la clase Mesa aplica vel
+      if (detenerEn !== null && i === Number(detenerEn)) {
+        // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)
+        document.getAnimations().forEach((x) => { try { x.finish(); } catch { /* una animacion sin fin no cuenta */ } });
+        window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return;
+      }
     }
     window.escenaTerminada = true;
+    document.body.dataset.duracionMs = (performance.now() - inicio).toFixed(1); // medido contra lo que dice la linea de tiempo exportada
+    document.body.dataset.esperadaMs = String(marcas.at(-1).finMs);
     document.body.dataset.terminada = '1'; // la herramienta de capturas lo busca para saber que la partida llego al final
     } catch (e) {
       console.error('escena: la reproduccion se detuvo', e);

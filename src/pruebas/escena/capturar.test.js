@@ -53,7 +53,7 @@ test('los beats clave de una partida: el primer reparto, anuncio, duda, revelado
   const tipos = clave.map((i) => beats[i].tipo);
   for (const t of ['reparto', 'anuncio', 'duda', 'revelado', 'retirada', 'final']) assert.ok(tipos.includes(t), `falta ${t}: ${tipos}`);
   assert.equal(beats[clave.at(-1)].tipo, 'final');
-  assert.equal(tipos.filter((t) => t === 'reparto').length, 1, 'uno solo de cada tipo');
+  assert.equal(tipos.filter((t) => t === 'revelado').length, 1, 'un solo revelado');
   assert.deepEqual(beatsClave([]), []);
   assert.deepEqual(beatsClave(null), []);
 });
@@ -65,4 +65,53 @@ test('buscarChrome usa CHROME_PATH si existe, luego los sitios conocidos, y devu
   assert.equal(buscarChrome({ CHROME_PATH: '/no/existe' }, existe), 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
   assert.equal(buscarChrome({}, existe), 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
   assert.equal(buscarChrome({}, () => false), null);
+});
+
+import { beatsDeEstado, erroresDeEstado, leerEstado, leerDesfase, desfaseAceptable } from '../../../herramientas/capturar-escena.mjs';
+
+test('los beats clave miran tambien una mano posterior: el estado que arrastra una mano a la siguiente es donde se vieron los fallos', async () => {
+  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
+  const clave = beatsClave(beats);
+  const posteriores = clave.map((i) => beats[i]).filter((b) => b.mano >= 2);
+  assert.ok(posteriores.some((b) => b.tipo === 'reparto'), 'falta el reparto de una mano posterior');
+  assert.ok(posteriores.some((b) => b.tipo === 'anuncio'), 'falta el primer anuncio de una mano posterior');
+});
+
+test('beatsDeEstado: el reparto de cada mano desde la segunda, con un tope de manos', async () => {
+  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
+  const todos = beatsDeEstado(beats, 99);
+  assert.ok(todos.length >= 5);
+  assert.ok(todos.every((i) => beats[i].tipo === 'reparto' && beats[i].mano >= 2));
+  assert.deepEqual(new Set(todos.map((i) => beats[i].mano)).size, todos.length, 'una por mano');
+  assert.equal(beatsDeEstado(beats, 3).length, 3);
+  assert.deepEqual(beatsDeEstado(null, 3), []);
+});
+
+test('erroresDeEstado: al repartir una mano no queda sello ni anuncio de la anterior, y las pastillas son las de la camara de esa mano', () => {
+  const beat = { id: 'm3-1-reparto', camara: [1, 3] };
+  assert.deepEqual(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 2, medallas: 0 }, beat), []);
+  assert.match(erroresDeEstado({ sello: 1, anuncio: 0, pastillas: 2, medallas: 0 }, beat).join(), /sello/);
+  assert.match(erroresDeEstado({ sello: 0, anuncio: 1, pastillas: 2, medallas: 0 }, beat).join(), /anuncio/);
+  assert.match(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 4, medallas: 0 }, beat).join(), /pastillas/);
+  assert.match(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 2, medallas: 1 }, beat).join(), /medalla/);
+  assert.match(erroresDeEstado(null, beat).join(), /estado/);
+  assert.equal(erroresDeEstado({ sello: 0.004, anuncio: 0, pastillas: 2, medallas: 0 }, beat).length, 0, 'una opacidad casi cero no se ve');
+});
+
+test('leerEstado y leerDesfase leen lo que la escena deja en el DOM', () => {
+  const dom = '<body data-estado="{&quot;sello&quot;:0,&quot;anuncio&quot;:0,&quot;pastillas&quot;:2,&quot;medallas&quot;:0}" data-duracion-ms="61000.5" data-esperada-ms="60000">';
+  assert.deepEqual(leerEstado(dom), { sello: 0, anuncio: 0, pastillas: 2, medallas: 0 });
+  assert.equal(leerEstado('<body>'), null);
+  assert.equal(leerEstado('<body data-estado="no es json">'), null);
+  assert.deepEqual(leerDesfase(dom), { medidoMs: 61000.5, esperadoMs: 60000, desfaseMs: 1000.5 });
+  assert.equal(leerDesfase('<body>'), null);
+});
+
+test('un desfase de reproduccion es aceptable hasta 1.5 s o el 4 % de lo esperado', () => {
+  assert.equal(desfaseAceptable({ medidoMs: 61000, esperadoMs: 60000, desfaseMs: 1000 }), true);
+  assert.equal(desfaseAceptable({ medidoMs: 30000, esperadoMs: 20000, desfaseMs: 10000 }), false);
+  assert.equal(desfaseAceptable({ medidoMs: 200000, esperadoMs: 190000, desfaseMs: 10000 }), false, '5 % de 190 s son 9.5 s');
+  assert.equal(desfaseAceptable({ medidoMs: 197000, esperadoMs: 190000, desfaseMs: 7000 }), true, '4 % de 190 s son 7.6 s');
+  assert.equal(desfaseAceptable({ medidoMs: 59000, esperadoMs: 60000, desfaseMs: -1000 }), true);
+  assert.equal(desfaseAceptable(null), false);
 });

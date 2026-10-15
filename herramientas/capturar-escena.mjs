@@ -9,6 +9,7 @@
 //
 // --archivo   partida de Duda y apuesta dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
+// --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
 // --salida    carpeta de las capturas (por defecto grabaciones/capturas-escena; grabaciones/ no se versiona)
 // --base      direccion del servidor (por defecto http://localhost:4321)   --chrome    ruta de Chrome (o la variable CHROME_PATH)
 // Salida 0 si no hubo errores de consola; 1 si los hubo o algo no se pudo capturar.
@@ -50,10 +51,51 @@ export function beatsClave(beats) {
     const i = beats.findIndex((b) => b.tipo === tipo);
     if (i >= 0) indices.add(i);
   }
+  // y el reparto y el primer anuncio de una mano posterior: ahi se ve lo que una mano le deja a la siguiente (se vieron fallos justo ahi)
+  const manos = [...new Set(beats.map((b) => b.mano))];
+  const posterior = manos[2] ?? manos[1];
+  for (const tipo of ['reparto', 'anuncio']) {
+    const i = beats.findIndex((b) => b.mano === posterior && b.tipo === tipo);
+    if (posterior !== undefined && i >= 0) indices.add(i);
+  }
   const final = beats.findLastIndex((b) => b.tipo === 'final');
   if (final >= 0) indices.add(final);
   return [...indices].sort((a, b) => a - b);
 }
+
+// El reparto de cada mano desde la segunda (hasta `max` manos): en ese momento no debe quedar nada visible de la mano anterior.
+export function beatsDeEstado(beats, max = 6) {
+  if (!Array.isArray(beats)) return [];
+  const manos = [...new Set(beats.map((b) => b.mano))].slice(1, 1 + max);
+  return manos.map((m) => beats.findIndex((b) => b.mano === m && b.tipo === 'reparto')).filter((i) => i >= 0);
+}
+
+// Lo que la escena informa de si misma al detenerse (data-estado): opacidad del sello y del anuncio, pastillas de camara y medallas puestas.
+export function erroresDeEstado(estado, beat) {
+  if (!estado) return ['la escena no informo su estado (data-estado)'];
+  const errores = [];
+  if (estado.sello > 0.01) errores.push(`sello visible (${estado.sello}) al repartir ${beat.id}: es de la mano anterior`);
+  if (estado.anuncio > 0.01) errores.push(`anuncio visible (${estado.anuncio}) al repartir ${beat.id}: es de la mano anterior`);
+  const camara = beat.camara?.length ?? 0;
+  if (estado.pastillas !== camara) errores.push(`hay ${estado.pastillas} pastillas de camara en ${beat.id} y la camara de esa mano tiene ${camara}`);
+  if (estado.medallas !== 0) errores.push(`queda ${estado.medallas} medalla de una partida anterior en ${beat.id}`);
+  return errores;
+}
+
+export function leerEstado(dom) {
+  const m = /data-estado="([^"]*)"/.exec(String(dom ?? ''));
+  if (!m) return null;
+  try { return JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')); } catch { return null; }
+}
+
+// Cuanto duro la reproduccion (medida por la pagina) contra lo que dice la linea de tiempo exportada.
+export function leerDesfase(dom) {
+  const texto = String(dom ?? '');
+  const medido = /data-duracion-ms="([\d.]+)"/.exec(texto), esperado = /data-esperada-ms="([\d.]+)"/.exec(texto);
+  if (!medido || !esperado) return null;
+  return { medidoMs: Number(medido[1]), esperadoMs: Number(esperado[1]), desfaseMs: Number(medido[1]) - Number(esperado[1]) };
+}
+export const desfaseAceptable = (d) => !!d && Math.abs(d.desfaseMs) <= Math.max(1500, 0.04 * d.esperadoMs);
 
 const CANDIDATOS = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -98,12 +140,30 @@ async function principal() {
 
   if (a.completa) {
     for (const formato of formatos) {
+      const vel = Number(a.vel ?? 8);
       const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=600000', '--dump-dom',
-        urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: 8 })]);
+        urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel })]);
       const termino = /data-terminada="1"/.test(r.salida);
       console.log(`  ${formato}: ${termino ? 'la partida termino de reproducirse' : 'NO termino de reproducirse'}`);
       if (!termino) fallos++;
+      const d = leerDesfase(r.salida);
+      if (d) {
+        console.log(`  ${formato}: duro ${(d.medidoMs / 1000).toFixed(1)} s y la linea de tiempo decia ${(d.esperadoMs / 1000).toFixed(1)} s (a velocidad ${vel})`);
+        if (!desfaseAceptable(d)) { console.error(`  ERROR en ${formato}: la reproduccion se desfasa ${(d.desfaseMs / 1000).toFixed(1)} s de su linea de tiempo`); fallos++; }
+      }
       revisar(`${formato} (completa)`, r.consola);
+    }
+  } else if (a.estado) {
+    for (const formato of formatos) {
+      for (const beat of beatsDeEstado(beats, Number(a.manos ?? 6))) {
+        const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=10000', '--dump-dom',
+          urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })]);
+        const errores = erroresDeEstado(leerEstado(r.salida), beats[beat]);
+        console.log(`  ${errores.length ? 'FALLO' : 'ok   '} ${formato} ${beats[beat].id}`);
+        for (const e of errores) console.error(`  ERROR: ${e}`);
+        fallos += errores.length;
+        revisar(`${formato} estado ${beat}`, r.consola);
+      }
     }
   } else {
     const lista = !a.beats || a.beats === 'auto' ? beatsClave(beats) : a.beats.split(',').map(Number);
