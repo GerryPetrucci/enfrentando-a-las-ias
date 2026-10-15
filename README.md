@@ -205,6 +205,18 @@ node src/correr.js --juego=dudaapuesta --jugadores=calculador,farolero,retador,p
 node src/correr.js --juego=dudaapuesta --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago                  # con modelos (la serie rota los asientos)
 ```
 
+### La escena de casino de Duda y apuesta
+
+Una partida guardada de Duda y apuesta se reproduce como una mesa de casino (fieltro, cartas con el logo en el dorso, fichas, sello de "Farol descubierto"): es lo que graba OBS. **La cámara oculta** muestra las cartas reales de dos jugadores elegidos al azar en cada mano (con el seed de la partida: el mismo archivo da siempre el mismo video); de los otros dos no se ve nada hasta el recuento, y una retirada nunca revela cartas. Las IAs nunca ven esto.
+
+```bash
+node src/servidor.js   # y abre http://localhost:4321/escena.html?archivo=NOMBRE.json&partida=1&formato=9x16
+node herramientas/capturar-escena.mjs --archivo=NOMBRE.json            # capturas de los momentos clave en 9:16 y 16:9 y revisión de errores de consola
+node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --completa  # reproduce la partida entera a velocidad 8 y comprueba que termina
+```
+
+Parámetros (todos opcionales): `archivo` (en `data/`), `partida`, `mano` y `hasta` (un clip por manos), `formato` (`9x16`, `16x9` o `hoja`: los dos juntos sobre la hoja maestra de 3840×2160), `camara` (0 a 4: a cuántos se les ven las cartas), `vel`, `razon=1` (muestra lo que pensó cada IA), `sonido=0`, `voz`, `auto=1`, `limpio=1`. El botón "Exportar tiempos" guarda `linea-de-tiempo.json` (cuándo empieza cada momento) para re-doblar el video. `mejoresManos(partida, n)` (en `web/casino/linea-de-tiempo-duda.js`) elige por código las manos más interesantes para un clip. Los sonidos son muestras CC0 opcionales con respaldo sintetizado: ver `web/audio/LEEME.md`. Las fuentes de la marca (Barlow Condensed e Inter) se usan si están instaladas en el equipo que graba.
+
 ## Como se compara justo
 
 Prompt identico y publicado, posiciones alternadas, seed en pantalla, fallos de

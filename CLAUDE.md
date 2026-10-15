@@ -190,6 +190,10 @@ control: `azar`, `calculador`, `farolero`, `retador`, `prudente`. Evaluacion al 
 el 24 % contra 16-19 % de los demas (la serie rota los asientos); 12-24 % de las partidas quedan sin pieza por empate en fichas; una partida entre calculadores dura ~6 manos (21 llamadas). **Estado:**
 motor, bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/duda-y-apuesta-diseno.md`, plan en `privado/planes/plan-dudaapuesta-motor.md`).
 
+### Escena de casino de Duda y apuesta (decidido el 15 de octubre de 2026)
+
+Primera escena "de casino" del reproductor y estreno del **kit común** (`web/casino/`: mesa de fieltro verde muy oscuro, cartas con forma y letra por color, dorso Noche con el logo, fichas, placas, sonido). Se abre con `web/escena.html?archivo=...` (formatos 9:16, 16:9 y `hoja` de 3840×2160) y es independiente de `replay.html`. **Cámara oculta:** el público ve las cartas reales de dos jugadores al azar por mano (seed de la partida); de los otros dos nada hasta el recuento. Dados vistos desde arriba (solo la cara que cuenta) para la escena de Triple dado, que tendrá su propio spec. Sonido: muestras CC0 opcionales (Kenney, licencia por revisar antes de publicar) con respaldo sintetizado. Lo puro (cámara, diseño, línea de tiempo, parámetros, sonido) se prueba en Node; el DOM se verifica con `node herramientas/capturar-escena.mjs`. La web no puede importar de `src/` ni de `herramientas/` (el sitio publica solo `web/` y `data/`): lo repetido (azar, medidas de formatos, tope de manos) lo vigila una prueba. **Pendiente:** la voz (`voz.json` aún sin generador), instalar Barlow Condensed donde se grabe (o decidir si se incluye en el repo), muestras de audio y revisar su licencia, escenas de Triple dado y Subasta de tiempo. Spec: `privado/spec/escena-duda-y-apuesta-diseno.md`; plan: `privado/planes/plan-escena-duda-apuesta.md`.
+
 ### Voz narradora con IA (decidido el 11 de octubre de 2026)
 
 El usuario no narra los videos: la voz es **sintetizada por IA** en todas las grabaciones. Lo que se graba con OBS es el reproductor
@@ -369,8 +373,8 @@ Hecho:
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/mayor-o-menor-diseno.md`)
 - Juego 7: **Triple dado** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion y pruebas listos; faltan la
   prueba con modelos y la escena del reproductor (diseno en `privado/spec/triple-dado-diseno.md`)
-- Juego 8: **Duda y apuesta** (categoria "Engaño y deducción"): motor por turnos, bots de control, narracion guardada en los datos, evaluacion y pruebas listos; faltan la
-  prueba con modelos y la escena del reproductor (diseno en `privado/spec/duda-y-apuesta-diseno.md`)
+- Juego 8: **Duda y apuesta** (categoria "Engaño y deducción"): motor por turnos, bots de control, narracion guardada en los datos, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
+  prueba con modelos (diseno en `privado/spec/duda-y-apuesta-diseno.md`)
 - CLI de duelos, agregador de marcador, servidor estatico
 - Sitio con marcador por categoria + reproductor vertical para OBS
 - Reproductor: clips por URL (`partida`, `ronda`, `hasta`, `vel`), razon de cada IA
