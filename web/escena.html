@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duda y apuesta · escena de casino</title>
+<link rel="stylesheet" href="casino/mesa.css">
+<style>
+  html, body { margin:0; height:100%; background:#08080b; color:#f2f0ed; font-family:'Inter','Segoe UI',system-ui,sans-serif; overflow:hidden; }
+  #barra { height:64px; display:flex; align-items:center; gap:10px; padding:0 14px; background:#0d0d11; border-bottom:1px solid #2a2a33; }
+  #barra button { font:600 14px inherit; font-family:inherit; color:#f2f0ed; background:#17171c; border:1px solid #2a2a33; border-radius:8px; padding:8px 14px; cursor:pointer; }
+  #barra button:hover { border-color:#e0b25c; }
+  #estado { font-size:13px; color:#9a9aa6; }
+  body.limpio #barra { display:none; }
+  body.limpio { background:#000; }
+  #hueco { margin:0 auto; position:relative; }
+  #marco { position:absolute; left:0; top:0; transform-origin:0 0; background:#101014; }
+</style>
+</head>
+<body>
+<div id="barra">
+  <button id="btnPlay">▶ Reproducir</button>
+  <button id="btnReiniciar">⟲ Reiniciar</button>
+  <button id="btnTiempos">Exportar tiempos</button>
+  <span id="estado">Cargando…</span>
+</div>
+<div id="hueco"><div id="marco"></div></div>
+<script type="module">
+  import { iniciar } from './casino/escena-duda.js';
+  iniciar();
+</script>
+</body>
+</html>

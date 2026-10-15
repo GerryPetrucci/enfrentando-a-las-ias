@@ -31,7 +31,8 @@ export const htmlDefs = () => `<svg width="0" height="0" style="position:absolut
 <pattern id="rombos" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" fill="${LOGO.noche}"/><rect width="16" height="1.2" fill="${LOGO.oro}" opacity=".16"/><rect width="1.2" height="16" fill="${LOGO.oro}" opacity=".16"/></pattern>
 </defs></svg>`;
 
-export const htmlLogo = (clase = 'logo') => `<svg class="${esc(clase)}" viewBox="80 140 352 232"><use href="#logo"/></svg>`;
+// El simbolo del logo se dibuja desde (0, 0) del svg que lo usa, por eso este svg parte de 0 0 (no de 80 140, que es el viewBox interno del simbolo).
+export const htmlLogo = (clase = 'logo') => `<svg class="${esc(clase)}" viewBox="0 0 352 232"><use href="#logo"/></svg>`;
 
 // Dorso: Noche con reticula dorada y el logo en sus colores dentro de un medallon.
 export const htmlDorso = () => `<div class="dorso"><svg class="fondo" viewBox="0 0 124 174"><rect width="124" height="174" fill="url(#rombos)"/><rect x="8" y="8" width="108" height="158" rx="7" fill="none" stroke="${LOGO.oro}" stroke-width="2" opacity=".85"/><rect x="13" y="13" width="98" height="148" rx="5" fill="none" stroke="${LOGO.oro}" stroke-width=".8" opacity=".5"/><circle cx="62" cy="87" r="42" fill="${LOGO.noche}" stroke="${LOGO.oro}" stroke-width="1.4" opacity=".95"/><use href="#logo" x="26" y="63" width="72" height="48"/></svg><div class="brillo"></div></div>`;

@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolverNombres } from '../../juegos/dudaapuesta/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
-import { construirLineaDeTiempo, puntuarManos, mejoresManos, nombrar, MIN_MS } from '../../../web/casino/linea-de-tiempo-duda.js';
+import { MANOS } from '../../juegos/dudaapuesta/constantes.js';
+import { construirLineaDeTiempo, puntuarManos, mejoresManos, nombrar, MIN_MS, MANOS_TOPE, conRazones } from '../../../web/casino/linea-de-tiempo-duda.js';
 import { correrPartida } from '../../arena.js';
 import dudaapuesta from '../../juegos/dudaapuesta.js';
 import { jugar, muchas, agentes, CASOS } from './ayudas.js';
@@ -267,4 +268,33 @@ test('los beats con texto duran al menos lo que tarda en leerse y revelado deja 
   }
   assert.ok(MIN_MS.revelado >= 3500);
   assert.deepEqual(Object.keys(MIN_MS).sort(), ['acepta', 'anuncio', 'apertura', 'cierre', 'defensa', 'duda', 'final', 'reparto', 'retirada', 'revelado']);
+});
+
+test('el tope de manos que muestra la escena es el del motor (la web no puede importarlo)', () => {
+  assert.equal(MANOS_TOPE, MANOS);
+});
+
+test('con razones (razon=1): cada jugada trae lo que penso su IA y dura lo que tarda en leerse; lo demas queda igual', async () => {
+  const p = structuredClone(await jugar(...CASOS.retirada));
+  const largo = 'Creo que el anuncio es falso: hay muchas cartas moradas en la mesa y pocas rojas. '.repeat(3);
+  p.rondas[1].razones[p.rondas[1].asiento] = `  ${largo} `;
+  const base = construirLineaDeTiempo(p);
+  const con = conRazones(base, p);
+  assert.equal(con.length, base.length);
+  let conTexto = 0;
+  con.forEach((b, k) => {
+    const r = p.rondas[b.registro];
+    const accion = ['anuncio', 'acepta', 'duda', 'defensa'].includes(b.tipo);
+    const texto = accion && !b.reemplazo ? r.razones?.[b.asiento] : null;
+    if (typeof texto === 'string' && texto.trim()) {
+      conTexto++;
+      assert.equal(b.razon, texto.trim());
+      assert.equal(b.minMs, base[k].minMs + Math.min(6000, 500 + 45 * texto.trim().length), b.id);
+    } else assert.deepEqual(b, base[k], `${b.id} no debia cambiar`);
+  });
+  assert.ok(conTexto > 5);
+  assert.ok(con.some((b) => b.registro === 1 && b.razon === largo.trim()), 'la razon puesta a mano llega al beat de esa jugada');
+  assert.ok(base.every((b) => !('razon' in b)), 'la linea de tiempo original no se modifica');
+  for (const basura of [null, undefined, 'x', 7]) assert.deepEqual(conRazones(basura, p), []);
+  assert.deepEqual(conRazones(base, null).map((b) => b.id), base.map((b) => b.id), 'sin partida no hay razones pero no lanza');
 });

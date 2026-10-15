@@ -21,6 +21,7 @@
 
 import { elegirCamara, CAMARA_POR_DEFECTO } from './camara.js';
 
+export const MANOS_TOPE = 16; // el tope de manos del motor (MANOS en src/juegos/dudaapuesta/constantes.js): una prueba los compara
 const ASIENTOS = [0, 1, 2, 3];
 const ARCOIRIS = 'arcoiris'; // cuenta como cualquier color
 
@@ -124,6 +125,19 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     beats.push({ id: `final-${beats.length}`, mano: ultimo.mano, tipo: 'final', registro: rondas.length - 1, asiento: ultimo.final?.pieza ?? null, camara: [], texto, lineas, minMs: duracion('final', texto), reemplazo: false, pasos: [{ tipo: 'final', final: ultimo.final ?? null }] });
   }
   return beats;
+}
+
+// Con razon=1 cada jugada de una IA muestra lo que dijo que penso (campo `razon`) y el beat dura lo que tarda en leerse (45 ms por letra, como mucho 6 s mas).
+// No toca la linea original ni las jugadas que puso el juego por una respuesta ilegal (ahi no penso nadie).
+const TIPOS_DE_JUGADA = ['anuncio', 'acepta', 'duda', 'defensa'];
+export function conRazones(beats, partida) {
+  if (!Array.isArray(beats)) return [];
+  const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+  return beats.map((b) => {
+    const texto = TIPOS_DE_JUGADA.includes(b.tipo) && !b.reemplazo ? rondas[b.registro]?.razones?.[b.asiento] : null;
+    const razon = typeof texto === 'string' ? texto.trim() : '';
+    return razon ? { ...b, razon, minMs: b.minMs + Math.min(6000, 500 + 45 * razon.length) } : b;
+  });
 }
 
 // ---- Que manos valen la pena para un clip de redes -------------------------------------------------------------------------------------

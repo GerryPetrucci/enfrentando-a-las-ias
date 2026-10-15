@@ -22,6 +22,8 @@ test('el logo conserva sus tres colores de marca y el dorso lo usa sobre fondo N
   assert.ok(dorso.includes('url(#rombos)') && defs.includes('id="rombos"') && defs.includes(`fill="${LOGO.noche}"`), 'la trama del dorso es Noche');
   assert.doesNotMatch(dorso, /filter|hue-rotate/, 'el logo no se recolorea');
   assert.match(htmlLogo('logo'), /<use href="#logo"/);
+  // El simbolo se dibuja desde (0, 0) de su contenedor: si el contenedor arrancara en (80, 140) el logo saldria recortado (se vio en la captura).
+  assert.match(htmlLogo('logo'), /viewBox="0 0 352 232"/);
 });
 
 test('hay una carta para cada color del juego, cada una con forma y letra propias (se leen sin depender del color)', () => {
