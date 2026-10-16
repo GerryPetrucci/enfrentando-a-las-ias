@@ -9,6 +9,7 @@
 //
 // --archivo   partida de Duda y apuesta dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
+// --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
 // --salida    carpeta de las capturas (por defecto grabaciones/capturas-escena; grabaciones/ no se versiona)
 // --base      direccion del servidor (por defecto http://localhost:4321)   --chrome    ruta de Chrome (o la variable CHROME_PATH)
@@ -27,10 +28,11 @@ export function tamanoDeFormato(formato) {
 }
 
 // La direccion de la escena lista para capturar: sin sonido ni barra, arranca sola y (con `beat`) avanza al instante hasta ese momento y se queda ahi.
-export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null }) {
+export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null }) {
   const q = new URLSearchParams({ archivo, partida: String(partida), formato, limpio: '1', auto: '1', sonido: '0', escala: '1' });
   if (beat !== null && beat !== undefined) q.set('detener', String(beat));
   if (vel) q.set('vel', String(vel));
+  if (voz) q.set('voz', voz);
   return `${base}/escena.html?${q}`;
 }
 
@@ -142,7 +144,7 @@ async function principal() {
     for (const formato of formatos) {
       const vel = Number(a.vel ?? 8);
       const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=600000', '--dump-dom',
-        urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel })]);
+        urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel, voz: a.voz })]);
       const termino = /data-terminada="1"/.test(r.salida);
       console.log(`  ${formato}: ${termino ? 'la partida termino de reproducirse' : 'NO termino de reproducirse'}`);
       if (!termino) fallos++;

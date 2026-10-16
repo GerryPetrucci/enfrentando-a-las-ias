@@ -26,6 +26,9 @@ Thumbs.db
 # Para subir una a proposito: git add -f data/pruebas/ARCHIVO.json
 data/pruebas/
 
+# voz narradora generada (herramientas/narrar.mjs): son binarios y se regeneran desde la partida
+data/voz/
+
 # conocimiento privado del proyecto (spec, planes, plan de contenido, terminos, prototipos): NUNCA se sube.
 # src/pruebas/privado.test.js falla si esta regla desaparece o si git rastrea algo aqui.
 privado/

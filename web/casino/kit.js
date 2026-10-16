@@ -24,6 +24,9 @@ export const CARTAS = {
   arcoiris: { nombre: 'Arcoíris', letra: '★', tinta: '#7d3fb8', forma: 'estrella',  gema: '<polygon points="40,4 49,29 76,30 55,47 62,74 40,58 18,74 25,47 4,30 31,29" fill="url(#arcoiris)" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>' },
 };
 
+// La forma de un color (para el recuadro del anuncio); un color desconocido no lanza: sale vacia.
+export const gemaDe = (color) => (Object.hasOwn(CARTAS, color) ? CARTAS[color].gema : '');
+
 // Definiciones SVG que usan las cartas: el logo, el degradado del arcoiris y la trama del dorso. Se inserta una sola vez por pagina.
 export const htmlDefs = () => `<svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="logo" viewBox="80 140 352 232"><clipPath id="clipV"><circle cx="196" cy="256" r="116"/></clipPath><circle cx="196" cy="256" r="116" fill="${LOGO.verde}"/><circle cx="316" cy="256" r="116" fill="${LOGO.rojo}"/><circle cx="316" cy="256" r="116" fill="${LOGO.oro}" clip-path="url(#clipV)"/></symbol>

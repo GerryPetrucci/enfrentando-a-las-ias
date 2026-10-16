@@ -1,0 +1,46 @@
+Muestras de sonido de web/audio: tomadas de tres paquetes de Kenney (kenney.nl), todos con licencia Creative Commons Zero (CC0, dominio publico).
+Se pueden usar en proyectos personales y comerciales y redistribuir; el credito (Kenney o www.kenney.nl) es agradable pero no obligatorio.
+Abajo, el texto de licencia que trae cada paquete, sin cambios. Las muestras se recortaron de nivel con herramientas/preparar-sonidos.mjs (solo volumen y recodificacion a OGG).
+
+=== Casino Audio ===
+Casino Audio (1.1)
+	by  Kenney Vleugels (Kenney.nl)
+			------------------------------
+	License (Creative Commons Zero, CC0)
+	http://creativecommons.org/publicdomain/zero/1.0/
+	You may use these assets in personal and commercial projects.
+	Credit (Kenney or www.kenney.nl) would be nice but is not mandatory.
+			------------------------------
+	Donate:   http://support.kenney.nl
+	Request:  http://request.kenney.nl
+	Follow on Twitter for updates:
+	@KenneyNL
+
+=== Interface Sounds ===
+Interface Sounds (1.0)
+	Created/distributed by Kenney (www.kenney.nl)
+	Creation date: 11-02-2020
+			------------------------------
+	License: (Creative Commons Zero, CC0)
+	http://creativecommons.org/publicdomain/zero/1.0/
+	This content is free to use in personal, educational and commercial projects.
+	Support us by crediting Kenney or www.kenney.nl (this is not mandatory)
+			------------------------------
+	Donate:   http://support.kenney.nl
+	Patreon:  http://patreon.com/kenney/
+	Follow on Twitter for updates:
+	http://twitter.com/KenneyNL
+
+=== Music Jingles ===
+Music Jingles
+	by  Kenney Vleugels (Kenney.nl)
+			------------------------------
+	License (Creative Commons Zero, CC0)
+	http://creativecommons.org/publicdomain/zero/1.0/
+	You may use these assets in personal and commercial projects.
+	Credit (Kenney or www.kenney.nl) would be nice but is not mandatory.
+			------------------------------
+	Donate:   http://support.kenney.nl
+	Request:  http://request.kenney.nl
+	Follow on Twitter for updates:
+	@KenneyNL

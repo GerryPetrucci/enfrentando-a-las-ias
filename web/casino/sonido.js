@@ -7,9 +7,9 @@ export const VOLUMEN = 0.25; // ganancia maestra: 20 * log10(0.25) = -12 dB
 // muestras: archivos opcionales de web/audio/ (si hay varios se elige uno con el azar con seed de la escena).
 // sintetico: el respaldo. vol va de 0 a 1 (el maestro lo baja); ruidos y tonos son los de la maqueta aprobada, con `retraso` en segundos.
 export const EVENTOS = {
-  carta:   { muestras: ['audio/carta-1.ogg', 'audio/carta-2.ogg', 'audio/carta-3.ogg'], sintetico: { ruidos: [{ dur: 0.09, f0: 5000, f1: 1800, vol: 0.9 }] } },
-  voltear: { muestras: ['audio/voltear-1.ogg', 'audio/voltear-2.ogg'], sintetico: { ruidos: [{ dur: 0.14, f0: 3500, f1: 900, vol: 1 }] } },
-  ficha:   { muestras: ['audio/ficha-1.ogg', 'audio/ficha-2.ogg', 'audio/ficha-3.ogg'], sintetico: { tonos: [
+  carta:   { muestras: ['audio/carta-2.ogg'], sintetico: { ruidos: [{ dur: 0.09, f0: 5000, f1: 1800, vol: 0.9 }] } },
+  voltear: { muestras: ['audio/voltear-1.ogg'], sintetico: { ruidos: [{ dur: 0.14, f0: 3500, f1: 900, vol: 1 }] } },
+  ficha:   { muestras: ['audio/ficha-3.ogg'], sintetico: { tonos: [
     { freq: 1800, dur: 0.06, tipo: 'triangle', vol: 0.6, f1: 1200 }, { freq: 2300, dur: 0.07, tipo: 'triangle', vol: 0.5, f1: 1500, retraso: 0.055 }] } },
   tic:     { muestras: ['audio/tic-1.ogg'], sintetico: { ruidos: [{ dur: 0.02, f0: 4000, f1: 3000, vol: 0.5, q: 6 }] } },
   anuncio: { muestras: ['audio/anuncio-1.ogg'], sintetico: { tonos: [
@@ -27,7 +27,7 @@ export function eventosDePaso(paso) {
     case 'revelar': return ['voltear'];
     case 'anuncio': return ['anuncio'];
     case 'duda': return ['duda'];
-    case 'apuesta': case 'fichas': case 'pago': case 'compra': return ['ficha'];
+    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': return ['ficha'];
     case 'contar': return ['tic'];
     case 'sello': return [paso.sello === 'justo' || paso.sello === 'cumplido' ? 'gana' : 'pierde'];
     default: return [];
@@ -93,22 +93,28 @@ export function crearSonido({ activo = true, azar = () => 0, base = '' } = {}) {
     }));
   };
 
+  const tocar = (buffer) => { const fuente = ctx.createBufferSource(); fuente.buffer = buffer; fuente.connect(maestro); fuente.start(); };
+  const sintetizar = (ev) => { for (const r of ev.sintetico.ruidos ?? []) ruido(r); for (const t of ev.sintetico.tonos ?? []) tono(t); };
+
   for (const [nombre, ev] of Object.entries(EVENTOS)) {
     sfx[nombre] = () => {
       if (!activo || !sfx.disponible) return;
       try {
         const grabadas = muestras[nombre] ?? [];
-        if (grabadas.length) {
-          const fuente = ctx.createBufferSource();
-          fuente.buffer = grabadas[Math.min(grabadas.length - 1, Math.floor(azar() * grabadas.length))];
-          fuente.connect(maestro);
-          fuente.start();
-        } else {
-          for (const r of ev.sintetico.ruidos ?? []) ruido(r);
-          for (const t of ev.sintetico.tonos ?? []) tono(t);
-        }
+        if (grabadas.length) tocar(grabadas[Math.min(grabadas.length - 1, Math.floor(azar() * grabadas.length))]);
+        else sintetizar(ev);
       } catch { /* un fallo de audio nunca tumba la escena */ }
     };
   }
+
+  // Para web/sonidos.html (escuchar cada muestra): cuantas muestras grabadas cargaron de cada efecto, y tocar una en concreto (indice -1 = el respaldo sintetizado).
+  sfx.cuantas = () => Object.fromEntries(Object.keys(EVENTOS).map((n) => [n, (muestras[n] ?? []).length]));
+  sfx.probar = (nombre, indice = 0) => {
+    if (!activo || !sfx.disponible || !EVENTOS[nombre]) return;
+    try {
+      if (indice < 0) sintetizar(EVENTOS[nombre]);
+      else if (muestras[nombre]?.[indice]) tocar(muestras[nombre][indice]);
+    } catch { /* un fallo de audio nunca tumba la escena */ }
+  };
   return sfx;
 }

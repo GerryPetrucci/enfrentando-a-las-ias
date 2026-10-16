@@ -6,9 +6,9 @@
 // Uso: escena.html?archivo=NOMBRE.json&partida=1&mano=1&hasta=16&formato=9x16|16x9|hoja&camara=2&vel=1&razon=1&sonido=0&voz=voz.json&auto=1&limpio=1
 
 import { colocar, abanico, POSICION_EN_HOJA } from './layout.js';
-import { htmlDefs, htmlLogo, htmlCarta, htmlFrente, htmlPlaca, htmlFicha, CARTAS, esc } from './kit.js';
+import { htmlDefs, htmlLogo, htmlCarta, htmlFrente, htmlPlaca, htmlFicha, CARTAS, gemaDe, esc } from './kit.js';
 import { construirLineaDeTiempo, conRazones, MANOS_TOPE } from './linea-de-tiempo-duda.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, rolDeJugada, etiquetaDeJugada, esRutaRelativa } from './escena-config.js';
 import { crearSonido, eventosDePaso } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -17,7 +17,6 @@ const SELLOS = {
   farol: { texto: 'Farol descubierto', clase: 'perder' }, incumplido: { texto: 'No se cumplió', clase: 'perder' }, cumplido: { texto: 'Se cumplió', clase: 'ganar' },
   justo: { texto: '¡Justo!', clase: 'ganar' }, retirada: { texto: 'Se retiró', clase: 'perder' },
 };
-const ROL = { anuncio: 'Anuncia', acepta: 'Acepta', duda: 'Duda', iguala: 'Iguala', pliega: 'Se retira' };
 const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
 const poner = (nodo, r) => Object.assign(nodo.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.ancho}px`, height: `${r.alto}px` });
 const centro = (r, fx = 0.5) => ({ x: r.x + r.ancho * fx, y: r.y + r.alto / 2 });
@@ -55,7 +54,7 @@ class Mesa {
     this.mazo = el('fijo mazo', `<div class="pila-mazo">${[0, 1, 2].map(() => htmlCarta(null)).join('')}</div><span>Mazo · 60</span>`);
     poner(this.mazo, L.mazo);
     this.mazo.querySelectorAll('.carta').forEach((c, i) => Object.assign(c.style, { left: `${i * 2}px`, top: `${-i * 2}px` }));
-    this.pozo = el('fijo pozo', '<span>Banca</span><div class="pila-p"></div>');
+    this.pozo = el('fijo pozo', '<span>Apuestas</span><div class="pila-p"></div>');
     poner(this.pozo, L.pozo);
     this.anuncio = el('fijo anuncio'); poner(this.anuncio, L.anuncio);
     this.sello = el('sello');
@@ -190,22 +189,29 @@ class Mesa {
     const s = beat.asiento;
     const a = this.asientos[s];
     a.reemplazo = beat.reemplazo;
-    a.rol = beat.reemplazo ? 'Jugada del juego' : ROL[beat.pasos.find((p) => ROL[p.tipo])?.tipo] ?? ROL[beat.tipo];
+    a.rol = rolDeJugada(beat);
     this.pintarPlaca(s);
     this.anim(a.placa, [{ transform: 'scale(1)' }, { transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 500 });
+    const etiqueta = etiquetaDeJugada(beat, this.nombre(s)); // si la jugada la puso el juego, no se le atribuye a la IA
     for (const p of beat.pasos) {
       this.sonar(p);
+      if (p.tipo === 'recupera') this.devolverApuesta(p);
       if (p.tipo === 'apuesta') this.volarFichas(this.centroPlaca(s), this.centroPozo(), p.fichas + p.espacios, 'juego', () => this.fichasAlPozo(1));
-      if (p.tipo === 'anuncio') this.mostrarAnuncio(p, beat.tipo === 'acepta' ? 'acepta y sube' : 'anuncia');
-      if (p.tipo === 'duda') this.textoAnuncio(`${this.nombre(s)} duda`, true);
-      if (p.tipo === 'iguala') this.textoAnuncio(`${this.nombre(s)} iguala la subida`);
-      if (p.tipo === 'pliega') this.textoAnuncio(`${this.nombre(s)} se retira`, true);
+      if (p.tipo === 'anuncio') this.mostrarAnuncio(p, etiqueta);
+      if (p.tipo === 'duda' || p.tipo === 'iguala' || p.tipo === 'pliega') this.textoAnuncio(etiqueta.texto, etiqueta.alerta);
     }
   }
 
-  mostrarAnuncio(paso, verbo) {
-    const c = CARTAS[paso.color];
-    this.anuncio.innerHTML = `<svg class="gema" viewBox="0 0 80 80">${c.gema}</svg><div class="txt"><span class="quien">${esc(this.nombre(paso.asiento))} ${verbo}</span><span class="frase">Al menos ${esc(paso.cantidad)} ${PLURAL[paso.color] ?? esc(paso.color)}</span></div><div class="hay"></div>`;
+  // Al aceptar un anuncio, su dueno recupera su apuesta: esas fichas salen del pozo y vuelven a su placa.
+  devolverApuesta({ asiento, fichas, espacios }) {
+    const n = Math.max(1, fichas + espacios);
+    this.volarFichas(this.centroPozo(), this.centroPlaca(asiento), n);
+    const pila = this.pozo.querySelector('.pila-p');
+    for (let i = 0; i < n && pila.lastChild; i++) { pila.lastChild.remove(); this.pozoFichas = Math.max(0, this.pozoFichas - 1); }
+  }
+
+  mostrarAnuncio(paso, etiqueta) {
+    this.anuncio.innerHTML = `<svg class="gema" viewBox="0 0 80 80">${gemaDe(paso.color)}</svg><div class="txt"><span class="quien${etiqueta.alerta ? ' alerta' : ''}">${esc(etiqueta.texto)}</span><span class="frase">Al menos ${esc(paso.cantidad)} ${PLURAL[paso.color] ?? esc(paso.color)}</span></div><div class="hay"></div>`;
     this.anim(this.anuncio, [{ opacity: 0, transform: 'scale(.7)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 380, fill: 'forwards', easing: 'cubic-bezier(.2,1.3,.4,1)' });
   }
 
@@ -296,12 +302,15 @@ export async function iniciar() {
   habilitar(false);
 
   document.body.insertAdjacentHTML('afterbegin', htmlDefs());
+  // las fuentes se cargan al usarse: se piden antes de montar nada, porque los subtitulos se miden (y se achican si no caben) con la fuente ya puesta
+  await Promise.all(['600 20px "Barlow Condensed"', '700 20px "Barlow Condensed"', '800 20px "Barlow Condensed"', '500 20px Inter', '600 20px Inter', '700 20px Inter'].map((f) => document.fonts.load(f).catch(() => [])));
   let azarSonido = crearAzar(1); // se cambia al montar cada partida: asi el mismo archivo suena siempre igual
   const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
   const mudo = crearSonido({ activo: false });
   const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
   let voz = null;
-  if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { aviso('No pude leer la voz: se usan los tiempos minimos.'); } }
+  let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
+  if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { avisoVoz = ' · No pude leer la voz: se usan los tiempos mínimos.'; } }
 
   let catalogo = [];
   let actual = null; // la partida montada: { entrada, partida, beats, marcas, mesas, ancho, alto }
@@ -345,7 +354,7 @@ export async function iniciar() {
     ajustar();
     habilitar(true);
     selector.value = entrada.clave;
-    aviso(`${entrada.titulo} — ${beats.length} momentos, ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}`);
+    aviso(`${entrada.titulo} — ${beats.length} momentos, ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}${avisoVoz}`);
   }
 
   async function reproducir() {
@@ -360,7 +369,7 @@ export async function iniciar() {
         const rapido = detenerEn !== null && i <= Number(detenerEn);
         mesas.forEach((m) => { m.rapido = rapido; });
         const audio = voz?.[beat.id]?.archivo;
-        if (audio && params.sonido) {
+        if (audio && params.sonido && esRutaRelativa(audio)) {
           try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
         }
         await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la clase Mesa aplica vel
@@ -402,7 +411,7 @@ export async function iniciar() {
       return aviso(`Ninguna partida sirve: ${catalogo.slice(0, 3).map((e) => `${e.archivo} (${e.motivo})`).join('; ')}`);
     }
     montar(elegida);
-    if (preferida && (elegida.archivo !== preferida.archivo || elegida.numero !== preferida.numero)) aviso(`La partida ${preferida.numero} de ${preferida.archivo} no sirve: se abrio ${elegida.titulo}`);
+    if (preferida && (elegida.archivo !== preferida.archivo || elegida.numero !== preferida.numero)) aviso(`La partida ${preferida.numero} de ${preferida.archivo} no sirve: se abrió ${elegida.titulo}`);
   }
 
   selector.onchange = () => { const e = catalogo.find((x) => x.clave === selector.value); if (e?.valida) montar(e); };
@@ -410,7 +419,7 @@ export async function iniciar() {
     const archivos = [...ev.target.files];
     if (!archivos.length) return;
     const cargados = await Promise.all(archivos.map(async (f) => {
-      try { return { nombre: f.name, datos: JSON.parse(await f.text()) }; } catch { return { nombre: f.name, datos: null, error: 'no es un JSON valido' }; }
+      try { return { nombre: f.name, datos: JSON.parse(await f.text()) }; } catch { return { nombre: f.name, datos: null, error: 'no es un JSON válido' }; }
     }));
     abrir(cargados);
     ev.target.value = ''; // asi se pueden volver a elegir los mismos archivos
@@ -424,7 +433,7 @@ export async function iniciar() {
   };
 
   const nombres = listaDeArchivos(params.archivo);
-  if (!nombres.length) return aviso('Elige uno o varios JSON con «Abrir JSON» (partidas de Duda y apuesta de data/ o data/pruebas/), o abre la pagina con ?archivo=a.json,b.json. Parametros: partida, mano, hasta, formato (9x16, 16x9 o hoja), camara (0 a 4), vel, razon, sonido, voz, auto, limpio.');
+  if (!nombres.length) return aviso('Elige uno o varios JSON con «Abrir JSON» (partidas de Duda y apuesta de data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, hasta, formato (9x16, 16x9 o hoja), camara (0 a 4), vel, razon, sonido, voz, auto, limpio.');
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {
       const r = await fetch(`data/${nombre}`);

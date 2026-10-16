@@ -12,6 +12,10 @@ const bandera = (v) => v !== null && v !== '' && v !== '0' && v !== 'false';
 
 export const FORMATOS_PAGINA = ['9x16', '16x9', 'hoja']; // 'hoja' dibuja los dos formatos juntos en la hoja maestra de OBS
 
+// Una ruta de este mismo sitio (voz/ep1.json): letras, numeros, punto, guion y barras, sin subir de carpeta. Nunca una URL de otro dominio: la pagina esta publicada
+// y ?voz= o un voz.json ajeno podrian hacer sonar cualquier audio de internet.
+export const esRutaRelativa = (texto) => typeof texto === 'string' && /^[\w.-]+(\/[\w.-]+)*$/.test(texto) && !texto.split('/').includes('..');
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..4 (a cuantos se les ven las cartas)
 // &sonido=0 &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
@@ -33,7 +37,7 @@ export function leerParametros(search) {
     razon: bandera(q.get('razon')),
     auto: bandera(q.get('auto')),
     limpio: bandera(q.get('limpio')),
-    voz: q.get('voz') || null,
+    voz: esRutaRelativa(q.get('voz')) ? q.get('voz') : null,
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',
   };
 }
@@ -60,6 +64,25 @@ export function marcarTiempos(beats, voz, vel = 1) {
     t += duracion;
     return marca;
   });
+}
+
+// ---- Lo que dice la pantalla de cada jugada ------------------------------------------------------------------------------------------------
+// El texto chico de la placa ("Anuncia", "Duda"...): aceptar no se llama "Anuncia", y una jugada que puso el juego lo dice.
+export function rolDeJugada(beat) {
+  if (beat?.reemplazo) return 'Jugada del juego';
+  if (beat?.tipo === 'defensa') return beat.pasos?.some((p) => p.tipo === 'pliega') ? 'Se retira' : 'Iguala';
+  return { anuncio: 'Anuncia', acepta: 'Acepta', duda: 'Duda' }[beat?.tipo] ?? '';
+}
+
+// La frase sobre el recuadro del anuncio ("Claude duda"); alerta = se pinta en rojo. Si la jugada la puso el juego no se le atribuye a la IA.
+export function etiquetaDeJugada(beat, nombre) {
+  if (!beat?.tipo) return { texto: '', alerta: false };
+  if (beat.reemplazo) return { texto: `El juego juega por ${nombre}`, alerta: false };
+  if (beat.tipo === 'defensa') {
+    return beat.pasos?.some((p) => p.tipo === 'pliega') ? { texto: `${nombre} se retira`, alerta: true } : { texto: `${nombre} iguala la subida`, alerta: false };
+  }
+  const texto = { anuncio: `${nombre} anuncia`, acepta: `${nombre} acepta y sube`, duda: `${nombre} duda` }[beat.tipo] ?? '';
+  return { texto, alerta: beat.tipo === 'duda' };
 }
 
 // ---- Varios archivos a la vez ------------------------------------------------------------------------------------------------------------
