@@ -7,6 +7,7 @@
 import { colocarMayorMenor } from './layout-mayormenor.js';
 import { htmlCartaNumero, htmlFrenteNumero, htmlPlaca, htmlPila, htmlTira, esc } from './kit.js';
 import { RONDAS_TOPE } from './linea-de-tiempo-mayormenor.js';
+import { etiquetaDeApuesta } from './escena-config.js';
 import { MesaBase, el, poner, centro } from './mesa-base.js';
 
 const NUMEROS = Array.from({ length: 11 }, (_, i) => i);
@@ -150,7 +151,7 @@ export class Mesa extends MesaBase {
     a.reemplazo = beat.reemplazo;
     a.rol = beat.reemplazo ? 'Jugada del juego' : 'Predictor · apuesta';
     this.pintarPlaca(p.asiento);
-    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(this.nombre(p.asiento))} apuesta${p.todo ? ' <span class="todo">¡Todo!</span>' : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
+    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(etiquetaDeApuesta(beat, this.nombre(p.asiento)).titulo)}${p.todo ? ' <span class="todo">¡Todo!</span>' : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
     this.anim(this.apuesta, [{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 380, fill: 'forwards', easing: 'cubic-bezier(.2,1.3,.4,1)' });
     this.sonar(p);
     this.volarFichas(this.centroPlaca(p.asiento), centro(this.L.centro.apuesta, 0.12), p.fichas, 'juego');

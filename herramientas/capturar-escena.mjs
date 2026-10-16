@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Verificacion visual de la escena de Duda y apuesta: abre web/escena.html con Chrome sin cabeza, toma capturas de los momentos clave en cada
+// Verificacion visual de la escena de casino de cualquier juego registrado (web/casino/lineas.js): abre web/escena.html con Chrome sin cabeza, toma capturas de los momentos clave en cada
 // formato y falla si la consola de la pagina trae errores. No juzga si "se ve bien": eso lo hace quien mira las capturas.
 //
 //   node src/servidor.js                      (en otra terminal: sirve web/ y data/)
@@ -7,7 +7,7 @@
 //   node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --formato=9x16 --beats=1,6,43 --salida=grabaciones/capturas
 //   node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --completa      (reproduce toda la partida a velocidad 8 y comprueba que termina)
 //
-// --archivo   partida de Duda y apuesta dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
+// --archivo   partida de un juego con escena dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
 // --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
@@ -99,7 +99,7 @@ function ejecutarChrome(chrome, argumentos) {
 
 async function principal() {
   const a = Object.fromEntries(process.argv.slice(2).map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
-  if (!a.archivo) { console.error('Falta --archivo=NOMBRE.json (una partida de Duda y apuesta dentro de data/).'); process.exit(1); }
+  if (!a.archivo) { console.error('Falta --archivo=NOMBRE.json (una partida de un juego con escena de casino dentro de data/).'); process.exit(1); }
   const base = a.base ?? 'http://localhost:4321';
   const formatos = (a.formato ?? '9x16,16x9').split(',');
   formatos.forEach(tamanoDeFormato);

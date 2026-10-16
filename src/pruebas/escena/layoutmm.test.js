@@ -4,6 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { colocarMayorMenor } from '../../../web/casino/layout-mayormenor.js';
 import { ZONA_SEGURA } from '../../../herramientas/formatos.mjs';
 
@@ -71,4 +72,12 @@ test('el jugador 0 va arriba y el 1 abajo en 9:16; el 0 a la izquierda y el 1 a 
 test('un formato desconocido lanza un error claro que dice cuales existen', () => {
   assert.throws(() => colocarMayorMenor('1x1'), /formato.*1x1.*9x16.*16x9/i);
   assert.throws(() => colocarMayorMenor(undefined), /formato/i);
+});
+
+test('el CSS de la tira no redeclara el tamano de sus numeros: lo manda el diseno (estilo en linea de la mesa), si no el 16:9 sale con otra forma', () => {
+  const css = readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8').split('\r\n').join('\n');
+  const reglas = [...css.matchAll(/(^|\n)([^{}\n]*\.tira-num[^{}\n]*)\{([^}]*)\}/g)];
+  assert.ok(reglas.length >= 2, 'encontre las reglas de la tira');
+  for (const [, , selector, cuerpo] of reglas) assert.ok(!/--t[wh]\s*:/.test(cuerpo), `la regla "${selector.trim()}" declara --tw/--th y le gana al diseno`);
+  assert.ok(/var\(--tw,\s*\d+px\)/.test(css) && /var\(--th,\s*\d+px\)/.test(css), 'sin diseno, la tira tiene medidas por defecto');
 });

@@ -1,10 +1,11 @@
 // Lo puro del reproductor de la escena (sin DOM, para probarlo en Node): parametros de la URL, recorte del clip por manos, duracion de
 // cada beat (con o sin voz) y marcas de tiempo para re-doblar.
 //
-// La voz (voz.json, que genera la herramienta de voz por escribir) es un objeto { "<id del beat>": { ms, archivo } }: cada beat dura lo que
-// dure su audio si es mas largo que su minimo; sin voz, su minimo. Entrada ilegible no lanza: vale como "sin voz".
+// La voz (voz.json, que genera herramientas/narrar.mjs) es un objeto { "<id del beat>": { ms, archivo, fuente } }: cada beat dura lo que dure su audio
+// si es mas largo que su minimo; sin voz, su minimo. `fuente` es el texto del beat que se narro: un audio solo vale para un beat que dice lo mismo (los ids de
+// una partida se repiten en otra, y asi la voz de una no suena sobre la otra). Entrada ilegible no lanza: vale como "sin voz".
 
-import { juegosConEscena } from './lineas.js';
+import { juegosConEscena, escenaDe } from './lineas.js';
 
 const entero = (v) => {
   const n = v === null || v === '' ? NaN : Number(v);
@@ -49,9 +50,31 @@ export const recortarClip = (beats, mano, hasta) => (Array.isArray(beats) ? beat
 
 export const hayVoz = (voz) => !!voz && typeof voz === 'object' && Object.keys(voz).length > 0;
 
+// El texto de un beat como se compara con la fuente de su audio: sin saltos de linea ni espacios de mas.
+export const fuenteDeVoz = (texto) => String(texto ?? '').replace(/\s+/g, ' ').trim();
+
+// El audio que le toca a un beat, o null: el id tiene que estar en el voz.json y, si trae `fuente`, el beat tiene que decir lo mismo. Sin `fuente` (escrito a mano) vale por id.
+export function entradaDeVoz(voz, beat) {
+  if (!voz || typeof voz !== 'object' || !beat || !Object.hasOwn(voz, beat.id)) return null;
+  const e = voz[beat.id];
+  if (!e || typeof e !== 'object') return null;
+  if (typeof e.fuente === 'string' && e.fuente !== fuenteDeVoz(beat.texto)) return null;
+  return e;
+}
+
+// Cuantos beats tienen su audio y cuantos tienen uno de OTRO texto (la voz es de otra partida o el texto cambio despues de narrarla).
+export function resumenDeVoz(beats, voz) {
+  let usados = 0, desacordes = 0;
+  for (const b of Array.isArray(beats) ? beats : []) {
+    if (entradaDeVoz(voz, b)) usados++;
+    else if (voz && typeof voz === 'object' && Object.hasOwn(voz, b?.id) && voz[b.id] && typeof voz[b.id] === 'object') desacordes++;
+  }
+  return { usados, desacordes };
+}
+
 // Cuanto dura un beat en pantalla (ms): max(su minimo, su voz) entre la velocidad.
 export function duracionDeBeat(beat, voz, vel = 1) {
-  const ms = voz && typeof voz === 'object' ? voz[beat.id]?.ms : null;
+  const ms = entradaDeVoz(voz, beat)?.ms;
   const delAudio = Number.isFinite(ms) && ms > 0 ? ms : 0;
   const velocidad = Number.isFinite(vel) && vel > 0 ? vel : 1;
   return Math.max(beat.minMs, delAudio) / velocidad;
@@ -74,6 +97,11 @@ export function rolDeJugada(beat) {
   if (beat?.reemplazo) return 'Jugada del juego';
   if (beat?.tipo === 'defensa') return beat.pasos?.some((p) => p.tipo === 'pliega') ? 'Se retira' : 'Iguala';
   return { anuncio: 'Anuncia', acepta: 'Acepta', duda: 'Duda' }[beat?.tipo] ?? '';
+}
+
+// El titulo de la caja de la apuesta (Mayor o menor): si la apuesta la puso el juego por una respuesta ilegal no se le atribuye a la IA.
+export function etiquetaDeApuesta(beat, nombre) {
+  return { titulo: beat?.reemplazo ? `El juego apuesta por ${nombre}` : `${nombre} apuesta` };
 }
 
 // La frase sobre el recuadro del anuncio ("Claude duda"); alerta = se pinta en rojo. Si la jugada la puso el juego no se le atribuye a la IA.
@@ -109,12 +137,14 @@ export function catalogarPartidas(cargados) {
     partidas.forEach((partida, i) => {
       const id = partida?.juego?.id ?? datos.juego?.id;
       const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
-      const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.mano) || 0), 0);
+      // el campo que numera cada registro lo dice la unidad del juego: Duda y apuesta cuenta manos y Mayor o menor rondas (ahi `mano` es la mano de cartas del jugador, no un numero)
+      const unidad = juegosConEscena().includes(id) ? escenaDe(id).unidad : 'mano';
+      const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[unidad]) || 0), 0);
       let motivo = null;
       if (!juegosConEscena().includes(id)) motivo = `es de ${id ?? 'otro juego'}, que no tiene escena de casino`;
       else if (!rondas.length) motivo = 'sin rondas';
       const nombres = (Array.isArray(partida?.jugadores) ? partida.jugadores : []).map((j) => j?.nombre ?? '?').join(' vs ');
-      const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? 'mano' : 'manos'}${partida?.truncada === true ? ' · cortada' : ''}`;
+      const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? unidad : `${unidad}s`}${partida?.truncada === true ? ' · cortada' : ''}`;
       entradas.push({ clave: `${archivo}#${i + 1}`, archivo, numero: i + 1, juego: id ?? null, titulo, manos, valida: motivo === null, motivo, partida: motivo === null ? partida : null });
     });
   }

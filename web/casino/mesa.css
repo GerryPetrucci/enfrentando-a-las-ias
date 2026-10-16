@@ -125,8 +125,8 @@
 /* ---------- cartas con numero y tira de numeros (Mayor o menor, El numero solitario) ---------- */
 .carta.num .cara .gran { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:800 calc(96 * var(--u))/1 var(--titulos); color:#101014; }
 .carta.num .cara .esq { color:#101014; font-size:calc(30 * var(--u)); }
-.tira-num { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; align-items:center; width:100%; height:100%; --tw:74px; --th:66px; }
-.tira-num .t { flex:0 0 var(--tw); height:var(--th); border-radius:9px; display:flex; align-items:center; justify-content:center; font:800 calc(var(--th) * .58)/1 var(--titulos); background:linear-gradient(#f4eedd,#e2d9c0); color:#101014; box-shadow:0 3px 0 #0006; }
+.tira-num { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; align-items:center; width:100%; height:100%; }
+.tira-num .t { flex:0 0 var(--tw, 74px); height:var(--th, 66px); border-radius:9px; display:flex; align-items:center; justify-content:center; font:800 calc(var(--th, 66px) * .58)/1 var(--titulos); background:linear-gradient(#f4eedd,#e2d9c0); color:#101014; box-shadow:0 3px 0 #0006; }
 .tira-num .t.usada { background:#17171c; color:#4a4a55; text-decoration:line-through; box-shadow:none; border:1px solid #2a2a33; }
 .tira-num .t.ahora { background:var(--oro); color:#101014; box-shadow:0 0 0 3px #fff6, 0 0 22px var(--oro); }
 

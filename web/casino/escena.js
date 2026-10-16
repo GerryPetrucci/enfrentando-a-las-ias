@@ -8,7 +8,7 @@
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -73,12 +73,14 @@ export async function iniciar() {
     });
     mesas.forEach((m) => m.mostrarEstadoInicial(beats[0])); // antes de reproducir, la mesa ya muestra el estado con el que empieza el clip
     const marcas = marcarTiempos(beats, voz, params.vel);
+    const { desacordes } = resumenDeVoz(beats, voz);
+    const avisoDesacorde = desacordes ? ` · La voz no coincide con ${desacordes} momentos de esta partida (¿es de otra?): esos duran su mínimo y no suenan.` : '';
     actual = { entrada, partida, beats, marcas, mesas, ancho, alto };
     window.escena = { beats, marcas, mesas, partida };
     ajustar();
     habilitar(true);
     selector.value = entrada.clave;
-    aviso(`${entrada.titulo} — ${beats.length} momentos, ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}${avisoVoz}`);
+    aviso(`${entrada.titulo} — ${beats.length} momentos, ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}${avisoVoz}${avisoDesacorde}`);
   }
   const montarSeguro = (entrada) => montar(entrada).catch((e) => { console.error('escena: no se pudo armar', e); document.body.dataset.error = String(e); aviso(`No pude armar la escena: ${e.message}`); });
 
@@ -93,7 +95,7 @@ export async function iniciar() {
       for (const [i, beat] of beats.entries()) {
         const rapido = detenerEn !== null && i <= Number(detenerEn);
         mesas.forEach((m) => { m.rapido = rapido; });
-        const audio = voz?.[beat.id]?.archivo;
+        const audio = entradaDeVoz(voz, beat)?.archivo;
         if (audio && params.sonido && esRutaRelativa(audio)) {
           try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
         }

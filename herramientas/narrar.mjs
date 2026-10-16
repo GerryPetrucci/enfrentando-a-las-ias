@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { lineaDe } from '../web/casino/lineas.js';
-import { marcarTiempos } from '../web/casino/escena-config.js';
+import { marcarTiempos, fuenteDeVoz } from '../web/casino/escena-config.js';
 
 export const VOZ = {
   motor: 'Piper (MIT)',
@@ -43,7 +43,7 @@ export function textoParaVoz(texto, pronunciaciones = []) {
 export function planDeNarracion(beats, pronunciaciones = []) {
   if (!Array.isArray(beats)) return [];
   return beats
-    .map((b) => ({ id: b.id, texto: textoParaVoz(b.texto, pronunciaciones) }))
+    .map((b) => ({ id: b.id, texto: textoParaVoz(b.texto, pronunciaciones), fuente: fuenteDeVoz(b.texto) }))
     .filter((p) => p.texto)
     .map((p) => ({ ...p, archivo: `${p.id}.ogg` }));
 }
@@ -54,11 +54,11 @@ export function carpetaDeVoz(archivo, partida = 1) {
   return `data/voz/${nombre}-p${partida}`;
 }
 
-// resultados = [{ id, duracionS }] -> voz.json: { "<id del beat>": { ms, archivo } }. Un audio sin duracion valida no entra (el beat dura su minimo).
+// resultados = [{ id, duracionS, fuente? }] -> voz.json: { "<id del beat>": { ms, archivo, fuente } } (fuente = el texto del beat que se narro: la escena no usa el audio en otro texto). Un audio sin duracion valida no entra (el beat dura su minimo).
 export function armarVoz(resultados, { carpeta, pausaMs = VOZ.pausaMs } = {}) {
   const voz = {};
   for (const r of Array.isArray(resultados) ? resultados : []) {
-    if (Number.isFinite(r?.duracionS) && r.duracionS > 0) voz[r.id] = { ms: Math.round(r.duracionS * 1000) + pausaMs, archivo: `${carpeta}/${r.id}.ogg` };
+    if (Number.isFinite(r?.duracionS) && r.duracionS > 0) voz[r.id] = { ms: Math.round(r.duracionS * 1000) + pausaMs, archivo: `${carpeta}/${r.id}.ogg`, ...(typeof r.fuente === 'string' ? { fuente: r.fuente } : {}) };
   }
   return voz;
 }
@@ -101,7 +101,7 @@ function principal() {
       if (v.status !== 0) salir(`Piper fallo en ${p.id}: ${String(v.stderr).slice(-300)}`);
       const f = spawnSync(ffmpeg, argumentosDeFfmpeg(wav, salida), { encoding: 'utf8' });
       if (f.status !== 0) salir(`ffmpeg fallo en ${p.id}: ${f.stderr}`);
-      resultados.push({ id: p.id, duracionS: duracionDe(salida) });
+      resultados.push({ id: p.id, duracionS: duracionDe(salida), fuente: p.fuente });
       process.stdout.write(`\r  ${i + 1} de ${plan.length} audios`);
     }
     const voz = armarVoz(resultados, { carpeta });

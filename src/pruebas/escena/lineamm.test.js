@@ -158,6 +158,23 @@ test('una jugada que puso el juego por una respuesta ilegal queda marcada en el 
   assert.ok(marcadas > 10, `solo ${marcadas} jugadas de reemplazo`);
 });
 
+test('una apuesta que puso el juego nunca se marca como "todo": la audacia no es de la IA (aunque el motor guarde apostoTodo)', async () => {
+  let probadas = 0;
+  for (let seed = 1; seed <= 8; seed++) {
+    for (const asiento of [0, 1]) {
+      const p = structuredClone(await jugarMMConCaido(seed, asiento));
+      for (const r of p.rondas) r.apostoTodo = true; // el motor lo marca cuando la apuesta (de reemplazo incluida) iguala las fichas del predictor
+      for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'apuesta')) {
+        const r = p.rondas[b.registro];
+        const ap = b.pasos.find((x) => x.tipo === 'apuesta');
+        assert.equal(ap.todo, r.invalidas[r.predictor] !== true, `${b.id}: todo = apostoTodo solo si la apuesta la puso la IA`);
+        if (b.reemplazo) probadas++;
+      }
+    }
+  }
+  assert.ok(probadas > 5, `solo ${probadas} apuestas de reemplazo`);
+});
+
 test('todos los pasos usan el vocabulario fijado, y cada uno suena o es mudo a proposito', async () => {
   const vistos = new Set();
   for (const p of await muchasMM()) for (const b of construirLineaDeTiempo(p)) for (const paso of b.pasos) {

@@ -46,7 +46,7 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     crear('apertura', { lineas: lineasDe('apertura'), pasos: [{ tipo: 'roles', activo: r.activo, predictor: r.predictor }, { tipo: 'estado', fichas: r.fichasAntes, disponibles: disponibles(false), crupierQuedan: quedan(false) }] });
     crear('crupier', { lineas: lineasDe('crupier'), pasos: [{ tipo: 'crupier', asiento: r.activo, carta: r.crupier, quedan: r.crupierQuedan[r.activo].length }] });
     crear('jugada', { lineas: lineasDe('jugada'), reemplazo: r.invalidas?.[r.activo] === true, pasos: [{ tipo: 'jugar', asiento: r.activo, carta: visible ? r.carta : null }, { tipo: 'pregunta' }] });
-    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: r.invalidas?.[r.predictor] === true, pasos: [{ tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true }] });
+    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: r.invalidas?.[r.predictor] === true, pasos: [{ tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true }] });
     crear('revelado', {
       lineas: lineasDe('revelacion'),
       pasos: [

@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { juegosConEscena, escenaDe, lineaDe } from '../../../web/casino/lineas.js';
 import { catalogarPartidas } from '../../../web/casino/escena-config.js';
+import { jugarMM } from './ayudas-mm.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -54,4 +55,15 @@ test('la linea de tiempo de cada juego registrado exporta lo que la herramienta 
     assert.deepEqual(linea.beatsDeEstado(null, 3), [], `${id}: beatsDeEstado con basura no lanza`);
     assert.ok(linea.erroresDeEstado(null, { id: 'x' }).length > 0, `${id}: una escena que no informa su estado es un error`);
   }
+});
+
+test('la lista cuenta las rondas de una partida real de Mayor o menor (sus registros traen ronda, no mano) y usa la palabra de su unidad', async () => {
+  const p = await jugarMM(1);
+  const [e] = catalogarPartidas([{ nombre: 'mm.json', datos: { partidas: [p] } }]);
+  assert.equal(e.valida, true);
+  assert.equal(e.manos, p.rondas.at(-1).ronda);
+  assert.ok(e.manos > 1);
+  assert.match(e.titulo, new RegExp(` · ${e.manos} rondas`));
+  const una = structuredClone(p); una.rondas = una.rondas.slice(0, 1);
+  assert.match(catalogarPartidas([{ nombre: 'mm.json', datos: { partidas: [una] } }])[0].titulo, / · 1 ronda$/);
 });
