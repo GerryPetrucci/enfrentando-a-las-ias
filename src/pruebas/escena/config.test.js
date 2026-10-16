@@ -12,7 +12,7 @@ import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
-  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: 2, sonido: true, vel: 1, razon: false, auto: false, limpio: false, voz: null, escala: 'ajustar' });
+  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, vel: 1, razon: false, auto: false, limpio: false, voz: null, escala: 'ajustar' });
   assert.deepEqual(leerParametros(undefined), leerParametros(''));
 });
 
@@ -22,7 +22,8 @@ test('los parametros se leen y se validan: lo ilegible vuelve al valor por defec
   assert.equal(leerParametros('formato=hoja').formato, 'hoja');
   for (const [q, esperado] of [
     ['formato=1x1', { formato: '9x16' }], ['formato=4x5', { formato: '9x16' }],
-    ['camara=7', { camara: 2 }], ['camara=-1', { camara: 2 }], ['camara=x', { camara: 2 }], ['camara=0', { camara: 0 }],
+    ['camara=10', { camara: null }], ['camara=-1', { camara: null }], ['camara=x', { camara: null }], ['camara=0', { camara: 0 }], ['camara=9', { camara: 9 }],
+    ['ronda=4', { mano: 4 }], ['mano=2&ronda=5', { mano: 2 }], ['ronda=0', { mano: 1 }], ['ronda=3&hasta=6', { mano: 3, hasta: 6 }],
     ['vel=0', { vel: 1 }], ['vel=abc', { vel: 1 }], ['vel=100', { vel: 8 }], ['vel=0.01', { vel: 0.25 }],
     ['partida=0', { partida: 1 }], ['partida=-3', { partida: 1 }], ['partida=x', { partida: 1 }],
     ['mano=0', { mano: 1 }], ['mano=x', { mano: 1 }],
@@ -115,6 +116,7 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
   assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
   assert.equal(c[0].partida, p1);
+  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'fuga']);
   const manos = Math.max(...p1.rondas.map((r) => r.mano));
   assert.equal(c[0].manos, manos);
   assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
