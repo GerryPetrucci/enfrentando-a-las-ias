@@ -44,6 +44,13 @@ export class Mesa extends MesaBase {
   pintarFila(s) {
     const f = this.filas[s], { st } = f;
     f.info.innerHTML = htmlInfoFila(this.partida.jugadores[s], st.puntos, st.fichas);
+    // un nombre largo ("Gemini Flash-Lite") se achica hasta caber antes de caer en la elipsis (igual que los subtitulos); sin pagina todavia (Node, mesa sin montar) no hay medidas y no hace nada
+    const nom = f.info.querySelector('.nom');
+    let tam = parseFloat(getComputedStyle(nom).fontSize);
+    const hueco = nom.parentElement.getBoundingClientRect().width;
+    nom.style.width = 'max-content'; // el ancho real del texto (scrollWidth redondea y deja pasar medio pixel de mas, que ya cae en la elipsis)
+    while (nom.getBoundingClientRect().width > hueco + 0.25 && tam > 22) { tam -= 2; nom.style.fontSize = `${tam}px`; }
+    nom.style.width = '';
     f.caja.classList.toggle('fuera', !st.jugando);
     f.caja.classList.toggle('reemplazo', st.reemplazo);
     f.caja.classList.toggle('ganadora', st.ganadora);
