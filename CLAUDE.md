@@ -201,8 +201,7 @@ leyendo una partida ya guardada, asi que la voz se genera **antes** de grabar y 
 sale completo en una sola toma, sin post-produccion de audio, y la linea de tiempo se exporta para poder re-doblarlo en otro idioma.
 Nada de voz en tiempo real. Hay dos capas de texto: los **hechos** (los escribe el codigo, siempre verdaderos) y el **comentario** (la
 capa editorial; nunca cambia ni oculta una jugada). La voz se declara como contenido generado por IA donde la plataforma lo pida y
-no imita a ninguna persona real. Motor de voz: **gratuito** (decidido por el usuario el 11 de octubre de 2026); falta elegir cual (se prueban 2-3 y se revisan
-sus licencias antes de publicar: gratis no siempre significa libre para uso comercial). Detalle y pasos en `privado/planes/plan-voz-narradora.md`. **Estado:** decidido, sin implementar.
+no imita a ninguna persona real. Motor de voz: **gratuito y local** (decidido el 11 de octubre de 2026). **Elegido el 16 de octubre de 2026** entre 7 voces de 3 motores: Piper (MIT) con una voz en español de México (Apache-2.0; su nombre técnico no se muestra en público: ver `privado/terminos/voz-narradora.md`, con licencias, cuidados y el respaldo Kokoro). **Estado:** `herramientas/narrar.mjs` hecho: genera un audio por momento y un `voz.json` en `data/voz/` (ignorado por git), y la escena lo usa con `?voz=`. Detalle en `privado/planes/plan-voz-narradora.md`.
 
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
