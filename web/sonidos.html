@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba de sonidos · escena de casino</title>
+<link rel="stylesheet" href="casino/mesa.css">
+<style>
+  body { margin:0; background:#101014; color:#f2f0ed; font-family:'Inter','Segoe UI',system-ui,sans-serif; padding:24px; }
+  h1 { font:800 40px 'Barlow Condensed','Arial Narrow',sans-serif; letter-spacing:.03em; text-transform:uppercase; margin:0 0 6px; }
+  p { color:#9a9aa6; max-width:720px; line-height:1.5; }
+  button { font:600 14px 'Inter',sans-serif; color:#f2f0ed; background:#17171c; border:1px solid #2a2a33; border-radius:8px; padding:8px 14px; cursor:pointer; margin:0 6px 6px 0; }
+  button:hover { border-color:#e0b25c; }
+  button:disabled { opacity:.4; cursor:default; }
+  table { border-collapse:collapse; margin-top:18px; }
+  td, th { padding:8px 14px 8px 0; text-align:left; border-bottom:1px solid #2a2a33; vertical-align:top; }
+  th { color:#9a9aa6; font-weight:600; font-size:13px; }
+  td.efecto { font:800 24px 'Barlow Condensed',sans-serif; text-transform:uppercase; color:#e0b25c; }
+  #estado { margin-top:10px; font-size:13px; color:#9a9aa6; }
+</style>
+</head>
+<body>
+<h1>Prueba de sonidos</h1>
+<p>Cada efecto de la escena, con sus muestras grabadas y su respaldo sintetizado. Suenan al volumen real de la escena (unos 12 dB bajo la voz): sube el volumen del equipo si hace falta.</p>
+<button id="activar">Activar sonido</button>
+<div id="estado"></div>
+<table id="tabla"><thead><tr><th>Efecto</th><th>Muestras grabadas</th><th>Respaldo</th></tr></thead><tbody></tbody></table>
+<script type="module">
+  import { EVENTOS, crearSonido } from './casino/sonido.js';
+  const sfx = crearSonido({ activo: true });
+  const cuerpo = document.querySelector('#tabla tbody');
+  const boton = (texto, fn, deshabilitado = true) => Object.assign(document.createElement('button'), { textContent: texto, disabled: deshabilitado, onclick: fn });
+  const botones = [];
+  for (const [nombre, ev] of Object.entries(EVENTOS)) {
+    const fila = cuerpo.insertRow();
+    fila.insertCell().textContent = nombre;
+    fila.cells[0].className = 'efecto';
+    const grabadas = fila.insertCell();
+    ev.muestras.forEach((m, i) => { const b = boton(`▶ ${m.replace('audio/', '')}`, () => sfx.probar(nombre, i)); botones.push(b); grabadas.append(b); });
+    const respaldo = fila.insertCell();
+    const b = boton('▶ sintetizado', () => sfx.probar(nombre, -1)); botones.push(b); respaldo.append(b);
+  }
+  document.getElementById('activar').onclick = async () => {
+    await sfx.preparar();
+    const cuantas = sfx.cuantas();
+    const total = Object.values(cuantas).reduce((a, n) => a + n, 0);
+    document.getElementById('estado').textContent = sfx.disponible ? `Sonido activo: ${total} muestras grabadas cargadas.` : 'Este navegador no pudo abrir el audio.';
+    botones.forEach((x) => { x.disabled = !sfx.disponible; });
+  };
+</script>
+</body>
+</html>

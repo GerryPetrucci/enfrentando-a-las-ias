@@ -11,11 +11,11 @@ export const EVENTOS = {
   voltear: { muestras: ['audio/voltear-1.ogg', 'audio/voltear-2.ogg'], sintetico: { ruidos: [{ dur: 0.14, f0: 3500, f1: 900, vol: 1 }] } },
   ficha:   { muestras: ['audio/ficha-1.ogg', 'audio/ficha-2.ogg', 'audio/ficha-3.ogg'], sintetico: { tonos: [
     { freq: 1800, dur: 0.06, tipo: 'triangle', vol: 0.6, f1: 1200 }, { freq: 2300, dur: 0.07, tipo: 'triangle', vol: 0.5, f1: 1500, retraso: 0.055 }] } },
-  tic:     { muestras: ['audio/tic-1.ogg'], sintetico: { ruidos: [{ dur: 0.02, f0: 4000, f1: 3000, vol: 0.5, q: 6 }] } },
+  tic:     { muestras: ['audio/tic-1.ogg', 'audio/tic-2.ogg'], sintetico: { ruidos: [{ dur: 0.02, f0: 4000, f1: 3000, vol: 0.5, q: 6 }] } },
   anuncio: { muestras: ['audio/anuncio-1.ogg'], sintetico: { tonos: [
     { freq: 1320, dur: 0.35, tipo: 'sine', vol: 0.6, f1: 1100 }, { freq: 1760, dur: 0.3, tipo: 'sine', vol: 0.35, retraso: 0.06 }] } },
   duda:    { muestras: ['audio/duda-1.ogg'], sintetico: { tonos: [{ freq: 110, dur: 0.25, tipo: 'square', vol: 0.8, f1: 55 }], ruidos: [{ dur: 0.08, f0: 800, f1: 300, vol: 1 }] } },
-  gana:    { muestras: ['audio/gana-1.ogg'], sintetico: { tonos: [523, 659, 784, 1047].map((freq, i) => ({ freq, dur: 0.28, tipo: 'triangle', vol: 0.65, retraso: i * 0.11 })) } },
+  gana:    { muestras: ['audio/gana-1.ogg', 'audio/gana-2.ogg'], sintetico: { tonos: [523, 659, 784, 1047].map((freq, i) => ({ freq, dur: 0.28, tipo: 'triangle', vol: 0.65, retraso: i * 0.11 })) } },
   pierde:  { muestras: ['audio/pierde-1.ogg'], sintetico: { tonos: [
     { freq: 330, dur: 0.3, tipo: 'sawtooth', vol: 0.5, f1: 200 }, { freq: 247, dur: 0.4, tipo: 'sawtooth', vol: 0.5, f1: 140, retraso: 0.18 }] } },
 };
@@ -93,22 +93,28 @@ export function crearSonido({ activo = true, azar = () => 0, base = '' } = {}) {
     }));
   };
 
+  const tocar = (buffer) => { const fuente = ctx.createBufferSource(); fuente.buffer = buffer; fuente.connect(maestro); fuente.start(); };
+  const sintetizar = (ev) => { for (const r of ev.sintetico.ruidos ?? []) ruido(r); for (const t of ev.sintetico.tonos ?? []) tono(t); };
+
   for (const [nombre, ev] of Object.entries(EVENTOS)) {
     sfx[nombre] = () => {
       if (!activo || !sfx.disponible) return;
       try {
         const grabadas = muestras[nombre] ?? [];
-        if (grabadas.length) {
-          const fuente = ctx.createBufferSource();
-          fuente.buffer = grabadas[Math.min(grabadas.length - 1, Math.floor(azar() * grabadas.length))];
-          fuente.connect(maestro);
-          fuente.start();
-        } else {
-          for (const r of ev.sintetico.ruidos ?? []) ruido(r);
-          for (const t of ev.sintetico.tonos ?? []) tono(t);
-        }
+        if (grabadas.length) tocar(grabadas[Math.min(grabadas.length - 1, Math.floor(azar() * grabadas.length))]);
+        else sintetizar(ev);
       } catch { /* un fallo de audio nunca tumba la escena */ }
     };
   }
+
+  // Para web/sonidos.html (escuchar cada muestra): cuantas muestras grabadas cargaron de cada efecto, y tocar una en concreto (indice -1 = el respaldo sintetizado).
+  sfx.cuantas = () => Object.fromEntries(Object.keys(EVENTOS).map((n) => [n, (muestras[n] ?? []).length]));
+  sfx.probar = (nombre, indice = 0) => {
+    if (!activo || !sfx.disponible || !EVENTOS[nombre]) return;
+    try {
+      if (indice < 0) sintetizar(EVENTOS[nombre]);
+      else if (muestras[nombre]?.[indice]) tocar(muestras[nombre][indice]);
+    } catch { /* un fallo de audio nunca tumba la escena */ }
+  };
   return sfx;
 }
