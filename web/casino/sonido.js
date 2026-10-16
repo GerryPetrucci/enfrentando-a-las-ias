@@ -27,7 +27,7 @@ export function eventosDePaso(paso) {
     case 'revelar': return ['voltear'];
     case 'anuncio': return ['anuncio'];
     case 'duda': return ['duda'];
-    case 'apuesta': case 'fichas': case 'pago': case 'compra': return ['ficha'];
+    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': return ['ficha'];
     case 'contar': return ['tic'];
     case 'sello': return [paso.sello === 'justo' || paso.sello === 'cumplido' ? 'gana' : 'pierde'];
     default: return [];

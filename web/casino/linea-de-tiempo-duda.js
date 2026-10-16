@@ -107,13 +107,16 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     // Un comentario dicho en medio de la mano puede adelantar si el anuncio era cierto (p. ej. "no se cumplia, pero lo acepta"): la camara oculta existe para que el
     // espectador especule hasta el recuento, asi que esos comentarios esperan al desenlace de su mano. Si la partida se corta antes, nunca se dicen.
     const aplazadas = [];
+    let ultimoAnuncio = null; // el ultimo anuncio de la mano y lo que apostaron con el: al aceptarlo, su dueno recupera esa apuesta
     for (let i = desde; i < hasta; i++) {
       const r = rondas[i];
       const resto = (r.narracion ?? []).filter((l) => !(i === desde && l.tipo === 'apertura'));
       const accion = r.resolucion ? 1 : resto.length;
       const delMomento = resto.slice(0, accion);
       aplazadas.push(...delMomento.filter((l) => l.tipo === 'comentario'));
-      crear(TIPO_DE_ACCION[r.accion] ?? 'anuncio', i, { asiento: r.asiento, lineas: delMomento.filter((l) => l.tipo !== 'comentario'), pasos: pasosDeAccion(r), reemplazo: r.invalidas?.[r.asiento] === true });
+      const recupera = r.accion === 'aceptar' && ultimoAnuncio ? [{ tipo: 'recupera', asiento: ultimoAnuncio.asiento, ...ultimoAnuncio.apuesta }] : [];
+      if ((r.accion === 'anunciar' || r.accion === 'aceptar') && r.apuesta) ultimoAnuncio = { asiento: r.asiento, apuesta: r.apuesta };
+      crear(TIPO_DE_ACCION[r.accion] ?? 'anuncio', i, { asiento: r.asiento, lineas: delMomento.filter((l) => l.tipo !== 'comentario'), pasos: [...recupera, ...pasosDeAccion(r)], reemplazo: r.invalidas?.[r.asiento] === true });
       if (!r.resolucion) continue;
       const desenlace = lineasDeDesenlace(r, resto);
       crear(r.resolucion.tipo === 'recuento' ? 'revelado' : 'retirada', i, { asiento: r.resolucion.ganador, lineas: [...resto.slice(1, 1 + desenlace), ...aplazadas.splice(0)], pasos: pasosDeDesenlace(r, reemplazos) });
@@ -166,7 +169,6 @@ const lider = (fichas) => {
 export function puntuarManos(partida) {
   const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
   const manos = [];
-  let antes = null; // el lider de fichas al empezar la mano
   for (let desde = 0; desde < rondas.length;) {
     let hasta = desde;
     while (hasta < rondas.length && rondas[hasta].mano === rondas[desde].mano) hasta++;
@@ -177,12 +179,14 @@ export function puntuarManos(partida) {
     if (res?.tipo === 'recuento' && res.ganador === res.dudador && !reemplazosDeMano(registros).anuncio) motivos.push('farol descubierto');
     if (res?.tipo === 'recuento' && res.ganador === res.predictor && res.real === res.cantidad) motivos.push('justo');
     if (res?.tipo === 'retirada') motivos.push('retirada tras subida');
-    if (res && res.ganado && res.ganado.fichas + res.ganado.espacios >= 3) motivos.push('apuesta grande');
+    const ganado = res?.ganado ?? res?.movidas; // los registros viejos solo traen lo que puso el perdedor
+    if (ganado && ganado.fichas + ganado.espacios >= 3) motivos.push('apuesta grande');
     if (registros.length >= 5) motivos.push('mano larga');
+    // como el motor: el lider unico de fichas al empezar la mano (el primer registro todavia no movio nada) contra el de despues de cerrarla; un empate no es lider
+    const antes = Array.isArray(registros[0].fichas) ? lider(registros[0].fichas) : null;
     const despues = Array.isArray(cierre.fichas) ? lider(cierre.fichas) : null;
     if (antes !== null && despues !== null && antes !== despues) motivos.push('pasa al frente');
     if (cierre.final?.eliminados?.length) motivos.push('eliminación');
-    antes = despues ?? antes;
     manos.push({ mano: registros[0].mano, puntos: motivos.reduce((a, m) => a + PESOS[m], 0), motivos, registros: [desde, hasta - 1] });
     desde = hasta;
   }

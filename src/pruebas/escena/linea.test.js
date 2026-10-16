@@ -106,7 +106,7 @@ test('revelado solo cuando hubo recuento; sus cartas, brillos y contador coincid
       assert.equal(contar.cantidad, res.cantidad);
       assert.equal(contar.color, res.color);
       assert.deepEqual(revelar.brillan.map((fila) => fila.filter(Boolean).length), res.cuentas, `${b.id}: las cartas que brillan no suman lo que conto el motor`);
-      for (let s = 0; s < 4; s++) assert.equal(revelar.cartas[s].length, p.rondas[b.registro].oculto.cartas[s].slice(0, revelar.cartas[s].length).length);
+      assert.deepEqual(revelar.cartas, p.rondas[b.registro].oculto.cartas, `${b.id}: las cartas reveladas son las del registro`);
     }
   }
   assert.ok(recuentos > 50, `solo ${recuentos} recuentos`);
