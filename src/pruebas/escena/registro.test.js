@@ -46,3 +46,12 @@ test('el catalogo de partidas usa el registro: un juego registrado vale y uno si
   assert.match(fuga.motivo, /fuga/);
   assert.equal(fuga.juego, 'fuga');
 });
+
+test('la linea de tiempo de cada juego registrado exporta lo que la herramienta de capturas necesita: construirla y comprobar el estado de su escena', async () => {
+  for (const id of juegosConEscena()) {
+    const linea = await escenaDe(id).linea();
+    for (const f of ['construirLineaDeTiempo', 'beatsDeEstado', 'erroresDeEstado']) assert.equal(typeof linea[f], 'function', `${id}: falta ${f}`);
+    assert.deepEqual(linea.beatsDeEstado(null, 3), [], `${id}: beatsDeEstado con basura no lanza`);
+    assert.ok(linea.erroresDeEstado(null, { id: 'x' }).length > 0, `${id}: una escena que no informa su estado es un error`);
+  }
+});

@@ -198,3 +198,24 @@ export function mejoresManos(partida, n) {
   if (!Number.isInteger(n) || n < 1) return [];
   return puntuarManos(partida).sort((a, b) => b.puntos - a.puntos || a.mano - b.mano).slice(0, n);
 }
+
+// ---- Para la herramienta de capturas (herramientas/capturar-escena.mjs): comprobar que la escena no arrastra nada de una mano a la siguiente ----
+
+// El reparto de cada mano desde la segunda (hasta `max` manos): en ese momento no debe quedar nada visible de la mano anterior.
+export function beatsDeEstado(beats, max = 6) {
+  if (!Array.isArray(beats)) return [];
+  const manos = [...new Set(beats.map((b) => b.mano))].slice(1, 1 + max);
+  return manos.map((m) => beats.findIndex((b) => b.mano === m && b.tipo === 'reparto')).filter((i) => i >= 0);
+}
+
+// Lo que la escena informa de si misma al detenerse (data-estado): opacidad del sello y del anuncio, pastillas de camara y medallas puestas.
+export function erroresDeEstado(estado, beat) {
+  if (!estado) return ['la escena no informo su estado (data-estado)'];
+  const errores = [];
+  if (estado.sello > 0.01) errores.push(`sello visible (${estado.sello}) al repartir ${beat.id}: es de la mano anterior`);
+  if (estado.anuncio > 0.01) errores.push(`anuncio visible (${estado.anuncio}) al repartir ${beat.id}: es de la mano anterior`);
+  const camara = beat.camara?.length ?? 0;
+  if (estado.pastillas !== camara) errores.push(`hay ${estado.pastillas} pastillas de camara en ${beat.id} y la camara de esa mano tiene ${camara}`);
+  if (estado.medallas !== 0) errores.push(`queda ${estado.medallas} medalla de una partida anterior en ${beat.id}`);
+  return errores;
+}
