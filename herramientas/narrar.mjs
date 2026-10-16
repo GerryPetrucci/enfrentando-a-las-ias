@@ -7,7 +7,7 @@
 //   opciones: --pronunciaciones=ARCHIVO.json  ([["GPT", "ge pe te"], ...])   --velocidad=1.1 (mas lento)   --piper=RUTA   --modelo=RUTA.onnx   --ffmpeg=RUTA
 //
 // Deja los audios y voz.json en data/voz/NOMBRE-pN/ (no se versiona: son binarios) y dice como abrir la escena con esa voz.
-// Voz elegida el 16 de octubre de 2026: Piper (MIT) con es_MX-claude-high (Apache-2.0); terminos y cuidados en privado/terminos/voz-narradora.md.
+// Voz elegida el 16 de octubre de 2026: Piper (MIT) con una voz en espanol de Mexico (Apache-2.0); su nombre tecnico y los terminos y cuidados viven en privado/terminos/voz-narradora.md.
 // El programa y el modelo viven en grabaciones/voz/ (git los ignora); si estan en otro lado, --piper y --modelo.
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -20,9 +20,9 @@ import { marcarTiempos, fuenteDeVoz } from '../web/casino/escena-config.js';
 
 export const VOZ = {
   motor: 'Piper (MIT)',
-  modelo: 'es_MX-claude-high',
+  modelo: 'voz-narradora',
   piper: 'grabaciones/voz/motores/piper/piper/piper.exe',
-  archivoModelo: 'grabaciones/voz/voces-piper/es_MX-claude-high.onnx',
+  archivoModelo: 'grabaciones/voz/voces-piper/voz-narradora.onnx', // copia local de la voz elegida con este nombre neutro (grabaciones/ no se versiona)
   lengthScale: 1, // 1 = velocidad normal del modelo; mas de 1 habla mas lento
   pausaMs: 350, // lo que se deja respirar despues de cada frase, antes del siguiente momento
 };

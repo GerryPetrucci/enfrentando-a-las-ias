@@ -51,10 +51,15 @@ test('MesaBase: la velocidad acorta animaciones, esperas y temporizadores por ig
   mesa.programar(60000, () => { llamada = true; });
   assert.equal(llamada, true, 'en modo rapido el temporizador corre al instante');
   mesa.rapido = false;
+  // se mide contra la misma espera a velocidad 1 (en la misma maquina y con la misma carga): a vel 4 tiene que tardar bastante menos, sin depender de cuantos ms sean
+  const normal = new MesaBase('9x16', { jugadores: [] }, { sfx: {}, vel: 1 }, {});
+  const t0n = Date.now();
+  await normal.esperar(400);
+  const tNormal = Date.now() - t0n;
   const t1 = Date.now();
-  await mesa.esperar(400); // a vel 4: unos 100 ms
+  await mesa.esperar(400);
   const paso = Date.now() - t1;
-  assert.ok(paso >= 80 && paso < 300, `esperar(400) a velocidad 4 tardo ${paso} ms`);
+  assert.ok(paso < tNormal * 0.6, `esperar(400) a velocidad 4 tardo ${paso} ms y a velocidad 1, ${tNormal} ms`);
 });
 
 test('MesaBase.nombre cae en "Jugador N" si falta el jugador', () => {

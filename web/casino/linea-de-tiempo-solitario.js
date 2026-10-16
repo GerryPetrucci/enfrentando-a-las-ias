@@ -145,8 +145,8 @@ export function bannerDe(beat) {
   const ciclo = ronda > 6 ? 2 : 1;
   if (beat?.tipo === 'final') return { ciclo, fase: 'Final', corte: '' };
   const corte = ronda <= 3 ? 'Corte: ronda 3' : ronda <= 6 ? 'Corte: ronda 6' : 'Final: ronda 12';
-  const fase = beat?.tipo === 'corte' ? `Corte ${beat.pasos?.find((p) => p.tipo === 'corte')?.numero ?? ''}`.trim() : FASES[beat?.tipo] ?? '';
-  return { ciclo, fase, corte };
+  if (beat?.tipo === 'corte') return { ciclo, fase: `Corte ${beat.pasos?.find((p) => p.tipo === 'corte')?.numero ?? ''}`.trim(), corte: '' }; // ya dice "Corte": no se repite
+  return { ciclo, fase: FASES[beat?.tipo] ?? '', corte };
 }
 
 // ---- Que rondas valen la pena para un clip de redes -----------------------------------------------------------------------------------------
@@ -173,7 +173,7 @@ export function puntuarRondas(partida) {
       if ([...choques.values()].some((c) => c >= 3)) motivos.push('choque de tres');
       if (r2.ganador === null) motivos.push('ronda en blanco');
       else {
-        if (r2.numero >= 7) motivos.push('premio alto');
+        if (r2.numero >= 7 && r2.invalidas?.[r2.ganador] !== true) motivos.push('premio alto'); // una marca que puso el juego no es audacia de la IA
         const antes = lideres(puntosAntes, vivos), despues = lideres(r2.puntos, vivos);
         if (!(antes.length === 1 && antes[0] === r2.ganador) && despues.length === 1 && despues[0] === r2.ganador) motivos.push('toma la delantera');
       }

@@ -144,7 +144,7 @@ export class Mesa extends MesaBase {
       this.anim(c, [{ transform: `translate(${origen.x - d.x}px, ${origen.y - d.y}px) scale(.45)`, opacity: 0 }, { opacity: 1, offset: 0.15 }, { transform: 'none', opacity: 1 }], { duration: 480, delay: i * 110 + k * 60, fill: 'backwards', easing: 'cubic-bezier(.2,.9,.3,1)' });
     }));
     this.filas.forEach((f, s) => { if (rev.parejas[s]) this.decir(s, 'Eligió', 'Cartas boca abajo', 'espera'); });
-    await this.esperar(Math.min(ms * 0.3, 1500));
+    await this.esperar(1100); // el reparto termina (~1 s) y entonces se voltean: los subtitulos y la voz nombran las parejas casi a la vez
     // se voltean todas juntas: ninguna pareja se adelanta
     this.sonar(rev);
     jugar.asientos.forEach((s) => {

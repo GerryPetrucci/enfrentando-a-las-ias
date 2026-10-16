@@ -281,9 +281,9 @@ test('el banner dice el ciclo, que se hace en cada fase y cuando es el siguiente
   assert.equal(por(1, 'marcas').fase, 'Cada quien marca la que juega');
   assert.equal(por(2, 'revelado').fase, 'Se revelan las marcas');
   assert.equal(por(2, 'resultado').fase, 'Resultado de la ronda');
-  assert.deepEqual([por(3, 'corte').fase, por(3, 'corte').corte], ['Corte 1', 'Corte: ronda 3']);
+  assert.deepEqual([por(3, 'corte').fase, por(3, 'corte').corte], ['Corte 1', '']); // el beat del corte ya dice "Corte": no se repite
   assert.deepEqual([por(4, 'apertura').ciclo, por(4, 'apertura').corte], [1, 'Corte: ronda 6']);
-  assert.deepEqual([por(6, 'corte').fase, por(6, 'corte').corte], ['Corte 2', 'Corte: ronda 6']);
+  assert.deepEqual([por(6, 'corte').fase, por(6, 'corte').corte], ['Corte 2', '']);
   assert.deepEqual([por(7, 'apertura').ciclo, por(7, 'apertura').corte], [2, 'Final: ronda 12']);
   assert.deepEqual(bannerDe(beats.at(-1)), { ciclo: 2, fase: 'Final', corte: '' });
   for (const raro of [null, undefined, {}, { tipo: 'raro', mano: 99 }]) assert.deepEqual(Object.keys(bannerDe(raro)), ['ciclo', 'fase', 'corte']);
@@ -322,4 +322,14 @@ test('el cierre de la final pone cada criterio de desempate junto a su puesto: e
   assert.deepEqual(textoDeFinal(final('ultima victoria', 'fichas'), nombre).detalle, 'C queda eliminado · La pieza se decidió por última victoria · El eliminado se decidió por fichas');
   assert.deepEqual(textoDeFinal(final('puntos', 'puntos'), nombre).detalle, 'C queda eliminado');
   assert.deepEqual(textoDeFinal(null, nombre), { grande: '', detalle: '' });
+});
+
+test('puntuarRondas no premia un numero alto que puso el juego', async () => {
+  const p = structuredClone(await jugarSol(2));
+  const i = p.rondas.findIndex((r) => r.fase === 2 && r.ganador !== null && r.numero >= 7);
+  assert.ok(i >= 0, 'la prueba necesita una ronda ganada con 7 u 8');
+  const ronda = p.rondas[i].ronda;
+  assert.ok(puntuarRondas(p).find((m) => m.ronda === ronda).motivos.includes('premio alto'));
+  p.rondas[i].invalidas[p.rondas[i].ganador] = true;
+  assert.ok(!puntuarRondas(p).find((m) => m.ronda === ronda).motivos.includes('premio alto'));
 });

@@ -96,6 +96,7 @@
 .sello { position:absolute; z-index:14; transform:rotate(-5deg); font:800 64px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; padding:8px 32px; border:6px solid; border-radius:14px; opacity:0; white-space:nowrap; background:#0b0b0fcc; }
 .sello.ganar { color:var(--oro); border-color:var(--oro); text-shadow:0 0 30px rgba(224,178,92,.9); }
 .sello.perder { color:var(--rojo); border-color:var(--rojo); }
+.sello.neutro { color:#c9c9d2; border-color:#c9c9d2; }
 .pozo, .mazo { z-index:9; display:flex; align-items:center; gap:14px; font:700 26px var(--titulos); letter-spacing:.2em; color:#ffffffa0; text-transform:uppercase; }
 .pozo .pila-p { position:relative; flex:1; height:100%; }
 .mazo { --cw:64px; } /* el mazo es mas chico que las cartas de los asientos: tiene que caber en su rectangulo */
@@ -180,9 +181,9 @@
 .caja-info.fuera, .ranura.fuera { opacity:.38; filter:grayscale(1); }
 .estado-sol.fuera { opacity:.75; }
 .con-panel .fila-sol, .con-panel .caja-info, .con-panel .ranura, .con-panel .estado-sol { opacity:.15; }
-.pill-carta { position:absolute; left:50%; top:-14px; transform:translateX(-50%); z-index:14; padding:2px 12px; border-radius:12px; font:800 22px var(--titulos); letter-spacing:.12em; text-transform:uppercase; background:var(--oro); color:var(--noche); white-space:nowrap; }
+.pill-carta { position:absolute; left:50%; bottom:-10px; transform:translateX(-50%); z-index:14; padding:2px 12px; border-radius:12px; font:800 22px var(--titulos); letter-spacing:.12em; text-transform:uppercase; background:var(--oro); color:var(--noche); white-space:nowrap; }
 .pill-carta.anulada { background:var(--rojo); color:#fff; }
-.f-16x9 .pill-carta { top:-16px; font-size:24px; }
+.f-16x9 .pill-carta { bottom:-12px; font-size:24px; }
 .estado-sol { z-index:12; display:flex; flex-direction:column; justify-content:center; align-items:flex-end; text-align:right; min-width:0; font:800 34px/1.05 var(--titulos); letter-spacing:.05em; text-transform:uppercase; }
 .f-16x9 .estado-sol { align-items:center; text-align:center; font-size:36px; }
 .estado-sol small { display:block; margin-top:2px; font:700 20px var(--titulos); letter-spacing:.12em; color:var(--suave); }

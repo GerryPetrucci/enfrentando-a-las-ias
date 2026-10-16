@@ -101,3 +101,12 @@ test('mesa.css trae el aspecto de la fila de El numero solitario: nombre con eli
   assert.match(texto, /\.fila-sol\.ganadora \{/);
   assert.match(texto, /\.panel-sol \{/);
 });
+
+test('el sello "Igual" de Mayor o menor es neutro (no dorado como "Acierta") y la pastilla de una carta de Solitario no tapa su numero de la esquina', () => {
+  const texto = css();
+  assert.match(texto, /\.sello\.neutro \{/);
+  assert.match(readFileSync(new URL('../../../web/casino/mesa-mayormenor.js', import.meta.url), 'utf8'), /igual: \{ texto: 'Igual', clase: 'neutro' \}/);
+  const pill = /\.pill-carta \{[^}]*\}/.exec(texto)[0];
+  assert.match(pill, /bottom:-/);
+  assert.doesNotMatch(pill, /top:-/);
+});
