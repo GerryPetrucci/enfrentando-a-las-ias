@@ -61,11 +61,31 @@ export function htmlPila(n, tipo, max = 8) {
   return `<div class="pila">${Array.from({ length: cuantas }, (_, i) => htmlFicha(tipo, 22 - i * 5)).join('')}</div>`;
 }
 
-export const htmlFichasPlaca = (fichas, espacios) => `<div class="fichas"><div class="grupo">${htmlPila(fichas, 'juego')}<span class="cuenta">${esc(fichas)}</span></div><div class="grupo">${htmlPila(espacios, 'espacio')}<span class="cuenta">${esc(espacios)}</span></div></div>`;
+// espacios = null: un solo grupo de fichas (los juegos que solo tienen un tipo, como Mayor o menor).
+export const htmlFichasPlaca = (fichas, espacios) => `<div class="fichas"><div class="grupo">${htmlPila(fichas, 'juego')}<span class="cuenta">${esc(fichas)}</span></div>${espacios === null ? '' : `<div class="grupo">${htmlPila(espacios, 'espacio')}<span class="cuenta">${esc(espacios)}</span></div>`}</div>`;
 
 // La placa de un jugador: color de su IA (de paleta.js; los bots usan el que trae el resultado guardado), inicial y nombre. `rol` es el texto chico de abajo.
 export function htmlPlaca(jugador, rol = '', fichas = 0, espacios = 0, reemplazo = false) {
   const j = jugador ?? {};
   const nombre = j.nombre ?? 'Jugador';
   return `<div class="placa${reemplazo ? ' reemplazo' : ''}" style="--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))}"><div class="avatar" style="--fondo:${esc(fondoCSS(j.id, j.color))}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="rol">${esc(rol)}</div></div>${htmlFichasPlaca(fichas, espacios)}</div>`;
+}
+
+// ---- Cartas con numero (Mayor o menor, El numero solitario): cara crema con el numero grande y chico, sin color ni palo (el numero se lee solo) ----
+const numeroValido = (n) => Number.isInteger(n) && n >= 0 && n <= 99;
+
+// Frente de una carta numerica. Un numero ilegible no lanza: cara en blanco.
+export function htmlFrenteNumero(n) {
+  if (!numeroValido(n)) return '<div class="cara"><div class="brillo"></div></div>';
+  return `<div class="cara"><div class="esq">${n}</div><div class="gran">${n}</div><div class="brillo"></div></div>`;
+}
+
+// Una carta numerica. n = null cuando el publico NO debe verla todavia: el HTML no lleva el numero (ni en un atributo) y la escena lo pone con htmlFrenteNumero() al voltearla.
+export const htmlCartaNumero = (n = null) => `<div class="carta num"${numeroValido(n) ? ` data-numero="${n}"` : ''}><div class="giro">${numeroValido(n) ? htmlFrenteNumero(n) : '<div class="cara"></div>'}${htmlDorso()}</div></div>`;
+
+// La tira de numeros de un jugador (informacion publica de Mayor o menor): los que siguen disponibles claros, los usados oscuros y tachados, el que se juega ahora en dorado.
+export function htmlTira(numeros, usadas = [], ahora = null) {
+  const lista = (Array.isArray(numeros) ? numeros : []).filter(numeroValido);
+  const gastadas = Array.isArray(usadas) ? usadas : [];
+  return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
