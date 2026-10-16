@@ -12,6 +12,14 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-duda.js'),
     mesa: () => import('./mesa-duda.js'),
   },
+  mayormenor: {
+    nombre: 'Mayor o menor',
+    jugadores: 2,
+    camaraPorDefecto: 1, // de 2 jugadores: en la mitad de las rondas se ve la carta jugada
+    unidad: 'ronda',
+    linea: () => import('./linea-de-tiempo-mayormenor.js'),
+    mesa: () => import('./mesa-mayormenor.js'),
+  },
 };
 
 export const juegosConEscena = () => Object.keys(ESCENAS);

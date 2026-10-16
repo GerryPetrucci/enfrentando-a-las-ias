@@ -124,3 +124,15 @@ test('beatsClave es generica (sirve a cualquier juego): el primer beat de cada t
   assert.deepEqual(beatsClave([b('apertura', 1), b('x', 1), b('apertura', 2), b('x', 2)]), [0, 1, 2, 3], 'con dos rondas la posterior es la segunda');
   assert.deepEqual(beatsClave([]), []);
 });
+
+test('los console.error de la escena cuentan como errores aunque Chrome los escriba como INFO (se vio: un fallo de la escena pasaba por limpio)', () => {
+  const salida = [
+    '[1:2:1015/101010.000:INFO:CONSOLE(113)] "escena: la reproduccion se detuvo TypeError: this[metodo] is not a function", source: http://localhost:4321/casino/escena.js (113)',
+    '[1:2:1015/101010.000:INFO:CONSOLE(45)] "hola", source: http://localhost:4321/casino/escena.js (45)',
+    '[1:2:1015/101010.000:INFO:CONSOLE(99)] "escena: no se pudo armar Error: x", source: http://localhost:4321/casino/escena.js (99)',
+  ].join('\n');
+  const errores = erroresDeConsola(salida);
+  assert.equal(errores.length, 2);
+  assert.match(errores[0], /la reproduccion se detuvo/);
+  assert.match(errores[1], /no se pudo armar/);
+});

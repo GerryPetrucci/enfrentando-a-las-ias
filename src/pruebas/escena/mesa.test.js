@@ -8,6 +8,10 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { juegosConEscena, mesaDe } from '../../../web/casino/lineas.js';
 import { MesaBase } from '../../../web/casino/mesa-base.js';
+import { construirLineaDeTiempo as lineaDuda } from '../../../web/casino/linea-de-tiempo-duda.js';
+import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { jugar } from './ayudas.js';
+import { jugarMM, jugarMMConCaido } from './ayudas-mm.js';
 
 const METODOS = ['ejecutar', 'estadoVisible', 'mostrarEstadoInicial', 'fijarEstado', 'anim', 'esperar', 'programar', 'sonar', 'nombre', 'mostrarSubtitulos', 'voltear', 'volarFichas'];
 const web = (r) => new URL(`../../../web/${r}`, import.meta.url);
@@ -55,4 +59,19 @@ test('MesaBase.nombre cae en "Jugador N" si falta el jugador', () => {
   const mesa = new MesaBase('9x16', { jugadores: [{ nombre: 'Claude' }] }, { sfx: {} }, {});
   assert.equal(mesa.nombre(0), 'Claude');
   assert.equal(mesa.nombre(1), 'Jugador 2');
+});
+
+test('cada mesa declara METODOS (tipo de beat -> metodo) y cada tipo de beat que su juego produce tiene un metodo que existe (se vio: un campo con el mismo nombre tapaba un metodo)', async () => {
+  const partidas = {
+    dudaapuesta: async () => lineaDuda(await jugar(3)),
+    mayormenor: async () => [...lineaMM(await jugarMM(3)), ...lineaMM(await jugarMMConCaido(2, 0)), ...lineaMM(await jugarMM(1, ['prudente', 'temerario']))],
+  };
+  for (const id of juegosConEscena()) {
+    const { Mesa } = await mesaDe(id);
+    assert.equal(typeof Mesa.METODOS, 'object', `${id}: falta Mesa.METODOS`);
+    for (const [tipo, metodo] of Object.entries(Mesa.METODOS)) assert.equal(typeof Mesa.prototype[metodo], 'function', `${id}: el beat "${tipo}" apunta a ${metodo}, que no existe`);
+    assert.ok(partidas[id], `${id}: falta una partida de prueba en esta prueba`);
+    const tipos = new Set((await partidas[id]()).map((b) => b.tipo));
+    for (const tipo of tipos) assert.ok(Mesa.METODOS[tipo], `${id}: el beat "${tipo}" no tiene metodo en la mesa`);
+  }
 });

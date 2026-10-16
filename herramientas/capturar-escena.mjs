@@ -40,7 +40,8 @@ export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1,
 // muestras de audio, que son opcionales (web/audio/LEEME.md).
 export function erroresDeConsola(salida) {
   return String(salida ?? '').split(/\r?\n/)
-    .filter((l) => /:ERROR:CONSOLE\(/.test(l))
+    // Chrome escribe los console.error como INFO: la escena marca los suyos con "escena:" y tambien cuentan
+    .filter((l) => /:ERROR:CONSOLE\(/.test(l) || /:CONSOLE\(\d+\)\] "escena: /.test(l))
     .filter((l) => !(/404/.test(l) && /\/audio\//.test(l)))
     .map((l) => l.replace(/^\[[^\]]*\]\s*/, ''));
 }

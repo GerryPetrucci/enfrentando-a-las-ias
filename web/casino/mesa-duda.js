@@ -14,9 +14,10 @@ const SELLOS = {
 };
 
 export class Mesa extends MesaBase {
+  static METODOS = { apertura: 'nuevaMano', reparto: 'repartir', anuncio: 'jugada', acepta: 'jugada', duda: 'jugada', defensa: 'jugada', revelado: 'desenlace', retirada: 'desenlace', cierre: 'cerrar', final: 'terminar' };
+
   constructor(formato, partida, opciones) {
     super(formato, partida, opciones, colocar(formato));
-    this.metodos = { apertura: 'nuevaMano', reparto: 'repartir', anuncio: 'jugada', acepta: 'jugada', duda: 'jugada', defensa: 'jugada', revelado: 'desenlace', retirada: 'desenlace', cierre: 'cerrar', final: 'terminar' };
     this.pozoFichas = 0;
     this.armar();
   }

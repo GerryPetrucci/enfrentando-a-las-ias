@@ -129,3 +129,32 @@
 .tira-num .t { flex:0 0 var(--tw); height:var(--th); border-radius:9px; display:flex; align-items:center; justify-content:center; font:800 calc(var(--th) * .58)/1 var(--titulos); background:linear-gradient(#f4eedd,#e2d9c0); color:#101014; box-shadow:0 3px 0 #0006; }
 .tira-num .t.usada { background:#17171c; color:#4a4a55; text-decoration:line-through; box-shadow:none; border:1px solid #2a2a33; }
 .tira-num .t.ahora { background:var(--oro); color:#101014; box-shadow:0 0 0 3px #fff6, 0 0 22px var(--oro); }
+
+/* ---------- Mayor o menor ---------- */
+.placa-grande .placa { height:100%; }
+.placa-grande .placa .nom { font-size:40px; }
+.placa-grande.turno .placa { box-shadow:0 0 0 3px var(--oro), 0 0 30px #e0b25c88, 0 8px 26px #000a; }
+.tira-caja { z-index:10; }
+.rotulo { z-index:12; display:flex; align-items:center; justify-content:center; white-space:nowrap; font:700 24px var(--titulos); letter-spacing:.18em; text-transform:uppercase; color:#ffffffb0; }
+.ranura { z-index:12; }
+.ranura .carta { left:0; top:0; }
+.carta.cam .giro { box-shadow:0 0 0 4px var(--rojo), 0 0 24px var(--rojo); border-radius:12px; }
+.pastilla-camara.libre { transform:none; z-index:13; }
+.indic { z-index:12; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.indic .flecha { font:900 120px/1 var(--titulos); color:var(--oro); text-shadow:0 0 30px #e0b25c99; }
+.f-16x9 .indic .flecha { font-size:100px; }
+.indic .txt { font:800 40px var(--titulos); letter-spacing:.1em; text-transform:uppercase; }
+.apuesta-caja { z-index:12; display:flex; align-items:center; padding:10px 26px; border-radius:26px; background:linear-gradient(#0b0b0fee,#050507f5); border:3px solid var(--oro); box-shadow:0 12px 40px #000c; opacity:0; overflow:hidden; }
+.apuesta-caja .t1 { font:800 30px var(--titulos); letter-spacing:.08em; text-transform:uppercase; color:var(--suave); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.apuesta-caja .t2 { font:800 50px/1.05 var(--titulos); text-transform:uppercase; white-space:nowrap; }
+.f-16x9 .apuesta-caja .t2 { font-size:34px; }
+.apuesta-caja .lado, .apuesta-caja .todo { color:var(--oro); }
+.apuesta-caja .todo { margin-left:8px; padding:0 12px; border-radius:10px; background:var(--oro); color:var(--noche); }
+.banca { z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; font:700 26px var(--titulos); letter-spacing:.2em; text-transform:uppercase; color:#ffffffa0; }
+.banca .pila-p { position:relative; width:180px; height:70px; }
+.mazo-centro { flex-direction:column; justify-content:center; }
+.mazo-centro .pila-mazo { --cw:72px; margin-bottom:8px; }
+.mazo-centro .quedan { font-size:20px; text-align:center; line-height:1.2; }
+.f-16x9 .mazo-centro { flex-direction:row; gap:16px; }
+.f-16x9 .mazo-centro .pila-mazo { --cw:64px; margin-bottom:0; }
+.placa-grande .medalla { top:13px; right:140px; }

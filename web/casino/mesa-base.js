@@ -21,7 +21,6 @@ export class MesaBase {
     this.razon = razon;
     this.rapido = false; // true: todo termina al instante (para capturas)
     this.L = L;
-    this.metodos = {}; // tipo de beat -> nombre del metodo que lo anima (lo llena cada mesa)
   }
 
   // El fondo y las piezas fijas de toda mesa. No agrega al DOM las piezas fijas (cabecera, etiqueta, subtitulos, capa): cada mesa las agrega en su orden.
@@ -88,7 +87,7 @@ export class MesaBase {
   async ejecutar(beat, ms) {
     const t0 = performance.now();
     this.mostrarSubtitulos(beat);
-    const metodo = this.metodos[beat.tipo];
+    const metodo = this.constructor.METODOS?.[beat.tipo]; // cada mesa declara METODOS: tipo de beat -> nombre del metodo que lo anima
     if (metodo) await this[metodo](beat, ms);
     await this.esperar(ms - (performance.now() - t0) * this.vel); // lo que ya paso, a velocidad 1
   }
