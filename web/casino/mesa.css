@@ -177,6 +177,9 @@
 .info-fila .stats b { color:var(--oro); font-size:30px; }
 .info-fila .stats .vic { color:var(--oro); }
 .ranura .carta.fade { opacity:.45; filter:grayscale(.7); }
+.caja-info.fuera, .ranura.fuera { opacity:.38; filter:grayscale(1); }
+.estado-sol.fuera { opacity:.75; }
+.con-panel .fila-sol, .con-panel .caja-info, .con-panel .ranura, .con-panel .estado-sol { opacity:.15; }
 .pill-carta { position:absolute; left:50%; top:-14px; transform:translateX(-50%); z-index:14; padding:2px 12px; border-radius:12px; font:800 22px var(--titulos); letter-spacing:.12em; text-transform:uppercase; background:var(--oro); color:var(--noche); white-space:nowrap; }
 .pill-carta.anulada { background:var(--rojo); color:#fff; }
 .f-16x9 .pill-carta { top:-16px; font-size:24px; }

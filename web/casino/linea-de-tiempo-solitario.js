@@ -34,12 +34,20 @@ function lideres(puntos, vivos) {
   return max === 0 ? [] : vivos.filter((s) => puntos[s] === max);
 }
 
-// Si la jugada de un asiento la puso el juego, su linea no dice que la eligio: "X enseña..." / "X juega el N." pasan a decir que la puso el juego.
-function sinAtribuir(linea, reemplazadas) {
+// Si la jugada de un asiento la puso el juego, su linea no dice que la eligio: "X enseña..." / "X juega el N." pasan a decir que la puso el juego, y la anulacion y el comentario del choque
+// en que entra tampoco la cuentan como si la IA hubiera pensado lo mismo que los demas.
+function sinAtribuir(linea, reemplazadas, marcas = [], anuladas = []) {
   const pareja = linea.tipo === 'pareja' ? /^\{(\d)\} (?:enseña|muestra) el (\d+) y el (\d+)\.$/.exec(linea.texto) : null;
   if (pareja && reemplazadas[Number(pareja[1])]) return { ...linea, texto: `El juego elige la pareja de {${pareja[1]}}: el ${pareja[2]} y el ${pareja[3]}.` };
   const marca = linea.tipo === 'marca' ? /^\{(\d)\} juega el (\d+)\.$/.exec(linea.texto) : null;
   if (marca && reemplazadas[Number(marca[1])]) return { ...linea, texto: `El juego juega el ${marca[2]} por {${marca[1]}}.` };
+  const anula = linea.tipo === 'anulacion' ? /^El (\d+) se anula: lo jugaron (.+)\.$/.exec(linea.texto) : null;
+  if (anula) {
+    const delJuego = [...anula[2].matchAll(/\{(\d)\}/g)].map((m) => Number(m[1])).filter((s) => reemplazadas[s]);
+    if (delJuego.length) return { ...linea, texto: `El ${anula[1]} se anula: lo jugaron ${anula[2]} (en ${delJuego.map((s) => `{${s}}`).join(' y ')} la jugada la puso el juego).` };
+  }
+  const choque = linea.tipo === 'comentario' ? /^Choque de (\d+) en el (\d+): demasiados pensaron lo mismo\.$/.exec(linea.texto) : null;
+  if (choque && marcas.some((m, s) => m === Number(choque[2]) && anuladas?.[s] === true && reemplazadas[s])) return { ...linea, texto: `Choque de ${choque[1]} en el ${choque[2]}: una de las jugadas la puso el juego.` };
   return linea;
 }
 
@@ -58,7 +66,7 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     const reemplazadas = Array.from({ length: JUGADORES_TOPE }, (_, s) => r.invalidas?.[s] === true);
     const lineasDe = (...tipos) => (r.narracion ?? []).filter((l) => tipos.includes(l.tipo));
     const crear = (tipo, { asiento = null, lineas = [], pasos = [], reemplazo = false } = {}) => {
-      const dichas = lineas.map((l) => sinAtribuir(l, reemplazadas)).map((l) => ({ tipo: l.tipo, texto: nombrar(l.texto, partida.jugadores) }));
+      const dichas = lineas.map((l) => sinAtribuir(l, reemplazadas, r.marcas, r.anuladas)).map((l) => ({ tipo: l.tipo, texto: nombrar(l.texto, partida.jugadores) }));
       const texto = dichas.map((l) => l.texto).join(' ');
       beats.push({ id: `r${r.ronda}-${beats.length}-${tipo}`, mano: r.ronda, tipo, registro: i, asiento, camara: vistas, texto, lineas: dichas, minMs: duracion(MIN_MS[tipo], texto), reemplazo, pasos });
     };
@@ -116,6 +124,17 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     beats.push({ id: `final-${beats.length}`, mano: ultimo.ronda, tipo: 'final', registro: rondas.length - 1, asiento: ultimo.final?.pieza ?? null, camara: [], texto, lineas, minMs: duracion(MIN_MS.final, texto), reemplazo: false, pasos: [{ tipo: 'final', final: ultimo.final ?? null }] });
   }
   return beats;
+}
+
+// ---- El cierre de la final: cada criterio de desempate va con su puesto (criterioPieza separa a la pieza del medio; criterioEliminado, al medio del eliminado) ----
+const CRITERIOS = { puntos: 'puntos', fichas: 'fichas', 'ultima victoria': 'última victoria', sorteo: 'sorteo' };
+
+export function textoDeFinal(final, nombre) {
+  if (!final) return { grande: '', detalle: '' };
+  const partes = [`${nombre(final.eliminado)} queda eliminado`];
+  if (final.criterioPieza && final.criterioPieza !== 'puntos') partes.push(`La pieza se decidió por ${CRITERIOS[final.criterioPieza] ?? final.criterioPieza}`);
+  if (final.criterioEliminado && final.criterioEliminado !== 'puntos') partes.push(`El eliminado se decidió por ${CRITERIOS[final.criterioEliminado] ?? final.criterioEliminado}`);
+  return { grande: `${nombre(final.pieza)} gana la pieza`, detalle: partes.join(' · ') };
 }
 
 // ---- El banner de la escena: ciclo, que se hace en esa fase y cuando es el siguiente corte ----

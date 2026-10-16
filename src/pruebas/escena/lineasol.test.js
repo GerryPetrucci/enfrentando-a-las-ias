@@ -9,7 +9,7 @@ import { RONDAS, JUGADORES, CORTES } from '../../juegos/solitario/constantes.js'
 import { resolverNombres } from '../../juegos/solitario/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-solitario.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, textoDeFinal, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-solitario.js';
 import { jugarSol, jugarSolConCaido, muchasSol } from './ayudas-sol.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -287,4 +287,39 @@ test('el banner dice el ciclo, que se hace en cada fase y cuando es el siguiente
   assert.deepEqual([por(7, 'apertura').ciclo, por(7, 'apertura').corte], [2, 'Final: ronda 12']);
   assert.deepEqual(bannerDe(beats.at(-1)), { ciclo: 2, fase: 'Final', corte: '' });
   for (const raro of [null, undefined, {}, { tipo: 'raro', mano: 99 }]) assert.deepEqual(Object.keys(bannerDe(raro)), ['ciclo', 'fase', 'corte']);
+});
+
+test('una marca de reemplazo que choca no se cuenta como si la IA hubiera pensado lo mismo que los demas: la anulacion y el comentario del choque lo dicen', async () => {
+  let anulaciones = 0, choques = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    for (const asiento of [0, 1, 2, 3, 4]) {
+      const p = await jugarSolConCaido(seed, asiento);
+      const beats = construirLineaDeTiempo(p);
+      for (const b of beats.filter((x) => x.tipo === 'revelado')) {
+        const r = p.rondas[b.registro];
+        for (const a of b.pasos.filter((x) => x.tipo === 'anula')) {
+          const delJuego = a.asientos.filter((s) => r.invalidas[s] === true);
+          if (!delJuego.length) continue;
+          const linea = b.lineas.find((l) => l.tipo === 'anulacion' && l.texto.startsWith(`El ${a.numero} se anula`));
+          assert.match(linea.texto, /la jugada la puso el juego/, b.id);
+          for (const s of delJuego) assert.ok(linea.texto.includes(`en ${p.jugadores[s].nombre} la jugada la puso el juego`) || linea.texto.includes(p.jugadores[s].nombre), b.id);
+          anulaciones++;
+          const res = beats.find((x) => x.tipo === 'resultado' && x.registro === b.registro);
+          const choque = res.lineas.find((l) => l.tipo === 'comentario' && /^Choque de/.test(l.texto) && l.texto.includes(`en el ${a.numero}`));
+          if (choque) { assert.match(choque.texto, /una de las jugadas la puso el juego/); assert.doesNotMatch(choque.texto, /demasiados pensaron/); choques++; }
+        }
+      }
+    }
+  }
+  assert.ok(anulaciones > 10 && choques > 0, `cobertura: ${anulaciones} anulaciones y ${choques} choques de reemplazo`);
+});
+
+test('el cierre de la final pone cada criterio de desempate junto a su puesto: el de la pieza a la pieza y el del eliminado al eliminado', () => {
+  const nombre = (s) => ['A', 'B', 'C'][s];
+  const final = (criterioPieza, criterioEliminado) => ({ pieza: 0, medio: 1, eliminado: 2, criterioPieza, criterioEliminado });
+  assert.deepEqual(textoDeFinal(final('fichas', 'puntos'), nombre), { grande: 'A gana la pieza', detalle: 'C queda eliminado · La pieza se decidió por fichas' });
+  assert.deepEqual(textoDeFinal(final('puntos', 'sorteo'), nombre), { grande: 'A gana la pieza', detalle: 'C queda eliminado · El eliminado se decidió por sorteo' });
+  assert.deepEqual(textoDeFinal(final('ultima victoria', 'fichas'), nombre).detalle, 'C queda eliminado · La pieza se decidió por última victoria · El eliminado se decidió por fichas');
+  assert.deepEqual(textoDeFinal(final('puntos', 'puntos'), nombre).detalle, 'C queda eliminado');
+  assert.deepEqual(textoDeFinal(null, nombre), { grande: '', detalle: '' });
 });

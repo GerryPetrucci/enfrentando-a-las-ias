@@ -7,7 +7,7 @@
 
 import { colocarSolitario } from './layout-solitario.js';
 import { htmlCartaNumero, htmlFrenteNumero, htmlInfoFila, estiloJugador, esc } from './kit.js';
-import { RONDAS_TOPE, bannerDe } from './linea-de-tiempo-solitario.js';
+import { RONDAS_TOPE, bannerDe, textoDeFinal } from './linea-de-tiempo-solitario.js';
 import { MesaBase, el, poner, centro } from './mesa-base.js';
 
 const CRITERIOS = { puntos: 'puntos', fichas: 'fichas', 'ultima victoria': 'última victoria', sorteo: 'sorteo' };
@@ -52,13 +52,15 @@ export class Mesa extends MesaBase {
     while (nom.getBoundingClientRect().width > hueco + 0.25 && tam > 22) { tam -= 2; nom.style.fontSize = `${tam}px`; }
     nom.style.width = '';
     f.caja.classList.toggle('fuera', !st.jugando);
+    f.info.classList.toggle('fuera', !st.jugando);
+    f.ranuras.forEach((r) => r.classList.toggle('fuera', !st.jugando));
     f.caja.classList.toggle('reemplazo', st.reemplazo);
     f.caja.classList.toggle('ganadora', st.ganadora);
   }
   // El estado de la derecha de la fila (o al pie de la columna): un titulo y, debajo, un detalle chico. clase: espera | ok | mal.
   decir(s, titulo, detalle = '', clase = 'espera') {
     const e = this.filas[s].estado;
-    e.className = `fijo estado-sol ${clase}`;
+    e.className = `fijo estado-sol ${clase}${this.filas[s].st.jugando ? '' : ' fuera'}`;
     e.innerHTML = `${esc(titulo)}${detalle ? `<small>${esc(detalle)}</small>` : ''}`;
   }
   decirFuera(s) {
@@ -86,6 +88,7 @@ export class Mesa extends MesaBase {
     this.raiz.querySelectorAll('.pastilla-camara').forEach((x) => x.remove());
     this.panel.getAnimations().forEach((x) => x.cancel());
     this.panel.style.opacity = 0;
+    this.raiz.classList.remove('con-panel');
   }
   mostrarEstadoInicial(beat) {
     this.limpiarRonda();
@@ -138,7 +141,7 @@ export class Mesa extends MesaBase {
       const c = carta(null);
       r.append(c);
       const d = centro(this.L.filas[s].cartas[k]);
-      this.anim(c, [{ transform: `translate(${origen.x - d.x}px, ${origen.y - d.y}px) scale(.45)`, opacity: 0 }, { opacity: 1, offset: 0.15 }, { transform: 'none', opacity: 1 }], { duration: 480, delay: i * 110 + k * 60, fill: 'both', easing: 'cubic-bezier(.2,.9,.3,1)' });
+      this.anim(c, [{ transform: `translate(${origen.x - d.x}px, ${origen.y - d.y}px) scale(.45)`, opacity: 0 }, { opacity: 1, offset: 0.15 }, { transform: 'none', opacity: 1 }], { duration: 480, delay: i * 110 + k * 60, fill: 'backwards', easing: 'cubic-bezier(.2,.9,.3,1)' });
     }));
     this.filas.forEach((f, s) => { if (rev.parejas[s]) this.decir(s, 'Eligió', 'Cartas boca abajo', 'espera'); });
     await this.esperar(Math.min(ms * 0.3, 1500));
@@ -186,7 +189,8 @@ export class Mesa extends MesaBase {
           const f = this.filas[s], k = Math.max(0, (f.st.pareja ?? []).indexOf(a.numero));
           const pill = f.ranuras[k].querySelector('.pill-carta');
           pill.textContent = 'Anulada'; pill.classList.add('anulada');
-          this.decir(s, 'Se anula', `Jugó el ${a.numero}`, 'mal');
+          if (f.st.reemplazo) this.decir(s, 'Jugada del juego', `Se anula · jugó el ${a.numero}`, 'mal');
+          else this.decir(s, 'Se anula', `Jugó el ${a.numero}`, 'mal');
         }
       });
       retraso += 550;
@@ -218,7 +222,7 @@ export class Mesa extends MesaBase {
     await this.esperar(Math.min(ms * 0.6, retraso + 800));
   }
 
-  mostrarPanel() { this.anim(this.panel, [{ opacity: 0, transform: 'scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 420, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' }); }
+  mostrarPanel() { this.raiz.classList.add('con-panel'); this.anim(this.panel, [{ opacity: 0, transform: 'scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 420, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' }); }
 
   async anunciarCorte(beat, ms) {
     const c = beat.pasos.find((p) => p.tipo === 'corte'), e = beat.pasos.find((p) => p.tipo === 'estado');
@@ -236,16 +240,16 @@ export class Mesa extends MesaBase {
     this.cabecera.querySelector('.mano').textContent = 'Final';
     if (!f) return;
     const PUESTOS = [['pieza', f.pieza, 'Gana la pieza'], ['medio', f.medio, 'Sobrevive'], ['eliminado', f.eliminado, 'Eliminado']];
-    const detalle = [f.criterioPieza, f.criterioEliminado].find((x) => x && x !== 'puntos');
-    this.panel.innerHTML = `<div class="titulo">Final</div><div class="grande">${esc(this.nombre(f.pieza))} gana la pieza</div><div class="detalle">${esc(this.nombre(f.eliminado))} queda eliminado${detalle ? ` · Desempate por ${esc(CRITERIOS[detalle] ?? detalle)}` : ''}</div>`
+    const texto = textoDeFinal(f, (s) => this.nombre(s));
+    this.panel.innerHTML = `<div class="titulo">Final</div><div class="grande">${esc(texto.grande)}</div><div class="detalle">${esc(texto.detalle)}</div>`
       + `<div class="tabla">${f.ranking.map((x, i) => `<div class="linea${i === 0 ? ' primero' : ''}"><span>${esc(this.nombre(x.s))}</span><span>${esc(x.puntos)} pts · ${esc(x.fichas)} ●</span></div>`).join('')}</div>`;
     this.mostrarPanel();
-    for (const [puesto, s, texto] of PUESTOS) {
+    for (const [puesto, s, frase] of PUESTOS) {
       const fila = this.filas[s];
       fila.st.ganadora = puesto === 'pieza';
       fila.st.jugando = puesto !== 'eliminado';
       this.pintarFila(s);
-      this.decir(s, texto, '', puesto === 'pieza' ? 'ok' : puesto === 'eliminado' ? 'mal' : 'espera');
+      this.decir(s, frase, '', puesto === 'pieza' ? 'ok' : puesto === 'eliminado' ? 'mal' : 'espera');
     }
   }
 }
