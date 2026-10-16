@@ -29,14 +29,14 @@ function dibujar9x16() {
 function dibujar16x9() {
   const filas = Array.from({ length: 5 }, (_, s) => {
     const x = 96 + 350 * s;
-    return { fila: r(x, 194, 328, 680), placa: r(x + 8, 202, 312, 128), cartas: [r(x + 20, 350, 130, 182), r(x + 178, 350, 130, 182)], estado: r(x + 8, 560, 312, 140) };
+    return { fila: r(x, 194, 328, 680), placa: r(x + 8, 202, 312, 128), cartas: [r(x + 14, 400, 140, 196), r(x + 174, 400, 140, 196)], estado: r(x + 8, 650, 312, 210) };
   });
   return {
     etiqueta: r(96, 990, 1728, 36),
     cabecera: r(96, 54, 1728, 64),
     banner: r(96, 126, 1728, 56),
     subtitulos: r(96, 890, 1728, 92),
-    carta: { ancho: 130, alto: 182 },
+    carta: { ancho: 140, alto: 196 },
     filas,
     panel: r(300, 210, 1320, 650),
   };

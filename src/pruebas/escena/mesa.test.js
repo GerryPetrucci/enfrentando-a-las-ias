@@ -10,8 +10,10 @@ import { juegosConEscena, mesaDe } from '../../../web/casino/lineas.js';
 import { MesaBase } from '../../../web/casino/mesa-base.js';
 import { construirLineaDeTiempo as lineaDuda } from '../../../web/casino/linea-de-tiempo-duda.js';
 import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { construirLineaDeTiempo as lineaSol } from '../../../web/casino/linea-de-tiempo-solitario.js';
 import { jugar } from './ayudas.js';
 import { jugarMM, jugarMMConCaido } from './ayudas-mm.js';
+import { jugarSol, jugarSolConCaido } from './ayudas-sol.js';
 
 const METODOS = ['ejecutar', 'estadoVisible', 'mostrarEstadoInicial', 'fijarEstado', 'anim', 'esperar', 'programar', 'sonar', 'nombre', 'mostrarSubtitulos', 'voltear', 'volarFichas'];
 const web = (r) => new URL(`../../../web/${r}`, import.meta.url);
@@ -65,6 +67,7 @@ test('cada mesa declara METODOS (tipo de beat -> metodo) y cada tipo de beat que
   const partidas = {
     dudaapuesta: async () => lineaDuda(await jugar(3)),
     mayormenor: async () => [...lineaMM(await jugarMM(3)), ...lineaMM(await jugarMMConCaido(2, 0)), ...lineaMM(await jugarMM(1, ['prudente', 'temerario']))],
+    solitario: async () => [...lineaSol(await jugarSol(3)), ...lineaSol(await jugarSolConCaido(2, 0)), ...lineaSol(await jugarSol(1, ['bajo', 'bajo', 'bajo', 'bajo', 'bajo']))],
   };
   for (const id of juegosConEscena()) {
     const { Mesa } = await mesaDe(id);

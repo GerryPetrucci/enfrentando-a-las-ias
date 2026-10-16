@@ -83,6 +83,18 @@ export function htmlFrenteNumero(n) {
 // Una carta numerica. n = null cuando el publico NO debe verla todavia: el HTML no lleva el numero (ni en un atributo) y la escena lo pone con htmlFrenteNumero() al voltearla.
 export const htmlCartaNumero = (n = null) => `<div class="carta num"${numeroValido(n) ? ` data-numero="${n}"` : ''}><div class="giro">${numeroValido(n) ? htmlFrenteNumero(n) : '<div class="cara"></div>'}${htmlDorso()}</div></div>`;
 
+// ---- El numero solitario: la fila de cada jugador ----
+// Las tres variables de color de un jugador (--c borde, --t texto, --fondo avatar): salen de paleta.js por su id; un bot usa el color que trae el resultado guardado.
+export const estiloJugador = (jugador) => { const j = jugador ?? {}; return `--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))};--fondo:${esc(fondoCSS(j.id, j.color))}`; };
+
+// La informacion de un jugador en su fila: avatar, nombre y "N pts · M ●" (puntos de cartas y fichas de victoria). Lo que llega de los datos pasa por esc(); un numero ilegible vale 0.
+export function htmlInfoFila(jugador, puntos = 0, fichas = 0) {
+  const j = jugador ?? {};
+  const nombre = j.nombre ?? 'Jugador';
+  const entero = (x) => (Number.isInteger(x) && x >= 0 ? x : 0);
+  return `<div class="info-fila" style="${estiloJugador(j)}"><div class="avatar">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="stats"><b>${entero(puntos)}</b> pts · ${entero(fichas)} <span class="vic">●</span></div></div></div>`;
+}
+
 // La tira de numeros de un jugador (informacion publica de Mayor o menor): los que siguen disponibles claros, los usados oscuros y tachados, el que se juega ahora en dorado.
 export function htmlTira(numeros, usadas = [], ahora = null) {
   const lista = (Array.isArray(numeros) ? numeros : []).filter(numeroValido);

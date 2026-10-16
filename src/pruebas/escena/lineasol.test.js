@@ -9,7 +9,7 @@ import { RONDAS, JUGADORES, CORTES } from '../../juegos/solitario/constantes.js'
 import { resolverNombres } from '../../juegos/solitario/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-solitario.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-solitario.js';
 import { jugarSol, jugarSolConCaido, muchasSol } from './ayudas-sol.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -271,4 +271,20 @@ test('la comprobacion de estado: al empezar cada ronda no queda nada de la anter
   }
   assert.match(erroresDeEstado(null, beats[idx[0]]).join(), /estado/);
   assert.deepEqual(beatsDeEstado(null, 3), []);
+});
+
+test('el banner dice el ciclo, que se hace en cada fase y cuando es el siguiente corte', async () => {
+  const beats = construirLineaDeTiempo(await jugarSol(3));
+  const por = (ronda, tipo) => bannerDe(beats.find((b) => b.mano === ronda && b.tipo === tipo));
+  assert.deepEqual(por(1, 'apertura'), { ciclo: 1, fase: 'Cada quien elige dos cartas', corte: 'Corte: ronda 3' });
+  assert.equal(por(1, 'parejas').fase, 'Cada quien elige dos cartas');
+  assert.equal(por(1, 'marcas').fase, 'Cada quien marca la que juega');
+  assert.equal(por(2, 'revelado').fase, 'Se revelan las marcas');
+  assert.equal(por(2, 'resultado').fase, 'Resultado de la ronda');
+  assert.deepEqual([por(3, 'corte').fase, por(3, 'corte').corte], ['Corte 1', 'Corte: ronda 3']);
+  assert.deepEqual([por(4, 'apertura').ciclo, por(4, 'apertura').corte], [1, 'Corte: ronda 6']);
+  assert.deepEqual([por(6, 'corte').fase, por(6, 'corte').corte], ['Corte 2', 'Corte: ronda 6']);
+  assert.deepEqual([por(7, 'apertura').ciclo, por(7, 'apertura').corte], [2, 'Final: ronda 12']);
+  assert.deepEqual(bannerDe(beats.at(-1)), { ciclo: 2, fase: 'Final', corte: '' });
+  for (const raro of [null, undefined, {}, { tipo: 'raro', mano: 99 }]) assert.deepEqual(Object.keys(bannerDe(raro)), ['ciclo', 'fase', 'corte']);
 });

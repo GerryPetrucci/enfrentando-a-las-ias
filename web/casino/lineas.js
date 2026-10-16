@@ -20,6 +20,14 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-mayormenor.js'),
     mesa: () => import('./mesa-mayormenor.js'),
   },
+  solitario: {
+    nombre: 'El número solitario',
+    jugadores: 5,
+    camaraPorDefecto: 2, // de los que siguen jugando: a cuantos se les ve la marca antes del reveal
+    unidad: 'ronda',
+    linea: () => import('./linea-de-tiempo-solitario.js'),
+    mesa: () => import('./mesa-solitario.js'),
+  },
 };
 
 export const juegosConEscena = () => Object.keys(ESCENAS);

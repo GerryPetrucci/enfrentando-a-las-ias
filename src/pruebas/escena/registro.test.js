@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { juegosConEscena, escenaDe, lineaDe } from '../../../web/casino/lineas.js';
 import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
+import { jugarSol } from './ayudas-sol.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -66,4 +67,15 @@ test('la lista cuenta las rondas de una partida real de Mayor o menor (sus regis
   assert.match(e.titulo, new RegExp(` · ${e.manos} rondas`));
   const una = structuredClone(p); una.rondas = una.rondas.slice(0, 1);
   assert.match(catalogarPartidas([{ nombre: 'mm.json', datos: { partidas: [una] } }])[0].titulo, / · 1 ronda$/);
+});
+
+test('El numero solitario esta registrado: cinco jugadores, camara 2, unidad ronda; la lista cuenta sus 12 rondas (dos registros por ronda)', async () => {
+  const e = escenaDe('solitario');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['El número solitario', 5, 2, 'ronda']);
+  const p = await jugarSol(1);
+  const [entrada] = catalogarPartidas([{ nombre: 'sol.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true);
+  assert.equal(entrada.manos, 12);
+  assert.match(entrada.titulo, / · 12 rondas$/);
+  assert.equal(typeof (await lineaDe('solitario')), 'function');
 });

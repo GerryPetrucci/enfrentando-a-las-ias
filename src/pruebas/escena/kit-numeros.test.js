@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador } from '../../../web/casino/kit.js';
+import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
 const cuenta = (texto, sub) => texto.split(sub).length - 1;
@@ -70,4 +71,33 @@ test('mesa.css trae el aspecto de la carta numerica y de la tira (usadas tachada
   assert.match(c, /\.tira-num \{[^}]*display:flex/);
   assert.match(c, /\.tira-num \.t\.usada \{[^}]*text-decoration:line-through/);
   assert.match(c, /\.tira-num \.t\.ahora \{[^}]*background:var\(--oro\)/);
+});
+
+test('la informacion de una fila de El numero solitario lleva avatar, nombre y "N pts · M ●", con el color de paleta.js y todo escapado', () => {
+  const claude = htmlInfoFila({ id: 'claude', nombre: 'Claude', inicial: 'C' }, 8, 1);
+  assert.ok(claude.includes(`--c:${PALETA.claude.color}`) && claude.includes(`--t:${PALETA.claude.texto}`), 'el color sale de paleta.js');
+  assert.match(claude, /class="nom">Claude</);
+  assert.match(claude, /<b>8<\/b> pts · 1 /);
+  const malo = htmlInfoFila({ id: 'x', nombre: '<img src=x onerror=alert(1)>', color: '#123456', inicial: '<' }, 3, 0);
+  assert.doesNotMatch(malo, /<img/, 'el nombre se escapa');
+  assert.match(malo, /--c:#123456/, 'un bot usa el color guardado');
+  for (const raro of [NaN, -3, 1.5, 'x', null, undefined]) assert.match(htmlInfoFila({ nombre: 'A' }, raro, raro), /<b>0<\/b> pts · 0 /, `puntos ilegibles: ${String(raro)}`);
+  for (const sinJugador of [null, undefined, {}]) assert.match(htmlInfoFila(sinJugador, 1, 1), /class="nom">Jugador</);
+});
+
+test('estiloJugador da las tres variables de color de un jugador (para la fila, que pone el borde con --c)', () => {
+  const e = estiloJugador({ id: 'claude', nombre: 'Claude' });
+  assert.ok(e.includes(`--c:${PALETA.claude.color}`) && e.includes('--t:') && e.includes('--fondo:'));
+  assert.doesNotThrow(() => estiloJugador(null));
+});
+
+test('mesa.css trae el aspecto de la fila de El numero solitario: nombre con elipsis, fila atenuada si ya no juega, borde punteado si hubo jugada del juego', () => {
+  const texto = css();
+  assert.match(texto, /\.info-fila \.nom \{[^}]*text-overflow:ellipsis/, 'un nombre largo termina en elipsis');
+  assert.match(texto, /\.info-fila \.nom \{[^}]*white-space:nowrap/);
+  assert.match(texto, /\.fila-sol \{[^}]*border:3px solid var\(--c\)/);
+  assert.match(texto, /\.fila-sol\.fuera \{[^}]*opacity/);
+  assert.match(texto, /\.fila-sol\.reemplazo \{[^}]*dashed/);
+  assert.match(texto, /\.fila-sol\.ganadora \{/);
+  assert.match(texto, /\.panel-sol \{/);
 });

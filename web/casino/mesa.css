@@ -158,3 +158,44 @@
 .f-16x9 .mazo-centro { flex-direction:row; gap:16px; }
 .f-16x9 .mazo-centro .pila-mazo { --cw:64px; margin-bottom:0; }
 .placa-grande .medalla { top:13px; right:140px; }
+
+/* ---------- El numero solitario ---------- */
+.fila-sol { z-index:10; border-radius:42px; background:linear-gradient(#1b1b22,#0c0c10); border:3px solid var(--c); box-shadow:0 8px 26px #000a; }
+.f-16x9 .fila-sol { border-radius:36px; }
+.fila-sol.reemplazo { border-style:dashed; }
+.fila-sol.fuera { opacity:.38; filter:grayscale(1); }
+.fila-sol.ganadora { box-shadow:0 0 0 4px var(--oro), 0 0 40px #e0b25c99, 0 8px 26px #000a; }
+.caja-info { z-index:12; }
+.caja-info .info-fila { height:100%; }
+.info-fila { display:flex; align-items:center; gap:12px; min-width:0; }
+.info-fila .avatar { width:62px; height:62px; font-size:34px; }
+.f-16x9 .info-fila .avatar { width:56px; height:56px; font-size:32px; }
+.info-fila .quien { min-width:0; flex:1; }
+.info-fila .nom { font:800 38px/1 var(--titulos); letter-spacing:.04em; text-transform:uppercase; color:var(--t); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.f-16x9 .info-fila .nom { font-size:34px; }
+.info-fila .stats { margin-top:4px; font:700 24px var(--titulos); letter-spacing:.06em; color:#c9c9d2; white-space:nowrap; }
+.info-fila .stats b { color:var(--oro); font-size:30px; }
+.info-fila .stats .vic { color:var(--oro); }
+.ranura .carta.fade { opacity:.45; filter:grayscale(.7); }
+.pill-carta { position:absolute; left:50%; top:-14px; transform:translateX(-50%); z-index:14; padding:2px 12px; border-radius:12px; font:800 22px var(--titulos); letter-spacing:.12em; text-transform:uppercase; background:var(--oro); color:var(--noche); white-space:nowrap; }
+.pill-carta.anulada { background:var(--rojo); color:#fff; }
+.f-16x9 .pill-carta { top:-16px; font-size:24px; }
+.estado-sol { z-index:12; display:flex; flex-direction:column; justify-content:center; align-items:flex-end; text-align:right; min-width:0; font:800 34px/1.05 var(--titulos); letter-spacing:.05em; text-transform:uppercase; }
+.f-16x9 .estado-sol { align-items:center; text-align:center; font-size:36px; }
+.estado-sol small { display:block; margin-top:2px; font:700 20px var(--titulos); letter-spacing:.12em; color:var(--suave); }
+.estado-sol.espera { color:var(--suave); }
+.estado-sol.ok { color:var(--oro); }
+.estado-sol.mal { color:var(--rojo); }
+.estado-sol .pastilla-camara { position:static; transform:none; display:inline-flex; margin-bottom:2px; padding:0; background:none; font-size:32px; color:var(--rojo); }
+.banner-sol { z-index:30; display:flex; align-items:center; justify-content:center; gap:14px; padding:0 20px; border-radius:20px; background:#000c; border:1.5px solid #ffffff22; font:800 28px var(--titulos); letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.banner-sol b { color:var(--oro); font-weight:800; }
+.f-16x9 .banner-sol { font-size:30px; }
+.panel-sol { z-index:36; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:28px 36px; border-radius:36px; background:linear-gradient(#0b0b0f,#050507); border:3px solid var(--oro); box-shadow:0 20px 60px #000d, 0 0 60px #e0b25c55; opacity:0; text-align:center; overflow:hidden; }
+.panel-sol .titulo { font:800 56px/1 var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--oro); }
+.panel-sol .grande { max-width:100%; font:800 46px/1.05 var(--titulos); text-transform:uppercase; }
+.panel-sol .detalle { font:600 26px var(--texto); color:#c9c9d2; }
+.panel-sol .tabla { width:100%; display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.panel-sol .linea { display:flex; justify-content:space-between; gap:16px; padding:8px 18px; border-radius:16px; background:#ffffff0d; font:700 32px var(--titulos); letter-spacing:.06em; text-transform:uppercase; }
+.panel-sol .linea.primero { background:#e0b25c26; color:var(--oro); }
+.panel-sol .linea span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.panel-sol .linea span:last-child { white-space:nowrap; }

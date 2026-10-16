@@ -118,6 +118,18 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
   return beats;
 }
 
+// ---- El banner de la escena: ciclo, que se hace en esa fase y cuando es el siguiente corte ----
+const FASES = { apertura: 'Cada quien elige dos cartas', parejas: 'Cada quien elige dos cartas', marcas: 'Cada quien marca la que juega', revelado: 'Se revelan las marcas', resultado: 'Resultado de la ronda', final: 'Final' };
+
+export function bannerDe(beat) {
+  const ronda = Number.isInteger(beat?.mano) ? beat.mano : 1;
+  const ciclo = ronda > 6 ? 2 : 1;
+  if (beat?.tipo === 'final') return { ciclo, fase: 'Final', corte: '' };
+  const corte = ronda <= 3 ? 'Corte: ronda 3' : ronda <= 6 ? 'Corte: ronda 6' : 'Final: ronda 12';
+  const fase = beat?.tipo === 'corte' ? `Corte ${beat.pasos?.find((p) => p.tipo === 'corte')?.numero ?? ''}`.trim() : FASES[beat?.tipo] ?? '';
+  return { ciclo, fase, corte };
+}
+
 // ---- Que rondas valen la pena para un clip de redes -----------------------------------------------------------------------------------------
 // Cada ronda suma puntos por lo que paso en ella (todo sale del registro y refleja las mismas reglas que los comentarios del motor). Los pesos son editoriales.
 const PESOS = { final: 5, corte: 3, 'toma la delantera': 3, 'choque de tres': 3, 'ronda en blanco': 3, 'premio alto': 2 };
