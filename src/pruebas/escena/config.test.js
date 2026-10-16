@@ -5,14 +5,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz } from '../../../web/casino/escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz, etiquetaDeApuesta, entradaDeVoz, resumenDeVoz, fuenteDeVoz } from '../../../web/casino/escena-config.js';
+import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { planDeNarracion, armarVoz } from '../../../herramientas/narrar.mjs';
+import { jugarMM } from './ayudas-mm.js';
 import { POSICION_EN_HOJA } from '../../../web/casino/layout.js';
 import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
 import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
-  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: 2, sonido: true, vel: 1, razon: false, auto: false, limpio: false, voz: null, escala: 'ajustar' });
+  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, vel: 1, razon: false, auto: false, limpio: false, voz: null, escala: 'ajustar' });
   assert.deepEqual(leerParametros(undefined), leerParametros(''));
 });
 
@@ -22,7 +25,8 @@ test('los parametros se leen y se validan: lo ilegible vuelve al valor por defec
   assert.equal(leerParametros('formato=hoja').formato, 'hoja');
   for (const [q, esperado] of [
     ['formato=1x1', { formato: '9x16' }], ['formato=4x5', { formato: '9x16' }],
-    ['camara=7', { camara: 2 }], ['camara=-1', { camara: 2 }], ['camara=x', { camara: 2 }], ['camara=0', { camara: 0 }],
+    ['camara=10', { camara: null }], ['camara=-1', { camara: null }], ['camara=x', { camara: null }], ['camara=0', { camara: 0 }], ['camara=9', { camara: 9 }],
+    ['ronda=4', { mano: 4 }], ['mano=2&ronda=5', { mano: 2 }], ['ronda=0', { mano: 1 }], ['ronda=3&hasta=6', { mano: 3, hasta: 6 }],
     ['vel=0', { vel: 1 }], ['vel=abc', { vel: 1 }], ['vel=100', { vel: 8 }], ['vel=0.01', { vel: 0.25 }],
     ['partida=0', { partida: 1 }], ['partida=-3', { partida: 1 }], ['partida=x', { partida: 1 }],
     ['mano=0', { mano: 1 }], ['mano=x', { mano: 1 }],
@@ -115,6 +119,7 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
   assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
   assert.equal(c[0].partida, p1);
+  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'fuga']);
   const manos = Math.max(...p1.rondas.map((r) => r.mano));
   assert.equal(c[0].manos, manos);
   assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
@@ -153,4 +158,45 @@ test('primeraValida elige la partida pedida si sirve y, si no, la primera que si
   assert.equal(primeraValida([]), null);
   assert.equal(primeraValida(null), null);
   assert.equal(primeraValida(c.slice(0, 1)), null);
+});
+
+test('el texto de la caja de la apuesta: una apuesta del juego no se le atribuye a la IA', () => {
+  assert.deepEqual(etiquetaDeApuesta({ reemplazo: false }, 'Claude'), { titulo: 'Claude apuesta' });
+  assert.deepEqual(etiquetaDeApuesta({ reemplazo: true }, 'Caido'), { titulo: 'El juego apuesta por Caido' });
+  for (const raro of [null, undefined, {}, 7]) assert.equal(typeof etiquetaDeApuesta(raro, 'X').titulo, 'string');
+});
+
+test('la voz solo vale para el beat cuyo texto se narro: un voz.json con otra partida no suena ni cambia los tiempos', async () => {
+  const p1 = await jugarMM(1), p2 = await jugarMM(2);
+  const b1 = lineaMM(p1), b2 = lineaMM(p2);
+  // los ids de Mayor o menor no dependen de la partida: el mismo id existe en las dos
+  assert.ok(b1.filter((b) => b2.some((x) => x.id === b.id)).length > 10, 'precondicion: hay ids compartidos');
+  const resultados = planDeNarracion(b1).map((x) => ({ id: x.id, duracionS: 30, fuente: x.fuente }));
+  const voz1 = armarVoz(resultados, { carpeta: 'data/voz/x-p1' });
+  // la misma partida: toda la voz sirve
+  const propia = resumenDeVoz(b1, voz1);
+  assert.equal(propia.desacordes, 0);
+  assert.equal(propia.usados, resultados.length);
+  for (const b of b1) if (voz1[b.id]) assert.deepEqual(entradaDeVoz(voz1, b), voz1[b.id]);
+  // otra partida: lo que dice distinto no se usa (dura su minimo y no suena), lo que dice igual si
+  const ajena = resumenDeVoz(b2, voz1);
+  assert.ok(ajena.desacordes > 0, 'hay momentos con otro texto');
+  let distintos = 0;
+  for (const b of b2) {
+    const e = entradaDeVoz(voz1, b);
+    const mismoTexto = voz1[b.id] && voz1[b.id].fuente === fuenteDeVoz(b.texto);
+    if (voz1[b.id] && !mismoTexto) { distintos++; assert.equal(e, null, b.id); assert.equal(duracionDeBeat(b, voz1, 1), b.minMs, `${b.id}: dura su minimo`); }
+    if (mismoTexto) assert.deepEqual(e, voz1[b.id], b.id);
+  }
+  assert.equal(distintos, ajena.desacordes);
+});
+
+test('una voz sin fuente (escrita a mano o de antes) sigue valiendo; la fuente ignora espacios y saltos; basura no lanza', () => {
+  const beat = { id: 'a', texto: '  Hola   mundo\n', minMs: 1000 };
+  assert.deepEqual(entradaDeVoz({ a: { ms: 5000, archivo: 'x/a.ogg' } }, beat), { ms: 5000, archivo: 'x/a.ogg' });
+  assert.deepEqual(entradaDeVoz({ a: { ms: 5000, archivo: 'x/a.ogg', fuente: 'Hola mundo' } }, beat).ms, 5000);
+  assert.equal(entradaDeVoz({ a: { ms: 5000, archivo: 'x/a.ogg', fuente: 'Otra cosa' } }, beat), null);
+  for (const voz of [null, undefined, 7, 'x', [], { a: null }, { a: 3 }, JSON.parse('{"__proto__": {"ms": 9}}')]) assert.equal(entradaDeVoz(voz, beat), null);
+  assert.equal(entradaDeVoz({ a: { ms: 1 } }, null), null);
+  assert.deepEqual(resumenDeVoz(null, null), { usados: 0, desacordes: 0 });
 });

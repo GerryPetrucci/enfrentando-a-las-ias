@@ -102,7 +102,7 @@ test('un color de carta desconocido no rompe el recuadro del anuncio: la forma s
 });
 
 test('los textos que ve el publico en la barra de la escena llevan acentos (la pagina se publica)', () => {
-  const cadenas = leer('casino/escena-duda.js').match(/'[^'\n]*'|`[^`\n]*`|"[^"\n]*"/g) ?? [];
+  const cadenas = (leer('casino/escena.js') + leer('casino/mesa-duda.js')).match(/'[^'\n]*'|`[^`\n]*`|"[^"\n]*"/g) ?? [];
   const sinAcento = cadenas.filter((c) => /\b(pagina|Parametros|minimos|abrio|valido)\b/.test(c));
   assert.deepEqual(sinAcento, [], 'cadenas sin acento');
 });
@@ -116,6 +116,6 @@ test('mesa.css: la medalla "Pieza" no se sale de la zona segura y las cartas de 
 });
 
 test('el pozo se llama "Apuestas": ahi no se juntan los pagos a la banca', () => {
-  assert.match(leer('casino/escena-duda.js'), /<span>Apuestas<\/span>/);
-  assert.doesNotMatch(leer('casino/escena-duda.js'), /<span>Banca<\/span>/);
+  assert.match(leer('casino/mesa-duda.js'), /<span>Apuestas<\/span>/);
+  assert.doesNotMatch(leer('casino/mesa-duda.js'), /<span>Banca<\/span>/);
 });

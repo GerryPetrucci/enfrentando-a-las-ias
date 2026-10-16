@@ -129,3 +129,23 @@ test('en web/audio no sobra ninguna muestra: solo estan las que usan los efectos
   const enDisco = readdirSync(new URL('../../../web/audio/', import.meta.url)).filter((f) => f.endsWith('.ogg')).sort();
   assert.deepEqual(enDisco, usadas);
 });
+
+test('los pasos de Mayor o menor y de El numero solitario suenan con los efectos que ya existen (vocabulario fijado en el plan, tarea A5)', () => {
+  const casos = [
+    // Mayor o menor
+    ['crupier', ['carta']], ['jugar', ['carta']], ['pregunta', ['duda']], ['cobra', ['ficha']], ['paga', ['ficha']],
+    // El numero solitario
+    ['marcar', ['tic']], ['anula', ['tic']], ['premio', ['gana']], ['corte', ['anuncio']],
+  ];
+  for (const [tipo, esperado] of casos) assert.deepEqual(eventosDePaso({ tipo }), esperado, tipo);
+  // los sellos de cada juego: gana o pierde segun el caso, y "igual" (la carta empata con la del crupier) no premia ni castiga
+  for (const [sello, esperado] of [['justo', ['gana']], ['cumplido', ['gana']], ['acierta', ['gana']], ['farol', ['pierde']], ['incumplido', ['pierde']], ['retirada', ['pierde']], ['falla', ['pierde']], ['igual', []]]) {
+    assert.deepEqual(eventosDePaso({ tipo: 'sello', sello }), esperado, `sello ${sello}`);
+  }
+  // lo que ya sonaba sigue igual
+  assert.deepEqual(eventosDePaso({ tipo: 'repartir' }), ['carta']);
+  assert.deepEqual(eventosDePaso({ tipo: 'revelar' }), ['voltear']);
+  assert.deepEqual(eventosDePaso({ tipo: 'apuesta' }), ['ficha']);
+  assert.deepEqual(eventosDePaso({ tipo: 'estado' }), []);
+  assert.deepEqual(eventosDePaso({ tipo: 'roles' }), [], 'los pasos que solo cambian el texto o el estado no suenan');
+});

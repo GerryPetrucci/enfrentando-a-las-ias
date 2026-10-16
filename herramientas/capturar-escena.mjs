@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Verificacion visual de la escena de Duda y apuesta: abre web/escena.html con Chrome sin cabeza, toma capturas de los momentos clave en cada
+// Verificacion visual de la escena de casino de cualquier juego registrado (web/casino/lineas.js): abre web/escena.html con Chrome sin cabeza, toma capturas de los momentos clave en cada
 // formato y falla si la consola de la pagina trae errores. No juzga si "se ve bien": eso lo hace quien mira las capturas.
 //
 //   node src/servidor.js                      (en otra terminal: sirve web/ y data/)
@@ -7,7 +7,7 @@
 //   node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --formato=9x16 --beats=1,6,43 --salida=grabaciones/capturas
 //   node herramientas/capturar-escena.mjs --archivo=NOMBRE.json --completa      (reproduce toda la partida a velocidad 8 y comprueba que termina)
 //
-// --archivo   partida de Duda y apuesta dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
+// --archivo   partida de un juego con escena dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
 // --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
@@ -19,7 +19,7 @@ import { existsSync, readFileSync, mkdirSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { construirLineaDeTiempo } from '../web/casino/linea-de-tiempo-duda.js';
+import { escenaDe } from '../web/casino/lineas.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -40,48 +40,29 @@ export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1,
 // muestras de audio, que son opcionales (web/audio/LEEME.md).
 export function erroresDeConsola(salida) {
   return String(salida ?? '').split(/\r?\n/)
-    .filter((l) => /:ERROR:CONSOLE\(/.test(l))
+    // Chrome escribe los console.error como INFO: la escena marca los suyos con "escena:" y tambien cuentan
+    .filter((l) => /:ERROR:CONSOLE\(/.test(l) || /:CONSOLE\(\d+\)\] "escena: /.test(l))
     .filter((l) => !(/404/.test(l) && /\/audio\//.test(l)))
     .map((l) => l.replace(/^\[[^\]]*\]\s*/, ''));
 }
 
-// Los momentos que vale la pena mirar: el primero de cada tipo importante y el final.
+// Los momentos que vale la pena mirar, de cualquier juego: el primer beat de cada tipo, el primero de cada tipo en una ronda posterior (ahi se ve lo que una ronda le deja
+// a la siguiente: se vieron fallos justo ahi) y el final.
 export function beatsClave(beats) {
   if (!Array.isArray(beats)) return [];
   const indices = new Set();
-  for (const tipo of ['reparto', 'anuncio', 'duda', 'revelado', 'retirada']) {
-    const i = beats.findIndex((b) => b.tipo === tipo);
-    if (i >= 0) indices.add(i);
-  }
-  // y el reparto y el primer anuncio de una mano posterior: ahi se ve lo que una mano le deja a la siguiente (se vieron fallos justo ahi)
-  const manos = [...new Set(beats.map((b) => b.mano))];
-  const posterior = manos[2] ?? manos[1];
-  for (const tipo of ['reparto', 'anuncio']) {
-    const i = beats.findIndex((b) => b.mano === posterior && b.tipo === tipo);
-    if (posterior !== undefined && i >= 0) indices.add(i);
-  }
+  const primerosDeCadaTipo = (lista) => {
+    const vistos = new Set();
+    for (const { b, i } of lista) if (!vistos.has(b.tipo)) { vistos.add(b.tipo); indices.add(i); }
+  };
+  const todos = beats.map((b, i) => ({ b, i }));
+  primerosDeCadaTipo(todos);
+  const rondas = [...new Set(beats.map((b) => b.mano))];
+  const posterior = rondas[2] ?? rondas[1];
+  if (posterior !== undefined) primerosDeCadaTipo(todos.filter(({ b }) => b.mano === posterior));
   const final = beats.findLastIndex((b) => b.tipo === 'final');
   if (final >= 0) indices.add(final);
   return [...indices].sort((a, b) => a - b);
-}
-
-// El reparto de cada mano desde la segunda (hasta `max` manos): en ese momento no debe quedar nada visible de la mano anterior.
-export function beatsDeEstado(beats, max = 6) {
-  if (!Array.isArray(beats)) return [];
-  const manos = [...new Set(beats.map((b) => b.mano))].slice(1, 1 + max);
-  return manos.map((m) => beats.findIndex((b) => b.mano === m && b.tipo === 'reparto')).filter((i) => i >= 0);
-}
-
-// Lo que la escena informa de si misma al detenerse (data-estado): opacidad del sello y del anuncio, pastillas de camara y medallas puestas.
-export function erroresDeEstado(estado, beat) {
-  if (!estado) return ['la escena no informo su estado (data-estado)'];
-  const errores = [];
-  if (estado.sello > 0.01) errores.push(`sello visible (${estado.sello}) al repartir ${beat.id}: es de la mano anterior`);
-  if (estado.anuncio > 0.01) errores.push(`anuncio visible (${estado.anuncio}) al repartir ${beat.id}: es de la mano anterior`);
-  const camara = beat.camara?.length ?? 0;
-  if (estado.pastillas !== camara) errores.push(`hay ${estado.pastillas} pastillas de camara en ${beat.id} y la camara de esa mano tiene ${camara}`);
-  if (estado.medallas !== 0) errores.push(`queda ${estado.medallas} medalla de una partida anterior en ${beat.id}`);
-  return errores;
 }
 
 export function leerEstado(dom) {
@@ -118,7 +99,7 @@ function ejecutarChrome(chrome, argumentos) {
 
 async function principal() {
   const a = Object.fromEntries(process.argv.slice(2).map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
-  if (!a.archivo) { console.error('Falta --archivo=NOMBRE.json (una partida de Duda y apuesta dentro de data/).'); process.exit(1); }
+  if (!a.archivo) { console.error('Falta --archivo=NOMBRE.json (una partida de un juego con escena de casino dentro de data/).'); process.exit(1); }
   const base = a.base ?? 'http://localhost:4321';
   const formatos = (a.formato ?? '9x16,16x9').split(',');
   formatos.forEach(tamanoDeFormato);
@@ -128,7 +109,10 @@ async function principal() {
 
   const datos = JSON.parse(readFileSync(resolve('data', a.archivo), 'utf8'));
   const partida = Number(a.partida ?? 1);
-  const beats = construirLineaDeTiempo(datos.partidas?.[partida - 1]);
+  const juego = datos.partidas?.[partida - 1]?.juego?.id ?? datos.juego?.id;
+  let linea;
+  try { linea = await escenaDe(juego).linea(); } catch (e) { console.error(e.message); process.exit(1); }
+  const beats = linea.construirLineaDeTiempo(datos.partidas?.[partida - 1]);
   if (!beats.length) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
   const carpeta = resolve(a.salida ?? 'grabaciones/capturas-escena');
   mkdirSync(carpeta, { recursive: true });
@@ -157,10 +141,10 @@ async function principal() {
     }
   } else if (a.estado) {
     for (const formato of formatos) {
-      for (const beat of beatsDeEstado(beats, Number(a.manos ?? 6))) {
+      for (const beat of linea.beatsDeEstado(beats, Number(a.manos ?? 6))) {
         const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=10000', '--dump-dom',
           urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })]);
-        const errores = erroresDeEstado(leerEstado(r.salida), beats[beat]);
+        const errores = linea.erroresDeEstado(leerEstado(r.salida), beats[beat]);
         console.log(`  ${errores.length ? 'FALLO' : 'ok   '} ${formato} ${beats[beat].id}`);
         for (const e of errores) console.error(`  ERROR: ${e}`);
         fallos += errores.length;

@@ -50,5 +50,5 @@ test('mesa.css declara cada fuente con sus pesos y apunta a archivos que existen
 });
 
 test('la escena espera a que carguen las fuentes antes de medir los textos', () => {
-  assert.match(leer('casino/escena-duda.js'), /document\.fonts\.load\(/);
+  assert.match(leer('casino/escena.js'), /document\.fonts\.load\(/);
 });

@@ -23,13 +23,16 @@ export const EVENTOS = {
 // Que suena con cada paso de la linea de tiempo (lista vacia = silencio). Un paso desconocido o ilegible no suena.
 export function eventosDePaso(paso) {
   switch (paso?.tipo) {
-    case 'repartir': return ['carta'];
+    case 'repartir': case 'crupier': case 'jugar': return ['carta'];
     case 'revelar': return ['voltear'];
     case 'anuncio': return ['anuncio'];
     case 'duda': return ['duda'];
-    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': return ['ficha'];
-    case 'contar': return ['tic'];
-    case 'sello': return [paso.sello === 'justo' || paso.sello === 'cumplido' ? 'gana' : 'pierde'];
+    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': case 'cobra': case 'paga': case 'devuelve': return ['ficha'];
+    case 'contar': case 'marcar': case 'anula': return ['tic'];
+    case 'pregunta': return ['duda'];
+    case 'premio': return ['gana'];
+    case 'corte': return ['anuncio'];
+    case 'sello': return paso.sello === 'igual' ? [] : [['justo', 'cumplido', 'acierta'].includes(paso.sello) ? 'gana' : 'pierde'];
     default: return [];
   }
 }

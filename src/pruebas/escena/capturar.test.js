@@ -53,7 +53,6 @@ test('los beats clave de una partida: el primer reparto, anuncio, duda, revelado
   const tipos = clave.map((i) => beats[i].tipo);
   for (const t of ['reparto', 'anuncio', 'duda', 'revelado', 'retirada', 'final']) assert.ok(tipos.includes(t), `falta ${t}: ${tipos}`);
   assert.equal(beats[clave.at(-1)].tipo, 'final');
-  assert.equal(tipos.filter((t) => t === 'revelado').length, 1, 'un solo revelado');
   assert.deepEqual(beatsClave([]), []);
   assert.deepEqual(beatsClave(null), []);
 });
@@ -67,7 +66,8 @@ test('buscarChrome usa CHROME_PATH si existe, luego los sitios conocidos, y devu
   assert.equal(buscarChrome({}, () => false), null);
 });
 
-import { beatsDeEstado, erroresDeEstado, leerEstado, leerDesfase, desfaseAceptable } from '../../../herramientas/capturar-escena.mjs';
+import { leerEstado, leerDesfase, desfaseAceptable } from '../../../herramientas/capturar-escena.mjs';
+import { beatsDeEstado, erroresDeEstado } from '../../../web/casino/linea-de-tiempo-duda.js';
 
 test('los beats clave miran tambien una mano posterior: el estado que arrastra una mano a la siguiente es donde se vieron los fallos', async () => {
   const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
@@ -114,4 +114,25 @@ test('un desfase de reproduccion es aceptable hasta 1.5 s o el 4 % de lo esperad
   assert.equal(desfaseAceptable({ medidoMs: 197000, esperadoMs: 190000, desfaseMs: 7000 }), true, '4 % de 190 s son 7.6 s');
   assert.equal(desfaseAceptable({ medidoMs: 59000, esperadoMs: 60000, desfaseMs: -1000 }), true);
   assert.equal(desfaseAceptable(null), false);
+});
+
+test('beatsClave es generica (sirve a cualquier juego): el primer beat de cada tipo, el primero de cada tipo en una ronda posterior y el final, sin repetir', () => {
+  const b = (tipo, mano) => ({ tipo, mano });
+  const beats = [b('apertura', 1), b('mira', 1), b('apertura', 2), b('mira', 2), b('cierre', 2), b('apertura', 3), b('mira', 3), b('final', 3)];
+  assert.deepEqual(beatsClave(beats), [0, 1, 4, 5, 6, 7]);
+  assert.deepEqual(beatsClave([b('apertura', 1), b('mira', 1), b('final', 1)]), [0, 1, 2], 'con una sola ronda no hay ronda posterior');
+  assert.deepEqual(beatsClave([b('apertura', 1), b('x', 1), b('apertura', 2), b('x', 2)]), [0, 1, 2, 3], 'con dos rondas la posterior es la segunda');
+  assert.deepEqual(beatsClave([]), []);
+});
+
+test('los console.error de la escena cuentan como errores aunque Chrome los escriba como INFO (se vio: un fallo de la escena pasaba por limpio)', () => {
+  const salida = [
+    '[1:2:1015/101010.000:INFO:CONSOLE(113)] "escena: la reproduccion se detuvo TypeError: this[metodo] is not a function", source: http://localhost:4321/casino/escena.js (113)',
+    '[1:2:1015/101010.000:INFO:CONSOLE(45)] "hola", source: http://localhost:4321/casino/escena.js (45)',
+    '[1:2:1015/101010.000:INFO:CONSOLE(99)] "escena: no se pudo armar Error: x", source: http://localhost:4321/casino/escena.js (99)',
+  ].join('\n');
+  const errores = erroresDeConsola(salida);
+  assert.equal(errores.length, 2);
+  assert.match(errores[0], /la reproduccion se detuvo/);
+  assert.match(errores[1], /no se pudo armar/);
 });
