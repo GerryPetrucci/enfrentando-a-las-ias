@@ -90,3 +90,67 @@ test('las marcas de tiempo (para re-doblar) son contiguas, parten de cero y suma
 test('la posicion de cada formato en la hoja maestra de la escena es la de herramientas/formatos.mjs', () => {
   for (const f of ['9x16', '16x9']) assert.deepEqual(POSICION_EN_HOJA[f], { x: FORMATOS[f].x, y: FORMATOS[f].y }, f);
 });
+
+import { listaDeArchivos, catalogarPartidas, primeraValida } from '../../../web/casino/escena-config.js';
+import { PRUDENTES } from './ayudas.js';
+
+test('listaDeArchivos separa por coma, recorta los espacios y quita vacios y repetidos', () => {
+  assert.deepEqual(listaDeArchivos('a.json, b.json,,a.json '), ['a.json', 'b.json']);
+  assert.deepEqual(listaDeArchivos('pruebas/x.json'), ['pruebas/x.json']);
+  for (const nada of [null, undefined, '', '  ,  ', 7]) assert.deepEqual(listaDeArchivos(nada), []);
+});
+
+test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las de Duda y apuesta que tienen rondas, y las demas dicen por que no', async () => {
+  const p1 = await jugar(1), p2 = await jugar(2, PRUDENTES);
+  const cargados = [
+    { nombre: 'a.json', datos: { juego: p1.juego, partidas: [p1, p2] } },
+    { nombre: 'fuga.json', datos: { juego: { id: 'fuga' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
+    { nombre: 'roto.json', datos: null, error: 'JSON invalido' },
+    { nombre: 'vacio.json', datos: { partidas: [] } },
+    { nombre: 'sinrondas.json', datos: { juego: { id: 'dudaapuesta' }, partidas: [{ jugadores: [], rondas: [] }] } },
+    { nombre: 'sinpartidas.json', datos: { algo: 1 } },
+  ];
+  const c = catalogarPartidas(cargados);
+  assert.equal(c.length, 7);
+  assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
+  assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
+  assert.equal(c[0].partida, p1);
+  const manos = Math.max(...p1.rondas.map((r) => r.mano));
+  assert.equal(c[0].manos, manos);
+  assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
+  assert.match(c[1].titulo, /Partida 2 — Prudente vs Prudente vs Prudente vs Prudente/);
+  const [fuga, roto, vacio, sinRondas, sinPartidas] = c.slice(2);
+  assert.deepEqual([fuga.valida, fuga.partida], [false, null]);
+  assert.match(fuga.motivo, /fuga/);
+  assert.match(roto.motivo, /JSON invalido/);
+  assert.match(vacio.motivo, /no trae partidas/);
+  assert.match(sinPartidas.motivo, /no trae partidas/);
+  assert.match(sinRondas.motivo, /sin rondas/);
+  for (const e of [fuga, roto, vacio, sinRondas, sinPartidas]) assert.equal(e.valida, false, e.clave);
+  assert.deepEqual(catalogarPartidas(null), []);
+  assert.deepEqual(catalogarPartidas([null, 7, {}]).map((e) => e.valida), [false, false, false], 'entradas basura no lanzan');
+});
+
+test('catalogarPartidas marca las partidas cortadas', async () => {
+  const corta = await jugar(3, undefined, { maxRondas: 10 });
+  const [e] = catalogarPartidas([{ nombre: 'c.json', datos: { juego: corta.juego, partidas: [corta] } }]);
+  assert.equal(e.valida, true);
+  assert.match(e.titulo, / · cortada$/);
+});
+
+test('primeraValida elige la partida pedida si sirve y, si no, la primera que sirva', async () => {
+  const p = await jugar(1);
+  const c = catalogarPartidas([
+    { nombre: 'otro.json', datos: { juego: { id: 'fuga' }, partidas: [{ rondas: [{}] }] } },
+    { nombre: 'a.json', datos: { juego: p.juego, partidas: [p, p] } },
+    { nombre: 'b.json', datos: { juego: p.juego, partidas: [p] } },
+  ]);
+  assert.equal(primeraValida(c).clave, 'a.json#1');
+  assert.equal(primeraValida(c, { archivo: 'a.json', numero: 2 }).clave, 'a.json#2');
+  assert.equal(primeraValida(c, { archivo: 'b.json', numero: 1 }).clave, 'b.json#1');
+  assert.equal(primeraValida(c, { archivo: 'otro.json', numero: 1 }).clave, 'a.json#1', 'la pedida no sirve: la primera valida');
+  assert.equal(primeraValida(c, { archivo: 'a.json', numero: 9 }).clave, 'a.json#1');
+  assert.equal(primeraValida([]), null);
+  assert.equal(primeraValida(null), null);
+  assert.equal(primeraValida(c.slice(0, 1)), null);
+});

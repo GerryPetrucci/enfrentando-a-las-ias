@@ -61,3 +61,44 @@ export function marcarTiempos(beats, voz, vel = 1) {
     return marca;
   });
 }
+
+// ---- Varios archivos a la vez ------------------------------------------------------------------------------------------------------------
+// ?archivo=a.json,b.json (o el boton "Abrir JSON" con varios archivos) carga todos; la escena deja elegir una partida de la lista.
+
+export const listaDeArchivos = (texto) => (typeof texto === 'string' ? [...new Set(texto.split(',').map((x) => x.trim()).filter(Boolean))] : []);
+
+// cargados = [{ nombre, datos (el JSON ya leido, o null), error? }]. Devuelve una entrada por partida de cada archivo, en orden:
+// { clave, archivo, numero (1 = la primera del archivo), titulo, manos, valida, motivo, partida }. Solo valen las de Duda y apuesta que traen rondas;
+// las demas quedan en la lista, marcadas, para que se vea por que no se pueden reproducir.
+export function catalogarPartidas(cargados) {
+  const entradas = [];
+  for (const c of Array.isArray(cargados) ? cargados : []) {
+    const archivo = typeof c?.nombre === 'string' ? c.nombre : 'archivo';
+    const datos = c?.datos;
+    const partidas = datos && typeof datos === 'object' && Array.isArray(datos.partidas) ? datos.partidas : null;
+    if (!partidas?.length) {
+      const motivo = datos == null ? (c?.error ?? 'no se pudo leer') : 'no trae partidas';
+      entradas.push({ clave: `${archivo}#0`, archivo, numero: null, titulo: archivo, manos: 0, valida: false, motivo, partida: null });
+      continue;
+    }
+    partidas.forEach((partida, i) => {
+      const id = partida?.juego?.id ?? datos.juego?.id;
+      const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+      const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.mano) || 0), 0);
+      let motivo = null;
+      if (id !== 'dudaapuesta') motivo = `es de ${id ?? 'otro juego'}, no de Duda y apuesta`;
+      else if (!rondas.length) motivo = 'sin rondas';
+      const nombres = (Array.isArray(partida?.jugadores) ? partida.jugadores : []).map((j) => j?.nombre ?? '?').join(' vs ');
+      const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? 'mano' : 'manos'}${partida?.truncada === true ? ' · cortada' : ''}`;
+      entradas.push({ clave: `${archivo}#${i + 1}`, archivo, numero: i + 1, titulo, manos, valida: motivo === null, motivo, partida: motivo === null ? partida : null });
+    });
+  }
+  return entradas;
+}
+
+// La partida que se abre al cargar: la pedida ({ archivo, numero }) si sirve y, si no, la primera que sirva (null si ninguna).
+export function primeraValida(catalogo, preferida = null) {
+  const validas = Array.isArray(catalogo) ? catalogo.filter((e) => e.valida) : [];
+  if (!validas.length) return null;
+  return (preferida && validas.find((e) => e.archivo === preferida.archivo && e.numero === preferida.numero)) || validas[0];
+}

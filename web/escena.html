@@ -10,7 +10,13 @@
   #barra { height:64px; display:flex; align-items:center; gap:10px; padding:0 14px; background:#0d0d11; border-bottom:1px solid #2a2a33; }
   #barra button { font:600 14px inherit; font-family:inherit; color:#f2f0ed; background:#17171c; border:1px solid #2a2a33; border-radius:8px; padding:8px 14px; cursor:pointer; }
   #barra button:hover { border-color:#e0b25c; }
-  #estado { font-size:13px; color:#9a9aa6; }
+  #barra button:disabled, #barra select:disabled { opacity:.45; cursor:default; }
+  #barra button:disabled:hover { border-color:#2a2a33; }
+  label.abrir { font:600 14px inherit; font-family:inherit; background:#17171c; border:1px solid #2a2a33; border-radius:8px; padding:8px 14px; cursor:pointer; white-space:nowrap; }
+  label.abrir:hover { border-color:#e0b25c; }
+  label.abrir input { display:none; }
+  #selPartida { font:500 13px inherit; font-family:inherit; color:#f2f0ed; background:#17171c; border:1px solid #2a2a33; border-radius:8px; padding:8px 10px; max-width:460px; min-width:0; }
+  #estado { font-size:13px; color:#9a9aa6; min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   body.limpio #barra { display:none; }
   body.limpio { background:#000; }
   #hueco { margin:0 auto; position:relative; }
@@ -19,6 +25,8 @@
 </head>
 <body>
 <div id="barra">
+  <label class="abrir">Abrir JSON(s)<input type="file" id="archivo" accept="application/json,.json" multiple></label>
+  <select id="selPartida" disabled title="Partidas de los archivos abiertos"><option>Sin partidas abiertas</option></select>
   <button id="btnPlay">▶ Reproducir</button>
   <button id="btnReiniciar">⟲ Reiniciar</button>
   <button id="btnTiempos">Exportar tiempos</button>

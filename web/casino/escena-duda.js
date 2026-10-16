@@ -8,7 +8,7 @@
 import { colocar, abanico, POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs, htmlLogo, htmlCarta, htmlFrente, htmlPlaca, htmlFicha, CARTAS, esc } from './kit.js';
 import { construirLineaDeTiempo, conRazones, MANOS_TOPE } from './linea-de-tiempo-duda.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida } from './escena-config.js';
 import { crearSonido, eventosDePaso } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -288,83 +288,150 @@ class Mesa {
 export async function iniciar() {
   const params = leerParametros(location.search);
   document.body.classList.toggle('limpio', params.limpio);
-  const estado = document.getElementById('estado');
-  const aviso = (t) => { estado.textContent = t; };
-  if (!params.archivo) return aviso('Abre esta pagina con ?archivo=NOMBRE.json (una partida de Duda y apuesta guardada en data/). Parametros: partida, mano, hasta, formato (9x16, 16x9 o hoja), camara (0 a 4), vel, razon, sonido, voz, auto, limpio.');
-  let datos;
-  try { datos = await (await fetch(`data/${params.archivo}`)).json(); } catch { return aviso(`No pude leer data/${params.archivo}`); }
-  const partida = datos?.partidas?.[params.partida - 1];
-  if (!partida) return aviso(`El archivo no tiene la partida ${params.partida}.`);
-  if ((partida.juego?.id ?? datos.juego?.id) !== 'dudaapuesta') return aviso('Esta escena es solo para partidas de Duda y apuesta.');
+  const aviso = (t) => { document.getElementById('estado').textContent = t; };
+  const marco = document.getElementById('marco');
+  const selector = document.getElementById('selPartida');
+  const botones = ['btnPlay', 'btnReiniciar', 'btnTiempos'].map((id) => document.getElementById(id));
+  const habilitar = (si) => botones.forEach((b) => { b.disabled = !si; });
+  habilitar(false);
+
+  document.body.insertAdjacentHTML('afterbegin', htmlDefs());
+  let azarSonido = crearAzar(1); // se cambia al montar cada partida: asi el mismo archivo suena siempre igual
+  const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
+  const mudo = crearSonido({ activo: false });
+  const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
   let voz = null;
   if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { aviso('No pude leer la voz: se usan los tiempos minimos.'); } }
 
-  let beats = recortarClip(construirLineaDeTiempo(partida, { camara: params.camara }), params.mano, params.hasta);
-  if (params.razon) beats = conRazones(beats, partida);
-  if (!beats.length) return aviso('La partida no tiene esas manos.');
+  let catalogo = [];
+  let actual = null; // la partida montada: { entrada, partida, beats, marcas, mesas, ancho, alto }
+  let generacion = 0; // cada vez que se monta otra partida sube: una reproduccion vieja se da cuenta y se retira
+  let corriendo = false;
 
-  document.body.insertAdjacentHTML('afterbegin', htmlDefs());
-  const sfx = crearSonido({ activo: params.sonido, azar: crearAzar(seedDeTexto(`sonido:${partida.seed}`)) });
-  const mudo = crearSonido({ activo: false });
-  const formatos = params.formato === 'hoja' ? ['9x16', '16x9'] : [params.formato];
-  const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon, vel: params.vel }));
-  const [ancho, alto] = params.formato === 'hoja' ? [3840, 2160] : [mesas[0].L.ancho, mesas[0].L.alto];
-  const marco = document.getElementById('marco');
-  marco.innerHTML = '';
-  Object.assign(marco.style, { width: `${ancho}px`, height: `${alto}px` });
-  mesas.forEach((m) => {
-    const sitio = params.formato === 'hoja' ? POSICION_EN_HOJA[m.formato] : { x: 0, y: 0 };
-    Object.assign(m.raiz.style, { left: `${sitio.x}px`, top: `${sitio.y}px` });
-    marco.append(m.raiz);
-  });
   const ajustar = () => {
-    const escala = params.escala === 'ajustar' ? Math.min(innerWidth / ancho, (innerHeight - (params.limpio ? 0 : 64)) / alto) : params.escala;
+    if (!actual) return;
+    const escala = params.escala === 'ajustar' ? Math.min(innerWidth / actual.ancho, (innerHeight - (params.limpio ? 0 : 64)) / actual.alto) : params.escala;
     marco.style.transform = `scale(${escala})`;
-    document.getElementById('hueco').style.cssText = `width:${ancho * escala}px;height:${alto * escala}px`;
+    document.getElementById('hueco').style.cssText = `width:${actual.ancho * escala}px;height:${actual.alto * escala}px`;
   };
-  ajustar();
   addEventListener('resize', ajustar);
 
-  const marcas = marcarTiempos(beats, voz, params.vel);
-  window.escena = { beats, marcas, mesas, partida };
-  let corriendo = false;
-  const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
-  const reproducir = async () => {
-    if (corriendo) return;
+  // Monta la escena de una partida (la que sea de la lista): reemplaza la anterior por completo.
+  function montar(entrada) {
+    actual?.mesas.forEach((m) => { m.sfx = mudo; }); // la escena que se abandona deja de sonar
+    generacion++;
+    corriendo = false;
+    for (const k of ['terminada', 'detenida', 'estado', 'error', 'duracionMs', 'esperadaMs']) delete document.body.dataset[k];
+    const partida = entrada.partida;
+    let beats = recortarClip(construirLineaDeTiempo(partida, { camara: params.camara }), params.mano, params.hasta);
+    if (params.razon) beats = conRazones(beats, partida);
+    marco.innerHTML = '';
+    if (!beats.length) { actual = null; habilitar(false); return aviso('La partida no tiene esas manos.'); }
+    azarSonido = crearAzar(seedDeTexto(`sonido:${partida.seed}`));
+    const formatos = params.formato === 'hoja' ? ['9x16', '16x9'] : [params.formato];
+    const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon, vel: params.vel }));
+    const [ancho, alto] = params.formato === 'hoja' ? [3840, 2160] : [mesas[0].L.ancho, mesas[0].L.alto];
+    Object.assign(marco.style, { width: `${ancho}px`, height: `${alto}px` });
+    mesas.forEach((m) => {
+      const sitio = params.formato === 'hoja' ? POSICION_EN_HOJA[m.formato] : { x: 0, y: 0 };
+      Object.assign(m.raiz.style, { left: `${sitio.x}px`, top: `${sitio.y}px` });
+      marco.append(m.raiz);
+    });
+    const primero = partida.rondas[beats[0].registro]; // antes de reproducir, las placas ya muestran las fichas con las que se empieza el clip
+    mesas.forEach((m) => { m.fijarEstado(primero.fichas, primero.fichasEspacio); m.cabecera.querySelector('.mano').textContent = `Mano ${beats[0].mano} / ${MANOS_TOPE}`; });
+    const marcas = marcarTiempos(beats, voz, params.vel);
+    actual = { entrada, partida, beats, marcas, mesas, ancho, alto };
+    window.escena = { beats, marcas, mesas, partida };
+    ajustar();
+    habilitar(true);
+    selector.value = entrada.clave;
+    aviso(`${entrada.titulo} — ${beats.length} momentos, ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}`);
+  }
+
+  async function reproducir() {
+    if (corriendo || !actual) return;
+    const { beats, marcas, mesas } = actual;
+    const miGeneracion = generacion;
     corriendo = true;
     window.escenaTerminada = false;
     const inicio = performance.now();
     try {
-    for (const [i, beat] of beats.entries()) {
-      const rapido = detenerEn !== null && i <= Number(detenerEn);
-      mesas.forEach((m) => { m.rapido = rapido; });
-      const audio = voz?.[beat.id]?.archivo;
-      if (audio && params.sonido) {
-        try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
+      for (const [i, beat] of beats.entries()) {
+        const rapido = detenerEn !== null && i <= Number(detenerEn);
+        mesas.forEach((m) => { m.rapido = rapido; });
+        const audio = voz?.[beat.id]?.archivo;
+        if (audio && params.sonido) {
+          try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
+        }
+        await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la clase Mesa aplica vel
+        if (miGeneracion !== generacion) return; // mientras tanto se abrio otra partida
+        if (detenerEn !== null && i === Number(detenerEn)) {
+          // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)
+          document.getAnimations().forEach((x) => { try { x.finish(); } catch { /* una animacion sin fin no cuenta */ } });
+          window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return;
+        }
       }
-      await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la clase Mesa aplica vel
-      if (detenerEn !== null && i === Number(detenerEn)) {
-        // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)
-        document.getAnimations().forEach((x) => { try { x.finish(); } catch { /* una animacion sin fin no cuenta */ } });
-        window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return;
-      }
-    }
-    window.escenaTerminada = true;
-    document.body.dataset.duracionMs = (performance.now() - inicio).toFixed(1); // medido contra lo que dice la linea de tiempo exportada
-    document.body.dataset.esperadaMs = String(marcas.at(-1).finMs);
-    document.body.dataset.terminada = '1'; // la herramienta de capturas lo busca para saber que la partida llego al final
+      window.escenaTerminada = true;
+      document.body.dataset.duracionMs = (performance.now() - inicio).toFixed(1); // medido contra lo que dice la linea de tiempo exportada
+      document.body.dataset.esperadaMs = String(marcas.at(-1).finMs);
+      document.body.dataset.terminada = '1'; // la herramienta de capturas lo busca para saber que la partida llego al final
     } catch (e) {
       console.error('escena: la reproduccion se detuvo', e);
       document.body.dataset.error = String(e);
     }
-    corriendo = false;
+    if (miGeneracion === generacion) corriendo = false;
+  }
+
+  // La lista de partidas de todos los archivos abiertos; las que no son de Duda y apuesta salen apagadas y dicen por que.
+  function llenarLista() {
+    selector.innerHTML = '';
+    for (const e of catalogo) {
+      const o = Object.assign(document.createElement('option'), { value: e.clave, textContent: e.valida ? e.titulo : `${e.titulo} (${e.motivo})` });
+      o.disabled = !e.valida;
+      selector.append(o);
+    }
+    selector.disabled = !catalogo.some((e) => e.valida);
+  }
+
+  function abrir(cargados, preferida = null) {
+    catalogo = catalogarPartidas(cargados);
+    llenarLista();
+    const elegida = primeraValida(catalogo, preferida);
+    if (!elegida) {
+      actual = null; marco.innerHTML = ''; habilitar(false);
+      return aviso(`Ninguna partida sirve: ${catalogo.slice(0, 3).map((e) => `${e.archivo} (${e.motivo})`).join('; ')}`);
+    }
+    montar(elegida);
+    if (preferida && (elegida.archivo !== preferida.archivo || elegida.numero !== preferida.numero)) aviso(`La partida ${preferida.numero} de ${preferida.archivo} no sirve: se abrio ${elegida.titulo}`);
+  }
+
+  selector.onchange = () => { const e = catalogo.find((x) => x.clave === selector.value); if (e?.valida) montar(e); };
+  document.getElementById('archivo').onchange = async (ev) => {
+    const archivos = [...ev.target.files];
+    if (!archivos.length) return;
+    const cargados = await Promise.all(archivos.map(async (f) => {
+      try { return { nombre: f.name, datos: JSON.parse(await f.text()) }; } catch { return { nombre: f.name, datos: null, error: 'no es un JSON valido' }; }
+    }));
+    abrir(cargados);
+    ev.target.value = ''; // asi se pueden volver a elegir los mismos archivos
   };
   document.getElementById('btnPlay').onclick = async () => { await sfx.preparar(); reproducir(); };
-  document.getElementById('btnReiniciar').onclick = () => location.reload();
+  document.getElementById('btnReiniciar').onclick = () => { if (actual) montar(actual.entrada); };
   document.getElementById('btnTiempos').onclick = () => {
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(marcas, null, 2)], { type: 'application/json' })), download: 'linea-de-tiempo.json' });
+    if (!actual) return;
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([JSON.stringify(actual.marcas, null, 2)], { type: 'application/json' })), download: 'linea-de-tiempo.json' });
     a.click();
   };
-  aviso(`${beats.length} momentos · ${(marcas.at(-1).finMs / 1000).toFixed(0)} s a velocidad ${params.vel}`);
-  if (params.auto) { await sfx.preparar(); reproducir(); }
+
+  const nombres = listaDeArchivos(params.archivo);
+  if (!nombres.length) return aviso('Elige uno o varios JSON con «Abrir JSON» (partidas de Duda y apuesta de data/ o data/pruebas/), o abre la pagina con ?archivo=a.json,b.json. Parametros: partida, mano, hasta, formato (9x16, 16x9 o hoja), camara (0 a 4), vel, razon, sonido, voz, auto, limpio.');
+  const cargados = await Promise.all(nombres.map(async (nombre) => {
+    try {
+      const r = await fetch(`data/${nombre}`);
+      if (!r.ok) throw new Error(String(r.status));
+      return { nombre, datos: await r.json() };
+    } catch { return { nombre, datos: null, error: `no pude leer data/${nombre}` }; }
+  }));
+  abrir(cargados, { archivo: nombres[0], numero: params.partida });
+  if (params.auto && actual) { await sfx.preparar(); reproducir(); }
 }
