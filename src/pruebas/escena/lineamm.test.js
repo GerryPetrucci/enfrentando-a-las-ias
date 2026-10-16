@@ -9,7 +9,7 @@ import { RONDAS } from '../../juegos/mayormenor/constantes.js';
 import { resolverNombres } from '../../juegos/mayormenor/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, conRazones, MIN_MS, RONDAS_TOPE } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
 import { jugarMM, jugarMMConCaido, muchasMM } from './ayudas-mm.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -223,4 +223,33 @@ test('la comprobacion de estado: al empezar cada ronda no queda nada de la anter
   assert.match(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 0, pastillas: 1 }, beats[idx[0]]).join(), /camara/);
   assert.match(erroresDeEstado(null, beats[idx[0]]).join(), /estado/);
   assert.deepEqual(beatsDeEstado(null, 3), []);
+});
+
+test('puntuarRondas no premia una apuesta que puso el juego (apuesta grande, cae de golpe): la audacia no es de la IA', async () => {
+  const p = structuredClone(await jugarMM(2));
+  const i = p.rondas.findIndex((r) => r.acierto === false && r.apuesta * 2 >= r.fichasAntes[r.predictor]);
+  assert.ok(i >= 0, 'la prueba necesita una ronda con apuesta grande que falla');
+  assert.ok(puntuarRondas(p)[i].motivos.includes('apuesta grande') && puntuarRondas(p)[i].motivos.includes('cae de golpe'));
+  p.rondas[i].invalidas[p.rondas[i].predictor] = true;
+  const motivos = puntuarRondas(p)[i].motivos;
+  assert.ok(!motivos.includes('apuesta grande') && !motivos.includes('cae de golpe'), motivos.join());
+});
+
+test('razon=1 en Mayor o menor: la razon del predictor sale con su apuesta y la del activo despues del reveal (nunca antes: delataria su carta), y no se atribuye a una jugada del juego', async () => {
+  const p = await jugarMM(2);
+  const beats = construirLineaDeTiempo(p);
+  const con = conRazones(beats, p);
+  assert.equal(con.length, beats.length);
+  let vistas = 0;
+  for (const b of con) {
+    const r = p.rondas[b.registro];
+    const esperado = b.tipo === 'apuesta' ? r.razones[r.predictor] : b.tipo === 'revelado' ? r.razones[r.activo] : null;
+    if (esperado) { assert.equal(b.razon, esperado.trim(), b.id); assert.ok(b.minMs > beats.find((x) => x.id === b.id).minMs, `${b.id}: la razon se lee`); vistas++; }
+    else assert.equal(b.razon, undefined, `${b.id}: sin razon`);
+  }
+  assert.ok(vistas > 20, `solo ${vistas} razones`);
+  const caido = await jugarMMConCaido(2, 0);
+  for (const b of conRazones(construirLineaDeTiempo(caido), caido)) if (b.reemplazo) assert.equal(b.razon, undefined, `${b.id}: nadie penso esa jugada`);
+  for (const basura of [null, undefined, 7]) assert.deepEqual(conRazones(basura, p), []);
+  assert.doesNotThrow(() => conRazones(beats, null));
 });

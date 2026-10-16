@@ -75,6 +75,20 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
   return beats;
 }
 
+// ---- razon=1: lo que cada IA dijo que penso (el rival nunca lo ve) ----
+// La del predictor sale con su apuesta; la del activo, DESPUES del reveal (antes delataria la carta que juega). No toca la linea original ni las jugadas que puso el juego (ahi no penso nadie).
+export function conRazones(beats, partida) {
+  if (!Array.isArray(beats)) return [];
+  const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+  return beats.map((b) => {
+    const r = rondas[b.registro];
+    const de = b.tipo === 'apuesta' ? r?.predictor : b.tipo === 'revelado' ? r?.activo : null;
+    const texto = Number.isInteger(de) && r?.invalidas?.[de] !== true ? r?.razones?.[de] : null;
+    const razon = typeof texto === 'string' ? texto.trim() : '';
+    return razon ? { ...b, razon, minMs: b.minMs + Math.min(6000, 500 + 45 * razon.length) } : b;
+  });
+}
+
 // ---- Que rondas valen la pena para un clip de redes -----------------------------------------------------------------------------------------
 // Cada ronda suma puntos por lo que paso en ella (todo sale del registro y refleja las mismas reglas que los comentarios del motor). Los pesos son editoriales.
 const PESOS = { final: 5, 'lo apuesta todo': 4, 'cae de golpe': 3, 'pasa al frente': 3, 'apuesta grande': 2, 'carta igual': 2, 'regala la ronda': 2 };
@@ -85,12 +99,13 @@ export function puntuarRondas(partida) {
     const motivos = [];
     const predictor = r.predictor, activo = r.activo;
     if (r.apostoTodo && r.invalidas?.[predictor] !== true) motivos.push('lo apuesta todo');
-    if (r.apuesta * 2 >= r.fichasAntes?.[predictor]) motivos.push('apuesta grande');
+    const propia = r.invalidas?.[predictor] !== true; // una apuesta que puso el juego no es audacia de la IA
+    if (propia && r.apuesta * 2 >= r.fichasAntes?.[predictor]) motivos.push('apuesta grande');
     if (r.veredicto === 'igual') motivos.push('carta igual');
     const manoAntes = [...(r.mano?.[activo] ?? []), r.carta];
     const arriba = manoAntes.filter((c) => c > r.crupier).length, abajo = manoAntes.filter((c) => c < r.crupier).length;
     if (r.invalidas?.[activo] !== true && r.veredicto === 'menor' && arriba > abajo) motivos.push('regala la ronda');
-    if (r.acierto === false && r.apuesta * 2 >= r.fichasAntes?.[predictor]) motivos.push('cae de golpe');
+    if (propia && r.acierto === false && r.apuesta * 2 >= r.fichasAntes?.[predictor]) motivos.push('cae de golpe');
     const antes = lider(r.fichasAntes), despues = lider(r.fichas);
     if (antes !== null && despues !== null && antes !== despues) motivos.push('pasa al frente');
     if (r.final) motivos.push('final');

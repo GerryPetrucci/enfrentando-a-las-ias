@@ -4,7 +4,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { textoParaVoz, planDeNarracion, carpetaDeVoz, armarVoz, argumentosDePiper, argumentosDeFfmpeg, VOZ } from '../../../herramientas/narrar.mjs';
 import { lineaDe, juegosConEscena } from '../../../web/casino/lineas.js';
 import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
@@ -12,9 +13,11 @@ import { esRutaRelativa, duracionDeBeat } from '../../../web/casino/escena-confi
 import { urlDeCaptura } from '../../../herramientas/capturar-escena.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
-test('la voz elegida es Piper con es_MX-claude-high (decision del usuario, 16 de octubre de 2026)', () => {
-  assert.equal(VOZ.modelo, 'es_MX-claude-high');
-  assert.match(VOZ.archivoModelo, /es_MX-claude-high\.onnx$/);
+test('la voz elegida es Piper (decision del usuario, 16 de octubre de 2026) y su nombre tecnico no esta en ningun archivo publico del repo', () => {
+  assert.match(VOZ.archivoModelo, /voz-narradora\.onnx$/);
+  const nombre = ['es_MX-', 'clau', 'de'].join('');
+  const archivos = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split(/\r?\n/).filter((f) => f && !/\.(png|woff2|ogg|jpg|svg|ico)$/.test(f));
+  for (const f of archivos) if (existsSync(f)) assert.ok(!readFileSync(f, 'utf8').includes(nombre), `${f} nombra la voz`);
   assert.match(VOZ.piper, /piper(\.exe)?$/);
 });
 

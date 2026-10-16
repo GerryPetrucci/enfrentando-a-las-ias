@@ -11,7 +11,7 @@ import { etiquetaDeApuesta } from './escena-config.js';
 import { MesaBase, el, poner, centro } from './mesa-base.js';
 
 const NUMEROS = Array.from({ length: 11 }, (_, i) => i);
-const SELLOS = { acierta: { texto: 'Acierta', clase: 'ganar' }, falla: { texto: 'Falla', clase: 'perder' }, igual: { texto: 'Igual', clase: 'ganar' } };
+const SELLOS = { acierta: { texto: 'Acierta', clase: 'ganar' }, falla: { texto: 'Falla', clase: 'perder' }, igual: { texto: 'Igual', clase: 'neutro' } };
 const FLECHAS = { mayor: ['▲', 'mayor'], menor: ['▼', 'menor'], igual: ['＝', 'igual'] };
 
 const carta = (n = null) => Object.assign(document.createElement('div'), { innerHTML: htmlCartaNumero(n) }).firstElementChild;

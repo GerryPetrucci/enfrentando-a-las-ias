@@ -48,6 +48,7 @@ export async function iniciar() {
 
   // Monta la escena de una partida (la que sea de la lista, de cualquier juego con escena): reemplaza la anterior por completo.
   async function montar(entrada) {
+    habilitar(false); // mientras se arma la nueva, ni Play ni Reiniciar (un Play en esa ventana arrancaria la partida vieja)
     actual?.mesas.forEach((m) => { m.sfx = mudo; }); // la escena que se abandona deja de sonar
     const miGeneracion = ++generacion;
     corriendo = false;
