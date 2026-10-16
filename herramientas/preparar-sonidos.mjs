@@ -15,20 +15,13 @@ import { pathToFileURL } from 'node:url';
 
 // destino (en web/audio) -> de que paquete y que archivo sale. Escogidas por nombre y duracion (cartas y fichas del paquete de casino; el resto, de los otros dos).
 export const MAPA = {
-  'carta-1.ogg': { paquete: 'casino', origen: 'card-slide-1.ogg' },
   'carta-2.ogg': { paquete: 'casino', origen: 'card-slide-2.ogg' },
-  'carta-3.ogg': { paquete: 'casino', origen: 'card-slide-3.ogg' },
   'voltear-1.ogg': { paquete: 'casino', origen: 'card-place-1.ogg' },
-  'voltear-2.ogg': { paquete: 'casino', origen: 'card-place-2.ogg' },
-  'ficha-1.ogg': { paquete: 'casino', origen: 'chip-lay-1.ogg' },
-  'ficha-2.ogg': { paquete: 'casino', origen: 'chip-lay-2.ogg' },
   'ficha-3.ogg': { paquete: 'casino', origen: 'chip-lay-3.ogg' },
   'tic-1.ogg': { paquete: 'interface', origen: 'tick_001.ogg' },
-  'tic-2.ogg': { paquete: 'interface', origen: 'tick_002.ogg' },
   'anuncio-1.ogg': { paquete: 'interface', origen: 'bong_001.ogg' },
   'duda-1.ogg': { paquete: 'interface', origen: 'question_002.ogg' },
   'gana-1.ogg': { paquete: 'jingles', origen: 'Hit jingles/jingles_HIT11.ogg' },
-  'gana-2.ogg': { paquete: 'jingles', origen: 'Hit jingles/jingles_HIT03.ogg' },
   'pierde-1.ogg': { paquete: 'interface', origen: 'error_003.ogg' },
 };
 

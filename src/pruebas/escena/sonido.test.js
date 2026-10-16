@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { EVENTOS, VOLUMEN, eventosDePaso, crearSonido } from '../../../web/casino/sonido.js';
 import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
 import { muchas } from './ayudas.js';
@@ -122,4 +122,10 @@ test('sfx.probar y sfx.cuantas existen y no rompen donde no hay audio (la pagina
   assert.doesNotThrow(() => sfx.probar('no-existe', 0));
   assert.deepEqual(Object.keys(sfx.cuantas()).sort(), Object.keys(EVENTOS).sort());
   assert.ok(existsSync(new URL('../../../web/sonidos.html', import.meta.url)), 'falta la pagina web/sonidos.html');
+});
+
+test('en web/audio no sobra ninguna muestra: solo estan las que usan los efectos', () => {
+  const usadas = Object.values(EVENTOS).flatMap((ev) => ev.muestras.map((m) => m.replace('audio/', ''))).sort();
+  const enDisco = readdirSync(new URL('../../../web/audio/', import.meta.url)).filter((f) => f.endsWith('.ogg')).sort();
+  assert.deepEqual(enDisco, usadas);
 });

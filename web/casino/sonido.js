@@ -7,15 +7,15 @@ export const VOLUMEN = 0.25; // ganancia maestra: 20 * log10(0.25) = -12 dB
 // muestras: archivos opcionales de web/audio/ (si hay varios se elige uno con el azar con seed de la escena).
 // sintetico: el respaldo. vol va de 0 a 1 (el maestro lo baja); ruidos y tonos son los de la maqueta aprobada, con `retraso` en segundos.
 export const EVENTOS = {
-  carta:   { muestras: ['audio/carta-1.ogg', 'audio/carta-2.ogg', 'audio/carta-3.ogg'], sintetico: { ruidos: [{ dur: 0.09, f0: 5000, f1: 1800, vol: 0.9 }] } },
-  voltear: { muestras: ['audio/voltear-1.ogg', 'audio/voltear-2.ogg'], sintetico: { ruidos: [{ dur: 0.14, f0: 3500, f1: 900, vol: 1 }] } },
-  ficha:   { muestras: ['audio/ficha-1.ogg', 'audio/ficha-2.ogg', 'audio/ficha-3.ogg'], sintetico: { tonos: [
+  carta:   { muestras: ['audio/carta-2.ogg'], sintetico: { ruidos: [{ dur: 0.09, f0: 5000, f1: 1800, vol: 0.9 }] } },
+  voltear: { muestras: ['audio/voltear-1.ogg'], sintetico: { ruidos: [{ dur: 0.14, f0: 3500, f1: 900, vol: 1 }] } },
+  ficha:   { muestras: ['audio/ficha-3.ogg'], sintetico: { tonos: [
     { freq: 1800, dur: 0.06, tipo: 'triangle', vol: 0.6, f1: 1200 }, { freq: 2300, dur: 0.07, tipo: 'triangle', vol: 0.5, f1: 1500, retraso: 0.055 }] } },
-  tic:     { muestras: ['audio/tic-1.ogg', 'audio/tic-2.ogg'], sintetico: { ruidos: [{ dur: 0.02, f0: 4000, f1: 3000, vol: 0.5, q: 6 }] } },
+  tic:     { muestras: ['audio/tic-1.ogg'], sintetico: { ruidos: [{ dur: 0.02, f0: 4000, f1: 3000, vol: 0.5, q: 6 }] } },
   anuncio: { muestras: ['audio/anuncio-1.ogg'], sintetico: { tonos: [
     { freq: 1320, dur: 0.35, tipo: 'sine', vol: 0.6, f1: 1100 }, { freq: 1760, dur: 0.3, tipo: 'sine', vol: 0.35, retraso: 0.06 }] } },
   duda:    { muestras: ['audio/duda-1.ogg'], sintetico: { tonos: [{ freq: 110, dur: 0.25, tipo: 'square', vol: 0.8, f1: 55 }], ruidos: [{ dur: 0.08, f0: 800, f1: 300, vol: 1 }] } },
-  gana:    { muestras: ['audio/gana-1.ogg', 'audio/gana-2.ogg'], sintetico: { tonos: [523, 659, 784, 1047].map((freq, i) => ({ freq, dur: 0.28, tipo: 'triangle', vol: 0.65, retraso: i * 0.11 })) } },
+  gana:    { muestras: ['audio/gana-1.ogg'], sintetico: { tonos: [523, 659, 784, 1047].map((freq, i) => ({ freq, dur: 0.28, tipo: 'triangle', vol: 0.65, retraso: i * 0.11 })) } },
   pierde:  { muestras: ['audio/pierde-1.ogg'], sintetico: { tonos: [
     { freq: 330, dur: 0.3, tipo: 'sawtooth', vol: 0.5, f1: 200 }, { freq: 247, dur: 0.4, tipo: 'sawtooth', vol: 0.5, f1: 140, retraso: 0.18 }] } },
 };

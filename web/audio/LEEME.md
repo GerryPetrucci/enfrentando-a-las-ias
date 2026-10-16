@@ -5,7 +5,7 @@ Para escucharlas una por una (y compararlas con el respaldo) abre `web/sonidos.h
 
 ## De donde salen y su licencia
 
-Las 15 muestras salen de tres paquetes de **Kenney** (kenney.nl), todos con licencia **Creative Commons Zero (CC0)**: dominio publico, se pueden usar en proyectos
+Las 8 muestras salen de tres paquetes de **Kenney** (kenney.nl), todos con licencia **Creative Commons Zero (CC0)**: dominio publico, se pueden usar en proyectos
 personales y comerciales y redistribuir, y el credito (Kenney o www.kenney.nl) es agradable pero no obligatorio. El texto de licencia de cada paquete esta en
 `LICENCIAS.txt`, sin cambios.
 
@@ -15,21 +15,21 @@ viene de afuera. Las muestras se llevaron a un nivel comun (volumen medio -20 dB
 
 ## Que archivo es cada efecto
 
-| Efecto | Archivos | Origen (paquete / archivo original) |
+El usuario las escucho en `web/sonidos.html` y escogio una por efecto (16 de octubre de 2026). Los numeros de los nombres son los de la prueba de sonidos.
+
+| Efecto | Archivo | Origen (paquete / archivo original) |
 |---|---|---|
-| Repartir una carta | `carta-1.ogg`, `carta-2.ogg`, `carta-3.ogg` | Casino Audio / card-slide-1, 2 y 3 |
-| Voltear las cartas | `voltear-1.ogg`, `voltear-2.ogg` | Casino Audio / card-place-1 y 2 |
-| Ficha | `ficha-1.ogg`, `ficha-2.ogg`, `ficha-3.ogg` | Casino Audio / chip-lay-1, 2 y 3 |
-| Cuenta (tic del contador) | `tic-1.ogg`, `tic-2.ogg` | Interface Sounds / tick_001 y tick_002 |
+| Repartir una carta | `carta-2.ogg` | Casino Audio / card-slide-2 |
+| Voltear las cartas | `voltear-1.ogg` | Casino Audio / card-place-1 |
+| Ficha | `ficha-3.ogg` | Casino Audio / chip-lay-3 |
+| Cuenta (tic del contador) | `tic-1.ogg` | Interface Sounds / tick_001 |
 | Anuncio (campanilla) | `anuncio-1.ogg` | Interface Sounds / bong_001 |
 | Duda | `duda-1.ogg` | Interface Sounds / question_002 |
-| Gana (sello dorado) | `gana-1.ogg`, `gana-2.ogg` | Music Jingles / Hit jingles / HIT11 y HIT03 |
+| Gana (sello dorado) | `gana-1.ogg` | Music Jingles / Hit jingles / HIT11 |
 | Pierde (sello rojo) | `pierde-1.ogg` | Interface Sounds / error_003 |
-
-Cuando un efecto tiene varias muestras, la escena elige una con el azar con seed de la partida (mismo video, mismos sonidos).
 
 ## Cambiar una muestra
 
-Los paquetes no estan en el repo (se bajan de kenney.nl). Edita `MAPA` en `herramientas/preparar-sonidos.mjs`, corre
-`node herramientas/preparar-sonidos.mjs --paquetes=CARPETA` (con las subcarpetas `casino/`, `interface/` y `jingles/`, cada una con su `Audio/`) y escucha el
+Los paquetes no estan en el repo (se bajan de kenney.nl). Edita `MAPA` en `herramientas/preparar-sonidos.mjs` (y `muestras` del efecto en `web/casino/sonido.js`),
+corre `node herramientas/preparar-sonidos.mjs --paquetes=CARPETA` (con las subcarpetas `casino/`, `interface/` y `jingles/`, cada una con su `Audio/`) y escucha el
 resultado en `web/sonidos.html`. Se apagan todos los efectos con `?sonido=0`.
