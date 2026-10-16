@@ -296,6 +296,8 @@ export async function iniciar() {
   habilitar(false);
 
   document.body.insertAdjacentHTML('afterbegin', htmlDefs());
+  // las fuentes se cargan al usarse: se piden antes de montar nada, porque los subtitulos se miden (y se achican si no caben) con la fuente ya puesta
+  await Promise.all(['600 20px "Barlow Condensed"', '700 20px "Barlow Condensed"', '800 20px "Barlow Condensed"', '500 20px Inter', '600 20px Inter', '700 20px Inter'].map((f) => document.fonts.load(f).catch(() => [])));
   let azarSonido = crearAzar(1); // se cambia al montar cada partida: asi el mismo archivo suena siempre igual
   const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
   const mudo = crearSonido({ activo: false });

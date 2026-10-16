@@ -1,7 +1,14 @@
 /* Mesa de casino de las escenas: fieltro, riel, cartas, fichas y placas. Basado en la maqueta aprobada (privado/prototipos/maqueta-casino.html).
    Las posiciones las pone la escena con los rectangulos de layout.js; aqui solo esta el aspecto.
    Colores: los de la marca (Noche, Oro, Rojo, Verde). El color de cada IA NUNCA se pone aqui: llega por --c, --t y --fondo desde web/paleta.js.
-   Fuentes: Barlow Condensed e Inter si estan instaladas; si no, las de respaldo (no se descarga nada: la grabacion puede hacerse sin red). */
+   Fuentes: Barlow Condensed e Inter vienen en web/fonts/ (no se descarga nada: la grabacion puede hacerse sin red); las demas de la pila son solo respaldo. */
+/* Fuentes de la marca, incluidas en el repo (licencia OFL: web/fonts/LEEME.md): la escena se ve igual en cualquier equipo y sin red. */
+@font-face { font-family:'Barlow Condensed'; font-weight:600; font-style:normal; font-display:swap; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
+@font-face { font-family:'Barlow Condensed'; font-weight:700; font-style:normal; font-display:swap; src:url('../fonts/barlow-condensed-700.woff2') format('woff2'); }
+@font-face { font-family:'Barlow Condensed'; font-weight:800; font-style:normal; font-display:swap; src:url('../fonts/barlow-condensed-800.woff2') format('woff2'); }
+@font-face { font-family:'Inter'; font-weight:100 900; font-style:normal; font-display:swap; src:url('../fonts/inter-variable.woff2') format('woff2'); }
+
+
 .escena {
   --noche:#101014; --panel:#17171c; --borde:#2a2a33; --hueso:#f2f0ed; --suave:#9a9aa6; --oro:#e0b25c; --rojo:#d8584e; --verde:#5fa877;
   --fieltro-1:#127450; --fieltro-2:#0a3d2b; --fieltro-3:#052418; /* verde MUY oscuro: no se confunde con el verde de "cooperar" ni con el color de ninguna IA */
@@ -29,9 +36,9 @@
 /* ---------- cabecera, etiqueta y subtitulos ---------- */
 .cabecera { display:flex; align-items:center; justify-content:space-between; gap:16px; z-index:30; }
 .cabecera .logo { width:60px; height:40px; flex:none; filter:drop-shadow(0 4px 10px #0009); }
-.cabecera .tit { flex:1; min-width:0; font:800 38px/1 var(--titulos); letter-spacing:.02em; text-transform:uppercase; text-shadow:0 4px 20px #000a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cabecera .mano { font:800 32px/1 var(--titulos); letter-spacing:.1em; color:var(--oro); text-transform:uppercase; white-space:nowrap; }
-.etiqueta-ia { z-index:30; display:flex; align-items:center; justify-content:center; font:600 22px var(--texto); color:#c9c9d2; letter-spacing:.04em; background:#000a; border-radius:18px; border:1px solid #ffffff22; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cabecera .tit { flex:1; min-width:0; font:800 50px/1 var(--titulos); letter-spacing:.03em; text-transform:uppercase; text-shadow:0 4px 20px #000a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cabecera .mano { font:800 42px/1 var(--titulos); letter-spacing:.12em; color:var(--oro); text-transform:uppercase; white-space:nowrap; }
+.etiqueta-ia { z-index:30; display:flex; align-items:center; justify-content:center; font:600 24px var(--texto); color:#c9c9d2; letter-spacing:.04em; background:#000a; border-radius:18px; border:1px solid #ffffff22; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .subtitulos { z-index:30; padding:18px 28px; border-radius:22px; background:linear-gradient(#0a0a0ee6,#050507f2); border:1.5px solid #e0b25c55; box-shadow:0 14px 44px #000b;
   font:600 38px/1.25 var(--texto); text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
 .f-16x9 .subtitulos { font-size:34px; padding:10px 28px; }
@@ -45,9 +52,9 @@
 .avatar { width:46px; height:46px; border-radius:50%; background:var(--fondo); display:flex; align-items:center; justify-content:center; font:800 28px var(--titulos); color:#101014; border:3px solid #ffffff55; flex:none; }
 .f-16x9 .avatar { width:54px; height:54px; font-size:32px; }
 .placa .quien { min-width:0; flex:1; }
-.placa .nom { font:800 26px/1 var(--titulos); letter-spacing:.02em; text-transform:uppercase; color:var(--t); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.f-16x9 .placa .nom { font-size:34px; }
-.placa .rol { font:600 16px var(--texto); color:var(--suave); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.placa .nom { font:800 36px/1 var(--titulos); letter-spacing:.04em; text-transform:uppercase; color:var(--t); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.f-16x9 .placa .nom { font-size:44px; }
+.placa .rol { font:600 18px/1 var(--texto); color:var(--suave); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .placa .fichas { display:flex; align-items:center; gap:12px; margin-left:auto; flex:none; }
 .grupo { display:flex; align-items:center; gap:4px; }
 .pila { position:relative; width:var(--fw); height:calc(var(--fw) * 1.5); }
@@ -56,8 +63,8 @@
   border:2px solid var(--cuerpo); box-shadow:0 2px 0 rgba(0,0,0,.55), 0 4px 8px rgba(0,0,0,.5); }
 .ficha.juego { --cuerpo:var(--oro); --borde-ficha:#fff6; --centro:#101014; }
 .ficha.espacio { --cuerpo:var(--verde); --borde-ficha:#fff6; --centro:#0d2417; }
-.cuenta { font:800 24px var(--titulos); }
-.f-16x9 .cuenta { font-size:30px; }
+.cuenta { font:800 32px var(--titulos); }
+.f-16x9 .cuenta { font-size:38px; }
 
 /* ---------- cartas ---------- */
 .mano-cartas { position:relative; }
@@ -73,22 +80,22 @@
 .cara .esq svg { width:calc(22 * var(--u)); height:calc(22 * var(--u)); }
 .cara .esq.abajo { left:auto; right:calc(9 * var(--u)); top:auto; bottom:calc(7 * var(--u)); transform:rotate(180deg); }
 .cara svg.gema { position:absolute; left:50%; top:50%; width:calc(72 * var(--u)); height:calc(72 * var(--u)); margin:calc(-42 * var(--u)) 0 0 calc(-36 * var(--u)); filter:drop-shadow(0 4px 4px #0004); }
-.cara .nombre { position:absolute; left:calc(9 * var(--u)); right:auto; bottom:calc(22 * var(--u)); text-align:left; font:800 calc(14 * var(--u)) var(--titulos); letter-spacing:.06em; color:var(--k); text-transform:uppercase; }
+.cara .nombre { position:absolute; left:calc(9 * var(--u)); right:auto; bottom:calc(22 * var(--u)); text-align:left; font:800 calc(18 * var(--u)) var(--titulos); letter-spacing:.06em; color:var(--k); text-transform:uppercase; }
 .cara.cuenta-si { box-shadow:0 0 0 4px var(--oro), 0 0 38px 8px rgba(224,178,92,.85), 0 8px 20px rgba(0,0,0,.55); }
-.pastilla-camara { position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--placa-h) - 8px); z-index:3; display:flex; align-items:center; gap:6px; padding:2px 10px; border-radius:12px; background:#000b; font:700 15px var(--titulos); letter-spacing:.18em; color:#ffffffd0; text-transform:uppercase; }
+.pastilla-camara { position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--placa-h) - 8px); z-index:3; display:flex; align-items:center; gap:6px; padding:2px 10px; border-radius:12px; background:#000b; font:700 18px var(--titulos); letter-spacing:.18em; color:#ffffffd0; text-transform:uppercase; }
 .pastilla-camara::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--rojo); box-shadow:0 0 8px var(--rojo); }
 
 /* ---------- centro de la mesa ---------- */
 .anuncio { z-index:12; display:flex; align-items:center; justify-content:center; gap:20px; padding:14px 22px; border-radius:26px; background:linear-gradient(#0b0b0fee,#050507f5); border:3px solid var(--oro); box-shadow:0 16px 50px #000c, 0 0 46px rgba(224,178,92,.35); opacity:0; transform:scale(.7); overflow:hidden; }
 .anuncio .txt { text-align:left; min-width:0; }
-.anuncio .quien { display:block; font:800 26px var(--titulos); letter-spacing:.12em; color:var(--suave); text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.anuncio .frase { display:block; font:800 42px/1.05 var(--titulos); text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
+.anuncio .quien { display:block; font:800 32px var(--titulos); letter-spacing:.12em; color:var(--suave); text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.anuncio .frase { display:block; font:800 60px/1.05 var(--titulos); text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
 .anuncio svg.gema { width:78px; height:78px; flex:none; }
 .hay { opacity:0; padding:6px 16px; border-radius:12px; background:var(--oro); color:var(--noche); font:900 40px/1 var(--digitos); white-space:nowrap; }
-.sello { position:absolute; z-index:14; transform:rotate(-5deg); font:800 46px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; padding:8px 28px; border:6px solid; border-radius:14px; opacity:0; white-space:nowrap; background:#0b0b0fcc; }
+.sello { position:absolute; z-index:14; transform:rotate(-5deg); font:800 64px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; padding:8px 32px; border:6px solid; border-radius:14px; opacity:0; white-space:nowrap; background:#0b0b0fcc; }
 .sello.ganar { color:var(--oro); border-color:var(--oro); text-shadow:0 0 30px rgba(224,178,92,.9); }
 .sello.perder { color:var(--rojo); border-color:var(--rojo); }
-.pozo, .mazo { z-index:9; display:flex; align-items:center; gap:14px; font:700 22px var(--titulos); letter-spacing:.2em; color:#ffffffa0; text-transform:uppercase; }
+.pozo, .mazo { z-index:9; display:flex; align-items:center; gap:14px; font:700 26px var(--titulos); letter-spacing:.2em; color:#ffffffa0; text-transform:uppercase; }
 .pozo .pila-p { position:relative; flex:1; height:100%; }
 .mazo { --cw:64px; } /* el mazo es mas chico que las cartas de los asientos: tiene que caber en su rectangulo */
 .f-16x9 .mazo { --cw:76px; }
@@ -108,8 +115,8 @@
 .medalla { position:absolute; right:-6px; top:-30px; z-index:5; padding:6px 18px; border-radius:20px; background:var(--oro); color:var(--noche); font:900 26px/1 var(--titulos); letter-spacing:.14em; text-transform:uppercase; box-shadow:0 8px 20px #000a; }
 
 /* en 16:9 el anuncio vive en una columna angosta y alta: se acomoda en vertical */
-.f-16x9 .anuncio { flex-direction:column; gap:12px; padding:18px; text-align:center; }
+.f-16x9 .anuncio { flex-direction:column; gap:8px; padding:18px; text-align:center; }
 .f-16x9 .anuncio .txt { text-align:center; }
-.f-16x9 .anuncio .quien { white-space:normal; }
-.f-16x9 .anuncio .frase { white-space:normal; font-size:44px; }
-.f-16x9 .anuncio svg.gema { width:100px; height:100px; }
+.f-16x9 .anuncio .quien { white-space:normal; font-size:26px; }
+.f-16x9 .anuncio .frase { white-space:normal; font-size:48px; }
+.f-16x9 .anuncio svg.gema { width:80px; height:80px; }
