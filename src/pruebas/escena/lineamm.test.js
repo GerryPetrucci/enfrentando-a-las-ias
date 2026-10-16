@@ -1,0 +1,209 @@
+// Linea de tiempo de la escena de Mayor o menor: convierte los registros guardados (uno por ronda) en beats. Funcion pura sobre partidas REALES jugadas por bots:
+// sin DOM, sin red y sin API.
+//
+//   npm test
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { RONDAS } from '../../juegos/mayormenor/constantes.js';
+import { resolverNombres } from '../../juegos/mayormenor/narracion.js';
+import { elegirCamara } from '../../../web/casino/camara.js';
+import { eventosDePaso } from '../../../web/casino/sonido.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { jugarMM, jugarMMConCaido, muchasMM } from './ayudas-mm.js';
+
+const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
+const TIPOS = ['apertura', 'crupier', 'jugada', 'apuesta', 'revelado', 'resultado'];
+const PASOS = ['roles', 'crupier', 'jugar', 'pregunta', 'apuesta', 'revelar', 'comparar', 'sello', 'cobra', 'paga', 'devuelve', 'estado', 'final'];
+const porRonda = (beats) => beats.reduce((m, b) => m.set(b.mano, [...(m.get(b.mano) ?? []), b]), new Map());
+const lider = (f) => { const max = Math.max(...f); const q = f.flatMap((x, s) => (x === max ? [s] : [])); return q.length === 1 ? q[0] : null; };
+
+test('el tope de rondas que muestra la escena es el del motor (la web no puede importarlo)', () => {
+  assert.equal(RONDAS_TOPE, RONDAS);
+});
+
+test('cada ronda cuenta su historia en orden: apertura, crupier, jugada, apuesta, revelado y resultado; el final solo al terminar', async () => {
+  for (const p of await muchasMM()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) assert.deepEqual(bs.map((b) => b.tipo), TIPOS, `seed ${p.seed} ronda ${ronda}`);
+    const finales = beats.filter((b) => b.tipo === 'final');
+    assert.equal(finales.length, p.truncada ? 0 : 1);
+    if (finales.length) assert.equal(beats.at(-1).tipo, 'final');
+    assert.equal(new Set(beats.map((b) => b.id)).size, beats.length, 'ids unicos');
+    for (const b of beats) assert.ok(Number.isFinite(b.minMs) && b.minMs >= MIN_MS[b.tipo], `${b.id}: minMs`);
+  }
+  assert.deepEqual(Object.keys(MIN_MS).sort(), [...TIPOS, 'final'].sort());
+});
+
+test('cubre todos los registros en orden y no pierde ni repite una sola linea de la narracion; los comentarios esperan al resultado de su ronda', async () => {
+  for (const p of [...await muchasMM(), await jugarMM(3, undefined, { maxRondas: 5 })]) {
+    const beats = construirLineaDeTiempo(p);
+    assert.deepEqual([...new Set(beats.map((b) => b.registro))], p.rondas.map((_, i) => i), `seed ${p.seed}: todos los registros, en orden`);
+    const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto)).sort();
+    assert.deepEqual(dichas, p.rondas.flatMap((r) => r.narracion).map((l) => nombres(p)(l.texto)).sort(), `seed ${p.seed}: se pierde o se repite una linea`);
+    for (const b of beats.filter((x) => x.tipo !== 'resultado')) assert.ok(b.lineas.every((l) => l.tipo !== 'comentario'), `${b.id}: un comentario fuera del resultado`);
+    for (const b of beats) assert.ok(b.lineas.every((l) => !/\{\d\}/.test(l.texto)), 'ningun {n} sin resolver');
+  }
+});
+
+test('una partida cortada no inventa final; con entrada ilegible no hay beats', async () => {
+  const corta = await jugarMM(3, undefined, { maxRondas: 5 });
+  assert.equal(corta.truncada, true);
+  const bs = construirLineaDeTiempo(corta);
+  assert.ok(bs.every((b) => b.tipo !== 'final') && bs.at(-1).registro === 4);
+  for (const basura of [null, undefined, {}, { rondas: [] }, { rondas: 'x' }, 7]) {
+    assert.deepEqual(construirLineaDeTiempo(basura), []);
+    assert.deepEqual(puntuarRondas(basura), []);
+    assert.deepEqual(mejoresRondas(basura, 3), []);
+  }
+});
+
+test('la camara oculta: la carta jugada solo se ve en las rondas que la camara elige (por seed) y nunca antes de tiempo', async () => {
+  let vistas = 0, ocultas = 0;
+  for (const p of await muchasMM()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const camara = elegirCamara(p.seed, ronda, 1, 2);
+      assert.ok(bs.every((b) => JSON.stringify(b.camara) === JSON.stringify(camara)), `seed ${p.seed} ronda ${ronda}: camara distinta de elegirCamara`);
+      const visible = camara.includes(r.activo);
+      const jugar = bs.find((b) => b.tipo === 'jugada').pasos.find((x) => x.tipo === 'jugar');
+      assert.equal(jugar.carta, visible ? r.carta : null, `ronda ${ronda}: la carta jugada ${visible ? 'debia verse' : 'debia seguir oculta'}`);
+      if (visible) vistas++; else ocultas++;
+      // antes del reveal, la carta jugada no aparece en ningun otro paso (el crupier y las cartas disponibles son publicos)
+      for (const b of bs.slice(0, bs.findIndex((x) => x.tipo === 'revelado'))) {
+        for (const paso of b.pasos) if (!['jugar', 'crupier', 'estado'].includes(paso.tipo)) assert.ok(!('carta' in paso), `${b.id}: ${paso.tipo} trae una carta antes del reveal`);
+      }
+    }
+  }
+  assert.ok(vistas > 20 && ocultas > 20, `la camara tiene que mezclar: ${vistas} vistas, ${ocultas} ocultas`);
+  const p = await jugarMM(3);
+  const con = (camara) => construirLineaDeTiempo(p, { camara }).filter((b) => b.tipo === 'jugada').map((b) => b.pasos.find((x) => x.tipo === 'jugar').carta);
+  assert.ok(con(0).every((c) => c === null), 'camara 0: nunca');
+  assert.ok(con(2).every((c) => typeof c === 'number'), 'camara 2: siempre');
+  assert.deepEqual(construirLineaDeTiempo(p, { camara: 0 }).map((b) => b.id), construirLineaDeTiempo(p, { camara: 2 }).map((b) => b.id), 'los ids no dependen de la camara');
+});
+
+test('la apuesta, el reveal y las fichas salen del registro: carta igual no mueve fichas, la apuesta total se marca y el estado final de la ronda es el del registro', async () => {
+  let iguales = 0, todos = 0, aciertos = 0, fallos = 0;
+  for (const p of await muchasMM()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const paso = (tipo, t) => bs.find((b) => b.tipo === tipo).pasos.filter((x) => x.tipo === t);
+      assert.deepEqual(paso('apertura', 'roles'), [{ tipo: 'roles', activo: r.activo, predictor: r.predictor }]);
+      const ap = paso('apuesta', 'apuesta')[0];
+      assert.deepEqual([ap.asiento, ap.fichas, ap.lado, ap.todo], [r.predictor, r.apuesta, r.lado, r.apostoTodo], `ronda ${ronda}`);
+      assert.deepEqual(paso('crupier', 'crupier'), [{ tipo: 'crupier', asiento: r.activo, carta: r.crupier, quedan: r.crupierQuedan[r.activo].length }]);
+      const sello = paso('revelado', 'sello')[0].sello;
+      assert.equal(sello, r.acierto === true ? 'acierta' : r.acierto === false ? 'falla' : 'igual', `ronda ${ronda}: sello`);
+      assert.deepEqual(paso('revelado', 'revelar'), [{ tipo: 'revelar', carta: r.carta }]);
+      assert.deepEqual(paso('revelado', 'comparar'), [{ tipo: 'comparar', veredicto: r.veredicto, crupier: r.crupier, carta: r.carta }]);
+      const res = bs.find((b) => b.tipo === 'resultado').pasos;
+      const cobra = res.filter((x) => x.tipo === 'cobra'), paga = res.filter((x) => x.tipo === 'paga'), devuelve = res.filter((x) => x.tipo === 'devuelve');
+      assert.deepEqual(res.find((x) => x.tipo === 'estado').fichas, r.fichas, `ronda ${ronda}: las fichas de la ronda son las del registro`);
+      assert.deepEqual(cobra.filter((x) => x.asiento === r.activo).map((x) => x.fichas), r.ganaActivo > 0 ? [r.ganaActivo] : [], 'el activo cobra de la banca solo si gana algo');
+      if (r.veredicto === 'igual') {
+        iguales++;
+        assert.deepEqual(res.filter((x) => x.tipo !== 'estado'), [{ tipo: 'devuelve', asiento: r.predictor, fichas: r.apuesta }], 'carta igual: solo se devuelve la apuesta');
+        assert.deepEqual(r.fichas, r.fichasAntes);
+      } else if (r.acierto) {
+        aciertos++;
+        assert.deepEqual(devuelve, [{ tipo: 'devuelve', asiento: r.predictor, fichas: r.apuesta }]);
+        assert.deepEqual(cobra.filter((x) => x.asiento === r.predictor).map((x) => x.fichas), [r.ganaPredictor]);
+        assert.equal(paga.length, 0);
+      } else {
+        fallos++;
+        assert.deepEqual(paga, [{ tipo: 'paga', asiento: r.predictor, fichas: r.apuesta }]);
+        assert.equal(devuelve.length, 0);
+      }
+      if (r.apostoTodo) todos++;
+    }
+  }
+  assert.ok(iguales > 0 && todos > 0 && aciertos > 0 && fallos > 0, `la prueba no vio todos los casos: ${iguales} iguales, ${todos} apuestas totales, ${aciertos} aciertos, ${fallos} fallos`);
+});
+
+test('las cartas que le quedan a cada jugador (la tira) y el mazo del crupier salen del registro, antes y despues de la ronda', async () => {
+  for (const p of await muchasMM()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const antes = bs.find((b) => b.tipo === 'apertura').pasos.find((x) => x.tipo === 'estado');
+      const despues = bs.find((b) => b.tipo === 'resultado').pasos.find((x) => x.tipo === 'estado');
+      assert.deepEqual(antes.fichas, r.fichasAntes);
+      for (const s of [0, 1]) {
+        assert.deepEqual(despues.disponibles[s], r.mano[s], `ronda ${ronda} asiento ${s}: despues`);
+        assert.deepEqual(antes.disponibles[s], s === r.activo ? [...r.mano[s], r.carta].sort((a, b) => a - b) : r.mano[s], `ronda ${ronda} asiento ${s}: antes (le falta la carta que va a jugar)`);
+        assert.equal(despues.crupierQuedan[s], r.crupierQuedan[s].length);
+        assert.equal(antes.crupierQuedan[s], r.crupierQuedan[s].length + (s === r.activo ? 1 : 0));
+      }
+    }
+  }
+});
+
+test('una jugada que puso el juego por una respuesta ilegal queda marcada en el beat de su jugador y no se atribuye a la IA', async () => {
+  let marcadas = 0;
+  for (let seed = 1; seed <= 8; seed++) {
+    for (const asiento of [0, 1]) {
+      const p = await jugarMMConCaido(seed, asiento);
+      const beats = construirLineaDeTiempo(p);
+      for (const b of beats) {
+        const r = p.rondas[b.registro];
+        const esperado = b.tipo === 'jugada' ? r.invalidas[r.activo] === true : b.tipo === 'apuesta' ? r.invalidas[r.predictor] === true : false;
+        assert.equal(b.reemplazo, esperado, `${b.id}`);
+        if (b.reemplazo) { marcadas++; assert.match(b.texto, /no responde bien/, 'el texto dice que la puso el juego'); }
+      }
+    }
+  }
+  assert.ok(marcadas > 10, `solo ${marcadas} jugadas de reemplazo`);
+});
+
+test('todos los pasos usan el vocabulario fijado, y cada uno suena o es mudo a proposito', async () => {
+  const vistos = new Set();
+  for (const p of await muchasMM()) for (const b of construirLineaDeTiempo(p)) for (const paso of b.pasos) {
+    assert.ok(PASOS.includes(paso.tipo), `paso fuera del vocabulario: ${paso.tipo}`);
+    assert.ok(Array.isArray(eventosDePaso(paso)));
+    vistos.add(paso.tipo);
+  }
+  assert.deepEqual([...vistos].sort(), [...PASOS].sort());
+  assert.deepEqual(eventosDePaso({ tipo: 'devuelve' }), ['ficha']);
+  assert.deepEqual(eventosDePaso({ tipo: 'comparar' }), []);
+});
+
+test('puntuarRondas cuenta exactamente lo que dice la narracion del motor (apuesta total, carta igual, regala la ronda, cae de golpe, pasa al frente) y el final', async () => {
+  const frases = { 'lo apuesta todo': /lo apuesta todo/, 'carta igual': /^Carta igual/, 'regala la ronda': /regala la ronda|juega bajo a propósito/, 'cae de golpe': /buena parte de sus fichas/, 'pasa al frente': /pasa al frente/ };
+  const vistos = {};
+  for (const p of await muchasMM()) {
+    for (const m of puntuarRondas(p)) {
+      const r = p.rondas[m.ronda - 1];
+      for (const [motivo, re] of Object.entries(frases)) {
+        const dice = r.narracion.some((l) => l.tipo === 'comentario' && re.test(l.texto));
+        assert.equal(m.motivos.includes(motivo), dice, `seed ${p.seed} ronda ${m.ronda}: ${motivo}`);
+        if (dice) vistos[motivo] = (vistos[motivo] ?? 0) + 1;
+      }
+      assert.equal(m.motivos.includes('final'), r.final !== null);
+      assert.ok(Number.isFinite(m.puntos) && m.puntos >= 0);
+    }
+  }
+  for (const motivo of Object.keys(frases)) assert.ok(vistos[motivo] > 0, `la prueba no vio "${motivo}"`);
+  const p = await jugarMM(2);
+  const top = mejoresRondas(p, 3);
+  assert.equal(top.length, 3);
+  assert.ok(top[0].puntos >= top[1].puntos && top[1].puntos >= top[2].puntos);
+  assert.equal(new Set(top.map((x) => x.ronda)).size, 3);
+  assert.deepEqual(mejoresRondas(p, 0), []);
+});
+
+test('la comprobacion de estado: al empezar cada ronda no queda nada de la anterior (sello, apuesta, cartas del escenario, etiquetas de camara)', async () => {
+  const beats = construirLineaDeTiempo(await jugarMM(3));
+  const idx = beatsDeEstado(beats, 4);
+  assert.equal(idx.length, 4);
+  assert.ok(idx.every((i) => beats[i].tipo === 'apertura' && beats[i].mano >= 2));
+  assert.deepEqual(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 0, pastillas: 0 }, beats[idx[0]]), []);
+  assert.match(erroresDeEstado({ sello: 1, apuesta: 0, cartas: 0, pastillas: 0 }, beats[idx[0]]).join(), /sello/);
+  assert.match(erroresDeEstado({ sello: 0, apuesta: 1, cartas: 0, pastillas: 0 }, beats[idx[0]]).join(), /apuesta/);
+  assert.match(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 3, pastillas: 0 }, beats[idx[0]]).join(), /cartas/);
+  assert.match(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 0, pastillas: 1 }, beats[idx[0]]).join(), /camara/);
+  assert.match(erroresDeEstado(null, beats[idx[0]]).join(), /estado/);
+  assert.deepEqual(beatsDeEstado(null, 3), []);
+});
