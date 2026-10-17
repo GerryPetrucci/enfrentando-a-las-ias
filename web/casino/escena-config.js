@@ -36,7 +36,7 @@ export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
 }
 
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
-// &sonido=0 &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
+// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
   const q = new URLSearchParams(search ?? '');
   const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda')) ?? 1); // ronda= es sinonimo de mano= (los juegos que juegan por rondas)
