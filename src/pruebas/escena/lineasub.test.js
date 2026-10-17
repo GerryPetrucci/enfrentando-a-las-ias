@@ -9,7 +9,7 @@ import { SUBASTAS as RONDAS, JUGADORES, BANCO } from '../../juegos/subasta/const
 import { resolverNombres } from '../../juegos/subasta/narracion.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
 import { duracionDeReloj } from '../../../web/casino/reloj.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, textoDeFinal, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, BANCO_S } from '../../../web/casino/linea-de-tiempo-subasta.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, textoDeFinal, textoDeArranque, textoDeSoltar, textoDeGanar, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, BANCO_S } from '../../../web/casino/linea-de-tiempo-subasta.js';
 import { jugarSub, jugarSubConCaido, muchasSub } from './ayudas-sub.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -101,7 +101,7 @@ test('quien se retira, quien ya no tiene banco y quien respondio mal se ven apar
       const tipos = res.map((x) => x.tipo).filter((t) => ['ganar', 'anular', 'nadie', 'ficha'].includes(t));
       if (r.ganador !== null) {
         assert.deepEqual(tipos, ['ganar', 'ficha']);
-        assert.deepEqual(res.find((x) => x.tipo === 'ganar'), { tipo: 'ganar', asiento: r.ganador, apuesta: r.oculto.apuestas[r.ganador] });
+        assert.deepEqual(res.find((x) => x.tipo === 'ganar'), { tipo: 'ganar', asiento: r.ganador, apuesta: r.oculto.apuestas[r.ganador], todo: r.oculto.todoElBanco?.[r.ganador] === true });
         assert.deepEqual(res.find((x) => x.tipo === 'ficha'), { tipo: 'ficha', asiento: r.ganador });
         vistos.ganar++;
       } else if (r.sinGanador === 'empate') {
@@ -231,4 +231,14 @@ test('el cierre de la final nombra a la pieza y al eliminado, o dice que nadie c
   assert.deepEqual(textoDeFinal({ pieza: null, eliminado: 1 }, nombre), { grande: 'Nadie gana la pieza', detalle: 'B queda eliminado' });
   assert.deepEqual(textoDeFinal({ pieza: 0, eliminado: null }, nombre), { grande: 'A gana la pieza', detalle: 'Nadie queda eliminado' });
   assert.deepEqual(textoDeFinal(null, nombre), { grande: '', detalle: '' });
+});
+
+test('el texto de una fila al arrancar el reloj no depende de cuanto apuesta: lo de "todo su banco" solo se dice al soltar o al ganar (el banco de antes es publico y delataria la apuesta)', () => {
+  assert.equal(textoDeArranque({ asiento: 0, apuesta: 571.9, todo: true }), textoDeArranque({ asiento: 0, apuesta: 12, todo: false }));
+  assert.doesNotMatch(textoDeArranque({ apuesta: 571.9, todo: true }), /todo|571|banco/i);
+  assert.equal(textoDeSoltar({ apuesta: 12.4, todo: false }), 'Soltó a 12.4 s');
+  assert.equal(textoDeSoltar({ apuesta: 571.9, todo: true }), 'Soltó a 571.9 s · ¡todo!');
+  assert.equal(textoDeGanar(31.8, false), 'Gana con 31.8 s');
+  assert.equal(textoDeGanar(600, true), 'Gana con 600.0 s · ¡todo!');
+  for (const raro of [null, undefined, {}]) assert.equal(typeof textoDeSoltar(raro), 'string');
 });

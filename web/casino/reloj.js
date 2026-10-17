@@ -49,7 +49,7 @@ export function tiempoDeReloj(t, apuestaMax) {
   return Math.min(a, a - SEGUNDOS_NORMALES + (x - (SEGUNDOS_NORMALES + dM)));
 }
 
-// El instante de pantalla en que el contador llega a `apuesta` (la inversa de tiempoDeReloj): es cuando se suelta el boton de quien apostó eso.
+// El instante de pantalla en que el contador llega a `apuesta` (la inversa de tiempoDeReloj): es cuando se suelta el boton de quien aposto eso.
 export function instanteDeCruce(apuesta, apuestaMax) {
   const a = legible(apuestaMax);
   const c = legible(apuesta);

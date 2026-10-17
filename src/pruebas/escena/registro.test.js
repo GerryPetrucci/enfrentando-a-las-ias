@@ -40,7 +40,7 @@ test('un juego sin escena da un error que dice cuales hay', async () => {
 
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
   // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo
-  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : { mano: 1 }] });
+  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
     { nombre: 'fuga.json', datos: { partidas: [partida('fuga')] } },
@@ -119,4 +119,12 @@ test('Subasta de tiempo esta registrada: cinco jugadores, sin camara, unidad ron
   assert.equal(entrada.manos, 19);
   assert.match(entrada.titulo, / · 19 rondas$/);
   assert.equal(typeof (await lineaDe('subasta')), 'function');
+});
+
+test('una partida de Subasta sin los datos ocultos de las apuestas (guardada con un motor anterior) sale apagada con el motivo "formato anterior"', async () => {
+  const p = structuredClone(await jugarSub(1));
+  for (const r of p.rondas) delete r.oculto;
+  const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [p] } }])[0];
+  assert.equal(e.valida, false);
+  assert.match(e.motivo, /formato anterior/);
 });

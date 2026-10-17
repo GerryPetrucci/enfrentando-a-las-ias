@@ -62,7 +62,7 @@ export function construirLineaDeTiempo(partida) {
     });
     crear('apuestas', { lineas: lineasDe('apuesta'), reemplazo: algunaIlegible });
     const resultado = r.ganador !== null && r.ganador !== undefined
-      ? [{ tipo: 'ganar', asiento: r.ganador, apuesta: apuestas[r.ganador] }, { tipo: 'ficha', asiento: r.ganador }]
+      ? [{ tipo: 'ganar', asiento: r.ganador, apuesta: apuestas[r.ganador], todo: r.oculto?.todoElBanco?.[r.ganador] === true }, { tipo: 'ficha', asiento: r.ganador }]
       : r.sinGanador === 'empate' ? [{ tipo: 'anular', asientos: r.oculto?.empatados ?? [], apuesta: max }] : [{ tipo: 'nadie' }];
     fichas = [...r.fichas];
     ganadas = ganadas.map((x, k) => (k === r.subasta - 1 ? (r.ganador ?? -1) : x));
@@ -97,6 +97,13 @@ export function textoDeFinal(final, nombre) {
     detalle: Number.isInteger(final.eliminado) ? `${nombre(final.eliminado)} queda eliminado` : 'Nadie queda eliminado',
   };
 }
+
+// Los textos de la fila de cada IA mientras corre el contador. Al arrancar NO se dice nada de cuanto apuesta (el banco de antes es publico: "todo su banco" delataria la apuesta desde el
+// segundo cero); eso se dice solo al soltar el boton o al ganar, cuando el contador ya paso por esa apuesta.
+const decimaTexto = (x) => (Number.isFinite(x) ? x.toFixed(1) : '0.0');
+export const textoDeArranque = () => 'Aguanta…';
+export function textoDeSoltar(o) { const { apuesta, todo } = o ?? {}; return `Soltó a ${decimaTexto(apuesta)} s${todo === true ? ' · ¡todo!' : ''}`; }
+export function textoDeGanar(apuesta, todo) { return `Gana con ${decimaTexto(apuesta)} s${todo === true ? ' · ¡todo!' : ''}`; }
 
 // ---- Que subastas valen la pena para un clip de redes -----------------------------------------------------------------------------------------
 // Cada subasta suma puntos por lo que paso en ella (todo sale del registro y refleja las mismas condiciones que los comentarios del motor). Los pesos son editoriales.

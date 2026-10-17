@@ -7,7 +7,7 @@
 
 import { colocarSubasta } from './layout-subasta.js';
 import { htmlAvatarJugador, estiloJugador, esc } from './kit.js';
-import { RONDAS_TOPE, BANCO_S, textoDeFinal } from './linea-de-tiempo-subasta.js';
+import { RONDAS_TOPE, BANCO_S, textoDeFinal, textoDeArranque, textoDeSoltar, textoDeGanar } from './linea-de-tiempo-subasta.js';
 import { tiempoDeReloj, instanteDeCruce } from './reloj.js';
 import { MesaBase, el, poner, centro } from './mesa-base.js';
 
@@ -47,19 +47,26 @@ export class Mesa extends MesaBase {
     this.sello = el('sello');
     this.panel = el('fijo panel-sol'); poner(this.panel, L.panel);
     this.raiz.append(this.cabecera, this.etiqueta, this.consola, this.rotulo, this.luz, this.contador, ...this.filas.flatMap((f) => [f.caja, f.avatar, f.nombre, f.estado, f.boton, f.banco, f.barra, f.fichas]), this.tira, this.sello, this.panel, this.subtitulos, this.capa);
-    this.filas.forEach((_, s) => { this.pintarFila(s); this.ajustarNombre(s); });
+    this.filas.forEach((_, s) => this.pintarFila(s));
   }
 
   // ---- ayudas ----
-  // Un nombre largo se achica hasta caber antes de caer en la elipsis (igual que en Solitario); sin pagina todavia no hay medidas y no hace nada.
+  // Un nombre largo se achica hasta caber antes de caer en la elipsis (igual que en Solitario). Se llama ya montada la mesa (mostrarEstadoInicial): antes no hay medidas. Devuelve al
+  // nombre el ancho que le puso poner() (si se lo borrara, el nombre largo pasaria por encima del boton).
   ajustarNombre(s) {
     const nom = this.filas[s].nombre;
     let tam = parseFloat(getComputedStyle(nom).fontSize);
     const hueco = nom.getBoundingClientRect().width;
+    const { width, maxWidth } = nom.style;
     nom.style.width = 'max-content'; nom.style.maxWidth = 'none';
     const ancho = () => nom.getBoundingClientRect().width;
     while (ancho() > hueco + 0.25 && tam > 22 && hueco > 0) { tam -= 2; nom.style.fontSize = `${tam}px`; }
-    nom.style.width = ''; nom.style.maxWidth = '';
+    nom.style.width = width; nom.style.maxWidth = maxWidth;
+  }
+  // Una fila sin tiempo (banco en cero) queda apagada, como las de los jugadores eliminados en Solitario.
+  apagar(s, fuera) {
+    const f = this.filas[s];
+    for (const nodo of [f.caja, f.avatar, f.nombre, f.estado, f.banco, f.barra, f.fichas]) nodo.classList.toggle('fuera', fuera);
   }
   pintarFila(s) {
     const f = this.filas[s], { st } = f;
@@ -68,7 +75,7 @@ export class Mesa extends MesaBase {
     f.fichas.innerHTML = `${st.fichas} ${st.fichas === 1 ? 'ficha' : 'fichas'} ${'<span class="vic">●</span>'.repeat(Math.min(5, st.fichas))}${st.fichas > 5 ? ` +${st.fichas - 5}` : ''}`;
     f.caja.classList.toggle('ganadora', st.ganadora);
   }
-  decir(s, texto, clase = '') { const e = this.filas[s].estado; e.className = `fijo estado-sub ${clase}`; e.textContent = texto; }
+  decir(s, texto, clase = '') { const e = this.filas[s].estado; const fuera = e.classList.contains('fuera') ? ' fuera' : ''; e.className = `fijo estado-sub ${clase}${fuera}`; e.textContent = texto; }
   pintarTira(ganadas) {
     this.tira.querySelectorAll('.cas').forEach((c, k) => {
       const g = ganadas[k];
@@ -92,6 +99,7 @@ export class Mesa extends MesaBase {
     this.filas.forEach((f, s) => {
       const participa = asientos.includes(s);
       f.boton.className = `fijo boton-sub ${participa ? 'oprimido' : 'fuera'}`;
+      this.apagar(s, !participa);
       this.decir(s, participa ? 'Oprimido' : 'Sin tiempo');
     });
   }
@@ -100,6 +108,7 @@ export class Mesa extends MesaBase {
     const e = beat.pasos.find((p) => p.tipo === 'estado'), o = beat.pasos.find((p) => p.tipo === 'oprimir');
     if (e) this.aplicarEstado(e);
     if (o) this.oprimir(o.asientos);
+    if (!this.nombresAjustados) { this.filas.forEach((_, s) => this.ajustarNombre(s)); this.nombresAjustados = true; }
     this.cabecera.querySelector('.mano').textContent = `Subasta ${beat.mano} / ${RONDAS_TOPE}`;
   }
   fijarEstado(e) { this.aplicarEstado(e); }
@@ -128,15 +137,16 @@ export class Mesa extends MesaBase {
       const f = this.filas[p.asiento];
       if (p.motivo !== 'sin tiempo') f.boton.className = 'fijo boton-sub suelto'; // un retirado suelta de entrada; quien no tiene banco ya estaba apagado
       if (p.motivo === 'ilegible') f.caja.classList.add('reemplazo');
-      this.decir(p.asiento, p.motivo === 'ilegible' ? 'No respondió bien: se retira' : p.motivo === 'sin tiempo' ? 'Sin tiempo' : 'Se retira', p.motivo === 'ilegible' ? 'mal' : '');
+      if (p.motivo === 'sin tiempo') this.apagar(p.asiento, true);
+      this.decir(p.asiento, p.motivo === 'ilegible' ? 'Ilegible: se retira' : p.motivo === 'sin tiempo' ? 'Sin tiempo' : 'Se retira', p.motivo === 'ilegible' ? 'mal' : '');
     }
     if (!c.orden.length) { await this.esperar(ms); return; }
     const max = c.max, D = c.duracionS;
     const empate = c.orden.filter((o) => o.apuesta === max).length > 1;
     // los que se sueltan: todos los de apuesta menor a su tiempo; si hay empate en lo mas alto, esos tambien (a la vez, al final); el unico que aguanta mas se queda oprimido
     const sueltan = c.orden.filter((o) => o.apuesta < max || empate).map((o) => ({ ...o, t: o.apuesta < max ? instanteDeCruce(o.apuesta, max) : D })).sort((a, b) => a.t - b.t);
-    const soltar = (o) => { const f = this.filas[o.asiento]; f.boton.className = 'fijo boton-sub suelto'; this.decir(o.asiento, `Soltó a los ${seg(o.apuesta)} s`, o.apuesta === max ? 'mal' : ''); };
-    for (const o of c.orden) this.decir(o.asiento, o.todo ? 'Aguanta… ¡todo su banco!' : 'Aguanta…');
+    const soltar = (o) => { const f = this.filas[o.asiento]; f.boton.className = 'fijo boton-sub suelto'; this.decir(o.asiento, textoDeSoltar(o), o.apuesta === max ? 'mal' : ''); };
+    for (const o of c.orden) this.decir(o.asiento, textoDeArranque(o)); // nada de cuanto apuesta: lo dice el contador al pasar por la apuesta
     this.luz.textContent = 'En vivo'; this.luz.classList.add('vivo');
     if (this.rapido) {
       this.contador.textContent = seg(max);
@@ -179,7 +189,7 @@ export class Mesa extends MesaBase {
         this.sonar(p);
         const f = this.filas[p.asiento];
         f.boton.className = 'fijo boton-sub gana'; f.st.ganadora = true; this.pintarFila(p.asiento);
-        this.decir(p.asiento, `Gana con ${seg(p.apuesta)} s`, 'ok');
+        this.decir(p.asiento, textoDeGanar(p.apuesta, p.todo), 'ok');
         marcar('Gana la ficha', 'ganar');
       } else if (p.tipo === 'anular') {
         this.sonar(p);
@@ -205,11 +215,12 @@ export class Mesa extends MesaBase {
   terminar(beat) {
     const f = beat.pasos[0]?.final;
     this.cabecera.querySelector('.mano').textContent = 'Final';
+    this.sello.getAnimations().forEach((x) => x.cancel()); this.sello.style.opacity = 0; // el sello de la ultima subasta no se queda sobre el panel
     if (!f) return;
     const texto = textoDeFinal(f, (s) => this.nombre(s));
     const orden = Array.isArray(f.ranking) ? f.ranking : [];
     this.panel.innerHTML = `<div class="titulo">Final</div><div class="grande">${esc(texto.grande)}</div><div class="detalle">${esc(texto.detalle)}</div>`
-      + `<div class="tabla">${orden.map((x) => `<div class="linea${x.s === f.pieza ? ' primero' : ''}"><span>${esc(this.nombre(x.s))}</span><span>${esc(x.fichas)} fichas · ${esc(seg(x.banco))} s</span></div>`).join('')}</div>`;
+      + `<div class="tabla">${orden.map((x) => `<div class="linea${x.s === f.pieza ? ' primero' : ''}"><span>${esc(this.nombre(x.s))}</span><span>${esc(x.fichas)} ${x.fichas === 1 ? 'ficha' : 'fichas'} · ${esc(seg(x.banco))} s</span></div>`).join('')}</div>`;
     this.mostrarPanel();
     if (Number.isInteger(f.pieza)) { this.filas[f.pieza].st.ganadora = true; this.pintarFila(f.pieza); }
   }

@@ -68,12 +68,17 @@ test('el contador cabe "600.0" (cinco caracteres), la tira cabe las 19 casillas 
 test('el sello de la subasta tiene su sitio dentro de la zona y de la consola (no tapa la tira)', () => {
   for (const f of ['9x16', '16x9']) {
     const L = colocarSubasta(f);
-    assert.ok(dentro(L.consola.sello, L.zona), `${f}: el sello se sale de la zona`);
+    assert.ok(dentro(L.consola.sello, L.consola.marco), `${f}: el sello se sale de la consola`);
     assert.ok(sinChoque(L.consola.sello, L.tira), `${f}: el sello tapa la tira`);
+    for (const [nombre, r] of [['contador', L.consola.contador], ['luz', L.consola.luz], ['rotulo', L.consola.rotulo], ['fila 0', L.filas[0].fila]]) assert.ok(sinChoque(L.consola.sello, r), `${f}: el sello tapa ${nombre}`);
     assert.ok(L.consola.sello.ancho >= 400, `${f}: ancho del sello`);
   }
 });
 
 test('un formato desconocido da un error claro que dice cuales hay', () => {
   for (const raro of [undefined, null, 'cuadrado', 7, '', '__proto__']) assert.throws(() => colocarSubasta(raro), /formato desconocido.*9x16 y 16x9/);
+});
+
+test('los subtitulos tienen alto para cuatro renglones de comentarios mas el resultado (un beat de resultado lleva hasta seis lineas)', () => {
+  for (const f of ['9x16', '16x9']) assert.ok(colocarSubasta(f).subtitulos.alto >= 190, `${f}: los subtitulos miden ${colocarSubasta(f).subtitulos.alto}`);
 });
