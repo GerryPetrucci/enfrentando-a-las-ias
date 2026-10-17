@@ -214,7 +214,35 @@
 .dado.cerrado .q { font:800 calc(var(--lado) * .5)/1 var(--titulos); color:#9ec7ee; }
 .dado.rojo.cerrado .q { color:#ff9c92; }
 .dado.azul.cerrado .q { color:#a9c8ff; }
-.bandeja { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.bandeja { display:flex; flex-wrap:wrap; gap:3px; align-items:center; }
 .bandeja .dado { --lado:34px; }
 .en-bandeja { display:inline-block; transition:opacity .2s; }
 .usado { opacity:.28; }
+
+/* ---------- Triple dado: mesa azul, tarjetas, dados en las filas y barra de la ronda ---------- */
+.escena.mesa-azul { --fieltro-1:#1c4d96; --fieltro-2:#0d2a5c; --fieltro-3:#061431; }
+.tarjetas-td { z-index:12; display:flex; align-items:center; gap:8px; }
+.tj { position:relative; flex:1; display:flex; align-items:center; justify-content:center; height:40px; border-radius:10px; font:800 20px var(--titulos); letter-spacing:.1em; background:#0b1a2e; border:1.5px solid #6f9bc766; color:#9ec7ee; white-space:nowrap; }
+.tj.usada { opacity:.3; text-decoration:line-through; }
+.tj.elegida { background:var(--oro); color:var(--noche); border-color:var(--oro); }
+.tj.oculta { flex:1.5; border-style:dashed; color:#c9c9d2; font-size:17px; }
+.tj .sello-tj { position:absolute; left:50%; top:-16px; transform:translateX(-50%); padding:1px 10px; border-radius:10px; font:800 16px var(--titulos); letter-spacing:.08em; background:var(--oro); color:var(--noche); white-space:nowrap; text-decoration:none; box-shadow:0 2px 8px #000a; }
+.tj .sello-tj.falla { background:var(--rojo); color:#fff; }
+.tarjetas-td .pastilla-camara { position:static; transform:none; display:inline-flex; flex:none; padding:0 4px; background:none; font-size:16px; color:var(--rojo); }
+.ranura-dado { z-index:12; display:flex; align-items:center; justify-content:center; }
+.ranura-dado .dado { --lado:var(--lado-grande, 96px); }
+.dado.combo { box-shadow:0 0 0 3px var(--oro), 0 0 20px #e0b25caa, 0 6px 14px #0008; }
+.bandeja-td { z-index:12; }
+.bandeja-td .dado { --lado:var(--lado-bandeja, 28px); }
+.en-bandeja.sin-usar .dado { box-shadow:0 0 0 2px var(--oro), 0 2px 6px #0008; }
+.info-td .info-fila { gap:10px; }
+.info-td .avatar { width:44px; height:44px; font-size:26px; }
+.info-td .nom { font-size:32px; }
+.info-td .stats { margin-top:0; font-size:20px; }
+.info-td .stats b { font-size:24px; }
+.f-16x9 .info-td .nom { font-size:34px; }
+.etq-comb { z-index:12; display:flex; align-items:center; justify-content:center; font:800 28px var(--titulos); letter-spacing:.12em; text-transform:uppercase; color:var(--noche); background:var(--oro); border-radius:14px; }
+.etq-comb:empty { visibility:hidden; }
+.pts-comb { z-index:12; display:flex; align-items:center; justify-content:center; font:800 42px var(--titulos); color:var(--oro); }
+.barra-ronda { z-index:12; border-radius:9px; background:#0a1d30; overflow:hidden; }
+.barra-ronda i { display:block; height:100%; width:0; background:var(--c); transition:width .5s; }

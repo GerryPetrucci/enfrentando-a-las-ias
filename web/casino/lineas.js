@@ -20,6 +20,14 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-mayormenor.js'),
     mesa: () => import('./mesa-mayormenor.js'),
   },
+  tripledado: {
+    nombre: 'Triple dado',
+    jugadores: 4,
+    camaraPorDefecto: 2, // a cuantos se les ve la tarjeta antes del cierre de la ronda
+    unidad: 'ronda',
+    linea: () => import('./linea-de-tiempo-tripledado.js'),
+    mesa: () => import('./mesa-tripledado.js'),
+  },
   solitario: {
     nombre: 'El número solitario',
     jugadores: 5,

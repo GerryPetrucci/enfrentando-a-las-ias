@@ -102,6 +102,13 @@ export function htmlTira(numeros, usadas = [], ahora = null) {
   return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
 
+// La informacion de un jugador en Triple dado: avatar, nombre y "N pts" (el texto de los puntos ya viene escrito: 28.5, 3.33). Todo lo que viene de los datos pasa por esc().
+export function htmlInfoPuntos(jugador, puntosTexto = '0') {
+  const j = jugador ?? {};
+  const nombre = j.nombre ?? 'Jugador';
+  return `<div class="info-fila" style="${estiloJugador(j)}"><div class="avatar">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="stats"><b>${esc(puntosTexto)}</b> pts</div></div></div>`;
+}
+
 // ---- Triple dado: dados vistos DESDE ARRIBA (solo se dibuja la cara de arriba) ----
 // Los puntos de cada cara sobre una rejilla de 3x3 (casillas 0 a 8, de izquierda a derecha y de arriba abajo).
 const PUNTOS_DADO = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };

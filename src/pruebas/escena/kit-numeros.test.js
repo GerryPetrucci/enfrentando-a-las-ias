@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos } from '../../../web/casino/kit.js';
 import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
@@ -143,4 +143,13 @@ test('la bandeja pone cada dado con su id, atenua los usados y nunca muestra la 
 test('mesa.css trae el aspecto del dado (blanco, rojo, azul, cerrado), la bandeja y los dados usados', () => {
   const texto = css();
   for (const sel of ['\\.dado \\{', '\\.dado\\.rojo \\{', '\\.dado\\.azul \\{', '\\.dado\\.cerrado \\{', '\\.bandeja \\{', '\\.usado \\{']) assert.match(texto, new RegExp(sel), sel);
+});
+
+test('la placa de Triple dado lleva avatar, nombre y "N pts" con el color de paleta.js y todo escapado', () => {
+  const claude = htmlInfoPuntos({ id: 'claude', nombre: 'Claude', inicial: 'C' }, '28.5');
+  assert.ok(claude.includes(`--c:${PALETA.claude.color}`));
+  assert.match(claude, /class="nom">Claude</);
+  assert.match(claude, /<b>28\.5<\/b> pts/);
+  assert.doesNotMatch(htmlInfoPuntos({ nombre: '<img src=x onerror=1>' }, '<b>'), /<img|<b><b>/);
+  for (const sinJugador of [null, undefined, {}]) assert.match(htmlInfoPuntos(sinJugador, '0'), /class="nom">Jugador</);
 });

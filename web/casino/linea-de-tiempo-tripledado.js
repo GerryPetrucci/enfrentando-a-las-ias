@@ -46,10 +46,10 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
   rondas.forEach((r, i) => {
     const vistas = elegirCamara(semilla, r.ronda, n, JUGADORES_TOPE);
     const lineasDe = (...tipos) => (r.narracion ?? []).filter((l) => tipos.includes(l.tipo));
-    const crear = (tipo, { lineas = [], pasos = [], reemplazo = false, asiento = null } = {}) => {
+    const crear = (tipo, { lineas = [], pasos = [], reemplazo = false, asiento = null, k } = {}) => {
       const dichas = lineas.map((l) => ({ tipo: l.tipo, texto: nombrar(l.texto, partida.jugadores) }));
       const texto = dichas.map((l) => l.texto).join(' ');
-      beats.push({ id: `r${r.ronda}-${beats.length}-${tipo}`, mano: r.ronda, tipo, registro: i, asiento, camara: vistas, texto, lineas: dichas, minMs: duracion(MIN_MS[tipo], texto), reemplazo, pasos });
+      beats.push({ id: `r${r.ronda}-${beats.length}-${tipo}`, mano: r.ronda, tipo, registro: i, asiento, camara: vistas, texto, lineas: dichas, minMs: duracion(MIN_MS[tipo], texto), reemplazo, pasos, ...(k ? { k } : {}) });
     };
     const estado = (puntos, tarjetas) => ({ tipo: 'estado', puntosD: [...puntos], tarjetasUsadas: tarjetas.map((x) => [...x]), jugando: [true, true, true, true] });
     const invalidas = SEATS.map((s) => r.invalidas?.[s] === true);
@@ -68,7 +68,7 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     // Un enfrentamiento: cada jugador sube sus tres dados (los rojo y azul se abren aqui), se nombra la combinacion y crece la barra de la ronda.
     pendientes.push(...lineasDe('comentario'));
     crear('enfrentamiento', {
-      lineas: lineasDe('apertura', 'jugada', 'resultado'), reemplazo: invalidas.some(Boolean),
+      k: r.enfrentamiento, lineas: lineasDe('apertura', 'jugada', 'resultado'), reemplazo: invalidas.some(Boolean),
       pasos: [
         ...SEATS.map((s) => ({ tipo: 'subir', asiento: s, dados: r.combos[s].dados, valores: r.combos[s].valores, categoria: r.combos[s].categoria, ocultos: r.combos[s].ocultos, reemplazada: invalidas[s] })),
         ...SEATS.map((s) => ({ tipo: 'combinar', asiento: s, categoria: r.combos[s].categoria, puntosD: r.puntosD[s] })),
@@ -109,6 +109,33 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     beats.push({ id: `final-${beats.length}`, mano: ultimo.ronda, tipo: 'final', registro: rondas.length - 1, asiento: ultimo.final?.pieza ?? null, camara: [], texto, lineas, minMs: duracion(MIN_MS.final, texto), reemplazo: false, pasos: [{ tipo: 'final', final: ultimo.final ?? null }] });
   }
   return beats;
+}
+
+// ---- Lo que escribe la pantalla ----
+// Puntos desde doceavos enteros, sin coma flotante: 54 -> "4.5", 40 -> "3.33", 336 -> "28". Un valor ilegible vale 0.
+export function puntosTexto(doceavos) {
+  const d = Number.isFinite(doceavos) && doceavos > 0 ? Math.round(doceavos) : 0;
+  if (d % 12 === 0) return String(d / 12);
+  const texto = (d / 12).toFixed(2);
+  return texto.replace(/0$/, '');
+}
+
+// El banner de la escena: la ronda y que se hace en ese beat.
+export function bannerDe(beat) {
+  const ronda = Number.isInteger(beat?.mano) ? beat.mano : 1;
+  if (beat?.tipo === 'final') return { ronda, fase: 'Final' };
+  const fase = { apertura: 'Nadie ha visto los dados', prediccion: 'Cada quien elige su tarjeta en secreto', lanzamiento: 'Se lanzan los dados', cierre: 'Cierre de la ronda' }[beat?.tipo]
+    ?? (beat?.tipo === 'enfrentamiento' ? `Enfrentamiento ${beat.k ?? ''} de 3`.replace('  ', ' ') : '');
+  return { ronda, fase };
+}
+
+// El cierre de la final: la pieza para el mas alto en solitario y eliminado el mas bajo en solitario; un empate deja a nadie.
+export function textoDeFinal(final, nombre) {
+  if (!final) return { grande: '', detalle: '' };
+  return {
+    grande: Number.isInteger(final.pieza) ? `${nombre(final.pieza)} gana la pieza` : 'Nadie gana la pieza',
+    detalle: Number.isInteger(final.eliminado) ? `${nombre(final.eliminado)} queda eliminado` : 'Nadie queda eliminado',
+  };
 }
 
 // ---- Que rondas valen la pena para un clip de redes -----------------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ import { RONDAS, JUGADORES } from '../../juegos/tripledado/constantes.js';
 import { resolverNombres } from '../../juegos/tripledado/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-tripledado.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, puntosTexto, bannerDe, textoDeFinal, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE } from '../../../web/casino/linea-de-tiempo-tripledado.js';
 import { jugarTD, jugarTDConCaido, muchasTD } from './ayudas-td.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -242,4 +242,31 @@ test('un clip que empieza en la ronda 3 arranca con los puntos y las tarjetas ga
   const primera = beats.find((b) => b.mano === 1 && b.tipo === 'apertura').pasos.find((x) => x.tipo === 'estado');
   assert.deepEqual(primera.puntosD, [0, 0, 0, 0]);
   assert.deepEqual(primera.tarjetasUsadas, [[], [], [], []]);
+});
+
+test('los puntos se escriben desde los doceavos sin coma flotante: enteros, mitades y tercios', () => {
+  const casos = [[0, '0'], [12, '1'], [336, '28'], [54, '4.5'], [150, '12.5'], [40, '3.33'], [8, '0.67'], [4, '0.33'], [1, '0.08'], [480, '40'], [-3, '0'], [NaN, '0'], [null, '0'], ['x', '0']];
+  for (const [d, esperado] of casos) assert.equal(puntosTexto(d), esperado, String(d));
+});
+
+test('los enfrentamientos traen su numero (1 a 3) y el banner dice la ronda, que se hace en cada beat y el enfrentamiento', async () => {
+  const beats = construirLineaDeTiempo(await jugarTD(3));
+  const por = (ronda, tipo, k = null) => beats.find((b) => b.mano === ronda && b.tipo === tipo && (k === null || b.k === k));
+  assert.deepEqual(beats.filter((b) => b.mano === 2 && b.tipo === 'enfrentamiento').map((b) => b.k), [1, 2, 3]);
+  assert.equal(por(2, 'cierre').k, undefined);
+  assert.deepEqual(bannerDe(por(1, 'apertura')), { ronda: 1, fase: 'Nadie ha visto los dados' });
+  assert.equal(bannerDe(por(1, 'prediccion')).fase, 'Cada quien elige su tarjeta en secreto');
+  assert.equal(bannerDe(por(1, 'lanzamiento')).fase, 'Se lanzan los dados');
+  assert.equal(bannerDe(por(3, 'enfrentamiento', 2)).fase, 'Enfrentamiento 2 de 3');
+  assert.equal(bannerDe(por(3, 'cierre')).fase, 'Cierre de la ronda');
+  assert.deepEqual(bannerDe(beats.at(-1)), { ronda: 4, fase: 'Final' });
+  for (const raro of [null, undefined, {}, { tipo: 'raro', mano: 99 }]) assert.deepEqual(Object.keys(bannerDe(raro)), ['ronda', 'fase']);
+});
+
+test('el cierre de la final nombra a la pieza y al eliminado, o dice que nadie cuando hay empate', () => {
+  const nombre = (s) => ['A', 'B', 'C', 'D'][s];
+  assert.deepEqual(textoDeFinal({ pieza: 1, eliminado: 2 }, nombre), { grande: 'B gana la pieza', detalle: 'C queda eliminado' });
+  assert.deepEqual(textoDeFinal({ pieza: null, eliminado: 2 }, nombre), { grande: 'Nadie gana la pieza', detalle: 'C queda eliminado' });
+  assert.deepEqual(textoDeFinal({ pieza: 0, eliminado: null }, nombre), { grande: 'A gana la pieza', detalle: 'Nadie queda eliminado' });
+  assert.deepEqual(textoDeFinal(null, nombre), { grande: '', detalle: '' });
 });

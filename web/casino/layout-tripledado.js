@@ -35,7 +35,7 @@ function dibujar16x9() {
   const filas = Array.from({ length: 4 }, (_, s) => {
     const x = 96 + 438 * s, y = 194;
     return {
-      fila: r(x, y, 414, 680),
+      fila: r(x, y, 414, 520),
       placa: r(x + 8, y + 8, 398, 52),
       tarjetas: r(x + 8, y + 66, 398, 44),
       dados: [0, 1, 2].map((i) => r(x + 15 + i * 130, y + 130, 120, 120)),
@@ -46,8 +46,8 @@ function dibujar16x9() {
     };
   });
   return {
-    etiqueta: r(96, 990, 1728, 36), cabecera: r(96, 54, 1728, 64), banner: r(96, 126, 1728, 56), subtitulos: r(96, 890, 1728, 92),
-    dado: { lado: 120 }, bandejaLado: 30, filas, panel: r(300, 210, 1320, 650),
+    etiqueta: r(96, 990, 1728, 36), cabecera: r(96, 54, 1728, 64), banner: r(96, 126, 1728, 56), subtitulos: r(96, 730, 1728, 252),
+    dado: { lado: 120 }, bandejaLado: 30, filas, panel: r(300, 210, 1320, 500),
   };
 }
 

@@ -8,6 +8,7 @@ import { juegosConEscena, escenaDe, lineaDe } from '../../../web/casino/lineas.j
 import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
+import { jugarTD } from './ayudas-td.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -78,4 +79,15 @@ test('El numero solitario esta registrado: cinco jugadores, camara 2, unidad ron
   assert.equal(entrada.manos, 12);
   assert.match(entrada.titulo, / · 12 rondas$/);
   assert.equal(typeof (await lineaDe('solitario')), 'function');
+});
+
+test('Triple dado esta registrado: cuatro jugadores, camara 2, unidad ronda; la lista cuenta sus 4 rondas (16 registros)', async () => {
+  const e = escenaDe('tripledado');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['Triple dado', 4, 2, 'ronda']);
+  const p = await jugarTD(1);
+  const [entrada] = catalogarPartidas([{ nombre: 'td.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true);
+  assert.equal(entrada.manos, 4);
+  assert.match(entrada.titulo, / · 4 rondas$/);
+  assert.equal(typeof (await lineaDe('tripledado')), 'function');
 });
