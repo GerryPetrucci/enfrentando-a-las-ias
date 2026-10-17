@@ -200,3 +200,28 @@ test('una voz sin fuente (escrita a mano o de antes) sigue valiendo; la fuente i
   assert.equal(entradaDeVoz({ a: { ms: 1 } }, null), null);
   assert.deepEqual(resumenDeVoz(null, null), { usados: 0, desacordes: 0 });
 });
+
+test('dividirEnDos parte una partida en dos clips de rondas contiguos que cubren todo, con duraciones parecidas; el final va en la segunda parte', async () => {
+  const { dividirEnDos, recortarClip, duracionDeBeat } = await import('../../../web/casino/escena-config.js');
+  const { construirLineaDeTiempo: lineaFuga } = await import('../../../web/casino/linea-de-tiempo-fuga.js');
+  const { construirLineaDeTiempo: lineaSub } = await import('../../../web/casino/linea-de-tiempo-subasta.js');
+  const { jugarFuga } = await import('./ayudas-fuga.js');
+  const { jugarSub } = await import('./ayudas-sub.js');
+  for (const beats of [lineaFuga(await jugarFuga(1)), lineaFuga(await jugarFuga(3, ['azar', 'azar'])), lineaSub(await jugarSub(2))]) {
+    const d = dividirEnDos(beats);
+    const manos = [...new Set(beats.map((b) => b.mano))];
+    assert.equal(d.parte1.mano, manos[0]);
+    assert.equal(d.parte2.hasta, manos.at(-1));
+    assert.equal(d.parte2.mano, d.parte1.hasta + 1, 'las dos partes son contiguas');
+    assert.equal(recortarClip(beats, d.parte1.mano, d.parte1.hasta).length + recortarClip(beats, d.parte2.mano, d.parte2.hasta).length, beats.length, 'no se pierde ni se repite un beat');
+    assert.ok(recortarClip(beats, d.parte2.mano, d.parte2.hasta).some((b) => b.tipo === 'final'), 'el final queda en la segunda parte');
+    const ms = (a, b) => recortarClip(beats, a, b).reduce((s, x) => s + duracionDeBeat(x, null, 1), 0);
+    assert.equal(d.parte1.ms, ms(d.parte1.mano, d.parte1.hasta));
+    assert.equal(d.parte2.ms, ms(d.parte2.mano, d.parte2.hasta));
+    const mayorMano = Math.max(...manos.map((m) => ms(m, m)));
+    assert.ok(Math.abs(d.parte1.ms - d.parte2.ms) <= mayorMano, 'la division es la mas pareja que permiten las rondas enteras');
+  }
+  assert.equal(dividirEnDos([]), null);
+  assert.equal(dividirEnDos(null), null);
+  assert.equal(dividirEnDos([{ mano: 1, tipo: 'apertura', minMs: 1000, texto: '' }]), null, 'con una sola ronda no hay como partir');
+});

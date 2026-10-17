@@ -12,8 +12,8 @@ import { jugarFuga, jugarFugaConCaido, muchasFuga } from './ayudas-fuga.js';
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
 const TIPOS_BASE = ['apertura', 'decisiones', 'verdad', 'resultado'];
 const LINEAS_DE = { apertura: ['apertura'], decisiones: ['decision'], verdad: ['verdad'], resultado: ['resultado'], consecuencia: ['consecuencia'], final: ['epilogo'] };
-const PASOS = ['armar', 'estado', 'decidir', 'riesgo', 'actuar', 'tentacion', 'medidor', 'final'];
-const PASOS_DE = { apertura: ['armar', 'estado'], decisiones: ['decidir'], verdad: ['riesgo'], resultado: ['actuar', 'medidor', 'estado'], consecuencia: ['tentacion', 'medidor', 'estado'], final: ['final'] };
+const PASOS = ['armar', 'estado', 'decidir', 'riesgo', 'actuar', 'tentacion', 'medidor', 'razones', 'final'];
+const PASOS_DE = { apertura: ['armar', 'estado'], decisiones: ['decidir'], verdad: ['riesgo'], resultado: ['actuar', 'medidor', 'estado', 'razones'], consecuencia: ['tentacion', 'medidor', 'estado', 'razones'], final: ['final'] };
 const porRonda = (beats) => beats.reduce((m, b) => m.set(b.mano, [...(m.get(b.mano) ?? []), b]), new Map());
 const pasosDe = (beats, tipo) => beats.flatMap((b) => b.pasos.filter((x) => x.tipo === tipo));
 const hayConsecuencia = (r) => (r.narracion ?? []).some((l) => l.tipo === 'consecuencia');
@@ -188,7 +188,7 @@ test('las decisiones salen todas juntas en su beat con postura, metodo, promesa 
       assert.deepEqual(d.jugadas, r.jugadas.map((j) => (j ? { postura: j.postura, metodo: j.metodo } : null)));
       assert.deepEqual(d.promesasRotas, r.promesaRota.map((x, s) => x === true && r.invalidas[s] !== true), 'una jugada que puso el juego nunca se marca como promesa rota de la IA');
       assert.deepEqual(d.mensajes, r.mensajes);
-      assert.deepEqual(d.razones, r.razones);
+      assert.ok(!('razones' in d), 'las razones no salen en las decisiones: podrian decir lo que se descubre en la consecuencia');
       rotas += d.promesasRotas.filter(Boolean).length;
       largos += d.mensajes.filter((m) => m && m.length === 140).length;
       vacios += d.mensajes.filter((m) => m === null).length;
@@ -406,4 +406,19 @@ test('una partida guardada con el motor anterior (sin final.perdidos) no hace tr
   delete p.rondas.at(-1).final.perdidos;
   delete p.rondas.at(-1).final.bono;
   assert.doesNotThrow(() => construirLineaDeTiempo(p));
+});
+
+test('las razones de las IAs salen solo en el ultimo beat de la situacion (con la consecuencia), tal cual y nunca antes', async () => {
+  let con = 0;
+  for (const p of await muchasFuga()) {
+    const beats = construirLineaDeTiempo(p);
+    for (const [n, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[n - 1];
+      const dondeHay = bs.filter((b) => b.pasos.some((x) => x.tipo === 'razones'));
+      assert.deepEqual(dondeHay.map((b) => b.id), [bs.at(-1).id], `situacion ${n}: las razones van en el ultimo beat y en ninguno mas`);
+      assert.deepEqual(dondeHay[0].pasos.find((x) => x.tipo === 'razones'), { tipo: 'razones', razones: r.razones });
+      con += r.razones.filter(Boolean).length;
+    }
+  }
+  assert.ok(con > 20, `cobertura: ${con} razones`);
 });

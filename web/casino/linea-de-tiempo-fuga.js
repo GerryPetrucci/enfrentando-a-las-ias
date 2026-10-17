@@ -7,9 +7,9 @@
 //   reemplazo alguna jugada de ese beat la puso el juego por una respuesta ilegible (la linea ya no se la atribuye a la IA)
 //   pasos     los movimientos de la animacion (vocabulario fijado en el plan, tarea E1):
 //     estado {alarma, cohesion, puntos[], libres[], heridas[], salieron[]}  (libres: sigue en el cuadro; salieron: escapo por su cuenta; libre=false y salio=false: capturado)
-//     armar {situacion, fase, titulo, corto}  · decidir {jugadas[{postura, metodo}|null], promesasRotas[], mensajes[], razones[], reemplazadas[], ilegibles[]}
+//     armar {situacion, fase, titulo, corto}  · decidir {jugadas[{postura, metodo}|null], promesasRotas[], mensajes[], reemplazadas[], ilegibles[]}
 //     riesgo {fallo[], pistaFiable, mejorMetodo} · actuar {asiento, resultado: 'limpio'|'tropezo'|'cayo', sale}
-//     tentacion {clase: 'botin'|'oferta', tomo, delataron[], objeto?} · medidor {alarma, cohesion} · final {final, finales[], bono[], perdidos[], puntos[]}
+//     tentacion {clase: 'botin'|'oferta', tomo, delataron[], objeto?} · medidor {alarma, cohesion} · razones {razones[]} (solo en el ultimo beat de la situacion: con razon=1 la mesa las muestra ahi, nunca antes de la consecuencia) · final {final, finales[], bono[], perdidos[], puntos[]}
 //
 // Las decisiones de los dos salen TODAS JUNTAS en su beat (nunca antes; y sin decir quien quiere la tentacion). La alarma, la cohesion y los puntos de DESPUES llegan en el ultimo beat de la
 // situacion, no en el resultado: la alarma sube con el botin y la cohesion baja con la oferta aceptada, y eso no se sabe hasta la consecuencia. Una partida cortada no inventa final.
@@ -65,6 +65,7 @@ export function construirLineaDeTiempo(partida) {
     const estadoAntes = { tipo: 'estado', alarma: r.oculto?.alarmaAntes ?? 0, cohesion: r.oculto?.cohesionAntes ?? 0, puntos: [...puntos], libres: libresAntes, heridas: [...heridas], salieron: [...salieron] };
     const estadoDespues = { tipo: 'estado', alarma: r.oculto?.alarma ?? 0, cohesion: r.oculto?.cohesion ?? 0, puntos: puntosDespues, libres: SEATS.map((s) => libresAntes[s] && resultados[s] !== 'cayo' && !salen[s]), heridas: heridasDespues, salieron: salieronDespues };
     const medidor = { tipo: 'medidor', alarma: estadoDespues.alarma, cohesion: estadoDespues.cohesion };
+    const razones = { tipo: 'razones', razones: SEATS.map((s) => r.razones?.[s] ?? null) };
 
     crear('apertura', { lineas: lineasDe('apertura'), pasos: [{ tipo: 'armar', situacion: r.situacion?.id ?? null, fase: r.situacion?.fase ?? null, titulo: r.situacion?.titulo ?? '', corto: r.situacion?.corto ?? '' }, estadoAntes] });
     crear('decisiones', {
@@ -74,7 +75,6 @@ export function construirLineaDeTiempo(partida) {
         jugadas: jugadas.map((j) => (j ? { postura: j.postura, metodo: j.metodo } : null)),
         promesasRotas: SEATS.map((s) => r.promesaRota?.[s] === true && !reemplazadas[s]), // si la jugada la puso el juego, la promesa no se la rompio la IA
         mensajes: SEATS.map((s) => r.mensajes?.[s] ?? null),
-        razones: SEATS.map((s) => r.razones?.[s] ?? null),
         reemplazadas,
         ilegibles: SEATS.map((s) => (r.ilegibles?.[s] ?? []).filter((c) => c === 'promesa')), // lo de la tentacion ilegible (vale "no") no se anota aqui: se descubriria antes de la consecuencia
       }],
@@ -82,8 +82,8 @@ export function construirLineaDeTiempo(partida) {
     crear('verdad', { lineas: lineasDe('verdad'), pasos: [{ tipo: 'riesgo', fallo: r.oculto?.fallo ?? [null, null], pistaFiable: r.oculto?.pistaFiable ?? null, mejorMetodo: r.oculto?.mejorMetodo ?? null }] });
     const consecuencias = lineasDe('consecuencia');
     const actuar = SEATS.filter((s) => libresAntes[s]).map((s) => ({ tipo: 'actuar', asiento: s, resultado: resultados[s], sale: salen[s] }));
-    crear('resultado', { lineas: lineasDe('resultado'), pasos: consecuencias.length ? actuar : [...actuar, medidor, estadoDespues] });
-    if (consecuencias.length) crear('consecuencia', { lineas: consecuencias, pasos: [...(r.tentacion ? [{ tipo: 'tentacion', clase: r.tentacion.tipo, tomo: r.tentacion.tomo, delataron: r.tentacion.delataron, ...(r.tentacion.objeto ? { objeto: r.tentacion.objeto } : {}) }] : []), medidor, estadoDespues] });
+    crear('resultado', { lineas: lineasDe('resultado'), pasos: consecuencias.length ? actuar : [...actuar, medidor, estadoDespues, razones] });
+    if (consecuencias.length) crear('consecuencia', { lineas: consecuencias, pasos: [...(r.tentacion ? [{ tipo: 'tentacion', clase: r.tentacion.tipo, tomo: r.tentacion.tomo, delataron: r.tentacion.delataron, ...(r.tentacion.objeto ? { objeto: r.tentacion.objeto } : {}) }] : []), medidor, estadoDespues, razones] });
 
     puntos = puntosDespues; heridas = heridasDespues; salieron = salieronDespues;
   });

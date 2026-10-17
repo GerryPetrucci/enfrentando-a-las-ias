@@ -91,6 +91,28 @@ export function marcarTiempos(beats, voz, vel = 1) {
   });
 }
 
+// Cada juego se publica en DOS partes (decidido el 17 de octubre de 2026): dos clips de rondas contiguos (`ronda=A&hasta=B` y `ronda=C&hasta=D`) con la duracion mas pareja que permiten las
+// rondas enteras. El final de la partida cae en la segunda. Con una sola ronda no hay como partir (null). Con voz (voz.json) usa lo que dura cada audio.
+export function dividirEnDos(beats, voz = null) {
+  if (!Array.isArray(beats) || !beats.length) return null;
+  const manos = [...new Set(beats.map((b) => b.mano))];
+  if (manos.length < 2) return null;
+  const ms = new Map(manos.map((m) => [m, 0]));
+  for (const b of beats) ms.set(b.mano, ms.get(b.mano) + duracionDeBeat(b, voz, 1));
+  const total = [...ms.values()].reduce((s, x) => s + x, 0);
+  let mejor = { k: 1, dif: Infinity }, acumulado = 0;
+  for (let k = 1; k < manos.length; k++) {
+    acumulado += ms.get(manos[k - 1]);
+    const dif = Math.abs(acumulado - (total - acumulado));
+    if (dif < mejor.dif) mejor = { k, dif };
+  }
+  const suma = (desde, hasta) => manos.slice(desde, hasta).reduce((s, m) => s + ms.get(m), 0);
+  return {
+    parte1: { mano: manos[0], hasta: manos[mejor.k - 1], ms: suma(0, mejor.k) },
+    parte2: { mano: manos[mejor.k], hasta: manos.at(-1), ms: suma(mejor.k, manos.length) },
+  };
+}
+
 // ---- Lo que dice la pantalla de cada jugada ------------------------------------------------------------------------------------------------
 // El texto chico de la placa ("Anuncia", "Duda"...): aceptar no se llama "Anuncia", y una jugada que puso el juego lo dice.
 export function rolDeJugada(beat) {

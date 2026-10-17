@@ -151,8 +151,8 @@ export class Mesa extends MesaBase {
   ponerHora(beat) { for (const c of this.camaras) c.hora.textContent = horaDeBeat(beat); }
   mostrarSubtitulos(beat) {
     super.mostrarSubtitulos(beat);
-    if (!this.razon || beat.tipo !== 'decisiones') return;
-    const razones = beat.pasos.find((p) => p.tipo === 'decidir')?.razones ?? [];
+    if (!this.razon) return;
+    const razones = beat.pasos.find((p) => p.tipo === 'razones')?.razones ?? []; // van en el ultimo beat de la situacion, nunca antes de la consecuencia
     const bloques = razones.map((r, s) => (r ? `<div class="razon"><small>${esc(this.nombre(s))} piensa</small>${esc(r)}</div>` : '')).join('');
     if (!bloques) return;
     this.subtitulos.insertAdjacentHTML('beforeend', bloques);
