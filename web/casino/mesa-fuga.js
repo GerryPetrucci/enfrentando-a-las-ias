@@ -10,11 +10,13 @@ import { colocarFuga } from './layout-fuga.js';
 import { estiloJugador, esc } from './kit.js';
 import { RONDAS_TOPE, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal } from './linea-de-tiempo-fuga.js';
 import { MesaBase, el, poner } from './mesa-base.js';
+import { PIEZAS, escenaDe } from './escenarios-fuga.js';
+import { ACCIONES, accionDeResultado } from './siluetas.js';
+import { colorDe } from '../paleta.js';
 
-const SIL = '<svg class="sil-svg" viewBox="0 0 60 120"><circle cx="30" cy="16" r="13"/><path d="M12 40 q0-9 10-9 h16 q10 0 10 9 v36 h-9 v40 h-9 v-32 h-4 v32 h-9 v-40 h-9z"/></svg>';
+const SIL = '<svg class="sil-svg" viewBox="0 0 60 120"><circle cx="30" cy="16" r="13"/><path d="M12 40 q0-9 10-9 h16 q10 0 10 9 v34 h-36z"/><path class="brazo" d="M46 36 l10 20 h-7 l-9 -15z"/><path class="pierna pi" d="M15 74 h14 v42 h-10z"/><path class="pierna pd" d="M31 74 h14 v42 h-10z"/></svg>';
 const pips = (n) => Array.from({ length: n }, () => '<i></i>').join('');
 const signo = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0');
-const INICIO = 0.12, META = 0.8, SALIDA = 1.12; // donde camina la silueta: de INICIO a META (o hasta fuera del cuadro), como fraccion del ancho de la imagen
 const MS_CAMINO = 1700;
 
 // Los metodos se llaman con verbos distintos de los campos (this.panel, this.medidores... son piezas del DOM): un campo con el mismo nombre taparia al metodo.
@@ -23,6 +25,7 @@ export class Mesa extends MesaBase {
 
   constructor(formato, partida, opciones) {
     super(formato, partida, opciones, colocarFuga(formato));
+    this.ficha = 0; // cada limpiar() cambia la ficha: una accion de la silueta que sigue corriendo de la situacion anterior se detiene
     this.armar();
   }
 
@@ -80,15 +83,46 @@ export class Mesa extends MesaBase {
     this.camaras.forEach((c, s) => { Object.assign(c.st, { libre: e.libres[s], salio: e.salieron[s], heridas: e.heridas[s], puntos: e.puntos[s] }); this.pintarCamara(s); });
     this.ponerMedidores(e.alarma, e.cohesion);
   }
-  // La imagen de la camara: el suelo, el obstaculo de la situacion (por ahora solo su titulo: las mini escenas dibujadas llegan en la tarea E4) y la silueta del prisionero.
+  // La imagen de la camara: el suelo, la mini escena de la situacion (sus piezas, detras) y la silueta del prisionero. Una situacion sin dibujar muestra su titulo sobre el cuadro.
   dibujarEscena(s, armar) {
-    const c = this.camaras[s];
-    c.escena.innerHTML = `<div class="suelo"></div><div class="obstaculo"><b>${esc(armar?.titulo ?? '')}</b><small>${esc(armar?.fase ?? '')}</small></div><div class="sil-fuga">${SIL}</div>`;
+    const c = this.camaras[s], { ancho, alto } = this.L.camaras[s].escena;
+    const e = escenaDe(armar?.situacion);
+    const piezas = e.piezas.map((p) => { const h = p.alto * alto, w = h * PIEZAS[p.pieza].ratio; return `<div class="pieza-fuga" style="left:${p.x * ancho - w / 2}px;top:${p.y * alto - h}px;width:${w}px;height:${h}px">${PIEZAS[p.pieza].svg()}</div>`; }).join('');
+    const titulo = e.generica ? `<div class="obstaculo"><b>${esc(armar?.titulo ?? '')}</b><small>${esc(armar?.fase ?? '')}</small></div>` : '';
+    c.escena.innerHTML = `<div class="suelo"></div>${titulo}${piezas}<div class="sil-fuga">${SIL}</div>`;
     c.sil = c.escena.querySelector('.sil-fuga');
-    c.sil.style.left = `${this.L.camaras[s].escena.ancho * INICIO}px`;
+    c.carril = e.carril;
+    c.color = colorDe(this.partida.jugadores[s]?.id, this.partida.jugadores[s]?.color);
+    this.ponerSilueta(s, ACCIONES.pasa(0, { desde: c.carril.desde, hasta: c.carril.hasta, color: c.color }));
+  }
+  // Pone la silueta como dice una accion (siluetas.js): su sitio, su pose y su color. La silueta mide la mitad del alto de la imagen y la cuarta parte de ese alto de ancho.
+  ponerSilueta(s, r) {
+    const c = this.camaras[s], { ancho, alto } = this.L.camaras[s].escena;
+    c.x = r.x;
+    Object.assign(c.sil.style, { left: `${r.x * ancho - alto * 0.125}px`, transform: `translateY(${r.y * alto}px) rotate(${r.pose.rot}deg) scaleY(${1 - 0.15 * r.pose.agacha})` });
+    c.sil.style.setProperty('--sw', Math.sin(r.pose.paso * 2 * Math.PI).toFixed(3));
+    c.sil.style.setProperty('--br', r.pose.brazo.toFixed(3));
+    c.sil.style.setProperty('--sc', r.color);
+  }
+  // Corre una accion de la silueta con el reloj de pantalla (nunca decide nada del juego): termina en su pose final. En modo rapido (capturas) llega al instante.
+  correrAccion(s, nombre, ms, extra = {}) {
+    const c = this.camaras[s], f = ACCIONES[nombre], ficha = this.ficha;
+    const ctx = { desde: c.x ?? c.carril.desde, hasta: c.carril.hasta, color: c.color, colorCaido: '#ff5a4d', ...extra };
+    if (this.rapido) { this.ponerSilueta(s, f(1, ctx)); return Promise.resolve(); }
+    return new Promise((fin) => {
+      const t0 = performance.now();
+      const paso = () => {
+        if (ficha !== this.ficha) return fin(); // se abrio otra situacion: esta accion ya no pinta
+        const t = Math.min(((performance.now() - t0) / ms) * this.vel, 1);
+        this.ponerSilueta(s, f(t, ctx));
+        if (t >= 1) fin(); else setTimeout(paso, 16);
+      };
+      paso();
+    });
   }
   // Quita todo lo de la situacion anterior: sellos, mensajes, riesgo, avisos, animaciones de las siluetas y el panel del final.
   limpiar() {
+    this.ficha++;
     for (const c of this.camaras) {
       for (const nodo of [c.sello, c.mensaje, c.riesgo, c.aviso]) { nodo.classList.remove('on', 'juego', 'rota'); nodo.textContent = ''; nodo.getAnimations().forEach((x) => x.cancel()); }
       c.escena.classList.remove('tropiezo', 'caida');
@@ -155,6 +189,8 @@ export class Mesa extends MesaBase {
       c.sello.classList.toggle('juego', d.reemplazadas[s]);
       c.sello.classList.add('on');
       if (d.mensajes[s]) { c.mensaje.textContent = `“${d.mensajes[s]}”`; c.mensaje.classList.add('on'); }
+      const postura = { ayudar: 'ayuda', sacrificarse: 'ayuda', separarse: 'separa' }[j.postura]; // avanzar no se actua: la silueta espera de pie
+      if (postura) this.correrAccion(s, postura, postura === 'ayuda' ? 1100 : 1300);
     });
     await this.esperar(ms * 0.4);
   }
@@ -175,25 +211,16 @@ export class Mesa extends MesaBase {
 
   // Una silueta actua: camina por la imagen y pasa limpia, tropieza, cae o sale. Los cambios de estado (la herida, "SIN SEÑAL", "SALIDA") caen al terminar de caminar.
   accion(p) {
-    const c = this.camaras[p.asiento], ancho = this.L.camaras[p.asiento].escena.ancho;
-    const x = (f) => `${ancho * f}px`;
-    const sil = c.sil;
+    const c = this.camaras[p.asiento];
     this.sonar(p);
-    const camina = (hasta, extra = {}) => this.anim(sil, [{ left: x(INICIO) }, { left: x(hasta) }], { duration: MS_CAMINO, fill: 'forwards', easing: 'ease-in-out', ...extra });
-    if (p.sale) {
-      camina(SALIDA);
-      this.programar(MS_CAMINO, () => { c.st.salio = true; c.st.libre = false; this.pintarCamara(p.asiento); });
-    } else if (p.resultado === 'cayo') {
-      const a = this.anim(sil, [{ left: x(INICIO), transform: 'none', offset: 0 }, { left: x(0.5), transform: 'none', offset: 0.7 }, { left: x(0.56), transform: 'rotate(88deg) translateX(-30px)', offset: 1 }], { duration: MS_CAMINO, fill: 'forwards', easing: 'ease-in' });
-      void a;
+    this.correrAccion(p.asiento, accionDeResultado(p), MS_CAMINO);
+    if (p.sale) this.programar(MS_CAMINO, () => { c.st.salio = true; c.st.libre = false; this.pintarCamara(p.asiento); });
+    else if (p.resultado === 'cayo') {
       c.escena.classList.add('caida');
       this.programar(MS_CAMINO, () => { c.st.libre = false; this.pintarCamara(p.asiento); });
     } else if (p.resultado === 'tropezo') {
-      this.anim(sil, [{ left: x(INICIO), transform: 'none', offset: 0 }, { left: x(0.5), transform: 'none', offset: 0.55 }, { left: x(0.55), transform: 'rotate(-14deg) translateY(10px)', offset: 0.65 }, { left: x(0.6), transform: 'none', offset: 0.8 }, { left: x(META), transform: 'none', offset: 1 }], { duration: MS_CAMINO, fill: 'forwards', easing: 'ease-in-out' });
       c.escena.classList.add('tropiezo');
       this.programar(MS_CAMINO * 0.65, () => { c.st.heridas += 1; this.pintarCamara(p.asiento); });
-    } else {
-      camina(META);
     }
   }
 
@@ -218,6 +245,7 @@ export class Mesa extends MesaBase {
     const t = beat.pasos.find((p) => p.tipo === 'tentacion');
     if (t) {
       this.sonar(t);
+      this.actuarTentacion(t);
       for (const a of avisosDeTentacion(t, (s) => this.nombre(s))) {
         const c = this.camaras[a.asiento];
         c.aviso.textContent = a.texto;
@@ -226,6 +254,19 @@ export class Mesa extends MesaBase {
     }
     this.aplicarFinDeSituacion(beat, 900);
     await this.esperar(Math.min(ms * 0.8, 1600));
+  }
+
+  // El botin aparece en el camino y quien lo toma se agacha a levantarlo; quien acepta la oferta del guardia se lleva la mano al oido.
+  actuarTentacion(t) {
+    if (t.clase === 'botin') {
+      for (const [s, c] of this.camaras.entries()) {
+        const { ancho, alto } = this.L.camaras[s].escena, h = 0.16 * alto;
+        c.escena.insertAdjacentHTML('afterbegin', `<div class="pieza-fuga botin" style="left:${0.55 * ancho - h / 2}px;top:${0.8 * alto - h}px;width:${h}px;height:${h}px">${PIEZAS.botin.svg()}</div>`);
+      }
+      if (Number.isInteger(t.tomo)) this.correrAccion(t.tomo, 'toma', 1300, { objeto: 0.55 });
+    } else if (t.clase === 'oferta') {
+      for (const d of t.delataron ?? []) this.correrAccion(d, 'acepta', 1100);
+    }
   }
 
   mostrarPanel() { this.raiz.classList.add('con-panel'); this.anim(this.panel, [{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 420, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' }); }
