@@ -229,7 +229,7 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 
 ## Estado actual
 
-**Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; juegos 1 y 3 a 8 con motor, bots, evaluacion, pruebas y escena (todas fusionadas en `main`; 1140 pruebas el 17 de octubre de 2026);
+**Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; juegos 1 y 3 a 8 con motor, bots, evaluacion, pruebas y escena (todas fusionadas en `main`; 1144 pruebas el 17 de octubre de 2026);
 CLI de duelos, series de rotacion, agregador de marcador, sitio publicado con marcador por categoria (<https://gerrypetrucci.github.io/enfrentando-a-las-ias/>, se despliega solo en cada push a `main` que toque `web/` o `data/`), reproductor vertical, voz local y
 herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentando-a-las-ias>.
 
