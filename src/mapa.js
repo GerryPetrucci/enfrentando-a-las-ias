@@ -176,6 +176,31 @@ function garantizarCapitales(regs, capitales) {
   }
 }
 
+// El mapa listo para guardar dentro de la partida (JSON puro, sin arreglos tipados): la escena de la web no puede importar de src/ ni regenerarlo, asi que lo lee de aqui.
+// `terreno` es una cadena de digitos (uno por celda, 0 a 5) y `region` un arreglo con la region de cada celda (-1 = sin region). Pesa de 9 a 25 KB segun los reinos.
+export function serializarMapa(m) {
+  return {
+    k: m.k, seed: m.seed, bioma: m.bioma, ancho: m.ancho, alto: m.alto, tile: m.tile,
+    terreno: Array.from(m.terreno).join(''),
+    region: Array.from(m.region),
+    regs: m.regs.map((r) => ({ id: r.id, nombre: r.nombre, celdas: r.celdas, centro: r.centro, terr: r.terr, rec: r.rec, vecinos: [...r.vecinos] })),
+    inicio: { dueno: Array.from(m.inicio.dueno), capitales: [...m.inicio.capitales] },
+  };
+}
+
+// Lo contrario: de lo guardado al mismo objeto que da crearMapa (con sus arreglos tipados). Con algo que no es un mapa guardado devuelve null, nunca lanza.
+export function restaurarMapa(o) {
+  const ok = o && typeof o === 'object' && typeof o.terreno === 'string' && Array.isArray(o.region) && Array.isArray(o.regs) && o.inicio && Array.isArray(o.inicio.dueno) && Array.isArray(o.inicio.capitales);
+  if (!ok) return null;
+  return {
+    k: o.k, seed: o.seed, bioma: o.bioma, ancho: o.ancho, alto: o.alto, tile: o.tile,
+    terreno: Uint8Array.from(o.terreno, Number),
+    region: Int16Array.from(o.region),
+    regs: o.regs.map((r) => ({ ...r, vecinos: [...r.vecinos] })),
+    inicio: { dueno: Int8Array.from(o.inicio.dueno), capitales: [...o.inicio.capitales] },
+  };
+}
+
 // garantizarCapitales puede pisar el unico nodo de un recurso que estaba justo en el minimo (si cerca de la capital no habia region libre ni con sobrante): se repone en una region
 // libre o, si no hay, en una con un recurso sobrante que no sea Comida ni Madera (asi no se deshace lo que garantizo). No hace nada cuando el minimo ya se cumple.
 function reponerMinimos(regs) {

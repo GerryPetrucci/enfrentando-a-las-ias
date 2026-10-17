@@ -5,11 +5,12 @@ import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, 
 
 export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
 
-export function crearEstado(rng, { jugadores = 4, mapa = null } = {}) {
+// `bioma` fuerza la forma del mapa (continente, arido, mares o interior); si viene `mapa` ya creado, manda ese y se ignora el bioma.
+export function crearEstado(rng, { jugadores = 4, mapa = null, bioma } = {}) {
   const k = Math.max(2, Math.min(5, Math.round(jugadores)));
   if (mapa && mapa.k !== k) throw new Error(`el mapa es de ${mapa.k} reinos y se pidieron ${k}`);
   const seedMapa = Math.floor(rng() * 4294967296) >>> 0; // siempre se consume, venga o no el mapa dado
-  const m = mapa ?? crearMapa(seedMapa, k);
+  const m = mapa ?? crearMapa(seedMapa, k, { bioma });
   const NR = m.regs.length;
   const dueno = Int8Array.from(m.inicio.dueno), tropas = new Int16Array(NR), fort = new Int8Array(NR);
   dueno.forEach((d, r) => { if (d >= 0) tropas[r] = r === m.inicio.capitales[d] ? TROPAS_CAPITAL : TROPAS_VECINA; });

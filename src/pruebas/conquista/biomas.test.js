@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearMapa, CONFIG, REC, BIOMAS, distancias } from '../../mapa.js';
+import { crearMapa, CONFIG, REC, BIOMAS, distancias, serializarMapa, restaurarMapa } from '../../mapa.js';
 
 const REINOS = [2, 3, 4, 5];
 const SEEDS_100 = Array.from({ length: 100 }, (_, i) => i + 1);
@@ -76,4 +76,23 @@ test('los biomas miden lo que dicen: arido con poca agua y casi sin bosque, mare
     return n / ((x1 - x0 + 1) * (y1 - y0 + 1));
   };
   assert.ok(promedio(int.map(aguaInterior)) > promedio(cont.map(aguaInterior)), 'el mar interior deja mas agua dentro de la tierra que el continente');
+});
+
+test('el mapa serializado va y vuelve sin perder nada, sin arreglos tipados y cabe en 30 KB', () => {
+  for (const bioma of BIOMAS) for (const k of REINOS) {
+    const m = crearMapa(7, k, { bioma }), s = serializarMapa(m), texto = JSON.stringify(s);
+    assert.deepStrictEqual(restaurarMapa(JSON.parse(texto)), m, `${bioma} k=${k}: la ida y vuelta cambia el mapa`);
+    assert.ok(texto.length <= 30000, `${bioma} k=${k}: pesa ${texto.length} bytes`);
+    assert.equal(s.bioma, bioma);
+    assert.equal(typeof s.terreno, 'string');
+    assert.equal(s.terreno.length, s.ancho * s.alto);
+    assert.ok(Array.isArray(s.region) && Array.isArray(s.inicio.dueno) && Array.isArray(s.inicio.capitales));
+    const tipados = []; // ningun arreglo tipado en todo el objeto
+    (function recorrer(x, ruta) { if (ArrayBuffer.isView(x)) tipados.push(ruta); else if (x && typeof x === 'object') for (const [c, v] of Object.entries(x)) recorrer(v, `${ruta}.${c}`); })(s, 'mapa');
+    assert.deepEqual(tipados, [], `${bioma} k=${k}: hay arreglos tipados`);
+  }
+});
+
+test('restaurarMapa con basura no lanza: devuelve null', () => {
+  for (const raro of [null, undefined, 7, 'x', {}, { k: 4 }, { terreno: 5 }]) assert.equal(restaurarMapa(raro), null, String(raro));
 });
