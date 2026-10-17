@@ -20,6 +20,21 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-mayormenor.js'),
     mesa: () => import('./mesa-mayormenor.js'),
   },
+  subasta: {
+    nombre: 'Subasta de tiempo',
+    jugadores: 5,
+    camaraPorDefecto: 0, // sin camara oculta: el publico ve los bancos desde el principio y descubre cuanto aguanta cada quien
+    unidad: 'ronda', // una subasta es una "ronda" de la URL
+    campo: 'subasta', // pero sus registros la numeran con este campo (los otros juegos la numeran con el nombre de su unidad)
+    // las partidas guardadas sin los datos ocultos de las apuestas y los bancos no se pueden reproducir: salen apagadas en la lista
+    comprobar: (partida) => {
+      const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+      const completo = rondas.every((r) => Array.isArray(r?.oculto?.apuestas) && Array.isArray(r.oculto?.bancos));
+      return completo ? null : 'formato anterior: la partida se guardó con un motor que no escribía todos los datos que usa la escena';
+    },
+    linea: () => import('./linea-de-tiempo-subasta.js'),
+    mesa: () => import('./mesa-subasta.js'),
+  },
   tripledado: {
     nombre: 'Triple dado',
     jugadores: 4,

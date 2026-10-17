@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos, htmlAvatarJugador } from '../../../web/casino/kit.js';
 import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
@@ -158,4 +158,24 @@ test('mesa.css apaga bajo un panel (corte, cierre o final) tambien las tarjetas,
   const texto = css();
   const regla = /\.con-panel [^{]*\{[^}]*opacity:\.15/.exec(texto)?.[0] ?? '';
   for (const sel of ['.tarjetas-td', '.ranura-dado', '.bandeja-td', '.etq-comb', '.pts-comb', '.barra-ronda']) assert.ok(regla.includes(sel), `.con-panel no apaga ${sel}`);
+});
+
+test('el avatar de una fila de Subasta de tiempo lleva la inicial con el color de paleta.js, todo escapado, y sin jugador no lanza', () => {
+  const a = htmlAvatarJugador({ id: 'claude', nombre: 'Claude', inicial: 'C' });
+  assert.ok(a.includes(`--c:${PALETA.claude.color}`) && a.includes('--fondo:'), 'el color sale de paleta.js');
+  assert.match(a, /class="avatar"[^>]*>C</);
+  assert.doesNotMatch(htmlAvatarJugador({ nombre: '<img src=x onerror=1>' }), /<img/);
+  for (const sinJugador of [null, undefined, {}]) assert.match(htmlAvatarJugador(sinJugador), /class="avatar"[^>]*>J</);
+});
+
+test('mesa.css trae el aspecto de la consola de la Subasta: contador, botones (oprimido, suelto, ganador), barra de banco y tira de subastas', () => {
+  const texto = css();
+  for (const sel of ['\\.mesa-consola', '\\.contador-sub \\{', '\\.boton-sub\\.oprimido', '\\.boton-sub\\.suelto', '\\.boton-sub\\.gana', '\\.barra-banco \\{', '\\.cas\\.anulada']) assert.match(texto, new RegExp(sel), sel);
+});
+
+test('mesa.css apaga bajo un panel tambien la consola, las filas, los botones y los bancos de la Subasta, y deja apagar una fila sin tiempo', () => {
+  const texto = css();
+  const regla = /.con-panel [^{]*{[^}]*opacity:.15/.exec(texto)?.[0] ?? '';
+  for (const sel of ['.consola-sub', '.avatar-sub', '.nombre-sub', '.estado-sub', '.boton-sub', '.banco-sub', '.barra-banco', '.fichas-sub', '.contador-sub']) assert.ok(regla.includes(sel), `.con-panel no apaga ${sel}`);
+  assert.match(texto, /.nombre-sub.fuera/);
 });

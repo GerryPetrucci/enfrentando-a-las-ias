@@ -9,6 +9,7 @@ import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
+import { jugarSub } from './ayudas-sub.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -39,7 +40,7 @@ test('un juego sin escena da un error que dice cuales hay', async () => {
 
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
   // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo
-  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : { mano: 1 }] });
+  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
     { nombre: 'fuga.json', datos: { partidas: [partida('fuga')] } },
@@ -107,4 +108,23 @@ test('una partida de Triple dado guardada con el motor anterior (sin doceavos ni
   // un juego sin comprobacion de formato sigue valiendo como antes
   const sol = catalogarPartidas([{ nombre: 'sol.json', datos: { partidas: [await jugarSol(1)] } }])[0];
   assert.equal(sol.valida, true);
+});
+
+test('Subasta de tiempo esta registrada: cinco jugadores, sin camara, unidad ronda; la lista cuenta sus 19 subastas', async () => {
+  const e = escenaDe('subasta');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['Subasta de tiempo', 5, 0, 'ronda']);
+  const p = await jugarSub(1);
+  const [entrada] = catalogarPartidas([{ nombre: 'sub.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true);
+  assert.equal(entrada.manos, 19);
+  assert.match(entrada.titulo, / · 19 rondas$/);
+  assert.equal(typeof (await lineaDe('subasta')), 'function');
+});
+
+test('una partida de Subasta sin los datos ocultos de las apuestas (guardada con un motor anterior) sale apagada con el motivo "formato anterior"', async () => {
+  const p = structuredClone(await jugarSub(1));
+  for (const r of p.rondas) delete r.oculto;
+  const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [p] } }])[0];
+  assert.equal(e.valida, false);
+  assert.match(e.motivo, /formato anterior/);
 });

@@ -139,7 +139,8 @@ export function catalogarPartidas(cargados) {
       const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
       // el campo que numera cada registro lo dice la unidad del juego: Duda y apuesta cuenta manos y Mayor o menor rondas (ahi `mano` es la mano de cartas del jugador, no un numero)
       const unidad = juegosConEscena().includes(id) ? escenaDe(id).unidad : 'mano';
-      const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[unidad]) || 0), 0);
+      const campo = juegosConEscena().includes(id) ? escenaDe(id).campo ?? unidad : unidad; // el campo con que sus registros numeran la unidad
+      const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[campo]) || 0), 0);
       let motivo = null;
       if (!juegosConEscena().includes(id)) motivo = `es de ${id ?? 'otro juego'}, que no tiene escena de casino`;
       else if (!rondas.length) motivo = 'sin rondas';

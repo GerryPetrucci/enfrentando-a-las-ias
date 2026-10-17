@@ -161,3 +161,9 @@ test('el efecto de dados trae dos muestras grabadas (para elegir de oido) y un r
   assert.equal(EVENTOS.dado.sintetico.ruidos.length, 3);
   assert.ok(readFileSync(audio('LEEME.md'), 'utf8').includes('dado-1.ogg'), 'el LEEME dice de donde sale cada muestra de dados');
 });
+
+test('los pasos de Subasta de tiempo suenan con los efectos que ya existen (vocabulario fijado en el plan, tarea 2); el reloj lo maneja la mesa', () => {
+  const casos = [['oprimir', ['tic']], ['ganar', ['gana']], ['anular', ['pierde']], ['nadie', ['duda']], ['ficha', ['ficha']], ['pagar', ['ficha']]];
+  for (const [tipo, esperado] of casos) assert.deepEqual(eventosDePaso({ tipo }), esperado, tipo);
+  for (const mudo of ['correr', 'retirar']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
+});

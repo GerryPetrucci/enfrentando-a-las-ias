@@ -12,10 +12,12 @@ import { construirLineaDeTiempo as lineaDuda } from '../../../web/casino/linea-d
 import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
 import { construirLineaDeTiempo as lineaSol } from '../../../web/casino/linea-de-tiempo-solitario.js';
 import { construirLineaDeTiempo as lineaTD } from '../../../web/casino/linea-de-tiempo-tripledado.js';
+import { construirLineaDeTiempo as lineaSub } from '../../../web/casino/linea-de-tiempo-subasta.js';
 import { jugar } from './ayudas.js';
 import { jugarMM, jugarMMConCaido } from './ayudas-mm.js';
 import { jugarSol, jugarSolConCaido } from './ayudas-sol.js';
 import { jugarTD, jugarTDConCaido } from './ayudas-td.js';
+import { jugarSub, jugarSubConCaido } from './ayudas-sub.js';
 
 const METODOS = ['ejecutar', 'estadoVisible', 'mostrarEstadoInicial', 'fijarEstado', 'anim', 'esperar', 'programar', 'sonar', 'nombre', 'mostrarSubtitulos', 'voltear', 'volarFichas'];
 const web = (r) => new URL(`../../../web/${r}`, import.meta.url);
@@ -75,6 +77,7 @@ test('cada mesa declara METODOS (tipo de beat -> metodo) y cada tipo de beat que
     dudaapuesta: async () => lineaDuda(await jugar(3)),
     mayormenor: async () => [...lineaMM(await jugarMM(3)), ...lineaMM(await jugarMMConCaido(2, 0)), ...lineaMM(await jugarMM(1, ['prudente', 'temerario']))],
     tripledado: async () => [...lineaTD(await jugarTD(3)), ...lineaTD(await jugarTDConCaido(2, 0)), ...lineaTD(await jugarTD(1, undefined, { maxRondas: 6 }))],
+    subasta: async () => [...lineaSub(await jugarSub(3)), ...lineaSub(await jugarSubConCaido(2, 0)), ...lineaSub(await jugarSub(1, ['parejo', 'parejo', 'parejo', 'parejo', 'parejo'])), ...lineaSub(await jugarSub(1, undefined, { maxRondas: 5 }))],
     solitario: async () => [...lineaSol(await jugarSol(3)), ...lineaSol(await jugarSolConCaido(2, 0)), ...lineaSol(await jugarSol(1, ['bajo', 'bajo', 'bajo', 'bajo', 'bajo']))],
   };
   for (const id of juegosConEscena()) {
