@@ -333,3 +333,18 @@ test('puntuarRondas no premia un numero alto que puso el juego', async () => {
   p.rondas[i].invalidas[p.rondas[i].ganador] = true;
   assert.ok(!puntuarRondas(p).find((m) => m.ronda === ronda).motivos.includes('premio alto'));
 });
+
+test('puntuarRondas no premia "toma la delantera" cuando la marca ganadora la puso el juego', async () => {
+  let visto = 0;
+  for (const original of await muchasSol()) {
+    const con = puntuarRondas(original).filter((m) => m.motivos.includes('toma la delantera'));
+    for (const m of con) {
+      const p = structuredClone(original);
+      const r2 = p.rondas.find((r) => r.ronda === m.ronda && r.fase === 2);
+      r2.invalidas[r2.ganador] = true;
+      assert.ok(!puntuarRondas(p).find((x) => x.ronda === m.ronda).motivos.includes('toma la delantera'), `seed ${p.seed} ronda ${m.ronda}`);
+      visto++;
+    }
+  }
+  assert.ok(visto > 0, 'la prueba necesita rondas donde alguien toma la delantera');
+});

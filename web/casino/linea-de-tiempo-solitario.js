@@ -175,7 +175,8 @@ export function puntuarRondas(partida) {
       else {
         if (r2.numero >= 7 && r2.invalidas?.[r2.ganador] !== true) motivos.push('premio alto'); // una marca que puso el juego no es audacia de la IA
         const antes = lideres(puntosAntes, vivos), despues = lideres(r2.puntos, vivos);
-        if (!(antes.length === 1 && antes[0] === r2.ganador) && despues.length === 1 && despues[0] === r2.ganador) motivos.push('toma la delantera');
+        const propia = r2.invalidas?.[r2.ganador] !== true; // tomar la delantera con una marca que puso el juego no es merito de la IA
+        if (propia && !(antes.length === 1 && antes[0] === r2.ganador) && despues.length === 1 && despues[0] === r2.ganador) motivos.push('toma la delantera');
       }
       if (r2.corte) motivos.push('corte');
       if (r2.final) motivos.push('final');
