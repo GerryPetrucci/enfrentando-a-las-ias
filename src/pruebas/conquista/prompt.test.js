@@ -6,6 +6,7 @@ import conquista from '../../juegos/conquista.js';
 import dilema from '../../juegos/dilema.js';
 import { obtenerJuego, JUEGOS } from '../../juegos/index.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
+import { BIOMAS } from '../../mapa.js';
 
 const ASCII = /^[\x00-\x7F]*$/;
 
@@ -18,6 +19,17 @@ test('el texto de reglas, el formato y la vista de un estado nuevo no tienen ace
 test('el prompt completo de 5 reinos en el peor caso cabe en el tope de tokens de Claude (caracteres / 1.97)', () => {
   const tokens = tokensDelPrompt(estadoPeorCaso());
   assert.ok(tokens <= TOPE_TOKENS_ENTRADA, `el prompt mide ${tokens} tokens y el tope aprobado es ${TOPE_TOKENS_ENTRADA}: hay que recortar texto de las reglas; subir el tope requiere aprobacion expresa (CLAUDE.md)`);
+});
+
+test('el peor caso de 5 reinos cabe en el tope con los cuatro biomas y 100 seeds (el arido, con su tierra compacta, tiene mas vecinas por region)', () => {
+  for (const bioma of BIOMAS) {
+    let peor = 0, peorSeed = 0;
+    for (let seed = 1; seed <= 100; seed++) {
+      const tokens = tokensDelPrompt(estadoPeorCaso(seed, bioma));
+      if (tokens > peor) { peor = tokens; peorSeed = seed; }
+    }
+    assert.ok(peor <= TOPE_TOKENS_ENTRADA, `${bioma}: el peor caso mide ${peor} tokens (seed ${peorSeed}) y el tope aprobado es ${TOPE_TOKENS_ENTRADA}: afinar el bioma; subir el tope requiere aprobacion expresa`);
+  }
 });
 
 test('construirUsuario no cambia para el Dilema (vista como objeto) y acepta una vista en texto', () => {

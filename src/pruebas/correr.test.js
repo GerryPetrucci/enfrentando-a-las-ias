@@ -9,6 +9,8 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { biomaDeSeed } from '../mapa.js';
+import { crearRng } from '../rng.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, ['src/correr.js', ...args], { cwd: RAIZ, encoding: 'utf8' });
@@ -51,7 +53,10 @@ test('el duelo del Dilema sigue igual: alterna asientos, un seed distinto por pa
 });
 
 test('--bioma=arido fuerza el bioma en toda la serie, queda guardado en cada partida y la consola lo dice', () => {
-  const { r, datos } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', '--bioma=arido');
+  // seed fijo, y uno al que el seed NO le da arido por si solo: sin esto, algunos dias (el seed sale de la fecha) la prueba pasaria aunque --bioma se ignorara
+  const seedMapa = Math.floor(crearRng(7)() * 4294967296) >>> 0;
+  assert.notEqual(biomaDeSeed(seedMapa), 'arido', 'el seed 7 no debe dar arido por si solo');
+  const { r, datos } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', '--seed=7', '--bioma=arido');
   assert.ok(datos.partidas.every((p) => p.mapa.bioma === 'arido'));
   assert.match(r.stdout, /bioma arido/);
 });

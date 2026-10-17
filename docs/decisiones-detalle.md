@@ -239,14 +239,18 @@ Pendiente:
         prueba fija 12 huellas); el bioma sale del seed con `biomaDeSeed` (rng propio, no mueve el de la partida; una
         serie de rotación conserva el mapa) y se fuerza con `--bioma=` en `src/correr.js` (valida antes de correr y
         solo vale para `--juego=conquista`). `resultadoDe` guarda `partida.mapa` (`serializarMapa`: terreno como
-        cadena de dígitos, regiones, vecinas, inicio y `bioma`; 9-25 KB; `restaurarMapa` lo devuelve) porque la web
-        no puede importar de `src/`. Si un seed no da tierra suficiente se sube el sesgo de costa en pasos de 0.02
-        (nunca se cambia de bioma ni se lanza). Hallazgo: `garantizarCapitales` podía pisar el nodo de un recurso que
-        estaba en el mínimo (visto con `interior`, 5 reinos, seed 24); `reponerMinimos` lo repone. Balance con bots
-        (4 reinos, rotación, 400 partidas por bioma): ningún asiento pasa de 31.3 % en ningún bioma (criterio 50 %);
-        el árido con la mezcla económica termina por Maravilla en 26.7 % de las partidas (continente 15.8 %): a
-        recalibrar con modelos reales. Medición: `privado/prototipos/herramientas/biomas-balance.mjs`. Maquetas:
-        `privado/prototipos/mapas-biomas-hoja2.png`.
+        cadena de dígitos, regiones, vecinas, inicio y `bioma`; 9-25 KB en JSON compacto, unas 3.6 veces más con la
+        sangría con que `correr.js` escribe el archivo; `restaurarMapa` lo devuelve o da `null` si está roto) porque
+        la web no puede importar de `src/`. Si un seed no da tierra suficiente se sube el sesgo de costa en pasos de
+        0.02; nunca se cambia de bioma en silencio, y si ni así alcanza falla claro al crear la partida (0 errores en
+        9 600 mapas). Hallazgo: `garantizarCapitales` podía pisar el nodo de un recurso que estaba en el mínimo (visto
+        con `interior`, 5 reinos, seed 24); `reponerMinimos` lo repone. Revisión final: el árido con tierra ancha y
+        pareja pasaba el tope de tokens del prompt (4,450) en 7 % de los seeds de 5 reinos por tener más vecinas por
+        región; se ajustó (`sesgo -0.02`, `esc 1.5`: costa más quebrada, 26 % de agua contra 35 % del continente) y
+        una prueba revisa los cuatro biomas con 100 seeds (peor caso medido en 2 000 seeds: 4,439 tokens). Balance
+        con bots (4 reinos, rotación, 400 partidas por bioma): ningún asiento pasa de 31.3 % en ningún bioma (criterio
+        50 %) y el árido ya termina por Maravilla como el continente (16.7 % contra 15.8 % con la mezcla económica).
+        Medición: `privado/prototipos/herramientas/biomas-balance.mjs`. Maquetas: `privado/prototipos/mapas-biomas-hoja2.png`.
       - *Pendiente:* quinto bioma «cordillera» (no se distinguía del continente con el tinte de los reinos); la
         paleta de cada bioma la decide la escena a partir de `mapa.bioma`.
 - [ ] Modo "bot escrito" para correr miles de partidas

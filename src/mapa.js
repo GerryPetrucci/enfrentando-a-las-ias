@@ -19,7 +19,7 @@ const AGUA_PROFUNDA = 0, AGUA = 1, ARENA = 2, PASTO = 3, BOSQUE = 4, MONTANA = 5
 export const BIOMAS = ['continente', 'arido', 'mares', 'interior'];
 const PARAMETROS = {
   continente: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.04, esc: 1 },
-  arido:      { mar: 0.22, agua: 0.29, arena: 0.37, mont: 0.66, bosq: 0.82, sesgo: 0.10, esc: 1 },
+  arido:      { mar: 0.22, agua: 0.29, arena: 0.37, mont: 0.66, bosq: 0.82, sesgo: -0.02, esc: 1.5 }, // costa quebrada y tierra no tan compacta: con tierra mas ancha y pareja el arido pasaba el tope de tokens del prompt (mas vecinas por region; plan-mapa-biomas, revision final)
   mares:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: -0.07, esc: 1.5 },
   interior:   { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, lago: 0.55 },
 };

@@ -13,14 +13,14 @@ import conquista from '../../juegos/conquista.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
 
 const cacheMapas = new Map();
-export function mapaDe(seed, k) {
-  const c = `${seed}|${k}`;
-  if (!cacheMapas.has(c)) cacheMapas.set(c, crearMapa(seed, k));
+export function mapaDe(seed, k, bioma = 'continente') {
+  const c = `${seed}|${k}|${bioma}`;
+  if (!cacheMapas.has(c)) cacheMapas.set(c, crearMapa(seed, k, { bioma }));
   return cacheMapas.get(c);
 }
 // Estado nuevo con una COPIA de las regiones, para que cada prueba pueda cambiarles terreno o recurso sin afectar a las demas.
-export function nuevoEstado(k = 4, seed = 7) {
-  const m = mapaDe(seed, k);
+export function nuevoEstado(k = 4, seed = 7, bioma = 'continente') {
+  const m = mapaDe(seed, k, bioma);
   const copia = { ...m, regs: m.regs.map((r) => ({ ...r, vecinos: [...r.vecinos] })) };
   return crearEstado(crearRng(seed), { jugadores: k, mapa: copia });
 }
@@ -96,8 +96,8 @@ export const TOPE_TOKENS_ENTRADA = 4450;  // excepcion aprobada de la Guerra de 
 export const tokensDelPrompt = (E, i = 0) =>
   Math.round((construirSistema(conquista).length + construirUsuario(vistaTexto(E, i)).length) / CARACTERES_POR_TOKEN);
 // El peor caso de 5 reinos: mapa lleno de tropas y edificios, y los 4 rivales mandando mensaje, privado y nota al largo maximo.
-export function estadoPeorCaso() {
-  const E = nuevoEstado(5);
+export function estadoPeorCaso(seed = 7, bioma = 'continente') {
+  const E = nuevoEstado(5, seed, bioma);
   E.turno = 13;
   for (let r = 0; r < E.dueno.length; r++) { E.dueno[r] = r % 5; E.tropas[r] = 12; E.fort[r] = 1; if (r % 3 === 0) { E.edif[r] = 'granja'; E.dan[r] = r % 2; } }
   E.reinos[0].nota = 'n'.repeat(250);
