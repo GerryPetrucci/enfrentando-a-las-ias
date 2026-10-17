@@ -8,7 +8,7 @@
 
 import { colocarFuga } from './layout-fuga.js';
 import { estiloJugador, esc } from './kit.js';
-import { RONDAS_TOPE, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal } from './linea-de-tiempo-fuga.js';
+import { RONDAS_TOPE, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, reglasDeFinal } from './linea-de-tiempo-fuga.js';
 import { MesaBase, el, poner } from './mesa-base.js';
 import { PIEZAS, escenaDe } from './escenarios-fuga.js';
 import { ACCIONES, accionDeResultado } from './siluetas.js';
@@ -271,12 +271,17 @@ export class Mesa extends MesaBase {
 
   mostrarPanel() { this.raiz.classList.add('con-panel'); this.anim(this.panel, [{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }], { duration: 420, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' }); }
 
-  // El final: por ahora una linea por prisionero con lo que ocurrio y lo que valio (la escena de las cuatro reglas llega en la tarea E6).
+  // El final: la regla oculta. Las cuatro reglas fijas de puntaje (lo que ninguno sabia) y, en la que se cumplio para cada IA, su nombre con su color; abajo el marcador final.
   revelarRegla(beat) {
     const f = beat.pasos[0];
     this.cabecera.querySelector('.mano').textContent = 'Final';
     if (!f?.finales) return;
-    this.panel.innerHTML = `<div class="titulo">Final</div>${f.finales.map((fin, s) => `<div class="linea-final"><span>${esc(textoDeFichaFinal(fin, f.bono[s], (k) => this.nombre(k), s))}</span></div>`).join('')}`;
+    const filas = reglasDeFinal(f.finales).map((r) => {
+      const chips = r.cumplen.map((s) => `<span class="chip-regla" style="${estiloJugador(this.partida.jugadores[s])}">${esc(this.nombre(s))}</span>`).join('');
+      return `<div class="fila-regla${r.cumplen.length ? ' cumple' : ''}"><span class="texto-regla">${esc(r.texto)}</span><span class="chips-regla">${chips}</span><span class="puntos-regla">${esc(r.puntos)}</span></div>`;
+    }).join('');
+    const puntos = Array.isArray(f.puntos) ? `<div class="marcador-regla">${f.puntos.map((p, s) => `<span>${esc(this.nombre(s))} · ${esc(p)}</span>`).join('')}</div>` : '';
+    this.panel.innerHTML = `<div class="titulo">Lo que ninguno sabía</div><div class="reglas">${filas}</div>${puntos}`;
     this.mostrarPanel();
   }
 }

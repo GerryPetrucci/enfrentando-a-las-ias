@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RONDAS, PUNTOS, ALARMA_MAX as ALARMA_MOTOR, COHESION_MAX as COHESION_MOTOR, NIVELES_ALERTA, nivelAlerta } from '../../juegos/fuga/constantes.js';
 import { resolverNombres } from '../../juegos/fuga/narracion.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal } from '../../../web/casino/linea-de-tiempo-fuga.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal, reglasDeFinal } from '../../../web/casino/linea-de-tiempo-fuga.js';
 import { jugarFuga, jugarFugaConCaido, muchasFuga } from './ayudas-fuga.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -355,4 +355,25 @@ test('la linea de la regla oculta de cada final dice lo que valia y a quien (sin
   assert.equal(textoDeFichaFinal('conjunto', 1, nombre, 0), 'Ana escapa junto a su compañero: 1 punto');
   for (const f of ['conjunto', 'solo', 'abandonado', 'anticipada', 'capturado']) assert.doesNotMatch(textoDeFichaFinal(f, 7, nombre, 0), /habr|delat|abandon|traici/i);
   assert.equal(typeof textoDeFichaFinal('raro', 3, nombre, 0), 'string');
+});
+
+test('la escena de la regla oculta muestra las cuatro reglas fijas (10, 7, 9 y 0) con los valores del motor y marca la que se cumplio para cada IA segun final.finales; lo que muestra es lo que cobro', async () => {
+  const vistas = new Set();
+  for (const p of await muchasFuga()) {
+    const fin = p.rondas.at(-1).final;
+    if (!fin) continue;
+    const filas = reglasDeFinal(fin.finales);
+    assert.deepEqual(filas.map((f) => f.clave), ['conjunto', 'solo', 'abandonado', 'capturado']);
+    assert.deepEqual(filas.map((f) => f.puntos), [PUNTOS.escapeConjunto, PUNTOS.escapeSolo, PUNTOS.escapeAbandonado, 0], 'los valores son los del motor');
+    for (const s of [0, 1]) {
+      const donde = filas.filter((f) => f.cumplen.includes(s));
+      assert.equal(donde.length, 1, `el prisionero ${s} se marca en una sola regla`);
+      assert.equal(donde[0].puntos, fin.bono[s], `la regla marcada vale lo que cobro el prisionero ${s} (${fin.finales[s]})`);
+      vistas.add(donde[0].clave);
+    }
+    for (const f of filas) assert.doesNotMatch(f.texto, /habr|delat|abandon|traici/i, f.texto);
+  }
+  assert.equal(vistas.size, 4, 'cobertura: las cuatro reglas se marcaron en alguna partida');
+  assert.deepEqual(reglasDeFinal(null).map((f) => f.cumplen), [[], [], [], []], 'sin final no se marca nada');
+  assert.deepEqual(reglasDeFinal(['anticipada', 'abandonado']).map((f) => f.cumplen), [[], [0], [1], []], 'quien escapo por su cuenta a mitad de camino cobra como quien escapa solo');
 });

@@ -140,6 +140,19 @@ export function avisosDeTentacion(t, nombre) {
 const FIN_TEXTO = { conjunto: 'escapa junto a su compañero', solo: 'escapa solo', abandonado: 'se quedó atrás y aun así escapa', anticipada: 'escapa por su cuenta a mitad de camino', capturado: 'queda capturado' };
 export const textoDeFichaFinal = (final, puntos, nombre, asiento) => `${nombre(asiento)} ${FIN_TEXTO[final] ?? 'termina la partida'}: ${puntos} ${puntos === 1 ? 'punto' : 'puntos'}`;
 
+// Las cuatro reglas fijas de puntaje que la escena final revela (lo que ninguno sabia), cada una con las IAs a las que les toco segun final.finales. Quien escapo por su cuenta a mitad de camino
+// cobra como quien escapa solo. Lo que se muestra es lo que se cobro (una prueba lo compara con final.bono); no se calcula ningun "habria pasado".
+const FILAS_REGLA = [
+  { clave: 'conjunto', texto: 'Escapan los dos juntos', finales: ['conjunto'] },
+  { clave: 'solo', texto: 'Uno escapa solo o por su cuenta', finales: ['solo', 'anticipada'] },
+  { clave: 'abandonado', texto: 'Se queda atrás y aun así escapa', finales: ['abandonado'] },
+  { clave: 'capturado', texto: 'Queda capturado', finales: ['capturado'] },
+];
+export function reglasDeFinal(finales) {
+  const lista = Array.isArray(finales) ? finales : [];
+  return FILAS_REGLA.map((f) => ({ clave: f.clave, texto: f.texto, puntos: REGLA_OCULTA[f.clave], cumplen: SEATS.filter((s) => f.finales.includes(lista[s])) }));
+}
+
 // ---- Que situaciones valen la pena para un clip de redes ---------------------------------------------------------------------------------------
 // Cada situacion suma puntos por lo que paso en ella (todo sale del registro y refleja lo que cuenta la narracion del motor). Los pesos son editoriales.
 const PESOS = { final: 5, caida: 4, 'escape anticipado': 4, 'oferta aceptada': 4, 'promesa rota': 3, botin: 2 };
