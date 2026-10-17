@@ -132,3 +132,23 @@ test('un bioma explicito manda sobre el del seed, y un mapa ya creado manda sobr
 test('restaurarMapa con basura no lanza: devuelve null', () => {
   for (const raro of [null, undefined, 7, 'x', {}, { k: 4 }, { terreno: 5 }]) assert.equal(restaurarMapa(raro), null, String(raro));
 });
+
+test('restaurarMapa rechaza un mapa guardado truncado o mal formado (devuelve null y nunca lanza): la escena lee archivos que pueden venir rotos', () => {
+  const bueno = JSON.parse(JSON.stringify(serializarMapa(crearMapa(7, 3, { bioma: 'mares' }))));
+  assert.notEqual(restaurarMapa(bueno), null, 'el mapa sano si se restaura');
+  const estropear = {
+    'una region nula': (m) => { m.regs[0] = null; },
+    'una region sin vecinas': (m) => { delete m.regs[0].vecinos; },
+    'terreno mas corto que ancho por alto': (m) => { m.terreno = m.terreno.slice(1); },
+    'region mas corta que ancho por alto': (m) => { m.region = m.region.slice(1); },
+    'terreno con una letra': (m) => { m.terreno = 'x' + m.terreno.slice(1); },
+    'terreno con un digito fuera de 0 a 5': (m) => { m.terreno = '9' + m.terreno.slice(1); },
+    'sin ancho': (m) => { delete m.ancho; },
+    'inicio sin duenos': (m) => { m.inicio = { capitales: [] }; },
+  };
+  for (const [que, f] of Object.entries(estropear)) {
+    const m = structuredClone(bueno); f(m);
+    assert.doesNotThrow(() => restaurarMapa(m), que);
+    assert.equal(restaurarMapa(m), null, que);
+  }
+});

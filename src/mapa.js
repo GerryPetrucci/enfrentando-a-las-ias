@@ -15,7 +15,7 @@ const AGUA_PROFUNDA = 0, AGUA = 1, ARENA = 2, PASTO = 3, BOSQUE = 4, MONTANA = 5
 
 // Biomas: cambian SOLO la forma y el aspecto de la tierra (no las reglas). Cada uno es un juego de umbrales sobre la elevacion (mar profundo, agua, arena, montana)
 // y la humedad (bosque), el sesgo de la costa (mas alto = mas tierra), la escala del ruido (mas alta = costa mas quebrada) y, en el mar interior, la fuerza del hundimiento central.
-// `continente` es el generador de siempre, bit a bit: una prueba fija su huella.
+// `continente` es el generador de siempre, bit a bit en terreno, regiones e inicio: una prueba fija su huella. (Unica excepcion: reponerMinimos corrige un defecto, solo si un recurso quedaba bajo su minimo.)
 export const BIOMAS = ['continente', 'arido', 'mares', 'interior'];
 const PARAMETROS = {
   continente: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.04, esc: 1 },
@@ -191,17 +191,27 @@ export function serializarMapa(m) {
   };
 }
 
-// Lo contrario: de lo guardado al mismo objeto que da crearMapa (con sus arreglos tipados). Con algo que no es un mapa guardado devuelve null, nunca lanza.
+// Lo contrario: de lo guardado al mismo objeto que da crearMapa (con sus arreglos tipados). Con algo que no es un mapa guardado completo (otro objeto, un archivo truncado,
+// una cadena de terreno de otro largo o con digitos fuera de 0 a 5, una region sin vecinas...) devuelve null; nunca lanza.
 export function restaurarMapa(o) {
-  const ok = o && typeof o === 'object' && typeof o.terreno === 'string' && Array.isArray(o.region) && Array.isArray(o.regs) && o.inicio && Array.isArray(o.inicio.dueno) && Array.isArray(o.inicio.capitales);
-  if (!ok) return null;
-  return {
-    k: o.k, seed: o.seed, bioma: o.bioma, ancho: o.ancho, alto: o.alto, tile: o.tile,
-    terreno: Uint8Array.from(o.terreno, Number),
-    region: Int16Array.from(o.region),
-    regs: o.regs.map((r) => ({ ...r, vecinos: [...r.vecinos] })),
-    inicio: { dueno: Int8Array.from(o.inicio.dueno), capitales: [...o.inicio.capitales] },
-  };
+  try {
+    const n = o?.ancho * o?.alto;
+    const ok = o && typeof o === 'object' && Number.isInteger(n) && n > 0
+      && typeof o.terreno === 'string' && o.terreno.length === n && /^[0-5]+$/.test(o.terreno)
+      && Array.isArray(o.region) && o.region.length === n
+      && Array.isArray(o.regs) && o.regs.every((r) => r && typeof r === 'object' && Array.isArray(r.vecinos))
+      && o.inicio && Array.isArray(o.inicio.dueno) && Array.isArray(o.inicio.capitales);
+    if (!ok) return null;
+    return {
+      k: o.k, seed: o.seed, bioma: o.bioma, ancho: o.ancho, alto: o.alto, tile: o.tile,
+      terreno: Uint8Array.from(o.terreno, Number),
+      region: Int16Array.from(o.region),
+      regs: o.regs.map((r) => ({ ...r, vecinos: [...r.vecinos] })),
+      inicio: { dueno: Int8Array.from(o.inicio.dueno), capitales: [...o.inicio.capitales] },
+    };
+  } catch {
+    return null;
+  }
 }
 
 // garantizarCapitales puede pisar el unico nodo de un recurso que estaba justo en el minimo (si cerca de la capital no habia region libre ni con sobrante): se repone en una region
