@@ -25,6 +25,12 @@ test('en serie y en paralelo salen las mismas partidas, en el orden del plan', a
   assert.deepEqual(todas.map((r) => r.jugadores[0].id), CLAVES);
 });
 
+test('ejecutarSerie pasa las opciones del juego a cada partida (el bioma del mapa)', async () => {
+  const plan = planDeSerie({ claves: CLAVES, partidas: 2, seedBase: 7, mismoSeed: true });
+  const r = await ejecutarSerie({ juego: conquista, plan, agentesPorClave: agentesDe(conquista, CLAVES), maxRondas: 1, opciones: { bioma: 'mares' } });
+  assert.deepEqual(r.map((x) => x.mapa.bioma), ['mares', 'mares']);
+});
+
 test('cada partida trae su rotacion, y con 2 jugadores tambien si va invertida', async () => {
   const plan = planDeSerie({ claves: ['tomaydaca', 'siempre-t'], partidas: 2, seedBase: 5 });
   const r = await ejecutarSerie({ juego: dilema, plan, agentesPorClave: agentesDe(dilema, ['tomaydaca', 'siempre-t']) });

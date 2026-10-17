@@ -9,7 +9,7 @@
 import { correrPartida } from './arena.js';
 
 export async function ejecutarSerie({
-  juego, plan, agentesPorClave, paralelo = false, maxRondas = null, limitador = null,
+  juego, plan, agentesPorClave, paralelo = false, maxRondas = null, limitador = null, opciones = {},
   alEmpezar = () => {}, alRegistrar = () => {}, alTerminar = () => {}, alAvisar = () => {},
 }) {
   const correr = async (p) => {
@@ -18,6 +18,7 @@ export async function ejecutarSerie({
       juego,
       agentes: p.claves.map((c) => agentesPorClave.get(c)),
       seed: p.seed,
+      opciones, // lo que el juego acepta al crearse (la Guerra de territorios: el bioma del mapa)
       maxRondas,
       limitador,
       alRegistrar: (registro, estado) => alRegistrar(p, registro, estado),

@@ -50,6 +50,32 @@ test('el duelo del Dilema sigue igual: alterna asientos, un seed distinto por pa
   assert.equal(datos.partidas[1].seed - datos.partidas[0].seed, 7919);
 });
 
+test('--bioma=arido fuerza el bioma en toda la serie, queda guardado en cada partida y la consola lo dice', () => {
+  const { r, datos } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', '--bioma=arido');
+  assert.ok(datos.partidas.every((p) => p.mapa.bioma === 'arido'));
+  assert.match(r.stdout, /bioma arido/);
+});
+
+test('sin --bioma, cada partida de conquista guarda el que le toca por seed y la consola lo dice', () => {
+  const { r, datos } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', '--seed=7');
+  const b = datos.partidas[0].mapa.bioma;
+  assert.ok(['continente', 'arido', 'mares', 'interior'].includes(b), b);
+  assert.ok(datos.partidas.every((p) => p.mapa.bioma === b), 'la serie cambio de bioma');
+  assert.match(r.stdout, new RegExp(`bioma ${b}`));
+});
+
+test('--bioma con un valor que no es uno de los cuatro, vacio o sin valor da un error que los lista; con otro juego, tambien', () => {
+  for (const malo of ['--bioma=raro', '--bioma=ARIDO', '--bioma=', '--bioma']) {
+    const r = cli('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', malo);
+    assert.equal(r.status, 1, malo);
+    assert.match(r.stderr, /--bioma debe ser uno de: continente, arido, mares, interior/, `${malo}: el error debe salir de la consola, antes de correr nada`);
+  }
+  // con otro juego el duelo seria real y se guardaria en data/ (el destino oficial): --partidas=1 --destino=pruebas acota el dano si la comprobacion faltara algun dia
+  const r = cli('--a=tomaydaca', '--b=siempre-t', '--partidas=1', '--destino=pruebas', '--bioma=arido');
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /solo vale para la Guerra de territorios/);
+});
+
 test('una serie desbalanceada se corre pero avisa', () => {
   const { r } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas');
   assert.match(r.stdout, /desbalanceada/);
