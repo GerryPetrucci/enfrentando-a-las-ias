@@ -19,6 +19,22 @@ export const FORMATOS_PAGINA = ['9x16', '16x9', 'hoja']; // 'hoja' dibuja los do
 // y ?voz= o un voz.json ajeno podrian hacer sonar cualquier audio de internet.
 export const esRutaRelativa = (texto) => typeof texto === 'string' && /^[\w.-]+(\/[\w.-]+)*$/.test(texto) && !texto.split('/').includes('..');
 
+// El audio de la voz que esta sonando: una sola a la vez. Sonar otra, o abrir otra partida, corta la anterior (si no, la voz de la partida vieja seguiria sonando sobre la nueva).
+// `fabrica` crea el audio (en la pagina, new Audio); un audio que no se puede crear o reproducir (el navegador lo bloquea) no tumba la reproduccion: se queda sin voz.
+export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
+  let actual = null;
+  const detener = () => { try { actual?.pause(); } catch { /* ya estaba parado */ } actual = null; };
+  const sonar = (src, vel = 1) => {
+    detener();
+    try {
+      actual = fabrica(src);
+      actual.playbackRate = vel;
+      actual.play()?.catch?.(() => {});
+    } catch { actual = null; }
+  };
+  return { sonar, detener };
+}
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
 // &sonido=0 &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {

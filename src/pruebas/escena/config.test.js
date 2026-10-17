@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz, etiquetaDeApuesta, entradaDeVoz, resumenDeVoz, fuenteDeVoz } from '../../../web/casino/escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz, etiquetaDeApuesta, entradaDeVoz, resumenDeVoz, fuenteDeVoz, crearReproductorDeVoz } from '../../../web/casino/escena-config.js';
 import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
 import { planDeNarracion, armarVoz } from '../../../herramientas/narrar.mjs';
 import { jugarMM } from './ayudas-mm.js';
@@ -224,4 +224,30 @@ test('dividirEnDos parte una partida en dos clips de rondas contiguos que cubren
   assert.equal(dividirEnDos([]), null);
   assert.equal(dividirEnDos(null), null);
   assert.equal(dividirEnDos([{ mano: 1, tipo: 'apertura', minMs: 1000, texto: '' }]), null, 'con una sola ronda no hay como partir');
+});
+
+// Un audio falso: anota lo que le hacen. `play` puede devolver una promesa rechazada.
+const audioFalso = (src, { playFalla = false } = {}) => ({ src, playbackRate: 1, pausado: false, jugado: false, pause() { this.pausado = true; }, play() { this.jugado = true; return playFalla ? Promise.reject(new Error('bloqueado')) : Promise.resolve(); } });
+
+test('el reproductor de voz: sonar() corta la voz anterior, detener() pausa la actual y la velocidad llega al audio', () => {
+  const creados = [];
+  const voz = crearReproductorDeVoz((src) => { const a = audioFalso(src); creados.push(a); return a; });
+  voz.sonar('a.ogg', 2);
+  assert.equal(creados[0].jugado, true);
+  assert.equal(creados[0].playbackRate, 2);
+  voz.sonar('b.ogg', 1);
+  assert.equal(creados[0].pausado, true, 'la anterior se corta al sonar la siguiente');
+  assert.equal(creados[1].pausado, false);
+  voz.detener();
+  assert.equal(creados[1].pausado, true, 'detener pausa la que suena');
+  assert.doesNotThrow(() => voz.detener(), 'detener sin nada sonando no hace nada');
+});
+
+test('el reproductor de voz no propaga errores: ni de la fabrica, ni de play() (el navegador puede bloquear el audio)', async () => {
+  const quienLanza = crearReproductorDeVoz(() => { throw new Error('sin audio'); });
+  assert.doesNotThrow(() => quienLanza.sonar('a.ogg', 1));
+  const bloqueado = crearReproductorDeVoz((src) => audioFalso(src, { playFalla: true }));
+  assert.doesNotThrow(() => bloqueado.sonar('a.ogg', 1));
+  await new Promise((listo) => setImmediate(listo)); // si la promesa rechazada no estuviera atendida, Node la reportaria como error sin atender
+  assert.doesNotThrow(() => bloqueado.detener());
 });
