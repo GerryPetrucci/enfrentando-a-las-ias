@@ -101,3 +101,23 @@ export function htmlTira(numeros, usadas = [], ahora = null) {
   const gastadas = Array.isArray(usadas) ? usadas : [];
   return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
+
+// ---- Triple dado: dados vistos DESDE ARRIBA (solo se dibuja la cara de arriba) ----
+// Los puntos de cada cara sobre una rejilla de 3x3 (casillas 0 a 8, de izquierda a derecha y de arriba abajo).
+const PUNTOS_DADO = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+export const COLORES_DADO = ['blanco', 'rojo', 'azul'];
+
+// Un dado. cara = null cuando el publico NO debe verla todavia: el HTML no lleva la cara ni en un atributo y la escena lo reemplaza con htmlDado(cara, color) al abrirlo.
+// Una cara ilegible tambien da un dado cerrado; un color desconocido cae en blanco.
+export function htmlDado(cara, color = 'blanco') {
+  const c = COLORES_DADO.includes(color) ? color : 'blanco';
+  if (!Number.isInteger(cara) || cara < 1 || cara > 6) return `<div class="dado ${c} cerrado"><span class="q">?</span></div>`;
+  const celdas = Array.from({ length: 9 }, (_, i) => (PUNTOS_DADO[cara].includes(i) ? '<i class="p"></i>' : '<i></i>'));
+  return `<div class="dado ${c}">${celdas.join('')}</div>`;
+}
+
+// La bandeja de un jugador: sus dados chicos en fila; los ya usados atenuados. dados = [{ id, cara|null, color, usado }].
+export function htmlBandeja(dados) {
+  const lista = Array.isArray(dados) ? dados : [];
+  return `<div class="bandeja">${lista.map((d) => `<span class="en-bandeja${d?.usado ? ' usado' : ''}" data-id="${esc(d?.id)}">${htmlDado(d?.cara, d?.color)}</span>`).join('')}</div>`;
+}
