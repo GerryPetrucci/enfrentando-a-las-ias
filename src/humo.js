@@ -2,8 +2,8 @@
 // Prueba de humo GRATUITA de la Guerra de territorios: una serie corta con modelos gratis para medir, antes de gastar
 // credito, cuantas respuestas traen JSON y cuantas ordenes valen. No corre en `npm test` porque llama a la API de verdad.
 //
-//   node src/humo.js                                  (laguna y ling, 10 turnos, 2 partidas: ~40 llamadas)
-//   node src/humo.js --modelos=nemotron-ultra,ling --turnos=10 --partidas=2 --ritmo=18
+//   node src/humo.js                                  (nemotron-ultra y nemotron-super, 10 turnos, 2 partidas: ~40 llamadas)
+//   node src/humo.js --modelos=nemotron-ultra,laguna --turnos=10 --partidas=2 --ritmo=18
 //
 // Siempre en modo gratis: se niega a llamar a un modelo que gaste credito. Las llamadas salen a 18 por minuto (el tope de
 // OpenRouter es 20) y sin comprar creditos el tope diario es de 50 llamadas. El resultado completo va a data/pruebas/.
@@ -21,6 +21,9 @@ import { seedDesdeTexto } from './rng.js';
 import { parsearArgumentos, errorDeCantidad, errorDeModo, planDeSerie, rutaLibre } from './serie.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Los modelos de la prueba cuando no se piden otros: solo gratis (Laguna se retira el 2026-10-31 y Ling ya cobra).
+export const MODELOS_DE_HUMO = ['nemotron-ultra', 'nemotron-super'];
 
 // Resume una serie de partidas por modelo (se juntan las partidas aunque el modelo cambie de asiento).
 export function resumirHumo(partidas) {
@@ -65,7 +68,7 @@ function salir(msg) {
 
 async function principal() {
   const o = parsearArgumentos(process.argv.slice(2));
-  const claves = String(o.modelos === undefined || o.modelos === true ? 'laguna,ling' : o.modelos).split(',').map((s) => s.trim()).filter(Boolean);
+  const claves = String(o.modelos === undefined || o.modelos === true ? MODELOS_DE_HUMO.join(',') : o.modelos).split(',').map((s) => s.trim()).filter(Boolean);
   const turnos = Number(o.turnos ?? 10);
   const partidas = Number(o.partidas ?? claves.length);
   const ritmo = Number(o.ritmo ?? 18);
@@ -83,7 +86,7 @@ async function principal() {
     salir(err.message);
   }
   const todos = claves.map((c) => agentesPorClave.get(c));
-  if (todos.some((a) => a.tipo !== 'modelo')) salir('La prueba de humo es solo con modelos gratis: usa --modelos=laguna,ling (los bots de control no usan la API).');
+  if (todos.some((a) => a.tipo !== 'modelo')) salir('La prueba de humo es solo con modelos gratis: usa --modelos=nemotron-ultra,nemotron-super (los bots de control no usan la API).');
   const errModo = errorDeModo({ modo: 'gratis', agentes: todos, contendientes: CONTENDIENTES });
   if (errModo) salir(errModo);
   fijarModo('gratis');
