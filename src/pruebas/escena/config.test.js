@@ -108,7 +108,7 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   const p1 = await jugar(1), p2 = await jugar(2, PRUDENTES);
   const cargados = [
     { nombre: 'a.json', datos: { juego: p1.juego, partidas: [p1, p2] } },
-    { nombre: 'fuga.json', datos: { juego: { id: 'fuga' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
+    { nombre: 'conquista.json', datos: { juego: { id: 'conquista' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
     { nombre: 'roto.json', datos: null, error: 'JSON invalido' },
     { nombre: 'vacio.json', datos: { partidas: [] } },
     { nombre: 'sinrondas.json', datos: { juego: { id: 'dudaapuesta' }, partidas: [{ jugadores: [], rondas: [] }] } },
@@ -119,19 +119,19 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
   assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
   assert.equal(c[0].partida, p1);
-  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'fuga']);
+  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'conquista']);
   const manos = Math.max(...p1.rondas.map((r) => r.mano));
   assert.equal(c[0].manos, manos);
   assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
   assert.match(c[1].titulo, /Partida 2 — Prudente vs Prudente vs Prudente vs Prudente/);
-  const [fuga, roto, vacio, sinRondas, sinPartidas] = c.slice(2);
-  assert.deepEqual([fuga.valida, fuga.partida], [false, null]);
-  assert.match(fuga.motivo, /fuga/);
+  const [sin, roto, vacio, sinRondas, sinPartidas] = c.slice(2);
+  assert.deepEqual([sin.valida, sin.partida], [false, null]);
+  assert.match(sin.motivo, /conquista/);
   assert.match(roto.motivo, /JSON invalido/);
   assert.match(vacio.motivo, /no trae partidas/);
   assert.match(sinPartidas.motivo, /no trae partidas/);
   assert.match(sinRondas.motivo, /sin rondas/);
-  for (const e of [fuga, roto, vacio, sinRondas, sinPartidas]) assert.equal(e.valida, false, e.clave);
+  for (const e of [sin, roto, vacio, sinRondas, sinPartidas]) assert.equal(e.valida, false, e.clave);
   assert.deepEqual(catalogarPartidas(null), []);
   assert.deepEqual(catalogarPartidas([null, 7, {}]).map((e) => e.valida), [false, false, false], 'entradas basura no lanzan');
 });
@@ -146,7 +146,7 @@ test('catalogarPartidas marca las partidas cortadas', async () => {
 test('primeraValida elige la partida pedida si sirve y, si no, la primera que sirva', async () => {
   const p = await jugar(1);
   const c = catalogarPartidas([
-    { nombre: 'otro.json', datos: { juego: { id: 'fuga' }, partidas: [{ rondas: [{}] }] } },
+    { nombre: 'otro.json', datos: { juego: { id: 'conquista' }, partidas: [{ rondas: [{}] }] } },
     { nombre: 'a.json', datos: { juego: p.juego, partidas: [p, p] } },
     { nombre: 'b.json', datos: { juego: p.juego, partidas: [p] } },
   ]);
@@ -199,4 +199,29 @@ test('una voz sin fuente (escrita a mano o de antes) sigue valiendo; la fuente i
   for (const voz of [null, undefined, 7, 'x', [], { a: null }, { a: 3 }, JSON.parse('{"__proto__": {"ms": 9}}')]) assert.equal(entradaDeVoz(voz, beat), null);
   assert.equal(entradaDeVoz({ a: { ms: 1 } }, null), null);
   assert.deepEqual(resumenDeVoz(null, null), { usados: 0, desacordes: 0 });
+});
+
+test('dividirEnDos parte una partida en dos clips de rondas contiguos que cubren todo, con duraciones parecidas; el final va en la segunda parte', async () => {
+  const { dividirEnDos, recortarClip, duracionDeBeat } = await import('../../../web/casino/escena-config.js');
+  const { construirLineaDeTiempo: lineaFuga } = await import('../../../web/casino/linea-de-tiempo-fuga.js');
+  const { construirLineaDeTiempo: lineaSub } = await import('../../../web/casino/linea-de-tiempo-subasta.js');
+  const { jugarFuga } = await import('./ayudas-fuga.js');
+  const { jugarSub } = await import('./ayudas-sub.js');
+  for (const beats of [lineaFuga(await jugarFuga(1)), lineaFuga(await jugarFuga(3, ['azar', 'azar'])), lineaSub(await jugarSub(2))]) {
+    const d = dividirEnDos(beats);
+    const manos = [...new Set(beats.map((b) => b.mano))];
+    assert.equal(d.parte1.mano, manos[0]);
+    assert.equal(d.parte2.hasta, manos.at(-1));
+    assert.equal(d.parte2.mano, d.parte1.hasta + 1, 'las dos partes son contiguas');
+    assert.equal(recortarClip(beats, d.parte1.mano, d.parte1.hasta).length + recortarClip(beats, d.parte2.mano, d.parte2.hasta).length, beats.length, 'no se pierde ni se repite un beat');
+    assert.ok(recortarClip(beats, d.parte2.mano, d.parte2.hasta).some((b) => b.tipo === 'final'), 'el final queda en la segunda parte');
+    const ms = (a, b) => recortarClip(beats, a, b).reduce((s, x) => s + duracionDeBeat(x, null, 1), 0);
+    assert.equal(d.parte1.ms, ms(d.parte1.mano, d.parte1.hasta));
+    assert.equal(d.parte2.ms, ms(d.parte2.mano, d.parte2.hasta));
+    const mayorMano = Math.max(...manos.map((m) => ms(m, m)));
+    assert.ok(Math.abs(d.parte1.ms - d.parte2.ms) <= mayorMano, 'la division es la mas pareja que permiten las rondas enteras');
+  }
+  assert.equal(dividirEnDos([]), null);
+  assert.equal(dividirEnDos(null), null);
+  assert.equal(dividirEnDos([{ mano: 1, tipo: 'apertura', minMs: 1000, texto: '' }]), null, 'con una sola ronda no hay como partir');
 });

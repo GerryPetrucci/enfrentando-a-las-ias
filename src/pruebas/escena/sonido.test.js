@@ -167,3 +167,15 @@ test('los pasos de Subasta de tiempo suenan con los efectos que ya existen (voca
   for (const [tipo, esperado] of casos) assert.deepEqual(eventosDePaso({ tipo }), esperado, tipo);
   for (const mudo of ['correr', 'retirar']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
 });
+
+test('los pasos de La Fuga suenan con los efectos que ya existen (vocabulario fijado en el plan, tarea E1): solo el que escapa suena a victoria, el que pasa limpio sin salir es mudo a proposito', () => {
+  const casos = [
+    [{ tipo: 'armar' }, ['anuncio']], [{ tipo: 'decidir' }, ['carta']], [{ tipo: 'riesgo' }, ['duda']],
+    [{ tipo: 'actuar', resultado: 'limpio', sale: true }, ['gana']], [{ tipo: 'actuar', resultado: 'limpio', sale: false }, []],
+    [{ tipo: 'actuar', resultado: 'tropezo', sale: false }, ['tic']], [{ tipo: 'actuar', resultado: 'tropezo', sale: true }, ['gana']],
+    [{ tipo: 'actuar', resultado: 'cayo', sale: false }, ['pierde']], [{ tipo: 'tentacion', clase: 'botin' }, ['ficha']], [{ tipo: 'tentacion', clase: 'oferta' }, ['duda']], [{ tipo: 'medidor' }, ['tic']],
+  ];
+  for (const [paso, esperado] of casos) assert.deepEqual(eventosDePaso(paso), esperado, JSON.stringify(paso));
+  for (const mudo of ['estado', 'final']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
+  assert.deepEqual(eventosDePaso({ tipo: 'actuar' }), [], 'un actuar sin resultado no suena');
+});

@@ -35,6 +35,20 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-subasta.js'),
     mesa: () => import('./mesa-subasta.js'),
   },
+  fuga: {
+    nombre: 'La Fuga',
+    jugadores: 2,
+    camaraPorDefecto: 0, // sin camara oculta: lo que el publico ve y las IAs no son la alarma, la cohesion y el riesgo real
+    unidad: 'ronda', // una situacion es una "ronda" de la URL
+    // las partidas guardadas antes de que el motor escribiera la alarma de antes, el riesgo real y los campos ilegibles salen apagadas en la lista
+    comprobar: (partida) => {
+      const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+      const completo = rondas.every((r) => Number.isFinite(r?.oculto?.alarmaAntes) && Number.isFinite(r.oculto?.cohesionAntes) && Array.isArray(r.oculto?.fallo) && Array.isArray(r.ilegibles));
+      return completo ? null : 'formato anterior: la partida se guardó con un motor que no escribía todos los datos que usa la escena';
+    },
+    linea: () => import('./linea-de-tiempo-fuga.js'),
+    mesa: () => import('./mesa-fuga.js'),
+  },
   tripledado: {
     nombre: 'Triple dado',
     jugadores: 4,

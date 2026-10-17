@@ -36,6 +36,12 @@ export function eventosDePaso(paso) {
     case 'premio': case 'ganar': return ['gana'];
     case 'anular': return ['pierde'];
     case 'corte': return ['anuncio'];
+    case 'armar': return ['anuncio'];
+    case 'decidir': return ['carta'];
+    case 'riesgo': return ['duda'];
+    case 'actuar': return paso.sale === true ? ['gana'] : paso.resultado === 'tropezo' ? ['tic'] : paso.resultado === 'cayo' ? ['pierde'] : [];
+    case 'tentacion': return paso.clase === 'oferta' ? ['duda'] : ['ficha'];
+    case 'medidor': return ['tic'];
     case 'sello': return paso.sello === 'igual' ? [] : [['justo', 'cumplido', 'acierta'].includes(paso.sello) ? 'gana' : 'pierde'];
     default: return [];
   }

@@ -10,6 +10,7 @@ import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
 import { jugarSub } from './ayudas-sub.js';
+import { jugarFuga } from './ayudas-fuga.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -33,23 +34,23 @@ test('todos los juegos registrados traen sus datos completos y una camara por de
 });
 
 test('un juego sin escena da un error que dice cuales hay', async () => {
-  assert.throws(() => escenaDe('fuga'), /no hay escena.*"fuga".*dudaapuesta/);
+  assert.throws(() => escenaDe('conquista'), /no hay escena.*"conquista".*dudaapuesta/);
   for (const raro of [undefined, null, '', 7, 'toString', '__proto__']) assert.throws(() => escenaDe(raro), /no hay escena/, String(raro));
-  await assert.rejects(() => lineaDe('fuga'), /no hay escena/);
+  await assert.rejects(() => lineaDe('conquista'), /no hay escena/);
 });
 
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
   // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo
-  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : { mano: 1 }] });
+  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
-    { nombre: 'fuga.json', datos: { partidas: [partida('fuga')] } },
+    { nombre: 'conquista.json', datos: { partidas: [partida('conquista')] } },
   ]);
-  for (const e of c.filter((x) => x.archivo !== 'fuga.json')) assert.equal(e.valida, true, e.archivo);
-  const fuga = c.find((x) => x.archivo === 'fuga.json');
-  assert.equal(fuga.valida, false);
-  assert.match(fuga.motivo, /fuga/);
-  assert.equal(fuga.juego, 'fuga');
+  for (const e of c.filter((x) => x.archivo !== 'conquista.json')) assert.equal(e.valida, true, e.archivo);
+  const sin = c.find((x) => x.archivo === 'conquista.json');
+  assert.equal(sin.valida, false);
+  assert.match(sin.motivo, /conquista/);
+  assert.equal(sin.juego, 'conquista');
 });
 
 test('la linea de tiempo de cada juego registrado exporta lo que la herramienta de capturas necesita: construirla y comprobar el estado de su escena', async () => {
@@ -127,4 +128,27 @@ test('una partida de Subasta sin los datos ocultos de las apuestas (guardada con
   const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [p] } }])[0];
   assert.equal(e.valida, false);
   assert.match(e.motivo, /formato anterior/);
+});
+
+test('La Fuga esta registrada: dos jugadores, sin camara, unidad ronda; la lista cuenta sus 9 situaciones, y la serie (dos partidas) aparece como dos entradas', async () => {
+  const e = escenaDe('fuga');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['La Fuga', 2, 0, 'ronda']);
+  const a = await jugarFuga(1), b = await jugarFuga(1, ['traidor', 'tomaydaca']);
+  const lista = catalogarPartidas([{ nombre: 'fuga.json', datos: { partidas: [a, b] } }]);
+  assert.equal(lista.length, 2);
+  assert.ok(lista.every((x) => x.valida === true));
+  assert.equal(lista[0].manos, a.rondas.length);
+  assert.match(lista[0].titulo, new RegExp(` · ${a.rondas.length} rondas$`));
+  assert.equal(typeof (await lineaDe('fuga')), 'function');
+});
+
+test('una partida de La Fuga guardada con el motor anterior (sin la alarma de antes, el riesgo real ni los campos ilegibles) sale apagada con el motivo "formato anterior"', async () => {
+  const p = await jugarFuga(1);
+  assert.equal(catalogarPartidas([{ nombre: 'fuga.json', datos: { partidas: [p] } }])[0].valida, true);
+  for (const quitar of [(x) => { for (const r of x.rondas) delete r.oculto.alarmaAntes; }, (x) => { for (const r of x.rondas) delete r.oculto.cohesionAntes; }, (x) => { for (const r of x.rondas) delete r.oculto.fallo; }, (x) => { for (const r of x.rondas) delete r.ilegibles; }]) {
+    const vieja = structuredClone(p); quitar(vieja);
+    const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [vieja] } }])[0];
+    assert.equal(e.valida, false);
+    assert.match(e.motivo, /formato anterior/);
+  }
 });

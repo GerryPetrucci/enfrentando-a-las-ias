@@ -285,3 +285,76 @@
 .con-panel .boton-sub.suelto, .con-panel .boton-sub.fuera, .con-panel .avatar-sub.fuera, .con-panel .nombre-sub.fuera, .con-panel .estado-sub.fuera, .con-panel .banco-sub.fuera, .con-panel .barra-banco.fuera, .con-panel .fichas-sub.fuera { opacity:.15; }
 .cas.ganada { background:var(--c); color:#101014; border-color:#fff6; }
 .cas.anulada { background:#3a3a44; color:#9a9aa6; }
+
+/* ---------- La Fuga: sala de control con camaras de vigilancia (estilo C de la maqueta). Colores propios: verde de vigilancia, rojo de alarma y oro del botin. Ningun color de IA aqui: llega por --c y --t. ---------- */
+.escena.mesa-vigilancia { --vg:#7bd88f; --vg-fondo:#0d1a10; --vg-linea:#1f3a26; --alerta:#ff5a4d; }
+.mesa-vigilancia .fieltro { background:#070b08; }
+.mesa-vigilancia .fieltro::after, .mesa-vigilancia .riel, .mesa-vigilancia .luz { display:none; }
+.medidores-fuga { z-index:10; border:1.5px solid #7bd88f66; background:#0d1a10; }
+.rotulo-med { z-index:12; display:flex; align-items:center; font:700 24px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--vg); white-space:nowrap; }
+.rotulo-med b { margin-left:.4em; font-weight:800; color:var(--hueso); }
+.f-16x9 .rotulo-med { font-size:26px; }
+.barra-med { z-index:12; border:1px solid var(--vg-linea); background:#0a120c; }
+.barra-med.alarma { display:flex; gap:5px; padding:2px; }
+.barra-med.alarma i { flex:1; background:#13241a; transition:background .3s, box-shadow .3s; }
+.barra-med.alarma i.on { background:var(--alerta); box-shadow:0 0 10px #ff5a4d88; }
+.barra-med.cohesion { position:absolute; }
+.barra-med.cohesion i { display:block; height:100%; width:50%; background:var(--oro); transition:width .6s ease; }
+.barra-med.cohesion.negativa i { background:var(--alerta); }
+.barra-med.cohesion::after { content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:2px; background:#ffffffaa; }
+
+.cam-fuga { z-index:10; background:var(--vg-fondo); border:2px solid var(--vg); box-shadow:inset 0 0 40px #000c, 0 0 22px #7bd88f22; transition:border-color .3s; }
+.cam-fuga.sin-senal { border-color:var(--alerta); box-shadow:inset 0 0 60px #ff5a4d44; }
+.cam-fuga.salida { border-color:var(--oro); }
+.escena-fuga { z-index:11; overflow:hidden; background:linear-gradient(#0d1a10, #0a140c); }
+.escena-fuga::after { content:""; position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(#0000 0 2px, #0000003d 2px 4px); }
+.escena-fuga::before { content:""; position:absolute; left:0; right:0; top:-16%; height:16%; pointer-events:none; z-index:3; background:linear-gradient(#7bd88f00, #7bd88f1c, #7bd88f00); animation:barrido 5s linear infinite; }
+@keyframes barrido { to { top:100%; } }
+.escena-fuga.tropiezo { box-shadow:inset 0 0 70px #e0b25c55; }
+.escena-fuga.caida { box-shadow:inset 0 0 90px #ff5a4d66; }
+.escena-fuga .suelo { position:absolute; left:0; right:0; top:80%; border-top:3px solid #7bd88f66; }
+.escena-fuga .obstaculo { position:absolute; left:0; right:0; top:34%; display:flex; flex-direction:column; align-items:center; gap:2px; color:#7bd88f55; text-align:center; text-transform:uppercase; }
+.escena-fuga .obstaculo b { font:800 54px/1 var(--titulos); letter-spacing:.08em; }
+.escena-fuga .obstaculo small { font:700 22px var(--titulos); letter-spacing:.3em; }
+.sil-fuga { position:absolute; bottom:20%; height:50%; aspect-ratio:1 / 2; transform-origin:50% 100%; z-index:2; }
+.sil-fuga.oculta { display:none; }
+.sil-fuga .sil-svg { width:100%; height:100%; fill:var(--sc, var(--c)); filter:drop-shadow(0 0 8px #000a); overflow:visible; }
+.sil-svg .pi { transform-origin:22px 74px; transform:rotate(calc(var(--sw, 0) * 22deg)); }
+.sil-svg .pd { transform-origin:38px 74px; transform:rotate(calc(var(--sw, 0) * -22deg)); }
+.sil-svg .brazo { transform-origin:46px 38px; transform:rotate(calc(var(--br, 0) * -150deg)); }
+.pieza-fuga { position:absolute; z-index:1; color:#7bd88fb3; }
+.pieza-fuga svg { width:100%; height:100%; }
+.pieza-fuga.botin { color:var(--oro); }
+.senal-fuga { z-index:12; display:none; align-items:center; justify-content:center; font:800 60px var(--titulos); letter-spacing:.2em; text-transform:uppercase; color:var(--alerta); background:repeating-linear-gradient(0deg, #0b0e0cdd 0 3px, #1d2b21dd 3px 6px); }
+.senal-fuga.dorada { color:var(--oro); }
+.senal-fuga.on { display:flex; }
+.rotulo-cam, .puntos-cam, .rec-cam, .hora-cam { z-index:13; display:flex; align-items:center; font:700 26px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--vg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.puntos-cam { justify-content:flex-end; color:var(--hueso); }
+.rec-cam { justify-content:flex-end; color:#ff8f86; font-size:24px; }
+.rec-cam.sin-senal { color:var(--alerta); }
+.rec-cam.salida { color:var(--oro); }
+.hora-cam { justify-content:flex-end; font:600 24px var(--digitos); letter-spacing:.06em; color:#7bd88fcc; }
+.sello-fuga { z-index:13; display:flex; align-items:center; gap:14px; font:800 32px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--t); white-space:nowrap; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; overflow:hidden; }
+.sello-fuga.on { opacity:1; transform:none; }
+.sello-fuga.juego { color:var(--alerta); }
+.sello-fuga .rota-cam { padding:1px 10px; border:2px solid var(--alerta); border-radius:6px; font-size:.7em; color:var(--alerta); }
+.mensaje-cam { overflow-wrap:anywhere; z-index:13; padding:6px 12px; border-left:3px solid var(--c); border-radius:6px; background:#000b; font:500 20px/1.2 var(--texto); color:#d8f5df; overflow:hidden; opacity:0; transition:opacity .3s; }
+.mensaje-cam.on { opacity:1; }
+.riesgo-cam { z-index:13; display:flex; align-items:center; justify-content:center; border:2px solid var(--oro); border-radius:8px; background:#000b; font:800 24px var(--titulos); letter-spacing:.08em; text-transform:uppercase; color:var(--oro); opacity:0; transition:opacity .3s; }
+.riesgo-cam.alto { border-color:var(--alerta); color:var(--alerta); }
+.riesgo-cam.on { opacity:1; }
+.aviso-cam { white-space:nowrap; overflow:hidden; padding:0 14px; z-index:14; display:flex; align-items:center; justify-content:center; border:3px solid var(--oro); border-radius:10px; background:#000d; font:800 30px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--oro); text-align:center; opacity:0; transform:scale(.9); transition:opacity .3s, transform .3s; }
+.aviso-cam.oferta { border-color:var(--alerta); color:var(--alerta); }
+.aviso-cam.on { opacity:1; transform:none; }
+.panel-fuga { z-index:20; display:flex; flex-direction:column; justify-content:center; gap:10px; padding:16px 46px; border-radius:10px; border:2px solid var(--vg); background:#050b07f2; box-shadow:0 14px 44px #000b; opacity:0; }
+.panel-fuga .titulo { font:800 34px var(--titulos); letter-spacing:.2em; text-transform:uppercase; color:var(--vg); text-align:center; }
+.panel-fuga .reglas { display:flex; flex-direction:column; gap:10px; }
+.fila-regla { display:grid; grid-template-columns:1fr auto 110px; align-items:center; gap:16px; padding:5px 18px; border:2px solid #1f3a26; border-radius:8px; background:#0a120c; opacity:.55; }
+.fila-regla.cumple { opacity:1; border-color:var(--oro); background:#16160d; box-shadow:0 0 22px #e0b25c33; }
+.fila-regla .texto-regla { font:700 28px var(--titulos); letter-spacing:.05em; text-transform:uppercase; color:var(--hueso); }
+.fila-regla .chips-regla { display:flex; gap:10px; }
+.chip-regla { padding:2px 14px; border-radius:20px; background:var(--c); color:#101014; font:800 22px var(--titulos); letter-spacing:.05em; text-transform:uppercase; white-space:nowrap; }
+.fila-regla .puntos-regla { text-align:right; font:800 40px var(--titulos); color:var(--oro); }
+.fila-regla .puntos-regla::after { content:' pts'; font-size:22px; color:var(--suave); }
+.marcador-regla { display:flex; justify-content:center; gap:40px; font:800 28px var(--titulos); letter-spacing:.08em; text-transform:uppercase; color:var(--vg); }
+.con-panel .cam-fuga, .con-panel .escena-fuga, .con-panel .senal-fuga, .con-panel .rotulo-cam, .con-panel .puntos-cam, .con-panel .rec-cam, .con-panel .sello-fuga.on, .con-panel .hora-cam, .con-panel .mensaje-cam.on, .con-panel .riesgo-cam.on, .con-panel .aviso-cam.on { opacity:.15; }

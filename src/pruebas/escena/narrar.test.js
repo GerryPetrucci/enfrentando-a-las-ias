@@ -79,7 +79,7 @@ test('los argumentos de Piper y de ffmpeg llevan la voz, el nivel comun (-18 LUF
 test('hay una linea de tiempo por juego con escena; un juego sin escena da un error que dice cuales hay', async () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
   assert.equal(typeof await lineaDe('dudaapuesta'), 'function');
-  await assert.rejects(() => lineaDe('fuga'), /no hay escena.*"fuga".*dudaapuesta/);
+  await assert.rejects(() => lineaDe('conquista'), /no hay escena.*"conquista".*dudaapuesta/);
   await assert.rejects(() => lineaDe(undefined), /no hay escena/);
 });
 
