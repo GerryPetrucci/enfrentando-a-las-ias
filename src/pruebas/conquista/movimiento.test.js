@@ -157,3 +157,82 @@ test('un reino que ya cayo no mueve ni recibe llamadas: sus movimientos se ignor
   assert.equal(ctx.jugadas[2], null);
   assert.doesNotThrow(() => { ordenesEconomicas(ctx); movimientos(ctx); });
 });
+
+// ---- Lo que registra cada combate para la escena del video (solo datos: los campos de siempre no cambian) ----
+
+test('un combate de dos bandos registra bandos, terreno, fortaleza, resultado y tropas que quedan', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; E.tropas[d] = 9; E.fort[d] = 1; E.mapa.regs[d].terr = 'll'; // defensa 9 x 1.5 = 13.5
+  E.tropas[a] = 12; E.reinos[0].armas = 1; // ataque 11 x 1.25 = 13.75
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 11`] } });
+  assert.deepEqual(ctx.combates, [{
+    d, k: 0, perdidas: 19, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
+    bandos: [{ k: 0, n: 11, f: 13.75, defensor: false, armas: 1 }, { k: 1, n: 9, f: 13.5, defensor: true, armas: 0 }],
+  }]);
+});
+
+test('el combate registra la fortaleza de ANTES de la batalla (la conquista la baja un nivel despues) y el terreno de la region', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; E.tropas[d] = 4; E.fort[d] = 2; E.mapa.regs[d].terr = 'mo';
+  E.tropas[a] = 30;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 29`] } });
+  assert.equal(E.fort[d], 1, 'la conquista bajo la fortaleza');
+  assert.equal(ctx.combates[0].fort, 2);
+  assert.equal(ctx.combates[0].terr, 'mo');
+});
+
+test('el combate que repele el defensor y el empate con defensor registran su resultado y las tropas que quedan', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; E.tropas[d] = 6; E.fort[d] = 1; E.mapa.regs[d].terr = 'll'; // defensa 9
+  E.tropas[a] = 6;
+  const repelido = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 5`] } }).combates[0];
+  assert.equal(repelido.resultado, 'repelido');
+  assert.equal(repelido.quedan, 2); // floor(6 x (1 - 5/9))
+  assert.equal(repelido.k, 1);
+  assert.deepEqual(repelido.bandos.map((b) => [b.k, b.defensor]), [[1, true], [0, false]]); // de mayor a menor fuerza
+
+  const E2 = nuevoEstado(4), [a2, d2] = frontera(E2, 0, -1);
+  E2.dueno[d2] = 1; E2.tropas[d2] = 6; E2.fort[d2] = 0; E2.mapa.regs[d2].terr = 'll';
+  E2.tropas[a2] = 7;
+  const empate = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} 6`] } }).combates[0];
+  assert.equal(empate.resultado, 'empate');
+  assert.equal(empate.quedan, 1);
+  assert.equal(empate.k, 1);
+});
+
+test('un empate sin defensor deja la region vacia y lo registra', () => {
+  const E = nuevoEstado(4), [a, d, b] = vecinaComun(E);
+  E.dueno[d] = -1; E.tropas[d] = 0; E.fort[d] = 0; E.edif[d] = null;
+  E.dueno[a] = 0; E.tropas[a] = 6; E.dueno[b] = 1; E.tropas[b] = 6;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 5`] }, 1: { ordenes: [`mover ${R(b)} ${R(d)} 5`] } });
+  assert.equal(ctx.combates.length, 1);
+  assert.deepEqual([ctx.combates[0].resultado, ctx.combates[0].quedan, ctx.combates[0].k], ['empate', 0, -1]);
+  assert.equal(ctx.combates[0].bandos.length, 2);
+});
+
+test('tres bandos: se registran los tres, de mayor a menor fuerza, y el refuerzo propio suma a las tropas del defensor', () => {
+  const E = nuevoEstado(4), [a, d, b] = vecinaComun(E);
+  E.dueno[d] = 2; E.tropas[d] = 3; E.fort[d] = 0; E.mapa.regs[d].terr = 'll';
+  E.dueno[a] = 0; E.tropas[a] = 7; E.dueno[b] = 1; E.tropas[b] = 6;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 6`] }, 1: { ordenes: [`mover ${R(b)} ${R(d)} 5`] } });
+  const c = ctx.combates[0];
+  assert.equal(c.bandos.length, 3);
+  assert.deepEqual(c.bandos.map((x) => [x.k, x.n, x.f, x.defensor]), [[0, 6, 6, false], [1, 5, 5, false], [2, 3, 3, true]]);
+  assert.equal(c.resultado, 'captura');
+  assert.equal(c.quedan, 1);
+
+  const E2 = nuevoEstado(4), [a2, d2, b2] = vecinaComun(E2);
+  E2.dueno[d2] = 1; E2.tropas[d2] = 4; E2.fort[d2] = 0; E2.mapa.regs[d2].terr = 'll';
+  E2.dueno[b2] = 1; E2.tropas[b2] = 6; E2.dueno[a2] = 0; E2.tropas[a2] = 9;
+  const c2 = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} 8`] }, 1: { ordenes: [`mover ${R(b2)} ${R(d2)} 3`] } }).combates[0];
+  assert.equal(c2.bandos.find((x) => x.defensor).n, 7, 'el refuerzo propio (3) se suma a las 4 tropas que ya estaban');
+});
+
+test('una conquista sin lucha (region con dueno pero sin tropas) no registra combate y el evento conquista si', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; E.tropas[d] = 0; E.fort[d] = 0;
+  E.tropas[a] = 10;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 6`] } });
+  assert.equal(ctx.combates.length, 0);
+  assert.ok(ctx.eventos.some((e) => e.tipo === 'conquista' && e.k === 0 && e.contra === 1 && e.r === d));
+});

@@ -56,14 +56,17 @@ function resolverRegion(ctx, d, grupos) {
   bandos.sort((a, b) => b.f - a.f || Number(b.defensor) - Number(a.defensor) || a.k - b.k);
   if (bandos.length === 1) { capturar(ctx, d, bandos[0].k, bandos[0].n, duenoViejo, false); return; }
   const [a, b] = bandos, todos = bandos.reduce((s, x) => s + x.n, 0);
+  // Lo que el combate le deja a la escena del video (solo datos): el terreno y la fortaleza de ANTES de la batalla (la conquista la baja despues) y cada bando con su
+  // nivel de armas. Los campos de siempre ({ d, k, perdidas }) no cambian.
+  const datos = { terr: ctx.regs[d].terr, fort: E.fort[d], bandos: bandos.map((x) => ({ ...x, armas: ctx.R[x.k].armas })) };
   if (a.f === b.f) { // empate: el defensor resiste con 1 tropa; sin defensor, la region queda sin dueno
     const def = bandos.find((x) => x.defensor);
-    if (def) { E.tropas[d] = 1; ctx.combates.push({ d, k: def.k, perdidas: todos - 1 }); ctx.evt({ tipo: 'repelido', k: b.k, contra: def.k, r: d }); }
-    else { E.dueno[d] = -1; E.tropas[d] = 0; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; ctx.combates.push({ d, k: -1, perdidas: todos }); }
+    if (def) { E.tropas[d] = 1; ctx.combates.push({ d, k: def.k, perdidas: todos - 1, ...datos, resultado: 'empate', quedan: 1 }); ctx.evt({ tipo: 'repelido', k: b.k, contra: def.k, r: d }); }
+    else { E.dueno[d] = -1; E.tropas[d] = 0; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; ctx.combates.push({ d, k: -1, perdidas: todos, ...datos, resultado: 'empate', quedan: 0 }); }
     return;
   }
   const quedan = Math.max(1, Math.floor(a.n * (1 - b.f / a.f)));
-  ctx.combates.push({ d, k: a.k, perdidas: a.n - quedan + b.n });
+  ctx.combates.push({ d, k: a.k, perdidas: a.n - quedan + b.n, ...datos, resultado: a.defensor ? 'repelido' : 'captura', quedan });
   if (a.defensor) { E.tropas[d] = quedan; ctx.evt({ tipo: 'repelido', k: b.k, contra: a.k, r: d }); }
   else capturar(ctx, d, a.k, quedan, duenoViejo, true);
 }
