@@ -19,7 +19,7 @@ import { existsSync, readFileSync, mkdirSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { escenaDe } from '../web/casino/lineas.js';
+import { escenaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -105,11 +105,14 @@ async function principal() {
   formatos.forEach(tamanoDeFormato);
   const chrome = a.chrome ?? buscarChrome();
   if (!chrome) { console.error('No encontre Chrome ni Edge. Pasa --chrome=RUTA o define CHROME_PATH.'); process.exit(1); }
-  try { await fetch(`${base}/escena.html`); } catch { console.error(`No hay servidor en ${base}. Abre otra terminal y corre: node src/servidor.js`); process.exit(1); }
 
   const datos = JSON.parse(readFileSync(resolve('data', a.archivo), 'utf8'));
   const partida = Number(a.partida ?? 1);
   const juego = datos.partidas?.[partida - 1]?.juego?.id ?? datos.juego?.id;
+  if (!datos.partidas?.[partida - 1]) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
+  const motivo = motivoDeNoReproducible(juego, datos.partidas[partida - 1]); // antes de buscar el servidor: una partida que la escena no puede reproducir no merece capturas
+  if (motivo) { console.error(`La partida ${partida} no se puede capturar: ${motivo}.`); process.exit(1); }
+  try { await fetch(`${base}/escena.html`); } catch { console.error(`No hay servidor en ${base}. Abre otra terminal y corre: node src/servidor.js`); process.exit(1); }
   let linea;
   try { linea = await escenaDe(juego).linea(); } catch (e) { console.error(e.message); process.exit(1); }
   const beats = linea.construirLineaDeTiempo(datos.partidas?.[partida - 1]);

@@ -4,7 +4,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { juegosConEscena, escenaDe, lineaDe } from '../../../web/casino/lineas.js';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { juegosConEscena, escenaDe, lineaDe, motivoDeNoReproducible } from '../../../web/casino/lineas.js';
 import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
@@ -150,5 +155,32 @@ test('una partida de La Fuga guardada con el motor anterior (sin la alarma de an
     const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [vieja] } }])[0];
     assert.equal(e.valida, false);
     assert.match(e.motivo, /formato anterior/);
+  }
+});
+
+test('motivoDeNoReproducible dice por que una partida no se puede reproducir: otro juego, sin rondas, formato anterior; una buena da null', async () => {
+  const buena = await jugarSub(1);
+  assert.equal(motivoDeNoReproducible('subasta', buena), null);
+  assert.match(motivoDeNoReproducible('conquista', buena), /conquista.*no tiene escena/);
+  assert.match(motivoDeNoReproducible(undefined, buena), /otro juego.*no tiene escena/);
+  assert.equal(motivoDeNoReproducible('subasta', { ...buena, rondas: [] }), 'sin rondas');
+  const vieja = structuredClone(buena);
+  for (const r of vieja.rondas) delete r.oculto;
+  assert.match(motivoDeNoReproducible('subasta', vieja), /formato anterior/);
+  for (const raro of [null, undefined, 7, {}]) assert.equal(typeof motivoDeNoReproducible('subasta', raro), 'string');
+});
+
+test('narrar.mjs y capturar-escena.mjs se niegan con "formato anterior" ante una partida que la escena no puede reproducir', async () => {
+  const vieja = structuredClone(await jugarSub(1));
+  for (const r of vieja.rondas) delete r.oculto;
+  const carpeta = mkdtempSync(join(tmpdir(), 'vieja-'));
+  const archivo = join(carpeta, 'vieja.json');
+  writeFileSync(archivo, JSON.stringify({ juego: vieja.juego, partidas: [vieja] }));
+  const falso = process.execPath; // existe: pasa las comprobaciones de Piper y de Chrome; la herramienta debe negarse antes de usarlos
+  for (const [herramienta, extra] of [['narrar.mjs', [`--piper=${falso}`, `--modelo=${falso}`]], ['capturar-escena.mjs', [`--chrome=${falso}`]]]) {
+    const ruta = fileURLToPath(new URL(`../../../herramientas/${herramienta}`, import.meta.url));
+    const r = spawnSync(process.execPath, [ruta, `--archivo=${archivo}`, ...extra], { encoding: 'utf8', timeout: 20000 });
+    assert.equal(r.status, 1, `${herramienta}: ${r.stdout}${r.stderr}`);
+    assert.match(r.stderr, /formato anterior/, herramienta);
   }
 });

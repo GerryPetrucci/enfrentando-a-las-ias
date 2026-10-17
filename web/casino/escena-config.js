@@ -5,7 +5,7 @@
 // si es mas largo que su minimo; sin voz, su minimo. `fuente` es el texto del beat que se narro: un audio solo vale para un beat que dice lo mismo (los ids de
 // una partida se repiten en otra, y asi la voz de una no suena sobre la otra). Entrada ilegible no lanza: vale como "sin voz".
 
-import { juegosConEscena, escenaDe } from './lineas.js';
+import { juegosConEscena, escenaDe, motivoDeNoReproducible } from './lineas.js';
 
 const entero = (v) => {
   const n = v === null || v === '' ? NaN : Number(v);
@@ -163,10 +163,7 @@ export function catalogarPartidas(cargados) {
       const unidad = juegosConEscena().includes(id) ? escenaDe(id).unidad : 'mano';
       const campo = juegosConEscena().includes(id) ? escenaDe(id).campo ?? unidad : unidad; // el campo con que sus registros numeran la unidad
       const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[campo]) || 0), 0);
-      let motivo = null;
-      if (!juegosConEscena().includes(id)) motivo = `es de ${id ?? 'otro juego'}, que no tiene escena de casino`;
-      else if (!rondas.length) motivo = 'sin rondas';
-      else motivo = escenaDe(id).comprobar?.(partida) ?? null; // cada juego puede exigir los datos que usa su escena
+      const motivo = motivoDeNoReproducible(id, partida);
       const nombres = (Array.isArray(partida?.jugadores) ? partida.jugadores : []).map((j) => j?.nombre ?? '?').join(' vs ');
       const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? unidad : `${unidad}s`}${partida?.truncada === true ? ' · cortada' : ''}`;
       entradas.push({ clave: `${archivo}#${i + 1}`, archivo, numero: i + 1, juego: id ?? null, titulo, manos, valida: motivo === null, motivo, partida: motivo === null ? partida : null });
