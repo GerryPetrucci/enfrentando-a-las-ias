@@ -13,6 +13,18 @@ export const CONFIG = {
 export const REC = ['Comida', 'Madera', 'Roca', 'Hierro', 'Oro', 'Caballos'];
 const AGUA_PROFUNDA = 0, AGUA = 1, ARENA = 2, PASTO = 3, BOSQUE = 4, MONTANA = 5;
 
+// Biomas: cambian SOLO la forma y el aspecto de la tierra (no las reglas). Cada uno es un juego de umbrales sobre la elevacion (mar profundo, agua, arena, montana)
+// y la humedad (bosque), el sesgo de la costa (mas alto = mas tierra), la escala del ruido (mas alta = costa mas quebrada) y, en el mar interior, la fuerza del hundimiento central.
+// `continente` es el generador de siempre, bit a bit: una prueba fija su huella.
+export const BIOMAS = ['continente', 'arido', 'mares', 'interior'];
+const PARAMETROS = {
+  continente: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.04, esc: 1 },
+  arido:      { mar: 0.22, agua: 0.29, arena: 0.37, mont: 0.66, bosq: 0.82, sesgo: 0.10, esc: 1 },
+  mares:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: -0.07, esc: 1.5 },
+  interior:   { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, lago: 0.55 },
+};
+const AJUSTES_MAX = 10; // si un seed no da tierra suficiente tras 40 intentos, se sube el sesgo de la costa en pasos de 0.02 (hasta 10 veces) sin cambiar de bioma
+
 function hash2(ix, iy, seed) {
   let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 1442695041)) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -31,13 +43,14 @@ function fbm(x, y, seed) {
   return v / 0.9375;
 }
 
-function generarTerreno(semilla, W, H) {
-  const t = new Uint8Array(W * H), escala = 0.085 * (54 / W); // misma forma relativa en cualquier tamano
+function generarTerreno(semilla, W, H, P) {
+  const t = new Uint8Array(W * H), escala = 0.085 * (54 / W) * P.esc; // misma forma relativa en cualquier tamano
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const e = fbm(x * escala, y * escala, semilla), h = fbm(x * escala * 1.3 + 50, y * escala * 1.3 + 50, semilla + 999);
     const borde = Math.min(1, Math.min(x, W - 1 - x) / (W * 0.16), Math.min(y, H - 1 - y) / (H * 0.10));
-    const el = e - (1 - borde) * 0.30 + 0.04;
-    t[y * W + x] = el < 0.30 ? AGUA_PROFUNDA : el < 0.40 ? AGUA : el < 0.44 ? ARENA : el > 0.72 ? MONTANA : h > 0.56 ? BOSQUE : PASTO;
+    let el = e - (1 - borde) * 0.30 + P.sesgo;
+    if (P.lago) { const dx = x / W - 0.5, dy = y / H - 0.52; el -= P.lago * Math.exp(-((dx * dx) / 0.05 + (dy * dy) / 0.05) * 1.2); } // mar interior: la elevacion se hunde en el centro
+    t[y * W + x] = el < P.mar ? AGUA_PROFUNDA : el < P.agua ? AGUA : el < P.arena ? ARENA : el > P.mont ? MONTANA : h > P.bosq ? BOSQUE : PASTO;
   }
   return t;
 }
@@ -163,19 +176,40 @@ function garantizarCapitales(regs, capitales) {
   }
 }
 
-export function crearMapa(seed, k) {
+// garantizarCapitales puede pisar el unico nodo de un recurso que estaba justo en el minimo (si cerca de la capital no habia region libre ni con sobrante): se repone en una region
+// libre o, si no hay, en una con un recurso sobrante que no sea Comida ni Madera (asi no se deshace lo que garantizo). No hace nada cuando el minimo ya se cumple.
+function reponerMinimos(regs) {
+  const minimo = Math.ceil(regs.length / 18), cuenta = (tipo) => regs.filter((r) => r.rec === tipo).length;
+  for (const tipo of REC) {
+    while (cuenta(tipo) < minimo) {
+      const destino = regs.find((r) => r.rec === null) ?? regs.find((r) => r.rec && r.rec !== 'Comida' && r.rec !== 'Madera' && cuenta(r.rec) > minimo);
+      if (!destino) break;
+      destino.rec = tipo;
+    }
+  }
+}
+
+export function crearMapa(seed, k, { bioma = 'continente' } = {}) {
   const c = CONFIG[k];
   if (!c) throw new Error(`Reinos invalidos: ${k} (de 2 a 5)`);
+  if (!BIOMAS.includes(bioma)) throw new Error(`bioma invalido: ${String(bioma)} (validos: ${BIOMAS.join(', ')})`);
+  const base = PARAMETROS[bioma];
   let terreno, tiles;
-  for (let intento = 0; intento < 40; intento++) {
-    terreno = generarTerreno((seed + intento * 7919) >>> 0, c.W, c.H);
-    tiles = mayorContinente(terreno, c.W, c.H);
+  for (let ajuste = 0; ajuste <= AJUSTES_MAX; ajuste++) {
+    const P = ajuste === 0 ? base : { ...base, sesgo: base.sesgo + 0.02 * ajuste };
+    for (let intento = 0; intento < 40; intento++) {
+      terreno = generarTerreno((seed + intento * 7919) >>> 0, c.W, c.H, P);
+      tiles = mayorContinente(terreno, c.W, c.H);
+      if (tiles.length >= c.N * 32) break;
+    }
     if (tiles.length >= c.N * 32) break;
   }
+  if (tiles.length < c.N * 32) throw new Error(`no hay tierra suficiente para el bioma ${bioma} con ${k} reinos (seed ${seed})`);
   const rng = crearRng((seed ^ 0x9e3779b9) >>> 0);
   const { region, regs } = regionar(tiles, c.N, rng, c.W, c.H);
   sembrarRecursos(regs, terreno, rng);
   const inicio = salidas(regs, k, c.W, c.H);
   garantizarCapitales(regs, inicio.capitales);
-  return { k, seed, ancho: c.W, alto: c.H, tile: c.T, terreno, region, regs, inicio };
+  reponerMinimos(regs);
+  return { k, seed, bioma, ancho: c.W, alto: c.H, tile: c.T, terreno, region, regs, inicio };
 }
