@@ -82,13 +82,6 @@ export function construirLineaDeTiempo(partida) {
   return beats;
 }
 
-// ---- Lo que escribe el banner ----
-export function bannerDe(beat) {
-  const subasta = Number.isInteger(beat?.mano) ? beat.mano : 1;
-  const fase = { apertura: 'Todos oprimen su botón', reloj: 'Corre el contador', apuestas: 'Lo que apostó cada quien', resultado: 'Resultado de la subasta', final: 'Final' }[beat?.tipo] ?? '';
-  return { subasta, fase };
-}
-
 // El cierre de la final: la pieza para quien tiene mas fichas y eliminado quien tiene menos; un empate total deja a nadie.
 export function textoDeFinal(final, nombre) {
   if (!final) return { grande: '', detalle: '' };
