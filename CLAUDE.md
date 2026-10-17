@@ -236,7 +236,8 @@ herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentan
 **Pendiente:**
 - [ ] Primer duelo real con modelos y grabar el episodio 1 (AL FINAL); antes, verificar los IDs de modelo en <https://openrouter.ai/models> (cambian cada pocos meses).
 - [ ] Kit de marca hecho (`marca/`); falta plan de contenido, dominio y cuentas, sitio multilenguaje e imagen para links (`marca/exportados/og-1200x630.png`).
-- [ ] Juego 2 Guerra de territorios: correr la prueba de humo con modelos gratis y hacer la escena.
+- [ ] Juego 2 Guerra de territorios (decidido el 17 de octubre de 2026): guardar el mapa en la partida con 4 biomas (continente, árido, mucho mar, mar interior; salen del seed y se pueden forzar con `--bioma=`; solo cambian forma y aspecto, no las reglas), y después la escena. La humo con modelos gratis ya se corrió (15-40 % de respuestas con JSON: no sirven); la prueba con modelos reales va AL FINAL.
+- [ ] Quinto bioma «cordillera» (apuntado el 17 de octubre de 2026): quedó fuera porque con el tinte de los reinos no se distingue del continente; rediseñar con montañas más anchas o un tinte más ligero.
 - [ ] Modo "bot escrito" para correr miles de partidas.
 - El detalle del estado de cada juego y las ideas de formato en la banca estan en `docs/decisiones-detalle.md`.
 
