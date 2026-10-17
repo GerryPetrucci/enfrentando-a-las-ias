@@ -7,6 +7,8 @@ import fuga from '../../juegos/fuga.js';
 const EXTRA = { bots: {
   largo: { fn: (E, s) => ({ postura: 'ayudar', metodo: 'sigilo', aprovechar: false, promesa: 'ayudar', mensaje: 'm'.repeat(200), razon: 'bot de control' }), nombre: 'Largo', color: '#999999' },
   confuso: { fn: () => ({ postura: 'ayudar', metodo: 'sigilo', aprovechar: 'quizas', promesa: 'tal vez', mensaje: 'Ya veremos.', razon: 'bot de control' }), nombre: 'Confuso', color: '#bbbbbb' },
+  // promete ayudar y en las situaciones impares escribe una postura ilegible: el juego pone "avanzar" y el motor marca la promesa como rota, aunque la IA no eligio esa jugada
+  torpe: { fn: (E) => ({ postura: E.ronda % 2 ? 'ayudarle mucho' : 'ayudar', metodo: 'sigilo', aprovechar: false, promesa: 'ayudar', mensaje: 'Voy.', razon: 'bot de control' }), nombre: 'Torpe', color: '#cccccc' },
   mudo: { fn: () => ({ postura: 'avanzar', metodo: 'fuerza', aprovechar: true, promesa: 'avanzar', mensaje: '', razon: 'bot de control' }), nombre: 'Mudo', color: '#aaaaaa' },
 } };
 export const agentesFuga = (claves = ['tomaydaca', 'traidor']) => claves.map((c) => (EXTRA.bots[c] ? resolverAgente(c, EXTRA) : resolverAgente(c, fuga)));
@@ -24,7 +26,7 @@ export async function jugarFugaConCaido(seed, asiento = 0) {
 // Varias partidas para recorrer muchos registros: capturas, salidas anticipadas, botines, ofertas, promesas rotas y partidas que terminan antes de la situacion 9.
 export async function muchasFuga() {
   const out = [];
-  for (const claves of [['tomaydaca', 'traidor'], ['leal', 'traidor'], ['traidor', 'traidor'], ['azar', 'azar'], ['leal', 'leal'], ['azar', 'tomaydaca'], ['mudo', 'largo'], ['confuso', 'tomaydaca']]) {
+  for (const claves of [['tomaydaca', 'traidor'], ['leal', 'traidor'], ['traidor', 'traidor'], ['azar', 'azar'], ['leal', 'leal'], ['azar', 'tomaydaca'], ['mudo', 'largo'], ['confuso', 'tomaydaca'], ['torpe', 'tomaydaca']]) {
     for (let seed = 1; seed <= 6; seed++) out.push(await jugarFuga(seed, claves));
   }
   return out;

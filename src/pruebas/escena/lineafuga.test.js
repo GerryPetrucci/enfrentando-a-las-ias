@@ -48,7 +48,7 @@ test('cubre todos los registros en orden y no pierde ni repite una sola linea; c
     const beats = construirLineaDeTiempo(p);
     assert.deepEqual([...new Set(beats.map((b) => b.registro))], p.rondas.map((_, i) => i), `seed ${p.seed}: todos los registros, en orden`);
     const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto)).sort();
-    assert.deepEqual(dichas, p.rondas.flatMap((r) => r.narracion.map((l) => nombres(p)(l.texto))).sort().map((t) => t), `seed ${p.seed}: se pierde o se repite una linea`);
+    assert.deepEqual(dichas, p.rondas.flatMap((r) => r.narracion.map((l) => { const m = l.tipo === 'decision' ? /^\{([01])\} (.+)$/.exec(l.texto) : null; return nombres(p)(m && r.invalidas[Number(m[1])] === true ? `El juego elige por {${m[1]}}: ${m[2]}` : l.texto); })).sort(), `seed ${p.seed}: se pierde o se repite una linea`);
     const final = beats.find((b) => b.tipo === 'final');
     if (final) assert.deepEqual(final.lineas.map((l) => l.texto), p.epilogo.map((l) => nombres(p)(l.texto)));
     for (const b of beats) {
@@ -84,7 +84,7 @@ test('las lineas de las jugadas que puso el juego no se atribuyen a la IA (se re
   let ilegibles = 0;
   for (const p of await muchasFuga()) for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'decisiones')) {
     const paso = b.pasos.find((x) => x.tipo === 'decidir');
-    assert.deepEqual(paso.ilegibles, p.rondas[b.registro].ilegibles);
+    assert.deepEqual(paso.ilegibles, p.rondas[b.registro].ilegibles.map((l) => l.filter((c) => c === 'promesa')), 'en decisiones solo se anota la promesa ilegible: lo de la tentacion se descubre en la consecuencia');
     ilegibles += paso.ilegibles.filter((l) => l.length).length;
   }
   assert.ok(ilegibles > 5, `cobertura: ${ilegibles} campos ilegibles`);
@@ -186,7 +186,7 @@ test('las decisiones salen todas juntas en su beat con postura, metodo, promesa 
       const r = p.rondas[b.registro];
       const d = b.pasos.find((x) => x.tipo === 'decidir');
       assert.deepEqual(d.jugadas, r.jugadas.map((j) => (j ? { postura: j.postura, metodo: j.metodo } : null)));
-      assert.deepEqual(d.promesasRotas, r.promesaRota.map(Boolean));
+      assert.deepEqual(d.promesasRotas, r.promesaRota.map((x, s) => x === true && r.invalidas[s] !== true), 'una jugada que puso el juego nunca se marca como promesa rota de la IA');
       assert.deepEqual(d.mensajes, r.mensajes);
       assert.deepEqual(d.razones, r.razones);
       rotas += d.promesasRotas.filter(Boolean).length;
@@ -262,7 +262,7 @@ test('puntuarRondas elige lo que se cuenta bien: caida, escape anticipado, ofert
       if (r.salieron.some(Boolean)) esperados.push('escape anticipado');
       if (r.tentacion?.tipo === 'oferta' && r.tentacion.delataron.length) esperados.push('oferta aceptada');
       if (r.tentacion?.tipo === 'botin' && r.tentacion.tomo !== null) esperados.push('botin');
-      if (r.promesaRota.some(Boolean)) esperados.push('promesa rota');
+      if (r.promesaRota.some((x, s) => x === true && r.invalidas[s] !== true)) esperados.push('promesa rota');
       if (r.final) esperados.push('final');
       assert.deepEqual([...pun[i].motivos].sort(), [...esperados].sort(), `situacion ${r.ronda}`);
       // de acuerdo con lo que cuenta el motor
@@ -376,4 +376,34 @@ test('la escena de la regla oculta muestra las cuatro reglas fijas (10, 7, 9 y 0
   assert.equal(vistas.size, 4, 'cobertura: las cuatro reglas se marcaron en alguna partida');
   assert.deepEqual(reglasDeFinal(null).map((f) => f.cumplen), [[], [], [], []], 'sin final no se marca nada');
   assert.deepEqual(reglasDeFinal(['anticipada', 'abandonado']).map((f) => f.cumplen), [[], [0], [1], []], 'quien escapo por su cuenta a mitad de camino cobra como quien escapa solo');
+});
+
+test('si la IA promete ayudar y escribe una postura ilegible, el juego pone la jugada y la promesa NO se marca como rota ni cuenta para los clips', async () => {
+  let casos = 0;
+  for (const seed of [1, 2, 3]) {
+    const p = await jugarFuga(seed, ['torpe', 'tomaydaca']);
+    const beats = construirLineaDeTiempo(p);
+    const pun = puntuarRondas(p);
+    p.rondas.forEach((r, i) => {
+      if (!(r.invalidas[0] === true && r.promesaRota[0] === true)) return;
+      casos++;
+      const d = beats.find((b) => b.registro === i && b.tipo === 'decisiones').pasos[0];
+      assert.equal(d.promesasRotas[0], false, `seed ${seed} situacion ${r.ronda}: se acusa de romper la promesa a una IA cuya jugada puso el juego`);
+      assert.ok(d.reemplazadas[0]);
+      if (r.promesaRota[1] !== true || r.invalidas[1] === true) assert.ok(!pun[i].motivos.includes('promesa rota'), `situacion ${r.ronda}: cuenta una promesa rota que no fue de la IA`);
+    });
+  }
+  assert.ok(casos >= 3, `cobertura: ${casos} situaciones con promesa rota por jugada del juego`);
+});
+
+test('el sello no menciona la tentacion ilegible (un "aprovechar" ilegible vale "no" y se descubriria antes de la consecuencia)', () => {
+  assert.equal(textoDeSello({ postura: 'ayudar', metodo: 'sigilo' }, { ilegibles: ['aprovechar'] }), 'Ayudar · Sigilo');
+  assert.equal(textoDeSello({ postura: 'ayudar', metodo: 'sigilo' }, { ilegibles: ['promesa', 'aprovechar'] }), 'Ayudar · Sigilo · promesa ilegible');
+});
+
+test('una partida guardada con el motor anterior (sin final.perdidos) no hace tronar la linea de tiempo', async () => {
+  const p = structuredClone(await jugarFuga(1));
+  delete p.rondas.at(-1).final.perdidos;
+  delete p.rondas.at(-1).final.bono;
+  assert.doesNotThrow(() => construirLineaDeTiempo(p));
 });

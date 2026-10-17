@@ -337,13 +337,13 @@
 .sello-fuga { z-index:13; display:flex; align-items:center; gap:14px; font:800 32px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--t); white-space:nowrap; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; overflow:hidden; }
 .sello-fuga.on { opacity:1; transform:none; }
 .sello-fuga.juego { color:var(--alerta); }
-.sello-fuga .rota-cam { padding:1px 10px; border:2px solid var(--alerta); border-radius:6px; font-size:22px; color:var(--alerta); }
-.mensaje-cam { z-index:13; padding:6px 12px; border-left:3px solid var(--c); border-radius:6px; background:#000b; font:500 20px/1.2 var(--texto); color:#d8f5df; overflow:hidden; opacity:0; transition:opacity .3s; }
+.sello-fuga .rota-cam { padding:1px 10px; border:2px solid var(--alerta); border-radius:6px; font-size:.7em; color:var(--alerta); }
+.mensaje-cam { overflow-wrap:anywhere; z-index:13; padding:6px 12px; border-left:3px solid var(--c); border-radius:6px; background:#000b; font:500 20px/1.2 var(--texto); color:#d8f5df; overflow:hidden; opacity:0; transition:opacity .3s; }
 .mensaje-cam.on { opacity:1; }
 .riesgo-cam { z-index:13; display:flex; align-items:center; justify-content:center; border:2px solid var(--oro); border-radius:8px; background:#000b; font:800 24px var(--titulos); letter-spacing:.08em; text-transform:uppercase; color:var(--oro); opacity:0; transition:opacity .3s; }
 .riesgo-cam.alto { border-color:var(--alerta); color:var(--alerta); }
 .riesgo-cam.on { opacity:1; }
-.aviso-cam { z-index:14; display:flex; align-items:center; justify-content:center; border:3px solid var(--oro); border-radius:10px; background:#000d; font:800 30px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--oro); text-align:center; opacity:0; transform:scale(.9); transition:opacity .3s, transform .3s; }
+.aviso-cam { white-space:nowrap; overflow:hidden; padding:0 14px; z-index:14; display:flex; align-items:center; justify-content:center; border:3px solid var(--oro); border-radius:10px; background:#000d; font:800 30px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--oro); text-align:center; opacity:0; transform:scale(.9); transition:opacity .3s, transform .3s; }
 .aviso-cam.oferta { border-color:var(--alerta); color:var(--alerta); }
 .aviso-cam.on { opacity:1; transform:none; }
 .panel-fuga { z-index:20; display:flex; flex-direction:column; justify-content:center; gap:10px; padding:16px 46px; border-radius:10px; border:2px solid var(--vg); background:#050b07f2; box-shadow:0 14px 44px #000b; opacity:0; }

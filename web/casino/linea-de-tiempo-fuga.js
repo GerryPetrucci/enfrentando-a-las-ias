@@ -61,7 +61,7 @@ export function construirLineaDeTiempo(partida) {
     for (const d of r.tentacion?.delataron ?? []) if (heridas[1 - d] > 0) heridasDespues[1 - d]++;
     const salieronDespues = SEATS.map((s) => salieron[s] || salen[s]);
     // el ultimo registro ya trae sumado el final (bonos) y descontado lo que pierden los capturados: la situacion se muestra con lo de antes de eso
-    const puntosDespues = r.final ? r.puntosAcumulados.map((v, s) => v - r.final.bono[s] + r.final.perdidos[s]) : [...(r.puntosAcumulados ?? puntos)];
+    const puntosDespues = r.final ? r.puntosAcumulados.map((v, s) => v - (r.final.bono?.[s] ?? 0) + (r.final.perdidos?.[s] ?? 0)) : [...(r.puntosAcumulados ?? puntos)];
     const estadoAntes = { tipo: 'estado', alarma: r.oculto?.alarmaAntes ?? 0, cohesion: r.oculto?.cohesionAntes ?? 0, puntos: [...puntos], libres: libresAntes, heridas: [...heridas], salieron: [...salieron] };
     const estadoDespues = { tipo: 'estado', alarma: r.oculto?.alarma ?? 0, cohesion: r.oculto?.cohesion ?? 0, puntos: puntosDespues, libres: SEATS.map((s) => libresAntes[s] && resultados[s] !== 'cayo' && !salen[s]), heridas: heridasDespues, salieron: salieronDespues };
     const medidor = { tipo: 'medidor', alarma: estadoDespues.alarma, cohesion: estadoDespues.cohesion };
@@ -72,11 +72,11 @@ export function construirLineaDeTiempo(partida) {
       pasos: [{
         tipo: 'decidir',
         jugadas: jugadas.map((j) => (j ? { postura: j.postura, metodo: j.metodo } : null)),
-        promesasRotas: SEATS.map((s) => r.promesaRota?.[s] === true),
+        promesasRotas: SEATS.map((s) => r.promesaRota?.[s] === true && !reemplazadas[s]), // si la jugada la puso el juego, la promesa no se la rompio la IA
         mensajes: SEATS.map((s) => r.mensajes?.[s] ?? null),
         razones: SEATS.map((s) => r.razones?.[s] ?? null),
         reemplazadas,
-        ilegibles: SEATS.map((s) => r.ilegibles?.[s] ?? []),
+        ilegibles: SEATS.map((s) => (r.ilegibles?.[s] ?? []).filter((c) => c === 'promesa')), // lo de la tentacion ilegible (vale "no") no se anota aqui: se descubriria antes de la consecuencia
       }],
     });
     crear('verdad', { lineas: lineasDe('verdad'), pasos: [{ tipo: 'riesgo', fallo: r.oculto?.fallo ?? [null, null], pistaFiable: r.oculto?.pistaFiable ?? null, mejorMetodo: r.oculto?.mejorMetodo ?? null }] });
@@ -106,7 +106,7 @@ export const nivelDeAlerta = (alarma) => NIVELES[Number.isFinite(alarma) ? Math.
 
 const POSTURA_TEXTO = { ayudar: 'Ayudar', avanzar: 'Avanzar', sacrificarse: 'Sacrificarse', separarse: 'Por su cuenta' };
 const METODO_TEXTO = { sigilo: 'Sigilo', fuerza: 'Fuerza', engano: 'Engaño', esperar: 'Esperar' };
-const CAMPO_TEXTO = { promesa: 'promesa', aprovechar: 'tentación' };
+const CAMPO_TEXTO = { promesa: 'promesa' }; // un "aprovechar" ilegible no se menciona: vale "no" y adelantaria lo que se revela en la consecuencia
 
 // El sello que cada camara pone sobre la decision: "Ayudar · Engaño". Una jugada que puso el juego lo dice (nunca se le atribuye a la IA) y un campo escrito pero ilegible se anota.
 export function textoDeSello(jugada, { reemplazada = false, ilegibles = [] } = {}) {
@@ -165,7 +165,7 @@ export function puntuarRondas(partida) {
     if (r.salieron?.some(Boolean)) motivos.push('escape anticipado');
     if (r.tentacion?.tipo === 'oferta' && r.tentacion.delataron?.length) motivos.push('oferta aceptada');
     if (r.tentacion?.tipo === 'botin' && r.tentacion.tomo !== null && r.tentacion.tomo !== undefined) motivos.push('botin');
-    if (r.promesaRota?.some(Boolean)) motivos.push('promesa rota');
+    if (r.promesaRota?.some((x, s) => x === true && r.invalidas?.[s] !== true)) motivos.push('promesa rota');
     if (r.final) motivos.push('final');
     return { ronda: r.ronda, puntos: motivos.reduce((t, m) => t + PESOS[m], 0), motivos, registros: [i, i] };
   });

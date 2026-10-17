@@ -124,7 +124,7 @@ export class Mesa extends MesaBase {
   limpiar() {
     this.ficha++;
     for (const c of this.camaras) {
-      for (const nodo of [c.sello, c.mensaje, c.riesgo, c.aviso]) { nodo.classList.remove('on', 'juego', 'rota'); nodo.textContent = ''; nodo.getAnimations().forEach((x) => x.cancel()); }
+      for (const nodo of [c.sello, c.mensaje, c.riesgo, c.aviso]) { nodo.classList.remove('on', 'juego', 'rota'); nodo.textContent = ''; nodo.style.fontSize = ''; nodo.getAnimations().forEach((x) => x.cancel()); }
       c.escena.classList.remove('tropiezo', 'caida');
       c.cuadro.getAnimations().forEach((x) => x.cancel());
       c.sil?.getAnimations().forEach((x) => x.cancel());
@@ -142,6 +142,12 @@ export class Mesa extends MesaBase {
     this.cabecera.querySelector('.mano').textContent = `Situación ${beat.mano} / ${RONDAS_TOPE}`;
   }
   fijarEstado(e) { this.aplicarEstado(e); }
+  // Un texto de una sola linea se achica de dos en dos hasta caber en su caja (minimo 16 px): un nombre largo o una marca de mas no se cortan.
+  encajar(nodo, minimo = 16) {
+    nodo.style.fontSize = '';
+    let tam = parseFloat(getComputedStyle(nodo).fontSize);
+    while (nodo.scrollWidth > nodo.clientWidth + 1 && tam > minimo) { tam -= 2; nodo.style.fontSize = `${tam}px`; }
+  }
   ponerHora(beat) { for (const c of this.camaras) c.hora.textContent = horaDeBeat(beat); }
   mostrarSubtitulos(beat) {
     super.mostrarSubtitulos(beat);
@@ -188,6 +194,7 @@ export class Mesa extends MesaBase {
       c.sello.innerHTML = `<span>${esc(texto)}</span>${d.promesasRotas[s] ? '<span class="rota-cam">Promesa rota</span>' : ''}`;
       c.sello.classList.toggle('juego', d.reemplazadas[s]);
       c.sello.classList.add('on');
+      this.encajar(c.sello, 18);
       if (d.mensajes[s]) { c.mensaje.textContent = `“${d.mensajes[s]}”`; c.mensaje.classList.add('on'); }
       const postura = { ayudar: 'ayuda', sacrificarse: 'ayuda', separarse: 'separa' }[j.postura]; // avanzar no se actua: la silueta espera de pie
       if (postura) this.correrAccion(s, postura, postura === 'ayuda' ? 1100 : 1300);
@@ -250,6 +257,7 @@ export class Mesa extends MesaBase {
         const c = this.camaras[a.asiento];
         c.aviso.textContent = a.texto;
         c.aviso.className = `fijo aviso-cam on ${a.clase}`;
+        this.encajar(c.aviso, 16);
       }
     }
     this.aplicarFinDeSituacion(beat, 900);
@@ -260,6 +268,7 @@ export class Mesa extends MesaBase {
   actuarTentacion(t) {
     if (t.clase === 'botin') {
       for (const [s, c] of this.camaras.entries()) {
+        if (!c.st.libre) continue; // una camara sin prisionero (SIN SEÑAL o SALIDA) no muestra el botin
         const { ancho, alto } = this.L.camaras[s].escena, h = 0.16 * alto;
         c.escena.insertAdjacentHTML('afterbegin', `<div class="pieza-fuga botin" style="left:${0.55 * ancho - h / 2}px;top:${0.8 * alto - h}px;width:${h}px;height:${h}px">${PIEZAS.botin.svg()}</div>`);
       }
