@@ -28,14 +28,18 @@ test('las constantes que muestra la escena son las del motor (la web no puede im
 test('cada ronda cuenta su historia en orden: apertura, prediccion, lanzamiento, tres enfrentamientos y cierre; el final solo al terminar', async () => {
   for (const p of await muchasTD()) {
     const beats = construirLineaDeTiempo(p);
-    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) assert.deepEqual(bs.map((b) => b.tipo), TIPOS, `seed ${p.seed} ronda ${ronda}`);
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const hayComentarios = registrosDe(p, ronda).some((r) => r.narracion.some((l) => l.tipo === 'comentario'));
+      assert.deepEqual(bs.map((b) => b.tipo), [...TIPOS, ...(hayComentarios ? ['comentarios'] : [])], `seed ${p.seed} ronda ${ronda}`);
+      for (const b of bs.filter((x) => x.tipo === 'cierre')) assert.ok(b.lineas.length <= 4 && b.lineas.every((l) => l.tipo === 'cierre'), `${b.id}: el cierre solo lleva sus 4 lineas`);
+    }
     const finales = beats.filter((b) => b.tipo === 'final');
     assert.equal(finales.length, p.truncada ? 0 : 1);
     if (finales.length) assert.equal(beats.at(-1).tipo, 'final');
     assert.equal(new Set(beats.map((b) => b.id)).size, beats.length, 'ids unicos');
     for (const b of beats) assert.ok(Number.isFinite(b.minMs) && b.minMs >= MIN_MS[b.tipo], `${b.id}: minMs`);
   }
-  assert.deepEqual(Object.keys(MIN_MS).sort(), [...new Set(TIPOS), 'final'].sort());
+  assert.deepEqual(Object.keys(MIN_MS).sort(), [...new Set(TIPOS), 'comentarios', 'final'].sort());
 });
 
 test('cubre todos los registros en orden y no pierde ni repite una sola linea de la narracion; los comentarios esperan al cierre de su ronda', async () => {
@@ -44,9 +48,9 @@ test('cubre todos los registros en orden y no pierde ni repite una sola linea de
     assert.deepEqual([...new Set(beats.map((b) => b.registro))], p.rondas.map((_, i) => i), `seed ${p.seed}: todos los registros, en orden`);
     const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto)).sort();
     assert.deepEqual(dichas, p.rondas.flatMap((r) => r.narracion).map((l) => nombres(p)(l.texto)).sort(), `seed ${p.seed}: se pierde o se repite una linea`);
-    for (const b of beats.filter((x) => x.tipo !== 'cierre')) {
+    for (const b of beats.filter((x) => x.tipo !== 'comentarios')) {
       const ultimaDeRonda = b === beats.filter((x) => x.mano === b.mano && x.tipo !== 'final').at(-1);
-      if (!(ultimaDeRonda && p.truncada)) assert.ok(b.lineas.every((l) => l.tipo !== 'comentario'), `${b.id}: un comentario fuera del cierre`);
+      if (!(ultimaDeRonda && p.truncada)) assert.ok(b.lineas.every((l) => l.tipo !== 'comentario'), `${b.id}: un comentario fuera del beat de comentarios`);
     }
     for (const b of beats) assert.ok(b.lineas.every((l) => !/\{\d\}/.test(l.texto)), 'ningun {n} sin resolver');
     assert.ok(beats.filter((b) => b.tipo === 'prediccion').every((b) => b.texto === ''), 'las tarjetas se eligen en silencio');
@@ -269,4 +273,28 @@ test('el cierre de la final nombra a la pieza y al eliminado, o dice que nadie c
   assert.deepEqual(textoDeFinal({ pieza: null, eliminado: 2 }, nombre), { grande: 'Nadie gana la pieza', detalle: 'C queda eliminado' });
   assert.deepEqual(textoDeFinal({ pieza: 0, eliminado: null }, nombre), { grande: 'A gana la pieza', detalle: 'Nadie queda eliminado' });
   assert.deepEqual(textoDeFinal(null, nombre), { grande: '', detalle: '' });
+});
+
+test('el beat de comentarios llega justo despues del cierre, solo trae comentarios y no mueve nada de la mesa', async () => {
+  let vistos = 0;
+  for (const p of await muchasTD()) {
+    const beats = construirLineaDeTiempo(p);
+    beats.forEach((b, i) => {
+      if (b.tipo !== 'comentarios') return;
+      vistos++;
+      assert.equal(beats[i - 1].tipo, 'cierre', `${b.id}: va despues del cierre`);
+      assert.ok(b.lineas.length > 0 && b.lineas.every((l) => l.tipo === 'comentario'), b.id);
+      assert.deepEqual(b.pasos, [], `${b.id}: no mueve nada`);
+      assert.equal(b.registro, beats[i - 1].registro);
+    });
+  }
+  assert.ok(vistos > 20, `cobertura: ${vistos} beats de comentarios`);
+});
+
+test('el banner no dice "en secreto" en la ronda 4 (la tarjeta se pone sola) y dice que se comenta la ronda', async () => {
+  const beats = construirLineaDeTiempo(await jugarTD(3));
+  const por = (ronda, tipo) => beats.find((b) => b.mano === ronda && b.tipo === tipo);
+  assert.equal(bannerDe(por(4, 'prediccion')).fase, 'La última tarjeta se pone sola');
+  assert.equal(bannerDe(por(1, 'prediccion')).fase, 'Cada quien elige su tarjeta en secreto');
+  assert.equal(bannerDe(por(2, 'comentarios')).fase, 'Lo que dejó la ronda');
 });

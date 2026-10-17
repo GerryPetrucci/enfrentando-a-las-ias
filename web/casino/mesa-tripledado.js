@@ -19,7 +19,7 @@ const posicionEnBandeja = (id) => (id === 'rojo' ? 9 : id === 'azul' ? 10 : Numb
 
 // Los metodos se llaman con verbos distintos de los campos (this.panel, this.banner... son piezas del DOM): un campo con el mismo nombre taparia al metodo.
 export class Mesa extends MesaBase {
-  static METODOS = { apertura: 'nuevaRonda', prediccion: 'dejarTarjetas', lanzamiento: 'lanzarDados', enfrentamiento: 'jugarEnfrentamiento', cierre: 'cerrarRonda', final: 'terminar' };
+  static METODOS = { apertura: 'nuevaRonda', prediccion: 'dejarTarjetas', lanzamiento: 'lanzarDados', enfrentamiento: 'jugarEnfrentamiento', cierre: 'cerrarRonda', comentarios: 'comentar', final: 'terminar' };
 
   constructor(formato, partida, opciones) {
     super(formato, partida, opciones, colocarTripleDado(formato));
@@ -63,10 +63,10 @@ export class Mesa extends MesaBase {
     f.caja.classList.toggle('reemplazo', st.reemplazo);
   }
   // Las cuatro tarjetas de un jugador: las ya gastadas tachadas; la elegida en dorado (solo cuando se sabe); una tarjeta boca abajo mientras nadie la ve.
-  pintarTarjetas(s, { elegida = null, oculta = null, sello = null, camara = false } = {}) {
+  pintarTarjetas(s, { elegida = null, oculta = null, sello = null, camara = false, nota = null } = {}) {
     const f = this.filas[s];
     const chips = TARJETAS.map((t) => `<span class="tj${f.st.usadas.includes(t) ? ' usada' : ''}${t === elegida ? ' elegida' : ''}">${t}${t === elegida && sello ? `<span class="sello-tj ${sello === 'acierta' ? 'acierta' : 'falla'}">${sello === 'acierta' ? 'Acierta' : 'No acierta'}</span>` : ''}</span>`).join('');
-    f.tarjetas.innerHTML = `${chips}${oculta ? `<span class="tj oculta">${esc(oculta)}</span>` : ''}${camara ? '<span class="pastilla-camara">Cámara</span>' : ''}`;
+    f.tarjetas.innerHTML = `${chips}${oculta ? `<span class="tj oculta">${esc(oculta)}</span>` : ''}${camara ? '<span class="pastilla-camara">Cámara</span>' : ''}${nota ? `<span class="marca-tj">${esc(nota)}</span>` : ''}`;
   }
   // Puntos y tarjetas gastadas de cada jugador. Las casillas de tarjetas no se repintan aqui (al cierre conservan el sello de la ronda hasta que empieza la siguiente).
   aplicarEstado(e) {
@@ -136,7 +136,8 @@ export class Mesa extends MesaBase {
       f.st.reemplazo = f.st.reemplazo || p.reemplazada;
       this.pintarFila(p.asiento);
       const marca = p.reemplazada ? 'El juego elige' : p.forzada ? 'Se pone sola' : 'Tarjeta ?';
-      this.pintarTarjetas(p.asiento, p.tarjeta !== null ? { elegida: p.tarjeta, camara: true } : { oculta: marca });
+      // con la camara se ve la tarjeta, pero una tarjeta forzada o puesta por el juego se marca igual (no se atribuye a la IA)
+      this.pintarTarjetas(p.asiento, p.tarjeta !== null ? { elegida: p.tarjeta, camara: true, nota: p.reemplazada || p.forzada ? marca : null } : { oculta: marca });
       if (p.tarjeta !== null) f.tarjetas.querySelector('.elegida')?.classList.add('camara');
     }
     this.sonar({ tipo: 'elegir' });
@@ -188,7 +189,9 @@ export class Mesa extends MesaBase {
         const dado = el('', htmlDado(p.valores[i], COLOR_DE(id))).firstElementChild; // abierto: aqui es donde el publico conoce un dado rojo o azul
         dado.classList.add('combo');
         f.dados[i].append(dado);
-        this.programar(retraso, () => this.anim(dado, [{ transform: `translate(${desde.x - destino.x}px, ${desde.y - destino.y}px) scale(${this.L.bandejaLado / this.L.dado.lado})`, opacity: 0.4 }, { opacity: 1, offset: 0.2 }, { transform: 'none', opacity: 1 }], { duration: 560, fill: 'both', easing: 'cubic-bezier(.2,.9,.3,1)' }));
+        // la animacion se crea ya, con su demora: si se creara despues, el dado se veria quieto en su casilla, saltaria a la bandeja y volveria a subir
+        this.anim(dado, [{ transform: `translate(${desde.x - destino.x}px, ${desde.y - destino.y}px) scale(${this.L.bandejaLado / this.L.dado.lado})`, opacity: 0.4 }, { opacity: 1, offset: 0.2 }, { transform: 'none', opacity: 1 }], { duration: 560, delay: retraso, fill: 'both', easing: 'cubic-bezier(.2,.9,.3,1)' });
+        if (hueco && (id === 'rojo' || id === 'azul')) hueco.innerHTML = htmlDado(p.valores[i], COLOR_DE(id)); // su valor ya es publico: el dado de la bandeja se abre tambien
         hueco?.classList.add('usado', 'reciente');
         retraso += 40;
       });
@@ -230,6 +233,9 @@ export class Mesa extends MesaBase {
     this.programar(900, () => { if (e) this.aplicarEstado(e); });
     await this.esperar(Math.min(ms * 0.4, 1600));
   }
+
+  // El beat de comentarios solo cambia lo que se dice (los subtitulos); la mesa se queda como esta.
+  async comentar(beat, ms) { await this.esperar(ms); }
 
   mostrarPanel() { this.raiz.classList.add('con-panel'); this.anim(this.panel, [{ opacity: 0, transform: 'scale(.9)' }, { opacity: 1, transform: 'none' }], { duration: 420, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' }); }
 

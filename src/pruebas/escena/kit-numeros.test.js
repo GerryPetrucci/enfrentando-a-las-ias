@@ -153,3 +153,9 @@ test('la placa de Triple dado lleva avatar, nombre y "N pts" con el color de pal
   assert.doesNotMatch(htmlInfoPuntos({ nombre: '<img src=x onerror=1>' }, '<b>'), /<img|<b><b>/);
   for (const sinJugador of [null, undefined, {}]) assert.match(htmlInfoPuntos(sinJugador, '0'), /class="nom">Jugador</);
 });
+
+test('mesa.css apaga bajo un panel (corte, cierre o final) tambien las tarjetas, los dados, las etiquetas y las barras de Triple dado', () => {
+  const texto = css();
+  const regla = /\.con-panel [^{]*\{[^}]*opacity:\.15/.exec(texto)?.[0] ?? '';
+  for (const sel of ['.tarjetas-td', '.ranura-dado', '.bandeja-td', '.etq-comb', '.pts-comb', '.barra-ronda']) assert.ok(regla.includes(sel), `.con-panel no apaga ${sel}`);
+});

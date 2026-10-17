@@ -3,7 +3,7 @@
 // vienen fijados en el registro (la animacion de rebote la calcula dados.js).
 //
 // Un beat: { id, mano, tipo, registro, asiento, camara, texto, lineas, minMs, reemplazo, pasos }   (mano es el numero de ronda: asi se llama la unidad de un clip en todas las escenas)
-//   tipo      apertura | prediccion | lanzamiento | enfrentamiento (x3) | cierre | final
+//   tipo      apertura | prediccion | lanzamiento | enfrentamiento (x3) | cierre | comentarios (solo si la ronda tiene) | final
 //   camara    los asientos cuya tarjeta ve el publico en esa ronda (camara.js: 2 de 4 por defecto)
 //   reemplazo alguna jugada del beat la puso el juego por una respuesta ilegal (la narracion del motor ya lo dice y no se atribuye a la IA)
 //   pasos     los movimientos de la animacion (vocabulario fijado en el plan, tarea 3):
@@ -12,7 +12,8 @@
 //     combinar {asiento, categoria, puntosD} · barra {puntosRondaD[]} · voltear {tarjetas[], sinUsar[][{color, valor}], aciertos[]} · premio {asiento, tarjeta, baseD, puntosD} · final {final}
 //
 // Las tarjetas se eligen en secreto: solo la camara las muestra antes del cierre. Un dado rojo o azul se conoce solo en el enfrentamiento que lo usa; los que quedan sin usar, en el cierre.
-// Los comentarios del motor se dicen al FINAL del cierre de su ronda, nunca antes (en una ronda cortada, sin cierre, van al final de lo ultimo que se conto).
+// Los comentarios del motor se dicen DESPUES del cierre de su ronda, nunca antes, en su propio beat (el cierre ya trae cuatro lineas largas y juntos no caben en los subtitulos);
+// en una ronda cortada, sin cierre, van al final de lo ultimo que se conto.
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
 import { elegirCamara } from './camara.js';
@@ -21,7 +22,7 @@ import { nombrar, duracion } from './linea-comun.js';
 export const RONDAS_TOPE = 4; // el tope de rondas del motor (RONDAS en src/juegos/tripledado/constantes.js): una prueba los compara
 export const JUGADORES_TOPE = 4;
 export const CAMARA_POR_DEFECTO = 2; // de 4 jugadores: la tarjeta de dos se ve antes del cierre
-export const MIN_MS = { apertura: 1800, prediccion: 2400, lanzamiento: 4200, enfrentamiento: 4200, cierre: 4800, final: 5000 };
+export const MIN_MS = { apertura: 1800, prediccion: 2400, lanzamiento: 4200, enfrentamiento: 4200, cierre: 4800, comentarios: 2400, final: 5000 };
 
 const SEATS = [0, 1, 2, 3];
 const aDoceavos = (puntos) => Math.round(Number(puntos) * 12); // 3.333... -> 40: exacto aunque venga como decimal
@@ -83,13 +84,14 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     puntosD = c.acumulados.map(aDoceavos);
     usadas = usadas.map((x, s) => [...x, pred?.oculto?.tarjetas?.[s]].filter(Boolean));
     crear('cierre', {
-      lineas: [...lineasDe('cierre'), ...pendientes], reemplazo: pred ? pred.invalidas?.some((x) => x === true) === true : false,
+      lineas: lineasDe('cierre'), reemplazo: pred ? pred.invalidas?.some((x) => x === true) === true : false,
       pasos: [
         { tipo: 'voltear', tarjetas: c.tarjetas, sinUsar, aciertos: c.aciertos },
         ...SEATS.filter((s) => c.aciertos[s]).map((s) => ({ tipo: 'premio', asiento: s, tarjeta: c.tarjetas[s], baseD: aDoceavos(c.totales[s]), puntosD: aDoceavos(c.puntos[s]) })),
         estado(puntosD, usadas),
       ],
     });
+    if (pendientes.length) crear('comentarios', { lineas: pendientes });
     pendientes = [];
   });
 
@@ -124,7 +126,8 @@ export function puntosTexto(doceavos) {
 export function bannerDe(beat) {
   const ronda = Number.isInteger(beat?.mano) ? beat.mano : 1;
   if (beat?.tipo === 'final') return { ronda, fase: 'Final' };
-  const fase = { apertura: 'Nadie ha visto los dados', prediccion: 'Cada quien elige su tarjeta en secreto', lanzamiento: 'Se lanzan los dados', cierre: 'Cierre de la ronda' }[beat?.tipo]
+  if (beat?.tipo === 'prediccion' && beat.pasos?.some((p) => p.tipo === 'elegir' && p.forzada)) return { ronda, fase: 'La última tarjeta se pone sola' };
+  const fase = { apertura: 'Nadie ha visto los dados', prediccion: 'Cada quien elige su tarjeta en secreto', lanzamiento: 'Se lanzan los dados', cierre: 'Cierre de la ronda', comentarios: 'Lo que dejó la ronda' }[beat?.tipo]
     ?? (beat?.tipo === 'enfrentamiento' ? `Enfrentamiento ${beat.k ?? ''} de 3`.replace('  ', ' ') : '');
   return { ronda, fase };
 }

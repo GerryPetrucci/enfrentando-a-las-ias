@@ -180,7 +180,8 @@
 .ranura .carta.fade { opacity:.45; filter:grayscale(.7); }
 .caja-info.fuera, .ranura.fuera { opacity:.38; filter:grayscale(1); }
 .estado-sol.fuera { opacity:.75; }
-.con-panel .fila-sol, .con-panel .caja-info, .con-panel .ranura, .con-panel .estado-sol { opacity:.15; }
+.con-panel .fila-sol, .con-panel .caja-info, .con-panel .ranura, .con-panel .estado-sol,
+.con-panel .tarjetas-td, .con-panel .ranura-dado, .con-panel .bandeja-td, .con-panel .etq-comb, .con-panel .pts-comb, .con-panel .barra-ronda { opacity:.15; }
 .pill-carta { position:absolute; left:50%; bottom:-10px; transform:translateX(-50%); z-index:14; padding:2px 12px; border-radius:12px; font:800 22px var(--titulos); letter-spacing:.12em; text-transform:uppercase; background:var(--oro); color:var(--noche); white-space:nowrap; }
 .pill-carta.anulada { background:var(--rojo); color:#fff; }
 .f-16x9 .pill-carta { bottom:-12px; font-size:24px; }
@@ -228,6 +229,7 @@
 .tj.oculta { flex:1.5; border-style:dashed; color:#c9c9d2; font-size:17px; }
 .tj .sello-tj { position:absolute; left:50%; top:-16px; transform:translateX(-50%); padding:1px 10px; border-radius:10px; font:800 16px var(--titulos); letter-spacing:.08em; background:var(--oro); color:var(--noche); white-space:nowrap; text-decoration:none; box-shadow:0 2px 8px #000a; }
 .tj .sello-tj.falla { background:var(--rojo); color:#fff; }
+.marca-tj { flex:none; margin-left:4px; font:700 15px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:#c9c9d2; white-space:nowrap; }
 .tarjetas-td .pastilla-camara { position:static; transform:none; display:inline-flex; flex:none; padding:0 4px; background:none; font-size:16px; color:var(--rojo); }
 .ranura-dado { z-index:12; display:flex; align-items:center; justify-content:center; }
 .ranura-dado .dado { --lado:var(--lado-grande, 96px); }

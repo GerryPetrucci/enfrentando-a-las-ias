@@ -25,6 +25,12 @@ const ESCENAS = {
     jugadores: 4,
     camaraPorDefecto: 2, // a cuantos se les ve la tarjeta antes del cierre de la ronda
     unidad: 'ronda',
+    // las partidas guardadas con el motor anterior no traen los doceavos ni los datos de los dados ocultos: salen apagadas en la lista
+    comprobar: (partida) => {
+      const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+      const completo = rondas.every((r) => (r?.fase === 'prediccion' ? Array.isArray(r.oculto?.tarjetas) && Array.isArray(r.lanzamiento?.blancos) : Array.isArray(r?.puntosD) && Array.isArray(r.puntosRondaD) && Array.isArray(r.combos) && Array.isArray(r.oculto?.sinUsar)));
+      return completo ? null : 'formato anterior: la partida se guardó con un motor que no escribía todos los datos que usa la escena';
+    },
     linea: () => import('./linea-de-tiempo-tripledado.js'),
     mesa: () => import('./mesa-tripledado.js'),
   },

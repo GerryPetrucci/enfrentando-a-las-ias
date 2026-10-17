@@ -37,12 +37,12 @@ function dibujar16x9() {
     return {
       fila: r(x, y, 414, 520),
       placa: r(x + 8, y + 8, 398, 52),
-      tarjetas: r(x + 8, y + 66, 398, 44),
-      dados: [0, 1, 2].map((i) => r(x + 15 + i * 130, y + 130, 120, 120)),
-      combinacion: r(x + 8, y + 262, 398, 44),
-      puntos: r(x + 8, y + 312, 398, 44),
-      bandeja: r(x + 8, y + 372, 398, 34),
-      barra: r(x + 8, y + 424, 398, 20),
+      tarjetas: r(x + 8, y + 82, 398, 44),
+      dados: [0, 1, 2].map((i) => r(x + 15 + i * 130, y + 142, 120, 120)),
+      combinacion: r(x + 8, y + 274, 398, 44),
+      puntos: r(x + 8, y + 324, 398, 44),
+      bandeja: r(x + 8, y + 384, 398, 34),
+      barra: r(x + 8, y + 436, 398, 20),
     };
   });
   return {
