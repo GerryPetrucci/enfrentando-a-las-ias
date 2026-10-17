@@ -231,18 +231,16 @@ export function crearMapa(seed, k, { bioma = 'continente' } = {}) {
   const c = CONFIG[k];
   if (!c) throw new Error(`Reinos invalidos: ${k} (de 2 a 5)`);
   if (!BIOMAS.includes(bioma)) throw new Error(`bioma invalido: ${String(bioma)} (validos: ${BIOMAS.join(', ')})`);
-  const base = PARAMETROS[bioma];
-  let terreno, tiles;
-  for (let ajuste = 0; ajuste <= AJUSTES_MAX; ajuste++) {
+  const base = PARAMETROS[bioma], minTierra = c.N * 32; // al menos 32 celdas de tierra por region
+  let terreno, tiles = [];
+  for (let ajuste = 0; ajuste <= AJUSTES_MAX && tiles.length < minTierra; ajuste++) {
     const P = ajuste === 0 ? base : { ...base, sesgo: base.sesgo + 0.02 * ajuste };
-    for (let intento = 0; intento < 40; intento++) {
+    for (let intento = 0; intento < 40 && tiles.length < minTierra; intento++) {
       terreno = generarTerreno((seed + intento * 7919) >>> 0, c.W, c.H, P);
       tiles = mayorContinente(terreno, c.W, c.H);
-      if (tiles.length >= c.N * 32) break;
     }
-    if (tiles.length >= c.N * 32) break;
   }
-  if (tiles.length < c.N * 32) throw new Error(`no hay tierra suficiente para el bioma ${bioma} con ${k} reinos (seed ${seed})`);
+  if (tiles.length < minTierra) throw new Error(`no hay tierra suficiente para el bioma ${bioma} con ${k} reinos (seed ${seed})`);
   const rng = crearRng((seed ^ 0x9e3779b9) >>> 0);
   const { region, regs } = regionar(tiles, c.N, rng, c.W, c.H);
   sembrarRecursos(regs, terreno, rng);
