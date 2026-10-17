@@ -108,14 +108,15 @@ async function principal() {
 
   const datos = JSON.parse(readFileSync(resolve('data', a.archivo), 'utf8'));
   const partida = Number(a.partida ?? 1);
-  const juego = datos.partidas?.[partida - 1]?.juego?.id ?? datos.juego?.id;
-  if (!datos.partidas?.[partida - 1]) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
-  const motivo = motivoDeNoReproducible(juego, datos.partidas[partida - 1]); // antes de buscar el servidor: una partida que la escena no puede reproducir no merece capturas
+  const guardada = datos.partidas?.[partida - 1];
+  const juego = guardada?.juego?.id ?? datos.juego?.id;
+  if (!guardada) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
+  const motivo = motivoDeNoReproducible(juego, guardada); // antes de buscar el servidor: una partida que la escena no puede reproducir no merece capturas
   if (motivo) { console.error(`La partida ${partida} no se puede capturar: ${motivo}.`); process.exit(1); }
   try { await fetch(`${base}/escena.html`); } catch { console.error(`No hay servidor en ${base}. Abre otra terminal y corre: node src/servidor.js`); process.exit(1); }
   let linea;
   try { linea = await escenaDe(juego).linea(); } catch (e) { console.error(e.message); process.exit(1); }
-  const beats = linea.construirLineaDeTiempo(datos.partidas?.[partida - 1]);
+  const beats = linea.construirLineaDeTiempo(guardada);
   if (!beats.length) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
   const carpeta = resolve(a.salida ?? 'grabaciones/capturas-escena');
   mkdirSync(carpeta, { recursive: true });
