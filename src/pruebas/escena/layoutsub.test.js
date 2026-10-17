@@ -65,6 +65,15 @@ test('el contador cabe "600.0" (cinco caracteres), la tira cabe las 19 casillas 
   }
 });
 
+test('el sello de la subasta tiene su sitio dentro de la zona y de la consola (no tapa la tira)', () => {
+  for (const f of ['9x16', '16x9']) {
+    const L = colocarSubasta(f);
+    assert.ok(dentro(L.consola.sello, L.zona), `${f}: el sello se sale de la zona`);
+    assert.ok(sinChoque(L.consola.sello, L.tira), `${f}: el sello tapa la tira`);
+    assert.ok(L.consola.sello.ancho >= 400, `${f}: ancho del sello`);
+  }
+});
+
 test('un formato desconocido da un error claro que dice cuales hay', () => {
   for (const raro of [undefined, null, 'cuadrado', 7, '', '__proto__']) assert.throws(() => colocarSubasta(raro), /formato desconocido.*9x16 y 16x9/);
 });

@@ -17,7 +17,7 @@ function dibujar9x16() {
   });
   return {
     etiqueta: r(60, 285, 890, 36), cabecera: r(60, 330, 890, 64),
-    consola: { marco: r(60, 402, 890, 200), contador: r(100, 452, 810, 130), luz: r(760, 414, 150, 30), rotulo: r(100, 414, 520, 30) },
+    consola: { marco: r(60, 402, 890, 200), contador: r(100, 452, 810, 130), luz: r(760, 414, 150, 30), rotulo: r(100, 414, 520, 30), sello: r(230, 570, 620, 64) },
     filas, tira: r(60, 1234, 890, 40), casillaTira: { lado: 40, hueco: 6 }, subtitulos: r(60, 1282, 890, 218), panel: r(90, 620, 830, 560),
   };
 }
@@ -29,7 +29,7 @@ function dibujar16x9() {
   });
   return {
     etiqueta: r(96, 990, 1728, 36), cabecera: r(96, 54, 1728, 64),
-    consola: { marco: r(96, 126, 640, 420), contador: r(120, 210, 592, 150), luz: r(560, 150, 152, 34), rotulo: r(120, 150, 400, 34) },
+    consola: { marco: r(96, 126, 640, 420), contador: r(120, 210, 592, 150), luz: r(560, 150, 152, 34), rotulo: r(120, 150, 400, 34), sello: r(140, 420, 520, 80) },
     filas, tira: r(96, 560, 640, 36), casillaTira: { lado: 28, hueco: 4 }, subtitulos: r(96, 872, 1728, 110), panel: r(360, 200, 1200, 560),
   };
 }

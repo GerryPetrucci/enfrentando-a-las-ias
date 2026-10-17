@@ -277,5 +277,6 @@
 .fichas-sub { z-index:12; display:flex; align-items:center; gap:4px; font:700 20px var(--titulos); letter-spacing:.06em; color:var(--oro); white-space:nowrap; }
 .tira-sub { z-index:12; display:flex; gap:var(--hueco); align-items:center; }
 .cas { flex:none; display:flex; align-items:center; justify-content:center; width:var(--cas); height:var(--cas); border-radius:50%; background:#16161c; border:2px solid #2f2f3a; color:#5b5b66; font:700 calc(var(--cas) * .45) var(--titulos); }
+.sello-sub { font-size:44px; padding:4px 24px; border-width:5px; }
 .cas.ganada { background:var(--c); color:#101014; border-color:#fff6; }
 .cas.anulada { background:#3a3a44; color:#9a9aa6; }

@@ -141,7 +141,7 @@ export class Mesa extends MesaBase {
     if (this.rapido) {
       this.contador.textContent = seg(max);
       for (const o of sueltan) soltar(o);
-      this.luz.classList.remove('vivo');
+      this.luz.classList.remove('vivo'); this.luz.textContent = 'Fin';
       return;
     }
     await new Promise((fin) => {
@@ -161,15 +161,15 @@ export class Mesa extends MesaBase {
       };
       paso();
     });
-    this.luz.classList.remove('vivo');
+    this.luz.classList.remove('vivo'); this.luz.textContent = 'Fin';
   }
 
   async mostrarApuestas(beat, ms) { await this.esperar(ms); } // solo cambian los subtitulos: la mesa se queda como esta
 
   async resolver(beat, ms) {
     const marcar = (texto, clase) => {
-      const c = centro(this.L.consola.marco);
-      this.sello.textContent = texto; this.sello.className = `sello ${clase}`;
+      const c = centro(this.L.consola.sello); // su sitio lo da el diseno: no tapa el numero del contador ni la tira
+      this.sello.textContent = texto; this.sello.className = `sello sello-sub ${clase}`;
       Object.assign(this.sello.style, { left: `${c.x}px`, top: `${c.y}px` });
       const base = 'translate(-50%, -50%) rotate(-4deg)';
       this.anim(this.sello, [{ opacity: 0, transform: `${base} scale(2.2)` }, { opacity: 1, transform: `${base} scale(1)` }], { duration: 320, fill: 'forwards', easing: 'cubic-bezier(.2,1.2,.4,1)' });
