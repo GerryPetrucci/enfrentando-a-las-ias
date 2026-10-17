@@ -18,6 +18,8 @@ export const MAPA = {
   'carta-2.ogg': { paquete: 'casino', origen: 'card-slide-2.ogg' },
   'voltear-1.ogg': { paquete: 'casino', origen: 'card-place-1.ogg' },
   'ficha-3.ogg': { paquete: 'casino', origen: 'chip-lay-3.ogg' },
+  'dado-1.ogg': { paquete: 'casino', origen: 'dice-throw-1.ogg' },
+  'dado-2.ogg': { paquete: 'casino', origen: 'die-throw-2.ogg' },
   'tic-1.ogg': { paquete: 'interface', origen: 'tick_001.ogg' },
   'anuncio-1.ogg': { paquete: 'interface', origen: 'bong_001.ogg' },
   'duda-1.ogg': { paquete: 'interface', origen: 'question_002.ogg' },

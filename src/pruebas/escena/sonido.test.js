@@ -149,3 +149,15 @@ test('los pasos de Mayor o menor y de El numero solitario suenan con los efectos
   assert.deepEqual(eventosDePaso({ tipo: 'estado' }), []);
   assert.deepEqual(eventosDePaso({ tipo: 'roles' }), [], 'los pasos que solo cambian el texto o el estado no suenan');
 });
+
+test('los pasos de Triple dado suenan con los efectos fijados en el plan: el lanzamiento con el efecto de dados y lo demas con los que ya existian', () => {
+  const casos = [['lanzar', ['dado']], ['subir', ['carta']], ['elegir', ['carta']], ['voltear', ['voltear']], ['premio', ['gana']]];
+  for (const [tipo, esperado] of casos) assert.deepEqual(eventosDePaso({ tipo }), esperado, tipo);
+  for (const mudo of ['combinar', 'barra', 'estado', 'final']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
+});
+
+test('el efecto de dados trae dos muestras grabadas (para elegir de oido) y un respaldo sintetizado de tres golpes', () => {
+  assert.deepEqual(EVENTOS.dado.muestras, ['audio/dado-1.ogg', 'audio/dado-2.ogg']);
+  assert.equal(EVENTOS.dado.sintetico.ruidos.length, 3);
+  assert.ok(readFileSync(audio('LEEME.md'), 'utf8').includes('dado-1.ogg'), 'el LEEME dice de donde sale cada muestra de dados');
+});
