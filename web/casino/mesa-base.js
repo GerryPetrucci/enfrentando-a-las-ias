@@ -53,6 +53,10 @@ export class MesaBase {
     const dichas = beat.lineas.map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' ');
     const razon = this.razon && beat.razon ? `<div class="razon"><small>${esc(this.nombre(beat.asiento))} piensa</small>${esc(beat.razon)}</div>` : '';
     this.subtitulos.innerHTML = `${dichas}${razon}`;
+    this.ajustarSubtitulos();
+  }
+  // El texto se achica de dos en dos hasta caber en su caja (minimo 20 px).
+  ajustarSubtitulos() {
     this.subtitulos.style.fontSize = '';
     let tam = parseFloat(getComputedStyle(this.subtitulos).fontSize);
     while (this.subtitulos.scrollHeight > this.subtitulos.clientHeight + 1 && tam > 20) { tam -= 2; this.subtitulos.style.fontSize = `${tam}px`; }

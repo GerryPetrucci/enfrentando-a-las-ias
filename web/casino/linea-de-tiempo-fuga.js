@@ -24,6 +24,9 @@ export const MIN_MS = { apertura: 2600, decisiones: 3800, verdad: 3400, resultad
 // Lo que vale cada final (PUNTOS en src/juegos/fuga/constantes.js; una prueba los compara). La escena final los muestra y marca el que se cumplio.
 export const REGLA_OCULTA = { conjunto: 10, solo: 7, abandonado: 9, anticipada: 7, capturado: 0 };
 
+export const ALARMA_MAX = 5; // ALARMA_MAX y COHESION_MAX del motor (una prueba los compara)
+export const COHESION_MAX = 3;
+const NIVELES = ['tranquila', 'tranquila', 'inquieta', 'en alerta', 'en alerta', 'desatada']; // NIVELES_ALERTA del motor
 const SEATS = [0, 1];
 
 // Si la jugada de un asiento la puso el juego (postura o metodo ilegibles: el motor pone "avanzar con sigilo"), la linea no dice que la eligio: "X ayuda..." pasa a decir que la puso el juego.
@@ -97,6 +100,45 @@ export function construirLineaDeTiempo(partida) {
   }
   return beats;
 }
+
+// ---- Lo que escribe la escena (etiquetas, sellos, avisos): vocabulario suave, nunca delatar, abandonar ni traicion ----
+export const nivelDeAlerta = (alarma) => NIVELES[Number.isFinite(alarma) ? Math.max(0, Math.min(ALARMA_MAX, Math.trunc(alarma))) : 0];
+
+const POSTURA_TEXTO = { ayudar: 'Ayudar', avanzar: 'Avanzar', sacrificarse: 'Sacrificarse', separarse: 'Por su cuenta' };
+const METODO_TEXTO = { sigilo: 'Sigilo', fuerza: 'Fuerza', engano: 'Engaño', esperar: 'Esperar' };
+const CAMPO_TEXTO = { promesa: 'promesa', aprovechar: 'tentación' };
+
+// El sello que cada camara pone sobre la decision: "Ayudar · Engaño". Una jugada que puso el juego lo dice (nunca se le atribuye a la IA) y un campo escrito pero ilegible se anota.
+export function textoDeSello(jugada, { reemplazada = false, ilegibles = [] } = {}) {
+  const p = POSTURA_TEXTO[jugada?.postura], m = METODO_TEXTO[jugada?.metodo];
+  if (!p || !m) return '';
+  const base = reemplazada ? `Jugada del juego: ${p} · ${m}` : `${p} · ${m}`;
+  const campos = (Array.isArray(ilegibles) ? ilegibles : []).map((c) => CAMPO_TEXTO[c]).filter(Boolean);
+  return campos.length ? `${base} · ${campos.join(' y ')} ${campos.length > 1 ? 'ilegibles' : 'ilegible'}` : base;
+}
+
+// La hora que marca la camara: una funcion PURA del beat (nunca el reloj del equipo): cada situacion avanza 47 s y cada beat suma lo suyo.
+const SEGUNDOS_DE_BEAT = { apertura: 0, decisiones: 9, verdad: 18, resultado: 27, consecuencia: 36, final: 45 };
+export function horaDeBeat(beat) {
+  const mano = Number.isInteger(beat?.mano) && beat.mano >= 1 ? beat.mano : 1;
+  const total = 3 * 3600 + 12 * 60 + (mano - 1) * 47 + (SEGUNDOS_DE_BEAT[beat?.tipo] ?? 0);
+  const dos = (n) => String(n).padStart(2, '0');
+  return `${dos(Math.floor(total / 3600) % 24)}:${dos(Math.floor(total / 60) % 60)}:${dos(total % 60)}`;
+}
+
+export const textoDeRiesgo = (fallo) => (Number.isFinite(fallo) ? `Riesgo real ${Math.round(fallo * 100)} %` : '');
+
+// Los avisos de la tentacion (solo se muestran en el beat de la consecuencia): el botin en el cuadro de quien lo toma; la oferta aceptada en el cuadro del OTRO.
+export function avisosDeTentacion(t, nombre) {
+  if (!t || typeof t !== 'object') return [];
+  if (t.clase === 'botin' && Number.isInteger(t.tomo)) return [{ asiento: t.tomo, clase: 'botin', texto: `Se queda con ${t.objeto ?? 'el botín'}` }];
+  if (t.clase === 'oferta' && Array.isArray(t.delataron)) return t.delataron.map((d) => ({ asiento: 1 - d, clase: 'oferta', texto: `${nombre(d)} aceptó la oferta del guardia` }));
+  return [];
+}
+
+// La linea de cada prisionero en la escena de la regla oculta: lo que ocurrio y lo que valio (lo lee de final.finales y final.bono; no calcula ningun "habria pasado").
+const FIN_TEXTO = { conjunto: 'escapa junto a su compañero', solo: 'escapa solo', abandonado: 'se quedó atrás y aun así escapa', anticipada: 'escapa por su cuenta a mitad de camino', capturado: 'queda capturado' };
+export const textoDeFichaFinal = (final, puntos, nombre, asiento) => `${nombre(asiento)} ${FIN_TEXTO[final] ?? 'termina la partida'}: ${puntos} ${puntos === 1 ? 'punto' : 'puntos'}`;
 
 // ---- Que situaciones valen la pena para un clip de redes ---------------------------------------------------------------------------------------
 // Cada situacion suma puntos por lo que paso en ella (todo sale del registro y refleja lo que cuenta la narracion del motor). Los pesos son editoriales.

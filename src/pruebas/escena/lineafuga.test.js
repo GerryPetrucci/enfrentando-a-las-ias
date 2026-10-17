@@ -4,9 +4,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RONDAS, PUNTOS } from '../../juegos/fuga/constantes.js';
+import { RONDAS, PUNTOS, ALARMA_MAX as ALARMA_MOTOR, COHESION_MAX as COHESION_MOTOR, NIVELES_ALERTA, nivelAlerta } from '../../juegos/fuga/constantes.js';
 import { resolverNombres } from '../../juegos/fuga/narracion.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA } from '../../../web/casino/linea-de-tiempo-fuga.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal } from '../../../web/casino/linea-de-tiempo-fuga.js';
 import { jugarFuga, jugarFugaConCaido, muchasFuga } from './ayudas-fuga.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -296,4 +296,63 @@ test('para la herramienta de capturas: los comienzos de situacion desde la segun
   for (const [campo, valor] of [['siluetas', libres + 1], ['sellos', 1], ['avisos', 1], ['sinSenal', bueno.sinSenal + 1], ['salidas', bueno.salidas + 1], ['panel', 1]]) {
     assert.ok(erroresDeEstado({ ...bueno, [campo]: valor }, b).some((m) => m.includes(campo === 'panel' ? 'panel' : campo)), `no detecta ${campo}`);
   }
+});
+
+test('los medidores usan las constantes del motor y la misma palabra de alerta (la web no puede importarlo)', () => {
+  assert.equal(ALARMA_MAX, ALARMA_MOTOR);
+  assert.equal(COHESION_MAX, COHESION_MOTOR);
+  for (let a = 0; a <= ALARMA_MOTOR; a++) assert.equal(nivelDeAlerta(a), nivelAlerta(a), `alarma ${a}`);
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map(nivelDeAlerta), NIVELES_ALERTA);
+  for (const raro of [-3, 99, NaN, null, undefined, 'x']) assert.equal(typeof nivelDeAlerta(raro), 'string');
+});
+
+test('el sello de una decision dice la postura y el metodo con el vocabulario suave ("Por su cuenta", nunca separarse), y una jugada del juego o un campo ilegible se dicen como tales', () => {
+  assert.equal(textoDeSello({ postura: 'ayudar', metodo: 'engano' }), 'Ayudar · Engaño');
+  assert.equal(textoDeSello({ postura: 'separarse', metodo: 'sigilo' }), 'Por su cuenta · Sigilo');
+  assert.equal(textoDeSello({ postura: 'sacrificarse', metodo: 'fuerza' }), 'Sacrificarse · Fuerza');
+  assert.equal(textoDeSello({ postura: 'avanzar', metodo: 'esperar' }), 'Avanzar · Esperar');
+  assert.equal(textoDeSello({ postura: 'avanzar', metodo: 'sigilo' }, { reemplazada: true }), 'Jugada del juego: Avanzar · Sigilo');
+  assert.equal(textoDeSello({ postura: 'ayudar', metodo: 'sigilo' }, { ilegibles: ['promesa'] }), 'Ayudar · Sigilo · promesa ilegible');
+  assert.equal(textoDeSello(null), '');
+  for (const raro of [undefined, {}, { postura: 'x', metodo: 'y' }, 7]) assert.equal(typeof textoDeSello(raro), 'string');
+  for (const post of ['ayudar', 'avanzar', 'sacrificarse', 'separarse']) for (const met of ['sigilo', 'fuerza', 'engano', 'esperar']) assert.doesNotMatch(textoDeSello({ postura: post, metodo: met }), /delat|abandon|traici|separ/i);
+});
+
+test('la hora de la camara es una funcion pura del beat: la misma para los dos cuadros, sube con la situacion y con el beat y nunca mira el reloj del equipo', async () => {
+  const p = await jugarFuga(1);
+  const beats = construirLineaDeTiempo(p);
+  const horas = beats.map(horaDeBeat);
+  assert.ok(horas.every((h) => /^\d\d:\d\d:\d\d$/.test(h)), 'formato HH:MM:SS');
+  assert.deepEqual(horas, beats.map(horaDeBeat), 'misma entrada, misma salida');
+  const seg = (h) => h.split(':').reduce((t, x) => t * 60 + Number(x), 0);
+  for (let i = 1; i < beats.length; i++) assert.ok(seg(horas[i]) > seg(horas[i - 1]), `beat ${i}: la hora no sube (${horas[i - 1]} -> ${horas[i]})`);
+  for (const raro of [null, undefined, {}, { mano: 'x', tipo: 'y' }]) assert.match(horaDeBeat(raro), /^\d\d:\d\d:\d\d$/);
+});
+
+test('el riesgo real se dice en porcentaje redondeado y solo para quien juega; los avisos de la tentacion van al cuadro que corresponde y no dicen quien acepto antes de la consecuencia', () => {
+  assert.equal(textoDeRiesgo(0.24), 'Riesgo real 24 %');
+  assert.equal(textoDeRiesgo(0.063135), 'Riesgo real 6 %');
+  assert.equal(textoDeRiesgo(null), '');
+  assert.equal(textoDeRiesgo(undefined), '');
+  const nombre = (s) => ['Ana', 'Beto'][s];
+  assert.deepEqual(avisosDeTentacion(null, nombre), []);
+  assert.deepEqual(avisosDeTentacion({ tipo: 'tentacion', clase: 'botin', tomo: 1, delataron: [], objeto: 'una caja de herramientas' }, nombre), [{ asiento: 1, clase: 'botin', texto: 'Se queda con una caja de herramientas' }]);
+  assert.deepEqual(avisosDeTentacion({ tipo: 'tentacion', clase: 'botin', tomo: null, delataron: [], objeto: 'x' }, nombre), []);
+  assert.deepEqual(avisosDeTentacion({ tipo: 'tentacion', clase: 'oferta', tomo: null, delataron: [0], objeto: undefined }, nombre), [{ asiento: 1, clase: 'oferta', texto: 'Ana aceptó la oferta del guardia' }]);
+  assert.deepEqual(avisosDeTentacion({ tipo: 'tentacion', clase: 'oferta', tomo: null, delataron: [0, 1] }, nombre), [{ asiento: 1, clase: 'oferta', texto: 'Ana aceptó la oferta del guardia' }, { asiento: 0, clase: 'oferta', texto: 'Beto aceptó la oferta del guardia' }]);
+  assert.deepEqual(avisosDeTentacion({ tipo: 'tentacion', clase: 'oferta', tomo: null, delataron: [] }, nombre), []);
+  for (const raro of [{}, 7, { clase: 'x' }]) assert.ok(Array.isArray(avisosDeTentacion(raro, nombre)));
+});
+
+test('la linea de la regla oculta de cada final dice lo que valia y a quien (sin "habria pasado" y con el vocabulario suave)', () => {
+  const nombre = (s) => ['Ana', 'Beto'][s];
+  assert.equal(textoDeFichaFinal('conjunto', 10, nombre, 0), 'Ana escapa junto a su compañero: 10 puntos');
+  assert.equal(textoDeFichaFinal('solo', 7, nombre, 1), 'Beto escapa solo: 7 puntos');
+  assert.equal(textoDeFichaFinal('abandonado', 9, nombre, 0), 'Ana se quedó atrás y aun así escapa: 9 puntos');
+  assert.equal(textoDeFichaFinal('anticipada', 7, nombre, 1), 'Beto escapa por su cuenta a mitad de camino: 7 puntos');
+  assert.equal(textoDeFichaFinal('capturado', 0, nombre, 0), 'Ana queda capturado: 0 puntos');
+  assert.equal(textoDeFichaFinal('capturado', 0, nombre, 1), 'Beto queda capturado: 0 puntos');
+  assert.equal(textoDeFichaFinal('conjunto', 1, nombre, 0), 'Ana escapa junto a su compañero: 1 punto');
+  for (const f of ['conjunto', 'solo', 'abandonado', 'anticipada', 'capturado']) assert.doesNotMatch(textoDeFichaFinal(f, 7, nombre, 0), /habr|delat|abandon|traici/i);
+  assert.equal(typeof textoDeFichaFinal('raro', 3, nombre, 0), 'string');
 });

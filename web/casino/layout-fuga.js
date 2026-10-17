@@ -20,7 +20,7 @@ function camara(x, y, ancho, alto) {
     escena: r(x, y + arriba, ancho, alto - arriba - abajo),
     rotulo: r(x + 16, y + 6, Math.round(ancho * 0.5), 32), puntos: r(x + Math.round(ancho * 0.5) + 24, y + 6, Math.round(ancho * 0.5) - 214, 32), rec: r(x + ancho - 160, y + 6, 144, 32),
     sello: r(x + 16, y + alto - 46, ancho - 240, 40), hora: r(x + ancho - 210, y + alto - 44, 194, 36),
-    mensaje: r(x + 16, y + arriba + 8, Math.round(ancho * 0.62), 66), riesgo: r(x + ancho - 276, y + arriba + 8, 260, 48), aviso: r(x + 120, y + arriba + 112, ancho - 240, 56),
+    mensaje: r(x + 16, y + arriba + 8, Math.round(ancho * 0.62), 84), riesgo: r(x + ancho - 276, y + arriba + 8, 260, 48), aviso: r(x + 120, y + arriba + 112, ancho - 240, 56),
   };
 }
 
