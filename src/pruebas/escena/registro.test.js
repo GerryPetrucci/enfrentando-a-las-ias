@@ -8,6 +8,7 @@ import { juegosConEscena, escenaDe, lineaDe } from '../../../web/casino/lineas.j
 import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
+import { jugarTD } from './ayudas-td.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -37,7 +38,8 @@ test('un juego sin escena da un error que dice cuales hay', async () => {
 });
 
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
-  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] });
+  // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo
+  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
     { nombre: 'fuga.json', datos: { partidas: [partida('fuga')] } },
@@ -78,4 +80,31 @@ test('El numero solitario esta registrado: cinco jugadores, camara 2, unidad ron
   assert.equal(entrada.manos, 12);
   assert.match(entrada.titulo, / · 12 rondas$/);
   assert.equal(typeof (await lineaDe('solitario')), 'function');
+});
+
+test('Triple dado esta registrado: cuatro jugadores, camara 2, unidad ronda; la lista cuenta sus 4 rondas (16 registros)', async () => {
+  const e = escenaDe('tripledado');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['Triple dado', 4, 2, 'ronda']);
+  const p = await jugarTD(1);
+  const [entrada] = catalogarPartidas([{ nombre: 'td.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true);
+  assert.equal(entrada.manos, 4);
+  assert.match(entrada.titulo, / · 4 rondas$/);
+  assert.equal(typeof (await lineaDe('tripledado')), 'function');
+});
+
+test('una partida de Triple dado guardada con el motor anterior (sin doceavos ni datos de los dados ocultos) sale apagada en la lista con el motivo "formato anterior"', async () => {
+  const p = await jugarTD(1);
+  const buena = catalogarPartidas([{ nombre: 'td.json', datos: { partidas: [p] } }])[0];
+  assert.equal(buena.valida, true);
+  for (const quitar of [(x) => { for (const r of x.rondas) delete r.puntosD; }, (x) => { for (const r of x.rondas) if (r.oculto) delete r.oculto.sinUsar; }, (x) => { for (const r of x.rondas) delete r.combos; }]) {
+    const vieja = structuredClone(p); quitar(vieja);
+    const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [vieja] } }])[0];
+    assert.equal(e.valida, false);
+    assert.match(e.motivo, /formato anterior/);
+    assert.equal(e.partida, null);
+  }
+  // un juego sin comprobacion de formato sigue valiendo como antes
+  const sol = catalogarPartidas([{ nombre: 'sol.json', datos: { partidas: [await jugarSol(1)] } }])[0];
+  assert.equal(sol.valida, true);
 });

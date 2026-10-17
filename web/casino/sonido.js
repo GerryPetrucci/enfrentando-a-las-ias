@@ -16,6 +16,8 @@ export const EVENTOS = {
     { freq: 1320, dur: 0.35, tipo: 'sine', vol: 0.6, f1: 1100 }, { freq: 1760, dur: 0.3, tipo: 'sine', vol: 0.35, retraso: 0.06 }] } },
   duda:    { muestras: ['audio/duda-1.ogg'], sintetico: { tonos: [{ freq: 110, dur: 0.25, tipo: 'square', vol: 0.8, f1: 55 }], ruidos: [{ dur: 0.08, f0: 800, f1: 300, vol: 1 }] } },
   gana:    { muestras: ['audio/gana-1.ogg'], sintetico: { tonos: [523, 659, 784, 1047].map((freq, i) => ({ freq, dur: 0.28, tipo: 'triangle', vol: 0.65, retraso: i * 0.11 })) } },
+  dado:    { muestras: ['audio/dado-1.ogg', 'audio/dado-2.ogg'], sintetico: { ruidos: [
+    { dur: 0.05, f0: 2500, f1: 900, vol: 0.9 }, { dur: 0.04, f0: 2000, f1: 800, vol: 0.7, retraso: 0.09 }, { dur: 0.05, f0: 1800, f1: 700, vol: 0.6, retraso: 0.19 }] } },
   pierde:  { muestras: ['audio/pierde-1.ogg'], sintetico: { tonos: [
     { freq: 330, dur: 0.3, tipo: 'sawtooth', vol: 0.5, f1: 200 }, { freq: 247, dur: 0.4, tipo: 'sawtooth', vol: 0.5, f1: 140, retraso: 0.18 }] } },
 };
@@ -23,8 +25,9 @@ export const EVENTOS = {
 // Que suena con cada paso de la linea de tiempo (lista vacia = silencio). Un paso desconocido o ilegible no suena.
 export function eventosDePaso(paso) {
   switch (paso?.tipo) {
-    case 'repartir': case 'crupier': case 'jugar': return ['carta'];
-    case 'revelar': return ['voltear'];
+    case 'repartir': case 'crupier': case 'jugar': case 'elegir': case 'subir': return ['carta'];
+    case 'revelar': case 'voltear': return ['voltear'];
+    case 'lanzar': return ['dado'];
     case 'anuncio': return ['anuncio'];
     case 'duda': return ['duda'];
     case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': case 'cobra': case 'paga': case 'devuelve': return ['ficha'];

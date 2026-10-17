@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos } from '../../../web/casino/kit.js';
 import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
@@ -109,4 +109,53 @@ test('el sello "Igual" de Mayor o menor es neutro (no dorado como "Acierta") y l
   const pill = /\.pill-carta \{[^}]*\}/.exec(texto)[0];
   assert.match(pill, /bottom:-/);
   assert.doesNotMatch(pill, /top:-/);
+});
+
+test('un dado visto desde arriba muestra solo su cara: 1 a 6 puntos, y un dado cerrado no lleva su cara ni en un atributo', () => {
+  for (let cara = 1; cara <= 6; cara++) {
+    const d = htmlDado(cara);
+    assert.equal(cuenta(d, 'class="p"'), cara, `la cara ${cara} lleva ${cara} puntos`);
+    assert.doesNotMatch(d, /cerrado|data-cara/);
+  }
+  const cerrado = htmlDado(null, 'rojo');
+  assert.match(cerrado, /class="dado rojo cerrado"/);
+  assert.doesNotMatch(cerrado, /class="p"|data-|cara|\b[1-6]\b/, 'el dado cerrado no filtra su valor');
+  for (const raro of [0, 7, 1.5, 'x', NaN, undefined, {}]) assert.match(htmlDado(raro), /cerrado/, `cara ilegible ${String(raro)}`);
+});
+
+test('el dado blanco, el rojo y el azul tienen su clase; un color desconocido cae en blanco; nada sin escapar', () => {
+  assert.match(htmlDado(3), /class="dado blanco"/);
+  assert.match(htmlDado(3, 'rojo'), /class="dado rojo"/);
+  assert.match(htmlDado(3, 'azul'), /class="dado azul"/);
+  assert.match(htmlDado(3, '"><img src=x onerror=1>'), /class="dado blanco"/);
+});
+
+test('la bandeja pone cada dado con su id, atenua los usados y nunca muestra la cara de uno cerrado', () => {
+  const b = htmlBandeja([{ id: 'b1', cara: 4, color: 'blanco', usado: false }, { id: 'rojo', cara: null, color: 'rojo', usado: false }, { id: 'b2', cara: 6, color: 'blanco', usado: true }]);
+  assert.equal(cuenta(b, 'class="dado '), 3);
+  assert.equal(cuenta(b, 'usado'), 1);
+  assert.match(b, /data-id="rojo"/);
+  assert.match(b, /class="dado rojo cerrado"/);
+  assert.equal(htmlBandeja(null), '<div class="bandeja"></div>');
+  assert.doesNotMatch(htmlBandeja([{ id: '<x>', cara: 2, color: 'blanco' }]), /<x>/);
+});
+
+test('mesa.css trae el aspecto del dado (blanco, rojo, azul, cerrado), la bandeja y los dados usados', () => {
+  const texto = css();
+  for (const sel of ['\\.dado \\{', '\\.dado\\.rojo \\{', '\\.dado\\.azul \\{', '\\.dado\\.cerrado \\{', '\\.bandeja \\{', '\\.usado \\{']) assert.match(texto, new RegExp(sel), sel);
+});
+
+test('la placa de Triple dado lleva avatar, nombre y "N pts" con el color de paleta.js y todo escapado', () => {
+  const claude = htmlInfoPuntos({ id: 'claude', nombre: 'Claude', inicial: 'C' }, '28.5');
+  assert.ok(claude.includes(`--c:${PALETA.claude.color}`));
+  assert.match(claude, /class="nom">Claude</);
+  assert.match(claude, /<b>28\.5<\/b> pts/);
+  assert.doesNotMatch(htmlInfoPuntos({ nombre: '<img src=x onerror=1>' }, '<b>'), /<img|<b><b>/);
+  for (const sinJugador of [null, undefined, {}]) assert.match(htmlInfoPuntos(sinJugador, '0'), /class="nom">Jugador</);
+});
+
+test('mesa.css apaga bajo un panel (corte, cierre o final) tambien las tarjetas, los dados, las etiquetas y las barras de Triple dado', () => {
+  const texto = css();
+  const regla = /\.con-panel [^{]*\{[^}]*opacity:\.15/.exec(texto)?.[0] ?? '';
+  for (const sel of ['.tarjetas-td', '.ranura-dado', '.bandeja-td', '.etq-comb', '.pts-comb', '.barra-ronda']) assert.ok(regla.includes(sel), `.con-panel no apaga ${sel}`);
 });

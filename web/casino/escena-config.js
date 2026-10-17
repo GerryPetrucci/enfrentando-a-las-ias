@@ -143,6 +143,7 @@ export function catalogarPartidas(cargados) {
       let motivo = null;
       if (!juegosConEscena().includes(id)) motivo = `es de ${id ?? 'otro juego'}, que no tiene escena de casino`;
       else if (!rondas.length) motivo = 'sin rondas';
+      else motivo = escenaDe(id).comprobar?.(partida) ?? null; // cada juego puede exigir los datos que usa su escena
       const nombres = (Array.isArray(partida?.jugadores) ? partida.jugadores : []).map((j) => j?.nombre ?? '?').join(' vs ');
       const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? unidad : `${unidad}s`}${partida?.truncada === true ? ' · cortada' : ''}`;
       entradas.push({ clave: `${archivo}#${i + 1}`, archivo, numero: i + 1, juego: id ?? null, titulo, manos, valida: motivo === null, motivo, partida: motivo === null ? partida : null });

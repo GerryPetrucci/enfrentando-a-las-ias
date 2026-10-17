@@ -5,7 +5,7 @@ Para escucharlas una por una (y compararlas con el respaldo) abre `web/sonidos.h
 
 ## De donde salen y su licencia
 
-Las 8 muestras salen de tres paquetes de **Kenney** (kenney.nl), todos con licencia **Creative Commons Zero (CC0)**: dominio publico, se pueden usar en proyectos
+Las 10 muestras salen de tres paquetes de **Kenney** (kenney.nl), todos con licencia **Creative Commons Zero (CC0)**: dominio publico, se pueden usar en proyectos
 personales y comerciales y redistribuir, y el credito (Kenney o www.kenney.nl) es agradable pero no obligatorio. El texto de licencia de cada paquete esta en
 `LICENCIAS.txt`, sin cambios.
 
@@ -27,6 +27,7 @@ El usuario las escucho en `web/sonidos.html` y escogio una por efecto (16 de oct
 | Duda | `duda-1.ogg` | Interface Sounds / question_002 |
 | Gana (sello dorado) | `gana-1.ogg` | Music Jingles / Hit jingles / HIT11 |
 | Pierde (sello rojo) | `pierde-1.ogg` | Interface Sounds / error_003 |
+| Dados que ruedan (Triple dado), dos para alternar | `dado-1.ogg`, `dado-2.ogg` | Casino Audio / dice-throw-1 y die-throw-2 (escogidas por nombre y duracion, 16 de octubre de 2026; el usuario las oye en `web/sonidos.html` y cambia la que no le guste) |
 
 ## Cambiar una muestra
 
