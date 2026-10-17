@@ -32,3 +32,6 @@ data/voz/
 # conocimiento privado del proyecto (spec, planes, plan de contenido, terminos, prototipos): NUNCA se sube.
 # src/pruebas/privado.test.js falla si esta regla desaparece o si git rastrea algo aqui.
 privado/
+
+# ajustes personales de Claude Code (el respaldo automatico de privado/ es solo de este equipo)
+.claude/settings.local.json
