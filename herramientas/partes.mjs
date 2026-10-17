@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { lineaDe } from '../web/casino/lineas.js';
+import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { dividirEnDos } from '../web/casino/escena-config.js';
 
 export const formatoDeTiempo = (ms) => `${Math.floor(ms / 60000)}:${String(Math.round((ms % 60000) / 1000)).padStart(2, '0').replace(/^60$/, '59')}`;
@@ -27,8 +27,11 @@ async function principal() {
   const datos = JSON.parse(readFileSync(resolve('data', a.archivo), 'utf8'));
   const partida = datos.partidas?.[numero - 1];
   if (!partida) salir(`El archivo no tiene la partida ${numero}.`);
+  const juegoId = partida.juego?.id ?? datos.juego?.id;
+  const motivo = motivoDeNoReproducible(juegoId, partida);
+  if (motivo) salir(`La partida ${numero} no se puede partir: ${motivo}.`);
   const voz = a.voz ? JSON.parse(readFileSync(resolve(a.voz), 'utf8')) : null;
-  const construir = await lineaDe(partida.juego?.id ?? datos.juego?.id);
+  const construir = await lineaDe(juegoId);
   const d = dividirEnDos(construir(partida), voz);
   if (!d) salir('Esta partida es muy corta para partirla en dos (una sola ronda).');
   for (const [n, p] of [[1, d.parte1], [2, d.parte2]]) {

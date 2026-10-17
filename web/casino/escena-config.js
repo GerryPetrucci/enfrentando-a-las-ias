@@ -5,7 +5,7 @@
 // si es mas largo que su minimo; sin voz, su minimo. `fuente` es el texto del beat que se narro: un audio solo vale para un beat que dice lo mismo (los ids de
 // una partida se repiten en otra, y asi la voz de una no suena sobre la otra). Entrada ilegible no lanza: vale como "sin voz".
 
-import { juegosConEscena, escenaDe } from './lineas.js';
+import { juegosConEscena, escenaDe, motivoDeNoReproducible } from './lineas.js';
 
 const entero = (v) => {
   const n = v === null || v === '' ? NaN : Number(v);
@@ -19,8 +19,24 @@ export const FORMATOS_PAGINA = ['9x16', '16x9', 'hoja']; // 'hoja' dibuja los do
 // y ?voz= o un voz.json ajeno podrian hacer sonar cualquier audio de internet.
 export const esRutaRelativa = (texto) => typeof texto === 'string' && /^[\w.-]+(\/[\w.-]+)*$/.test(texto) && !texto.split('/').includes('..');
 
+// El audio de la voz que esta sonando: una sola a la vez. Sonar otra, o abrir otra partida, corta la anterior (si no, la voz de la partida vieja seguiria sonando sobre la nueva).
+// `fabrica` crea el audio (en la pagina, new Audio); un audio que no se puede crear o reproducir (el navegador lo bloquea) no tumba la reproduccion: se queda sin voz.
+export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
+  let actual = null;
+  const detener = () => { try { actual?.pause(); } catch { /* ya estaba parado */ } actual = null; };
+  const sonar = (src, vel = 1) => {
+    detener();
+    try {
+      actual = fabrica(src);
+      actual.playbackRate = vel;
+      actual.play()?.catch?.(() => {});
+    } catch { actual = null; }
+  };
+  return { sonar, detener };
+}
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
-// &sonido=0 &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
+// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
   const q = new URLSearchParams(search ?? '');
   const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda')) ?? 1); // ronda= es sinonimo de mano= (los juegos que juegan por rondas)
@@ -163,10 +179,7 @@ export function catalogarPartidas(cargados) {
       const unidad = juegosConEscena().includes(id) ? escenaDe(id).unidad : 'mano';
       const campo = juegosConEscena().includes(id) ? escenaDe(id).campo ?? unidad : unidad; // el campo con que sus registros numeran la unidad
       const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[campo]) || 0), 0);
-      let motivo = null;
-      if (!juegosConEscena().includes(id)) motivo = `es de ${id ?? 'otro juego'}, que no tiene escena de casino`;
-      else if (!rondas.length) motivo = 'sin rondas';
-      else motivo = escenaDe(id).comprobar?.(partida) ?? null; // cada juego puede exigir los datos que usa su escena
+      const motivo = motivoDeNoReproducible(id, partida);
       const nombres = (Array.isArray(partida?.jugadores) ? partida.jugadores : []).map((j) => j?.nombre ?? '?').join(' vs ');
       const titulo = `${archivo} · Partida ${i + 1} — ${nombres} · ${manos} ${manos === 1 ? unidad : `${unidad}s`}${partida?.truncada === true ? ' · cortada' : ''}`;
       entradas.push({ clave: `${archivo}#${i + 1}`, archivo, numero: i + 1, juego: id ?? null, titulo, manos, valida: motivo === null, motivo, partida: motivo === null ? partida : null });

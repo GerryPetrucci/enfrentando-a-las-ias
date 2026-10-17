@@ -136,10 +136,6 @@ export function avisosDeTentacion(t, nombre) {
   return [];
 }
 
-// La linea de cada prisionero en la escena de la regla oculta: lo que ocurrio y lo que valio (lo lee de final.finales y final.bono; no calcula ningun "habria pasado").
-const FIN_TEXTO = { conjunto: 'escapa junto a su compañero', solo: 'escapa solo', abandonado: 'se quedó atrás y aun así escapa', anticipada: 'escapa por su cuenta a mitad de camino', capturado: 'queda capturado' };
-export const textoDeFichaFinal = (final, puntos, nombre, asiento) => `${nombre(asiento)} ${FIN_TEXTO[final] ?? 'termina la partida'}: ${puntos} ${puntos === 1 ? 'punto' : 'puntos'}`;
-
 // Las cuatro reglas fijas de puntaje que la escena final revela (lo que ninguno sabia), cada una con las IAs a las que les toco segun final.finales. Quien escapo por su cuenta a mitad de camino
 // cobra como quien escapa solo. Lo que se muestra es lo que se cobro (una prueba lo compara con final.bono); no se calcula ningun "habria pasado".
 const FILAS_REGLA = [

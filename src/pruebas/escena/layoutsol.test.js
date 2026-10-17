@@ -65,7 +65,9 @@ test('las dos cartas de cada jugador caben una junto a la otra, miden 5:7, son i
   }
 });
 
-test('el nombre y los puntos tienen sitio: la placa mide lo suficiente para un nombre largo con su elipsis', () => {
+// Solo mide el rectangulo de la placa. Que un nombre largo ("Gemini Flash-Lite") se achique hasta caber se decide al medir el texto en el navegador (mesa-solitario.js, pintarFila):
+// eso no se puede probar en Node y lo cubren las capturas de herramientas/capturar-escena.mjs.
+test('la placa de cada jugador mide al menos 300 px en los dos formatos (el sitio para nombre y puntos)', () => {
   assert.ok(colocarSolitario('9x16').filas[0].placa.ancho >= 300);
   assert.ok(colocarSolitario('16x9').filas[0].placa.ancho >= 300);
 });

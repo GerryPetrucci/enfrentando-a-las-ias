@@ -56,6 +56,23 @@ test('cubre todos los registros en orden y no pierde ni repite una sola linea de
   }
 });
 
+test('con un modelo caido (el juego juega por el) tampoco se pierde ni se repite una linea: las de reemplazo se reescriben pero se dicen todas', async () => {
+  let reescritas = 0;
+  for (const seed of [1, 2]) {
+    for (let asiento = 0; asiento < JUGADORES; asiento++) {
+      const p = await jugarSolConCaido(seed, asiento);
+      const beats = construirLineaDeTiempo(p);
+      assert.deepEqual([...new Set(beats.map((b) => b.registro))], p.rondas.map((_, i) => i), `seed ${seed} asiento ${asiento}: todos los registros, en orden`);
+      const dichas = beats.filter((b) => b.tipo !== 'final').flatMap((b) => b.lineas.map((l) => l.texto));
+      assert.equal(dichas.length, p.rondas.flatMap((r) => r.narracion).length, `seed ${seed} asiento ${asiento}: se pierde o se repite una linea`);
+      assert.equal(new Set(beats.map((b) => b.id)).size, beats.length, 'ids unicos');
+      assert.ok(dichas.every((t) => !/\{\d\}/.test(t)), 'ningun {n} sin resolver');
+      reescritas += dichas.filter((t) => /^El juego (elige|juega)/.test(t)).length;
+    }
+  }
+  assert.ok(reescritas > 10, `cobertura: solo ${reescritas} lineas de reemplazo reescritas`);
+});
+
 test('una partida cortada en la fase 1 no inventa marcas ni final; con entrada ilegible no hay beats', async () => {
   const corta = await jugarSol(3, undefined, { maxRondas: 5 });
   assert.equal(corta.truncada, true);
@@ -332,4 +349,19 @@ test('puntuarRondas no premia un numero alto que puso el juego', async () => {
   assert.ok(puntuarRondas(p).find((m) => m.ronda === ronda).motivos.includes('premio alto'));
   p.rondas[i].invalidas[p.rondas[i].ganador] = true;
   assert.ok(!puntuarRondas(p).find((m) => m.ronda === ronda).motivos.includes('premio alto'));
+});
+
+test('puntuarRondas no premia "toma la delantera" cuando la marca ganadora la puso el juego', async () => {
+  let visto = 0;
+  for (const original of await muchasSol()) {
+    const con = puntuarRondas(original).filter((m) => m.motivos.includes('toma la delantera'));
+    for (const m of con) {
+      const p = structuredClone(original);
+      const r2 = p.rondas.find((r) => r.ronda === m.ronda && r.fase === 2);
+      r2.invalidas[r2.ganador] = true;
+      assert.ok(!puntuarRondas(p).find((x) => x.ronda === m.ronda).motivos.includes('toma la delantera'), `seed ${p.seed} ronda ${m.ronda}`);
+      visto++;
+    }
+  }
+  assert.ok(visto > 0, 'la prueba necesita rondas donde alguien toma la delantera');
 });

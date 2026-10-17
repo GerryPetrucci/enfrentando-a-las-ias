@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RONDAS, PUNTOS, ALARMA_MAX as ALARMA_MOTOR, COHESION_MAX as COHESION_MOTOR, NIVELES_ALERTA, nivelAlerta } from '../../juegos/fuga/constantes.js';
 import { resolverNombres } from '../../juegos/fuga/narracion.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, textoDeFichaFinal, reglasDeFinal } from '../../../web/casino/linea-de-tiempo-fuga.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO, REGLA_OCULTA, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, horaDeBeat, textoDeRiesgo, avisosDeTentacion, reglasDeFinal } from '../../../web/casino/linea-de-tiempo-fuga.js';
 import { jugarFuga, jugarFugaConCaido, muchasFuga } from './ayudas-fuga.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -344,18 +344,6 @@ test('el riesgo real se dice en porcentaje redondeado y solo para quien juega; l
   for (const raro of [{}, 7, { clase: 'x' }]) assert.ok(Array.isArray(avisosDeTentacion(raro, nombre)));
 });
 
-test('la linea de la regla oculta de cada final dice lo que valia y a quien (sin "habria pasado" y con el vocabulario suave)', () => {
-  const nombre = (s) => ['Ana', 'Beto'][s];
-  assert.equal(textoDeFichaFinal('conjunto', 10, nombre, 0), 'Ana escapa junto a su compañero: 10 puntos');
-  assert.equal(textoDeFichaFinal('solo', 7, nombre, 1), 'Beto escapa solo: 7 puntos');
-  assert.equal(textoDeFichaFinal('abandonado', 9, nombre, 0), 'Ana se quedó atrás y aun así escapa: 9 puntos');
-  assert.equal(textoDeFichaFinal('anticipada', 7, nombre, 1), 'Beto escapa por su cuenta a mitad de camino: 7 puntos');
-  assert.equal(textoDeFichaFinal('capturado', 0, nombre, 0), 'Ana queda capturado: 0 puntos');
-  assert.equal(textoDeFichaFinal('capturado', 0, nombre, 1), 'Beto queda capturado: 0 puntos');
-  assert.equal(textoDeFichaFinal('conjunto', 1, nombre, 0), 'Ana escapa junto a su compañero: 1 punto');
-  for (const f of ['conjunto', 'solo', 'abandonado', 'anticipada', 'capturado']) assert.doesNotMatch(textoDeFichaFinal(f, 7, nombre, 0), /habr|delat|abandon|traici/i);
-  assert.equal(typeof textoDeFichaFinal('raro', 3, nombre, 0), 'string');
-});
 
 test('la escena de la regla oculta muestra las cuatro reglas fijas (10, 7, 9 y 0) con los valores del motor y marca la que se cumplio para cada IA segun final.finales; lo que muestra es lo que cobro', async () => {
   const vistas = new Set();

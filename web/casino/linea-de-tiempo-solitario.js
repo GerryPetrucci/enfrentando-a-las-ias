@@ -173,9 +173,10 @@ export function puntuarRondas(partida) {
       if ([...choques.values()].some((c) => c >= 3)) motivos.push('choque de tres');
       if (r2.ganador === null) motivos.push('ronda en blanco');
       else {
-        if (r2.numero >= 7 && r2.invalidas?.[r2.ganador] !== true) motivos.push('premio alto'); // una marca que puso el juego no es audacia de la IA
+        const propia = r2.invalidas?.[r2.ganador] !== true; // una marca que puso el juego no es audacia ni merito de la IA: ni premio alto ni toma de la delantera
+        if (r2.numero >= 7 && propia) motivos.push('premio alto');
         const antes = lideres(puntosAntes, vivos), despues = lideres(r2.puntos, vivos);
-        if (!(antes.length === 1 && antes[0] === r2.ganador) && despues.length === 1 && despues[0] === r2.ganador) motivos.push('toma la delantera');
+        if (propia && !(antes.length === 1 && antes[0] === r2.ganador) && despues.length === 1 && despues[0] === r2.ganador) motivos.push('toma la delantera');
       }
       if (r2.corte) motivos.push('corte');
       if (r2.final) motivos.push('final');

@@ -9,7 +9,7 @@ import { SUBASTAS as RONDAS, JUGADORES, BANCO } from '../../juegos/subasta/const
 import { resolverNombres } from '../../juegos/subasta/narracion.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
 import { duracionDeReloj } from '../../../web/casino/reloj.js';
-import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, bannerDe, textoDeFinal, textoDeArranque, textoDeSoltar, textoDeGanar, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, BANCO_S } from '../../../web/casino/linea-de-tiempo-subasta.js';
+import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, textoDeFinal, textoDeArranque, textoDeSoltar, textoDeGanar, MIN_MS, RONDAS_TOPE, JUGADORES_TOPE, BANCO_S } from '../../../web/casino/linea-de-tiempo-subasta.js';
 import { jugarSub, jugarSubConCaido, muchasSub } from './ayudas-sub.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
@@ -200,16 +200,6 @@ test('puntuarRondas cuenta lo que dice la narracion del motor (empate, se adelan
   assert.deepEqual(mejoresRondas(await jugarSub(2), 0), []);
 });
 
-test('el banner dice la subasta y que pasa en cada beat', async () => {
-  const beats = construirLineaDeTiempo(await jugarSub(3));
-  const por = (n, tipo) => beats.find((b) => b.mano === n && b.tipo === tipo);
-  assert.deepEqual(bannerDe(por(7, 'apertura')), { subasta: 7, fase: 'Todos oprimen su botón' });
-  assert.equal(bannerDe(por(7, 'reloj')).fase, 'Corre el contador');
-  assert.equal(bannerDe(por(7, 'apuestas')).fase, 'Lo que apostó cada quien');
-  assert.equal(bannerDe(por(7, 'resultado')).fase, 'Resultado de la subasta');
-  assert.deepEqual(bannerDe(beats.at(-1)), { subasta: 19, fase: 'Final' });
-  for (const raro of [null, undefined, {}, { tipo: 'raro', mano: 99 }]) assert.deepEqual(Object.keys(bannerDe(raro)), ['subasta', 'fase']);
-});
 
 test('la comprobacion de estado: al empezar cada subasta no queda nada de la anterior (botones sueltos, sellos, premio, contador, panel)', async () => {
   const beats = construirLineaDeTiempo(await jugarSub(3));

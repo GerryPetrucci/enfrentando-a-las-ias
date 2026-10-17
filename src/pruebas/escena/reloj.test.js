@@ -24,14 +24,17 @@ test('las duraciones que dijo el usuario: 30 s son unos 9 s de pantalla, 600 s s
 test('es monotona y continua en todo su recorrido', () => {
   for (const a of APUESTAS) {
     const total = duracionDeReloj(a);
-    let anterior = 0;
+    const cota = (perfilDeReloj(a).velocidad * total) / 2000; // lo que avanza el contador entre dos puntos de la malla a la velocidad maxima
+    let anterior = 0, mayorPaso = 0;
     for (let i = 0; i <= 2000; i++) {
       const t = (total * i) / 2000;
       const c = tiempoDeReloj(t, a);
       assert.ok(c >= anterior - 1e-9, `a=${a} t=${t}: retrocede`);
-      assert.ok(c - anterior <= (a / 2000) * 400 + 1e-6 || a > 8 === false, 'sin saltos'); // el salto entre dos puntos de la malla no pasa de lo que da la velocidad maxima
+      if (i > 0) mayorPaso = Math.max(mayorPaso, c - anterior);
       anterior = c;
     }
+    assert.ok(mayorPaso <= cota + 1e-9, `a=${a}: un salto de ${mayorPaso} supera lo que da la velocidad maxima (${cota})`);
+    assert.ok(mayorPaso >= cota * 0.9, `a=${a}: el contador nunca llega a la velocidad que dice su perfil (${mayorPaso} de ${cota})`); // sin esto la cota podria ser holgada y no medir nada
   }
 });
 

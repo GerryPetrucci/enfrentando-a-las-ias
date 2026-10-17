@@ -15,7 +15,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { lineaDe } from '../web/casino/lineas.js';
+import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { marcarTiempos, fuenteDeVoz } from '../web/casino/escena-config.js';
 
 export const VOZ = {
@@ -85,9 +85,12 @@ function principal() {
   const datos = JSON.parse(readFileSync(resolve('data', a.archivo), 'utf8'));
   const partida = datos.partidas?.[numero - 1];
   if (!partida) salir(`El archivo no tiene la partida ${numero}.`);
+  const juegoId = partida.juego?.id ?? datos.juego?.id;
+  const motivo = motivoDeNoReproducible(juegoId, partida);
+  if (motivo) salir(`La partida ${numero} no se puede narrar: ${motivo}.`);
   const pronunciaciones = a.pronunciaciones ? JSON.parse(readFileSync(resolve(a.pronunciaciones), 'utf8')) : [];
 
-  return lineaDe(partida.juego?.id ?? datos.juego?.id).then((construir) => {
+  return lineaDe(juegoId).then((construir) => {
     const beats = construir(partida);
     const plan = planDeNarracion(beats, pronunciaciones);
     const carpeta = carpetaDeVoz(a.archivo, numero);

@@ -8,7 +8,7 @@
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -28,6 +28,7 @@ export async function iniciar() {
   let azarSonido = crearAzar(1); // se cambia al montar cada partida: asi el mismo archivo suena siempre igual
   const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
   const mudo = crearSonido({ activo: false });
+  const reproductorDeVoz = crearReproductorDeVoz();
   const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
   let voz = null;
   let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
@@ -49,6 +50,7 @@ export async function iniciar() {
   // Monta la escena de una partida (la que sea de la lista, de cualquier juego con escena): reemplaza la anterior por completo.
   async function montar(entrada) {
     habilitar(false); // mientras se arma la nueva, ni Play ni Reiniciar (un Play en esa ventana arrancaria la partida vieja)
+    reproductorDeVoz.detener(); // la voz de la partida que se abandona se corta
     actual?.mesas.forEach((m) => { m.sfx = mudo; }); // la escena que se abandona deja de sonar
     const miGeneracion = ++generacion;
     corriendo = false;
@@ -97,9 +99,7 @@ export async function iniciar() {
         const rapido = detenerEn !== null && i <= Number(detenerEn);
         mesas.forEach((m) => { m.rapido = rapido; });
         const audio = entradaDeVoz(voz, beat)?.archivo;
-        if (audio && params.sonido && esRutaRelativa(audio)) {
-          try { const voz1 = new Audio(audio); voz1.playbackRate = params.vel; voz1.play().catch(() => {}); } catch { /* sin voz */ }
-        }
+        if (audio && params.sonido && esRutaRelativa(audio)) reproductorDeVoz.sonar(audio, params.vel);
         await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel
         if (miGeneracion !== generacion) return; // mientras tanto se abrio otra partida
         if (detenerEn !== null && i === Number(detenerEn)) {
@@ -163,7 +163,7 @@ export async function iniciar() {
   const nombres = listaDeArchivos(params.archivo);
   if (!nombres.length) {
     const juegos = juegosConEscena().map((id) => escenaDe(id).nombre).join(', ');
-    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano o ronda, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido, voz, auto, limpio.`);
+    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano o ronda, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
   }
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {
