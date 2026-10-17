@@ -83,7 +83,7 @@ export function escenaDe(juegoId) {
   return ESCENAS[juegoId];
 }
 
-// Por que una partida guardada NO se puede reproducir con la escena (null si se puede): la usan la lista de la pagina y las herramientas (narrar, capturar-escena),
+// Por que una partida guardada NO se puede reproducir con la escena (null si se puede): la usan la lista de la pagina y las herramientas (narrar, capturar-escena, partes),
 // para que una partida de otro juego, vacia o guardada con un motor anterior se rechace con un mensaje claro y no produzca voz o capturas basura.
 export function motivoDeNoReproducible(juegoId, partida) {
   if (!juegosConEscena().includes(juegoId)) return `es de ${juegoId ?? 'otro juego'}, que no tiene escena de casino`;

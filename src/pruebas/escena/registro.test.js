@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -170,17 +170,23 @@ test('motivoDeNoReproducible dice por que una partida no se puede reproducir: ot
   for (const raro of [null, undefined, 7, {}]) assert.equal(typeof motivoDeNoReproducible('subasta', raro), 'string');
 });
 
-test('narrar.mjs y capturar-escena.mjs se niegan con "formato anterior" ante una partida que la escena no puede reproducir', async () => {
+test('narrar.mjs, capturar-escena.mjs y partes.mjs se niegan con "formato anterior" ante una partida que la escena no puede reproducir', async () => {
+  const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
   const vieja = structuredClone(await jugarSub(1));
   for (const r of vieja.rondas) delete r.oculto;
   const carpeta = mkdtempSync(join(tmpdir(), 'vieja-'));
-  const archivo = join(carpeta, 'vieja.json');
-  writeFileSync(archivo, JSON.stringify({ juego: vieja.juego, partidas: [vieja] }));
-  const falso = process.execPath; // existe: pasa las comprobaciones de Piper y de Chrome; la herramienta debe negarse antes de usarlos
-  for (const [herramienta, extra] of [['narrar.mjs', [`--piper=${falso}`, `--modelo=${falso}`]], ['capturar-escena.mjs', [`--chrome=${falso}`]]]) {
-    const ruta = fileURLToPath(new URL(`../../../herramientas/${herramienta}`, import.meta.url));
-    const r = spawnSync(process.execPath, [ruta, `--archivo=${archivo}`, ...extra], { encoding: 'utf8', timeout: 20000 });
-    assert.equal(r.status, 1, `${herramienta}: ${r.stdout}${r.stderr}`);
-    assert.match(r.stderr, /formato anterior/, herramienta);
+  try {
+    const archivo = join(carpeta, 'vieja.json');
+    writeFileSync(archivo, JSON.stringify({ juego: vieja.juego, partidas: [vieja] }));
+    const falso = process.execPath; // existe: pasa las comprobaciones de Piper y de Chrome; la herramienta debe negarse antes de usarlos
+    const herramientas = [['narrar.mjs', [`--piper=${falso}`, `--modelo=${falso}`]], ['capturar-escena.mjs', [`--chrome=${falso}`]], ['partes.mjs', []]];
+    for (const [herramienta, extra] of herramientas) {
+      // cwd en la raiz del repo, como las demas pruebas de herramientas: si la comprobacion faltara, lo que la herramienta escribiera caeria ahi y no en el directorio de quien corra la suite
+      const r = spawnSync(process.execPath, [join(RAIZ, 'herramientas', herramienta), `--archivo=${archivo}`, ...extra], { encoding: 'utf8', timeout: 20000, cwd: RAIZ });
+      assert.equal(r.status, 1, `${herramienta}: ${r.error ?? ''}${r.stdout}${r.stderr}`);
+      assert.match(r.stderr, /formato anterior/, herramienta);
+    }
+  } finally {
+    rmSync(carpeta, { recursive: true, force: true });
   }
 });
