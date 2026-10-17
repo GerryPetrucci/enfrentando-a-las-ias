@@ -4,7 +4,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearMapa, CONFIG, REC, BIOMAS, distancias, serializarMapa, restaurarMapa } from '../../mapa.js';
+import { crearMapa, CONFIG, REC, BIOMAS, distancias, serializarMapa, restaurarMapa, biomaDeSeed } from '../../mapa.js';
+import { crearRng } from '../../rng.js';
+import { crearEstado } from '../../juegos/conquista/estado.js';
 
 const REINOS = [2, 3, 4, 5];
 const SEEDS_100 = Array.from({ length: 100 }, (_, i) => i + 1);
@@ -91,6 +93,40 @@ test('el mapa serializado va y vuelve sin perder nada, sin arreglos tipados y ca
     (function recorrer(x, ruta) { if (ArrayBuffer.isView(x)) tipados.push(ruta); else if (x && typeof x === 'object') for (const [c, v] of Object.entries(x)) recorrer(v, `${ruta}.${c}`); })(s, 'mapa');
     assert.deepEqual(tipados, [], `${bioma} k=${k}: hay arreglos tipados`);
   }
+});
+
+// el seed del mapa que crearEstado saca de la partida: su primer sorteo (asi lo hace el motor)
+const seedMapaDe = (seed) => Math.floor(crearRng(seed)() * 4294967296) >>> 0;
+
+test('biomaDeSeed es determinista y reparte los cuatro biomas (cada uno entre 15 % y 35 % de 400 seeds)', () => {
+  const cuenta = Object.fromEntries(BIOMAS.map((b) => [b, 0]));
+  for (let s = 1; s <= 400; s++) {
+    const b = biomaDeSeed(s * 7919);
+    assert.equal(b, biomaDeSeed(s * 7919));
+    assert.ok(BIOMAS.includes(b), b);
+    cuenta[b]++;
+  }
+  for (const b of BIOMAS) assert.ok(cuenta[b] >= 60 && cuenta[b] <= 140, `${b}: ${cuenta[b]} de 400 (${JSON.stringify(cuenta)})`);
+});
+
+test('elegir el bioma del seed no mueve el rng de la partida: forzar el mismo bioma da la partida identica y el rng queda igual', () => {
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const elegido = biomaDeSeed(seedMapaDe(seed));
+    const r1 = crearRng(seed), r2 = crearRng(seed);
+    const auto = crearEstado(r1, { jugadores: 4 }), forzado = crearEstado(r2, { jugadores: 4, bioma: elegido });
+    assert.equal(auto.mapa.bioma, elegido, `seed ${seed}`);
+    assert.deepEqual(auto.desempate, forzado.desempate);
+    assert.equal(huella(auto.mapa), huella(forzado.mapa));
+    assert.equal(r1(), r2(), `seed ${seed}: el rng de la partida quedo en otro punto`);
+  }
+});
+
+test('un bioma explicito manda sobre el del seed, y un mapa ya creado manda sobre cualquier bioma pedido', () => {
+  const seed = [1, 2, 3, 4, 5, 6, 7, 8].find((s) => biomaDeSeed(seedMapaDe(s)) !== 'arido');
+  assert.ok(seed, 'hace falta un seed que no elija el arido');
+  assert.equal(crearEstado(crearRng(seed), { jugadores: 4, bioma: 'arido' }).mapa.bioma, 'arido');
+  const dado = crearMapa(seed, 4);
+  assert.equal(crearEstado(crearRng(seed), { jugadores: 4, mapa: dado, bioma: 'arido' }).mapa.bioma, 'continente');
 });
 
 test('restaurarMapa con basura no lanza: devuelve null', () => {

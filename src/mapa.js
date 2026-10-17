@@ -23,6 +23,9 @@ const PARAMETROS = {
   mares:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: -0.07, esc: 1.5 },
   interior:   { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, lago: 0.55 },
 };
+// El bioma que le toca a un seed de mapa: un sorteo con su PROPIO rng derivado del seed, para no mover el rng de la partida. Es lo que usa la Guerra de territorios cuando
+// nadie fuerza el bioma, asi una serie de rotacion (que repite el seed) juega siempre sobre el mismo mapa.
+export const biomaDeSeed = (seedMapa) => BIOMAS[Math.floor(crearRng(((seedMapa >>> 0) ^ 0xb10a5eed) >>> 0)() * BIOMAS.length)];
 const AJUSTES_MAX = 10; // si un seed no da tierra suficiente tras 40 intentos, se sube el sesgo de la costa en pasos de 0.02 (hasta 10 veces) sin cambiar de bioma
 
 function hash2(ix, iy, seed) {

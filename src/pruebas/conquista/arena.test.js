@@ -8,6 +8,7 @@ import { correrPartida } from '../../arena.js';
 import { resolverAgente } from '../../agentes.js';
 import conquista from '../../juegos/conquista.js';
 import { BIOMAS, CONFIG, restaurarMapa } from '../../mapa.js';
+import { planDeSerie } from '../../serie.js';
 
 const bots = (...claves) => claves.map((c) => resolverAgente(c, conquista));
 const COMBO = ['agresivo', 'pacifico', 'economico', 'azar'];
@@ -35,6 +36,16 @@ test('la partida guardada trae su mapa completo y su bioma, y el mapa se restaur
     assert.equal(m.bioma, bioma);
     assert.ok(JSON.stringify(guardada.mapa).length <= 30000);
   }
+});
+
+test('una serie de rotacion (mismo seed) juega todas sus partidas en el mismo bioma y el mismo mapa', async () => {
+  const plan = planDeSerie({ claves: COMBO, partidas: 4, seedBase: 21, mismoSeed: true });
+  const mapas = [];
+  for (const p of plan) {
+    const r = await correrPartida({ juego: conquista, agentes: bots(...p.claves), seed: p.seed });
+    mapas.push(`${r.mapa.bioma}|${r.mapa.terreno}|${r.mapa.region.join(',')}`);
+  }
+  assert.equal(new Set(mapas).size, 1, 'las partidas de la serie usaron mapas distintos');
 });
 
 test('de 2 a 5 reinos terminan con un solo ganador y 5/3/1/0 puntos', async () => {
