@@ -9,6 +9,7 @@ import { catalogarPartidas } from '../../../web/casino/escena-config.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
+import { jugarSub } from './ayudas-sub.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -107,4 +108,15 @@ test('una partida de Triple dado guardada con el motor anterior (sin doceavos ni
   // un juego sin comprobacion de formato sigue valiendo como antes
   const sol = catalogarPartidas([{ nombre: 'sol.json', datos: { partidas: [await jugarSol(1)] } }])[0];
   assert.equal(sol.valida, true);
+});
+
+test('Subasta de tiempo esta registrada: cinco jugadores, sin camara, unidad ronda; la lista cuenta sus 19 subastas', async () => {
+  const e = escenaDe('subasta');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['Subasta de tiempo', 5, 0, 'ronda']);
+  const p = await jugarSub(1);
+  const [entrada] = catalogarPartidas([{ nombre: 'sub.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true);
+  assert.equal(entrada.manos, 19);
+  assert.match(entrada.titulo, / · 19 rondas$/);
+  assert.equal(typeof (await lineaDe('subasta')), 'function');
 });

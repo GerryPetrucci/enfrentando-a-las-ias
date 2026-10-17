@@ -30,10 +30,11 @@ export function eventosDePaso(paso) {
     case 'lanzar': return ['dado'];
     case 'anuncio': return ['anuncio'];
     case 'duda': return ['duda'];
-    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': case 'cobra': case 'paga': case 'devuelve': return ['ficha'];
-    case 'contar': case 'marcar': case 'anula': return ['tic'];
-    case 'pregunta': return ['duda'];
-    case 'premio': return ['gana'];
+    case 'apuesta': case 'recupera': case 'fichas': case 'pago': case 'compra': case 'cobra': case 'paga': case 'devuelve': case 'ficha': case 'pagar': return ['ficha'];
+    case 'contar': case 'marcar': case 'anula': case 'oprimir': return ['tic'];
+    case 'pregunta': case 'nadie': return ['duda'];
+    case 'premio': case 'ganar': return ['gana'];
+    case 'anular': return ['pierde'];
     case 'corte': return ['anuncio'];
     case 'sello': return paso.sello === 'igual' ? [] : [['justo', 'cumplido', 'acierta'].includes(paso.sello) ? 'gana' : 'pierde'];
     default: return [];

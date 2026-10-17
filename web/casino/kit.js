@@ -102,6 +102,13 @@ export function htmlTira(numeros, usadas = [], ahora = null) {
   return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
 
+// El avatar de una fila de Subasta de tiempo: la inicial sobre el color de la IA (de paleta.js; un bot usa el color guardado). Todo lo que viene de los datos pasa por esc().
+export function htmlAvatarJugador(jugador) {
+  const j = jugador ?? {};
+  const nombre = j.nombre ?? 'Jugador';
+  return `<div class="avatar" style="${estiloJugador(j)}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div>`;
+}
+
 // La informacion de un jugador en Triple dado: avatar, nombre y "N pts" (el texto de los puntos ya viene escrito: 28.5, 3.33). Todo lo que viene de los datos pasa por esc().
 export function htmlInfoPuntos(jugador, puntosTexto = '0') {
   const j = jugador ?? {};

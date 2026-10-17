@@ -20,6 +20,15 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-mayormenor.js'),
     mesa: () => import('./mesa-mayormenor.js'),
   },
+  subasta: {
+    nombre: 'Subasta de tiempo',
+    jugadores: 5,
+    camaraPorDefecto: 0, // sin camara oculta: el publico ve los bancos desde el principio y descubre cuanto aguanta cada quien
+    unidad: 'ronda', // una subasta es una "ronda" de la URL
+    campo: 'subasta', // pero sus registros la numeran con este campo (los otros juegos la numeran con el nombre de su unidad)
+    linea: () => import('./linea-de-tiempo-subasta.js'),
+    mesa: () => import('./mesa-subasta.js'),
+  },
   tripledado: {
     nombre: 'Triple dado',
     jugadores: 4,
