@@ -72,7 +72,7 @@ Proyecto independiente, sin afiliación con los proveedores de los modelos. Sus 
 
 | Red | Usuario | Creada |
 |---|---|---|
-| TikTok | | |
-| YouTube | @enfrentandoalasias | 9 oct 2026 |
-| Instagram | | |
-| X | | |
+| TikTok | @enfrentandoalasias · <https://www.tiktok.com/@enfrentandoalasias> | 9 oct 2026 |
+| YouTube | @enfrentandoalasias · <https://youtube.com/@enfrentandoalasias> | 9 oct 2026 |
+| Instagram | @enfrentandoalasias · <https://www.instagram.com/enfrentandoalasias> | 9 oct 2026 |
+| X | @enfrentandoias · <https://x.com/enfrentandoias> | 10 oct 2026 (la fecha de X es aproximada) |
