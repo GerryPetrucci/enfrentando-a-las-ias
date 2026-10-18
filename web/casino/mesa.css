@@ -357,4 +357,19 @@
 .fila-regla .puntos-regla { text-align:right; font:800 40px var(--titulos); color:var(--oro); }
 .fila-regla .puntos-regla::after { content:' pts'; font-size:22px; color:var(--suave); }
 .marcador-regla { display:flex; justify-content:center; gap:40px; font:800 28px var(--titulos); letter-spacing:.08em; text-transform:uppercase; color:var(--vg); }
+
+/* ---------- tarjeta de arranque (la misma para todos los juegos; MesaBase.ejecutarIntro) ---------- */
+.intro-juego { position:absolute; z-index:80; opacity:0; pointer-events:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; text-align:center;
+  padding:40px 48px; border-radius:30px; border:4px solid var(--oro); background:radial-gradient(ellipse 90% 45% at 50% 0%, rgba(224,178,92,.16), rgba(224,178,92,0) 70%), #0b0b0e; box-shadow:0 24px 80px #000d; }
+.intro-juego .ij-cat { font:700 30px var(--titulos); letter-spacing:.26em; color:var(--oro); text-transform:uppercase; }
+.intro-juego .ij-nombre { font:800 124px/.95 var(--titulos); letter-spacing:.02em; text-transform:uppercase; color:var(--hueso); text-shadow:0 6px 28px #000a; }
+.intro-juego .ij-regla { font:600 42px/1.28 var(--texto); color:#dcdce2; max-width:100%; }
+.intro-juego .ij-gana { font:800 44px/1.2 var(--titulos); letter-spacing:.04em; color:var(--oro); text-transform:uppercase; }
+.intro-juego .ij-pie { margin-top:6px; font:600 24px var(--texto); letter-spacing:.04em; color:var(--suave); }
+.f-16x9 .intro-juego { gap:20px; padding:30px 70px; }
+.f-16x9 .intro-juego .ij-cat { font-size:34px; }
+.f-16x9 .intro-juego .ij-nombre { font-size:128px; }
+.f-16x9 .intro-juego .ij-regla { font-size:44px; max-width:1400px; }
+.f-16x9 .intro-juego .ij-gana { font-size:46px; }
+.f-16x9 .intro-juego .ij-pie { font-size:26px; }
 .con-panel .cam-fuga, .con-panel .escena-fuga, .con-panel .senal-fuga, .con-panel .rotulo-cam, .con-panel .puntos-cam, .con-panel .rec-cam, .con-panel .sello-fuga.on, .con-panel .hora-cam, .con-panel .mensaje-cam.on, .con-panel .riesgo-cam.on, .con-panel .aviso-cam.on { opacity:.15; }
