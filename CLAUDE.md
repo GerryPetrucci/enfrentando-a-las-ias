@@ -87,7 +87,7 @@ se cortaba); si aun asi se cortan, se mide y se decide con el usuario, sin subir
 ### Juegos y escenas (resumen; el detalle esta en `docs/decisiones-detalle.md`: leerlo solo al tocar ese juego)
 
 Cada juego es un objeto con seis funciones en `src/juegos/`; cada uno trae motor, bots de control, evaluacion al final de la serie (caracteristicas por IA, sin llamadas extra), pruebas y una escena en `web/escena.html`.
-Todos respetan el presupuesto de llamadas (abajo). **Con modelos reales solo se han corrido Mayor o menor (Claude vs GPT, $0.38) y Guerra de territorios (Claude, GPT, Gemini y DeepSeek, $1.02), ambos el 18 de octubre de 2026 con orden expresa y 2 partidas; detalle en `docs/decisiones-detalle.md`**; los demas, AL FINAL.
+Todos respetan el presupuesto de llamadas (abajo). **Con modelos reales solo se han corrido Mayor o menor (Claude vs GPT, $0.45) y Guerra de territorios (Claude, GPT, Gemini y DeepSeek, $1.03), ambos el 18 de octubre de 2026 con orden expresa y 2 partidas; detalle en `docs/decisiones-detalle.md`**; los demas, AL FINAL.
 
 | Juego | IAs | Idea | Categoria | Llamadas por partida |
 |---|---|---|---|---|

@@ -87,8 +87,9 @@ bots, evaluacion, pruebas y escena listos, y primera corrida con modelos reales 
 
 **Primera corrida con modelos reales (18 de octubre de 2026, con orden expresa y tope de $2):** Claude (`anthropic/claude-sonnet-5.5`) contra GPT (`openai/gpt-6.1-sol`), razonamiento medio, en vivo
 (en vivo la consola no tiene `--tope`: se corrio con un vigilante que lee el saldo cada 15 s y corta el comando si el gasto pasa del tope). Un ensayo de 2 rondas (4 llamadas, $0.021) y una serie de
-2 partidas (72 llamadas, 145,156 tokens, $0.356); gasto total medido $0.377. Resultado guardado en `data/2026-10-18-mayormenor-claude-vs-gpt.json` (oficial). Medido por llamada: Claude ~2,170 tokens de
-entrada y ~205 de salida, GPT ~1,470 y ~190 (el razonamiento medio da pocos tokens de salida), o sea ~$0.006 y ~$0.005: una partida cuesta ~$0.18 (lo estimado era $0.43). Una de 36 respuestas de
+2 partidas (72 llamadas, 145,156 tokens); gasto total **$0.45** segun el saldo de la cuenta (el vigilante midio $0.377: el saldo de OpenRouter tarda en reflejar las ultimas llamadas, asi que un vigilante
+subestima ~15 %). Resultado guardado en `data/2026-10-18-mayormenor-claude-vs-gpt.json` (oficial). Medido por llamada: Claude ~2,170 tokens de
+entrada y ~205 de salida, GPT ~1,470 y ~190 (el razonamiento medio da pocos tokens de salida), o sea ~$0.007 y ~$0.005: una partida cuesta ~$0.21 (lo estimado era $0.43). Una de 36 respuestas de
 Claude no trajo JSON valido y se reemplazo por una jugada legal. GPT gano las dos partidas (fichas 161-70 y 226-56) sin ser superado en fichas en ninguna ronda; igualo la carta del crupier 10 veces
 para anular las apuestas del predictor y aposto todo 7 veces cuando contaba que no podia perder. Con voz, cada partida dura ~7:56 (casi 4:00 por parte): no cabe como Short ni como Reel.
 
@@ -151,7 +152,7 @@ Durante la prueba de la primera publicacion el usuario pidio dos cosas y dijo «
 ### Guerra de territorios: primera corrida con modelos reales (18 de octubre de 2026)
 
 Con orden expresa («Autorizo Guerra con Claude, GPT, Gemini y DeepSeek, 2 partidas, tope $3»), en vivo y con el vigilante de saldo (la consola no tiene `--tope` en vivo): un ensayo de 3 turnos (12 llamadas,
-$0.089, sin errores) y la serie de 2 partidas (99 llamadas, 355,438 tokens, $0.93); gasto total medido **$1.017** de $3. Guardada en `data/2026-10-18-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json` (oficial).
+$0.089, sin errores) y la serie de 2 partidas (99 llamadas, 355,438 tokens); gasto total **$1.03** de $3 segun el saldo de la cuenta (el vigilante midio $1.017). Guardada en `data/2026-10-18-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json` (oficial).
 Medido: ~26 s por turno en vivo y ~$0.035 por turno de 4 llamadas; por llamada, Claude ~3,600 tokens de entrada y ~280 de salida, GPT ~2,400 y ~1,000, Gemini ~2,200 y ~1,800 (el de mas salida), DeepSeek ~2,600 y ~300.
 Las dos partidas terminaron por Maravilla antes del turno 30: la 1 en 10 turnos (gana GPT, 5-3-1-0 para GPT, Gemini, DeepSeek, Claude) y la 2 en 16 (gana Gemini tras conquistar la Maravilla de GPT, que cayo en el turno
 11; DeepSeek rompio tres veces su pacto con Claude y quedo con 1 de honor). Serie: Gemini 8, GPT 5, DeepSeek 4, Claude 1 (2 partidas con 4 jugadores: serie desbalanceada, mismo mapa). **Respuestas cortadas por
