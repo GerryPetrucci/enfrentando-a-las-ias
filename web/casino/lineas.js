@@ -119,5 +119,15 @@ export async function lineaDe(juegoId) {
   return (partida, opciones) => conIntro(construirLineaDeTiempo(partida, opciones), juegoId);
 }
 
+// Los n mejores momentos de una partida segun las reglas fijas de cada escena (cada juego los llama distinto: mejoresManos, mejoresRondas o mejoresTurnos), de mayor a menor:
+// [{ unidad, puntos, motivos }]. `unidad` es el numero de mano/ronda/turno que usan los beats. Sin partida o con un juego sin esa funcion, lista vacia.
+export async function destacadasDe(juegoId, partida, n) {
+  if (!partida || typeof partida !== 'object') return [];
+  const modulo = await escenaDe(juegoId).linea();
+  const mejores = modulo.mejoresManos ?? modulo.mejoresRondas ?? modulo.mejoresTurnos;
+  if (typeof mejores !== 'function') return [];
+  return mejores(partida, n).map((x) => ({ unidad: x.mano ?? x.ronda ?? x.turno, puntos: x.puntos, motivos: Array.isArray(x.motivos) ? x.motivos : [] }));
+}
+
 // El modulo de la mesa del juego (exporta la clase de la mesa; solo se carga en el navegador).
 export const mesaDe = (juegoId) => escenaDe(juegoId).mesa();
