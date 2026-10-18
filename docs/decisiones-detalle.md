@@ -222,7 +222,7 @@ Pendiente:
       Reglas extra aprobadas (sin llamadas extra): mensajes privados, comercio, edificios,
       maravilla, honor y nota de plan. Motor y reglas implementados en `src/mapa.js` y `src/juegos/conquista/`
       con pruebas (plan 1); arena, consola, marcador y prueba de humo listos con bots de control (plan 2);
-      falta la escena del video (plan 3). **Prueba de humo con modelos gratis corrida el 17 de octubre de 2026**
+      escena del video lista (plan 3, 17 de octubre de 2026; falta la prueba con modelos reales, AL FINAL). **Prueba de humo con modelos gratis corrida el 17 de octubre de 2026**
       (2 reinos, 10 turnos, 40 llamadas): Nemotron Ultra 15 % con JSON y 31 % de órdenes válidas (sobrecarga del
       proveedor y cortes por `max_tokens`), Nemotron Super 40 % y 46 %. Igual que el 9 de octubre: los modelos gratis
       no sirven para calibrar este juego; la prueba con modelos reales (de pago, práctica por lote) va AL FINAL.
@@ -251,6 +251,24 @@ Pendiente:
         con bots (4 reinos, rotación, 400 partidas por bioma): ningún asiento pasa de 31.3 % en ningún bioma (criterio
         50 %) y el árido ya termina por Maravilla como el continente (16.7 % contra 15.8 % con la mezcla económica).
         Medición: `privado/prototipos/herramientas/biomas-balance.mjs`. Maquetas: `privado/prototipos/mapas-biomas-hoja2.png`.
+      - *La escena (HECHA el 17 de octubre de 2026):* `web/casino/` trae `conquista-datos.js` (constantes y lector del
+        mapa guardado, `leerMapa`/`estadoInicial`), `linea-de-tiempo-conquista.js` (beats puros: apertura, ordenes,
+        traicion, batalla, resolucion y final), `layout-conquista.js` (9:16 y 16:9), `mapa-dibujo.js` (terreno, reinos,
+        fichas, flechas y estallido en canvas), `mesa-conquista.js` y `.css`, y el registro `conquista` en `lineas.js`
+        (unidad `turno`, sin camara oculta, `comprobar` que apaga con «formato anterior» las partidas sin mapa legible
+        o con combates sin `bandos`). El motor guarda ahora, aditivamente, `combates[].bandos` (con tropas, fuerza,
+        armas y fortaleza de cada bando; `terr`, `fort`, `resultado` y `quedan` del combate) y el evento `pacto_cumplido`;
+        `resumenPublico` ignora tipos de evento que no conoce, y 3 huellas sha1 de las `vistas` fijan que el prompt no
+        cambió. Decisiva (pantalla VS): cae una capital, las dos fuerzas más altas difieren menos del 10 %, hay 3 o más
+        bandos, o se ataca tras romper un pacto con el defensor ese turno; máximo 3 tarjetas por turno, por importancia;
+        flechas: todas las de ataque y las 5 más importantes de las demás (máximo 10). Privados: «X le escribió en
+        privado a Y» al enviarse; su texto sale en el `flashback` de la traición (el último de ese reino a su víctima,
+        incluso del mismo turno), en el `cumplido` de un pacto (hasta 2) o en el panel final (los 3 más recientes sin
+        revelar). Con `razon=1` las razones salen con la resolución. Pruebas con partidas reales de bots elegidas por
+        búsqueda (`src/pruebas/escena/ayudas-conq.js`, seeds 18, 61 y 94), no con guiones. Hallazgo de la revisión visual:
+        el marcador salió vacío en las primeras capturas (se desestructuraba `ancho`/`alto` de un canvas, que solo
+        tiene `width`/`height`) y ninguna prueba de Node lo veía; ahora `estadoVisible()` informa `reinos` y
+        `filasMarcador` y `erroresDeEstado` (`--estado`) lo exige. Una partida de 30 turnos dura unos 4 minutos sin voz.
       - *Pendiente:* quinto bioma «cordillera» (no se distinguía del continente con el tinte de los reinos); la
         paleta de cada bioma la decide la escena a partir de `mapa.bioma`.
 - [ ] Modo "bot escrito" para correr miles de partidas
