@@ -87,7 +87,7 @@ se cortaba); si aun asi se cortan, se mide y se decide con el usuario, sin subir
 ### Juegos y escenas (resumen; el detalle esta en `docs/decisiones-detalle.md`: leerlo solo al tocar ese juego)
 
 Cada juego es un objeto con seis funciones en `src/juegos/`; cada uno trae motor, bots de control, evaluacion al final de la serie (caracteristicas por IA, sin llamadas extra), pruebas y una escena en `web/escena.html`.
-Todos respetan el presupuesto de llamadas (abajo). **Ninguno se ha corrido todavia con modelos reales** (va AL FINAL).
+Todos respetan el presupuesto de llamadas (abajo). **Con modelos reales solo se ha corrido Mayor o menor** (Claude vs GPT, 2 partidas, 18 de octubre de 2026, $0.38 en total; detalle en `docs/decisiones-detalle.md`); los demas, AL FINAL.
 
 | Juego | IAs | Idea | Categoria | Llamadas por partida |
 |---|---|---|---|---|
@@ -235,7 +235,7 @@ CLI de duelos, series de rotacion, agregador de marcador, sitio publicado con ma
 herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentando-a-las-ias>.
 
 **Pendiente:**
-- [ ] Primer duelo real con modelos y grabar el episodio 1 (AL FINAL); antes, verificar los IDs de modelo en <https://openrouter.ai/models> (cambian cada pocos meses).
+- [ ] Piloto con modelos reales (en curso desde el 18 de octubre de 2026, con orden expresa y tope): grabar el episodio 1 y, si queda bien, subirlo; los IDs de modelo se verifican con `node herramientas/verificar-modelos.mjs` antes de cada corrida (cambian cada pocos meses; ultima vez 18 de octubre, todo cuadra).
 - [ ] Kit de marca hecho (`marca/`), cuentas de las 4 redes creadas (usuarios en `marca/perfiles.md`) y estrategia de publicacion escrita (`privado/contenido/`); falta dominio propio, sitio multilenguaje, imagen para links (`marca/exportados/og-1200x630.png`) y la tarjeta de marcador (resumen de una serie). Antes de la semana 1: correr series reales (AL FINAL, con orden expresa) y verificar una vez las pantallas de cada red (lista en la guia).
 - [ ] Juego 2 Guerra de territorios: mapa en la partida con 4 biomas y escena **hechos el 17 de octubre de 2026** (detalle en `docs/decisiones-detalle.md`); la humo con modelos gratis ya se corrió (15-40 % de respuestas con JSON: no sirven); falta solo la prueba con modelos reales (AL FINAL).
 - [ ] Quinto bioma «cordillera» (apuntado el 17 de octubre de 2026): quedó fuera porque con el tinte de los reinos no se distingue del continente; rediseñar con montañas más anchas o un tinte más ligero.

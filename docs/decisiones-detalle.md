@@ -82,8 +82,15 @@ mayor, el activo gana la diferencia; el predictor gana o pierde lo apostado (car
 en la ronda 18 o antes si alguien queda sin fichas; gana quien tiene mas. Puntos del marcador: ganador 4, perdedor 0, empate 2 y 2. **No tiene regla oculta**: lo secreto es lo que el
 rival decide a la vez y el orden del crupier. Categoria "Estrategia de eliminación". **18 turnos y 36 llamadas** por partida (sin excepcion), en vivo. Bots de control: `azar`,
 `prudente`, `contador`, `temerario`, `contrario`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, lectura, audacia, provecho y constancia). **Estado:** motor,
-bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
-`privado/planes/plan-mayormenor-motor.md`).
+bots, evaluacion, pruebas y escena listos, y primera corrida con modelos reales hecha (abajo); diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
+`privado/planes/plan-mayormenor-motor.md`.
+
+**Primera corrida con modelos reales (18 de octubre de 2026, con orden expresa y tope de $2):** Claude (`anthropic/claude-sonnet-5.5`) contra GPT (`openai/gpt-6.1-sol`), razonamiento medio, en vivo
+(en vivo la consola no tiene `--tope`: se corrio con un vigilante que lee el saldo cada 15 s y corta el comando si el gasto pasa del tope). Un ensayo de 2 rondas (4 llamadas, $0.021) y una serie de
+2 partidas (72 llamadas, 145,156 tokens, $0.356); gasto total medido $0.377. Resultado guardado en `data/2026-10-18-mayormenor-claude-vs-gpt.json` (oficial). Medido por llamada: Claude ~2,170 tokens de
+entrada y ~205 de salida, GPT ~1,470 y ~190 (el razonamiento medio da pocos tokens de salida), o sea ~$0.006 y ~$0.005: una partida cuesta ~$0.18 (lo estimado era $0.43). Una de 36 respuestas de
+Claude no trajo JSON valido y se reemplazo por una jugada legal. GPT gano las dos partidas (fichas 161-70 y 226-56) sin ser superado en fichas en ninguna ronda; igualo la carta del crupier 10 veces
+para anular las apuestas del predictor y aposto todo 7 veces cuando contaba que no podia perder. Con voz, cada partida dura ~7:56 (casi 4:00 por parte): no cabe como Short ni como Reel.
 
 ### Juego 7: Triple dado (decidido el 11 de octubre de 2026)
 
@@ -198,8 +205,8 @@ Hecho:
   pruebas y **escena de casino** listos; falta la prueba con modelos (diseno en `privado/spec/numero-solitario-diseno.md`)
 - Juego 5: **Subasta de tiempo** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
   prueba con modelos (diseno en `privado/spec/subasta-tiempo-diseno.md`)
-- Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
-  prueba con modelos (diseno en `privado/spec/mayor-o-menor-diseno.md`)
+- Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; primera
+  corrida con modelos reales el 18 de octubre de 2026 (Claude vs GPT, ver arriba) (diseno en `privado/spec/mayor-o-menor-diseno.md`)
 - Juego 7: **Triple dado** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
   prueba con modelos (diseno en `privado/spec/triple-dado-diseno.md`)
 - Juego 8: **Duda y apuesta** (categoria "Engaño y deducción"): motor por turnos, bots de control, narracion guardada en los datos, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
