@@ -136,3 +136,55 @@ test('los console.error de la escena cuentan como errores aunque Chrome los escr
   assert.match(errores[0], /la reproduccion se detuvo/);
   assert.match(errores[1], /no se pudo armar/);
 });
+
+import { leerFundido } from '../../../herramientas/capturar-escena.mjs';
+
+test('la URL de captura solo lleva grabar=1 cuando se pide: las capturas y --completa de siempre no cambian', () => {
+  const normal = new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: 'hoja' }));
+  assert.equal(normal.searchParams.has('grabar'), false);
+  const grabando = new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: 'hoja', grabar: true, vel: 8 }));
+  assert.equal(grabando.searchParams.get('grabar'), '1');
+  assert.equal(grabando.searchParams.get('auto'), '1', 'grabar solo vale con auto');
+  assert.equal(grabando.searchParams.get('vel'), '8');
+});
+
+test('leerFundido lee en que punto de la grabacion esta la pagina y si ya se cerro en negro', () => {
+  assert.deepEqual(leerFundido('<body data-fundido="margen">'), { fundido: 'margen', cerrada: false });
+  assert.deepEqual(leerFundido('<body data-fundido="negro" data-cierre="1" data-terminada="1">'), { fundido: 'negro', cerrada: true });
+  assert.deepEqual(leerFundido('<body data-fundido="contenido" data-cierre="0">'), { fundido: 'contenido', cerrada: false });
+  assert.equal(leerFundido('<body>'), null, 'sin modo grabacion no hay nada que leer');
+  assert.equal(leerFundido(undefined), null);
+});
+
+import { pngEsNegro } from '../../../herramientas/capturar-escena.mjs';
+import { deflateSync } from 'node:zlib';
+
+// Un PNG de color solido (RGBA de 8 bits, sin entrelazar, filtro 0) armado a mano: el lector no verifica los CRC, asi que van en cero.
+function pngSolido(ancho, alto, [r, g, b, a = 255], filas = null) {
+  const fila = Buffer.alloc(1 + ancho * 4);
+  for (let x = 0; x < ancho; x++) fila.set([r, g, b, a], 1 + x * 4);
+  const crudo = Buffer.concat(Array.from({ length: alto }, (_, y) => (filas?.[y] ?? fila)));
+  const trozo = (nombre, cuerpo) => { const t = Buffer.alloc(12 + cuerpo.length); t.writeUInt32BE(cuerpo.length, 0); t.write(nombre, 4, 'ascii'); cuerpo.copy(t, 8); return t; };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(ancho, 0); ihdr.writeUInt32BE(alto, 4); ihdr.set([8, 6, 0, 0, 0], 8);
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), trozo('IHDR', ihdr), trozo('IDAT', deflateSync(crudo)), trozo('IEND', Buffer.alloc(0))]);
+}
+
+test('pngEsNegro: una captura toda negra lo es; un solo pixel con contenido o un gris del tapiz ya no; lo que no es un PNG que Chrome escribiria no se juzga como negro', () => {
+  assert.equal(pngEsNegro(pngSolido(64, 32, [0, 0, 0])), true);
+  assert.equal(pngEsNegro(pngSolido(64, 32, [4, 4, 4])), true, 'el ruido de compresion cuenta como negro');
+  assert.equal(pngEsNegro(pngSolido(64, 32, [16, 16, 20])), false, 'el tapiz de la mesa (#101014) no es el negro de la cortina');
+  assert.equal(pngEsNegro(pngSolido(64, 32, [0, 0, 0, 0])), true, 'el canal alfa no cuenta');
+  const fila = Buffer.alloc(1 + 64 * 4); fila.set([200, 40, 40, 255], 1 + 10 * 4);
+  assert.equal(pngEsNegro(pngSolido(64, 32, [0, 0, 0], { 20: fila })), false, 'un pixel rojo en la fila 20');
+  for (const basura of [null, undefined, Buffer.alloc(0), Buffer.from('no es un png'), 'x']) assert.equal(pngEsNegro(basura), false);
+});
+
+test('pngEsNegro entiende los filtros de PNG (Sub y Up): Chrome comprime con ellos', () => {
+  // fila 0 con filtro Sub (1): los bytes son diferencias con el pixel de la izquierda; todo cero = negro. fila 1 con filtro Up (2): diferencias con la fila de arriba.
+  const ancho = 8, alto = 2;
+  const sub = Buffer.alloc(1 + ancho * 4); sub[0] = 1;
+  const up = Buffer.alloc(1 + ancho * 4); up[0] = 2;
+  assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], { 0: sub, 1: up })), true);
+  const conRojo = Buffer.from(sub); conRojo[1 + 4 * 2] = 200; // en la fila Sub, el pixel 2 suma 200 al rojo y arrastra a los siguientes
+  assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], { 0: conRojo, 1: up })), false);
+});
