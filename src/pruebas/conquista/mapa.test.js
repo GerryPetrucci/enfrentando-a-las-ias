@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { crearMapa, CONFIG, REC, distancias } from '../../mapa.js';
 
 const SEEDS = [1, 2, 3, 11, 48];
@@ -57,5 +58,21 @@ test('inicio: una capital por reino y 2 regiones vecinas de esa capital', () => 
       assert.ok(suyas.length >= 1 && suyas.length <= 2, `k=${k} seed=${seed} reino ${s} tiene ${suyas.length} vecinas`);
       for (const r of suyas) assert.ok(m.regs[capitales[s]].vecinos.includes(r));
     }
+  }
+});
+
+// Huellas calculadas el 17 de octubre de 2026 con el generador de ANTES de los biomas: el continente (bioma por defecto) no debe cambiar jamas para el mismo seed,
+// porque las pruebas con seeds fijos y la reproduccion de partidas guardadas dependen de el.
+const HUELLAS_CONTINENTE = {
+  '1|2': '1c0b9b2022d24a4c595c690c0c819957e6552410', '1|3': 'da39967d4242b0490658bc324fe53a3df1b2bab8', '1|4': '7915b1fe47e7e8634054d71e4a4351c4ce8b8769', '1|5': 'a738b7775a04fea3cb2bff79318f2f5f9a427f5f',
+  '2|2': 'dbe69d037df29cf04b4ad2492a06fb522fb91c2f', '2|3': 'ee63fda92f4b1130ff53b8d9d92a6ce084c974bd', '2|4': '22e9bcb08818c9a3ee34a3450843b70360daa5f5', '2|5': 'e7a1ff270af9d141072671278fc95003afa56243',
+  '3|2': '279499af563bd2296e49fcca65be20137a9b7cdd', '3|3': 'c57f7daf418a3dbcee6ad4cf593e689f656a972a', '3|4': 'be6f9b747016df3b1ece358761a69983c2cd1a18', '3|5': 'f2ff961b2c243bd99952fc59de5914f3ebe74cb7',
+};
+const huellaCompleta = (m) => createHash('sha1').update(JSON.stringify({ terreno: Array.from(m.terreno), region: Array.from(m.region), regs: m.regs, inicio: { dueno: Array.from(m.inicio.dueno), capitales: m.inicio.capitales } })).digest('hex');
+
+test('el continente no cambia: la huella de 12 mapas coincide con la de antes de los biomas', () => {
+  for (const [clave, esperada] of Object.entries(HUELLAS_CONTINENTE)) {
+    const [seed, k] = clave.split('|').map(Number);
+    assert.equal(huellaCompleta(crearMapa(seed, k)), esperada, `seed ${seed}, ${k} reinos`);
   }
 });

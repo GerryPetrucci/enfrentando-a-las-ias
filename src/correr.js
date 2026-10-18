@@ -8,6 +8,11 @@
 //   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4   (bots de control)
 //   node src/correr.js --juego=conquista --jugadores=haiku,luna,flash-lite,deepseek --partidas=4 --modo=pago --lote --tope=0.50 --destino=pruebas
 //
+//   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4 --bioma=arido   (fuerza la forma del mapa)
+//
+// BIOMA (solo Guerra de territorios): `--bioma=continente|arido|mares|interior` fuerza la forma del mapa; sin el, sale del seed (una serie de rotacion
+// usa el mismo seed y por eso el mismo mapa). Cada partida guarda su mapa completo y su bioma, y la consola dice cual se jugo.
+//
 // MODO (obligatorio en cada ejecucion con modelos, no hay valor por defecto):
 //   --modo=gratis  solo modelos gratis ($0 por llamada, no tocan tu saldo)
 //   --modo=pago    permite modelos que gastan credito de OpenRouter
@@ -46,6 +51,7 @@ import { crearLimitador } from './limitador.js';
 import { crearClienteLote } from './lote.js';
 import { crearCoordinador } from './coordinador-lote.js';
 import { seedDesdeTexto } from './rng.js';
+import { BIOMAS } from './mapa.js';
 import {
   parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, errorDeLote,
   errorDePrimeraRonda, rutaLibre,
@@ -77,6 +83,13 @@ export async function correr(argv, {
 
   const errCantidad = errorDeCantidad(juego, k);
   if (errCantidad) salir(errCantidad);
+
+  // --bioma=continente|arido|mares|interior fuerza la forma del mapa de la Guerra de territorios; sin el, sale del seed. Se valida antes de cualquier llamada.
+  if (o.bioma !== undefined) {
+    if (juego.id !== 'conquista') salir('--bioma solo vale para la Guerra de territorios (--juego=conquista).');
+    if (!BIOMAS.includes(o.bioma)) salir(`--bioma debe ser uno de: ${BIOMAS.join(', ')}.`);
+  }
+  const opcionesDeJuego = o.bioma !== undefined ? { bioma: o.bioma } : {};
 
   let agentesPorClave;
   try {
@@ -196,13 +209,13 @@ export async function correr(argv, {
   const alTerminar = (r, p) => {
     const nombres = r.jugadores.map((j) => j.nombre);
     const texto = r.truncada ? `cortada a ${r.rondas.length} turno(s)` : r.empate ? `empate ${r.puntos.join('-')}` : `gana ${nombres[r.ganador]} ${r.puntos.join('-')}`;
-    consola.log(`${lote ? `  Partida ${p.n + 1}/${partidas}` : ''}  ${texto}`);
+    consola.log(`${lote ? `  Partida ${p.n + 1}/${partidas}` : ''}  ${texto}${r.mapa?.bioma ? ` · bioma ${r.mapa.bioma}` : ''}`);
     const fallos = r.rondas.flatMap((x) => x.errores.filter(Boolean));
     if (fallos.length) consola.log(`     ! ${fallos.length} error(es) de API: ${fallos[0].slice(0, 90)}`);
     for (const aviso of r.avisos) consola.log(`     ! ${aviso}`);
   };
   const resultados = await ejecutarSerie({
-    juego, plan, agentesPorClave, paralelo: lote, maxRondas: turnos, limitador, alTerminar,
+    juego, plan, agentesPorClave, paralelo: lote, maxRondas: turnos, limitador, alTerminar, opciones: opcionesDeJuego,
     ...(lote ? {} : { alEmpezar: (p) => consola.escribir(`  Partida ${p.n + 1}/${partidas} `), alRegistrar: () => consola.escribir('.') }),
   });
 

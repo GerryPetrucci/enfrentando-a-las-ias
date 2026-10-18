@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { correrPartida } from '../../arena.js';
 import { resolverAgente } from '../../agentes.js';
 import conquista from '../../juegos/conquista.js';
+import { BIOMAS, CONFIG, restaurarMapa } from '../../mapa.js';
+import { planDeSerie } from '../../serie.js';
 
 const bots = (...claves) => claves.map((c) => resolverAgente(c, conquista));
 const COMBO = ['agresivo', 'pacifico', 'economico', 'azar'];
@@ -21,6 +23,29 @@ test('una partida de 4 bots corre en la arena y deja un resultado completo y gua
   assert.equal(r.usoPorJugador.reduce((s, u) => s + u.llamadas, 0), r.llamadas);
   assert.doesNotThrow(() => JSON.stringify(r));
   assert.ok(r.rondas.every((x) => Array.isArray(x.errores) && Array.isArray(x.respuestas)));
+});
+
+test('la partida guardada trae su mapa completo y su bioma, y el mapa se restaura desde el JSON', async () => {
+  for (const bioma of BIOMAS) {
+    const r = await jugar(5, COMBO, { opciones: { bioma } });
+    const guardada = JSON.parse(JSON.stringify(r));
+    assert.equal(guardada.mapa.bioma, bioma);
+    assert.equal(guardada.mapa.k, 4);
+    const m = restaurarMapa(guardada.mapa);
+    assert.equal(m.regs.length, CONFIG[4].N);
+    assert.equal(m.bioma, bioma);
+    assert.ok(JSON.stringify(guardada.mapa).length <= 30000);
+  }
+});
+
+test('una serie de rotacion (mismo seed) juega todas sus partidas en el mismo bioma y el mismo mapa', async () => {
+  const plan = planDeSerie({ claves: COMBO, partidas: 4, seedBase: 21, mismoSeed: true });
+  const mapas = [];
+  for (const p of plan) {
+    const r = await correrPartida({ juego: conquista, agentes: bots(...p.claves), seed: p.seed });
+    mapas.push(`${r.mapa.bioma}|${r.mapa.terreno}|${r.mapa.region.join(',')}`);
+  }
+  assert.equal(new Set(mapas).size, 1, 'las partidas de la serie usaron mapas distintos');
 });
 
 test('de 2 a 5 reinos terminan con un solo ganador y 5/3/1/0 puntos', async () => {

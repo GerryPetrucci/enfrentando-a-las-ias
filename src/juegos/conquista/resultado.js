@@ -2,6 +2,7 @@
 
 import { clasificar, regionesDe } from './estado.js';
 import { PUNTOS_POSICION } from './constantes.js';
+import { serializarMapa } from '../../mapa.js';
 
 export function resultadoDe(E) {
   const orden = clasificar(E), puntos = Array(E.k).fill(0);
@@ -17,5 +18,6 @@ export function resultadoDe(E) {
       ordenesValidas: st.validas, ordenesTotal: st.total,
     };
   });
-  return { puntos, ganador: E.ganador, empate: false, metricas, orden: orden.map((f) => f.s), ganoPorMaravilla: E.ganoPorMaravilla, turnos: E.turno };
+  // `mapa`: el mapa completo y su bioma, para que la escena de la web (que no puede importar de src/) dibuje la partida desde lo guardado.
+  return { puntos, ganador: E.ganador, empate: false, metricas, orden: orden.map((f) => f.s), ganoPorMaravilla: E.ganoPorMaravilla, turnos: E.turno, mapa: serializarMapa(E.mapa) };
 }

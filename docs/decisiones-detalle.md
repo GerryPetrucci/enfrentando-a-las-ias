@@ -222,7 +222,37 @@ Pendiente:
       Reglas extra aprobadas (sin llamadas extra): mensajes privados, comercio, edificios,
       maravilla, honor y nota de plan. Motor y reglas implementados en `src/mapa.js` y `src/juegos/conquista/`
       con pruebas (plan 1); arena, consola, marcador y prueba de humo listos con bots de control (plan 2);
-      faltan correr la prueba de humo con modelos gratis y la escena del video (plan 3).
+      falta la escena del video (plan 3). **Prueba de humo con modelos gratis corrida el 17 de octubre de 2026**
+      (2 reinos, 10 turnos, 40 llamadas): Nemotron Ultra 15 % con JSON y 31 % de órdenes válidas (sobrecarga del
+      proveedor y cortes por `max_tokens`), Nemotron Super 40 % y 46 %. Igual que el 9 de octubre: los modelos gratis
+      no sirven para calibrar este juego; la prueba con modelos reales (de pago, práctica por lote) va AL FINAL.
+      **Decisiones del 17 de octubre de 2026 (brainstorming de la escena y del mapa, aún sin spec):**
+      - *Enfrentamientos:* tarjeta de fuerzas sobre el mapa para todas las batallas (variante A de las maquetas
+        `privado/prototipos/maqueta-conquista-batalla-*.png`) y pantalla VS (variante C) solo para las decisivas;
+        el turno dura 5 s normal y 7.5 s con una decisiva, máximo 3 tarjetas por turno.
+      - *Alianzas y traiciones:* los mensajes privados no se muestran con su texto al enviarse (en el feed solo
+        «X le escribió en privado a Y»); se revelan junto a la traición como un flashback con candado, o en la
+        pantalla final si nunca hubo traición. La escena solo retrasa cuándo se ve; nunca oculta ni cambia nada.
+      - *Mapa variable (HECHO el 17 de octubre de 2026):* 4 biomas que cambian solo forma y aspecto (`continente`,
+        `arido`, `mares` e `interior` = mar interior); las reglas de recursos, combate y hambre no cambian y el
+        prompt tampoco. `crearMapa(seed, k, { bioma })` en `src/mapa.js` (el continente sale idéntico a antes: una
+        prueba fija 12 huellas); el bioma sale del seed con `biomaDeSeed` (rng propio, no mueve el de la partida; una
+        serie de rotación conserva el mapa) y se fuerza con `--bioma=` en `src/correr.js` (valida antes de correr y
+        solo vale para `--juego=conquista`). `resultadoDe` guarda `partida.mapa` (`serializarMapa`: terreno como
+        cadena de dígitos, regiones, vecinas, inicio y `bioma`; 9-25 KB en JSON compacto, unas 3.6 veces más con la
+        sangría con que `correr.js` escribe el archivo; `restaurarMapa` lo devuelve o da `null` si está roto) porque
+        la web no puede importar de `src/`. Si un seed no da tierra suficiente se sube el sesgo de costa en pasos de
+        0.02; nunca se cambia de bioma en silencio, y si ni así alcanza falla claro al crear la partida (0 errores en
+        9 600 mapas). Hallazgo: `garantizarCapitales` podía pisar el nodo de un recurso que estaba en el mínimo (visto
+        con `interior`, 5 reinos, seed 24); `reponerMinimos` lo repone. Revisión final: el árido con tierra ancha y
+        pareja pasaba el tope de tokens del prompt (4,450) en 7 % de los seeds de 5 reinos por tener más vecinas por
+        región; se ajustó (`sesgo -0.02`, `esc 1.5`: costa más quebrada, 26 % de agua contra 35 % del continente) y
+        una prueba revisa los cuatro biomas con 100 seeds (peor caso medido en 2 000 seeds: 4,439 tokens). Balance
+        con bots (4 reinos, rotación, 400 partidas por bioma): ningún asiento pasa de 31.3 % en ningún bioma (criterio
+        50 %) y el árido ya termina por Maravilla como el continente (16.7 % contra 15.8 % con la mezcla económica).
+        Medición: `privado/prototipos/herramientas/biomas-balance.mjs`. Maquetas: `privado/prototipos/mapas-biomas-hoja2.png`.
+      - *Pendiente:* quinto bioma «cordillera» (no se distinguía del continente con el tinte de los reinos); la
+        paleta de cada bioma la decide la escena a partir de `mapa.bioma`.
 - [ ] Modo "bot escrito" para correr miles de partidas
 - [x] Publicar el sitio — GitHub Pages, <https://gerrypetrucci.github.io/enfrentando-a-las-ias/>.
       Se despliega solo (`.github/workflows/pages.yml`) en cada push a `main` que

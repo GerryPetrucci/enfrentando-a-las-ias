@@ -92,7 +92,7 @@ Todos respetan el presupuesto de llamadas (abajo). **Ninguno se ha corrido todav
 | Juego | IAs | Idea | Categoria | Llamadas por partida |
 |---|---|---|---|---|
 | 1 Dilema del Prisionero Negociado | 2 | cooperar o traicionar con promesas publicas; juego de control | Traición y confianza | corto |
-| 2 Guerra de territorios | 2-5 | mapa de regiones, alianzas, mensajes, comercio; motor y bots listos; **faltan humo con modelos gratis y su escena** | — | ~100 |
+| 2 Guerra de territorios | 2-5 | mapa de regiones, alianzas, mensajes, comercio; motor y bots listos, mapa con 4 biomas guardado en la partida; **falta su escena** (la humo con modelos gratis ya se corrió) | — | ~100 |
 | 3 La Fuga | 2 | 9 situaciones, postura hacia el companero + metodo, tentaciones; **regla oculta**: salir solo vale 7, quedarse atras y salir 9, juntos 10, capturado 0 | Lealtad bajo riesgo | 18 |
 | 4 El numero solitario | 5 | 12 rondas, parejas de cartas y marca; gana el menor numero que nadie mas jugo; cortes en las rondas 3 y 6 | Estrategia de eliminación | 90 |
 | 5 Subasta de tiempo | 5 | 19 subastas con banco de 600 s; todas las apuestas se pagan; empate en lo alto anula | Estrategia de eliminación | 95 |
@@ -229,14 +229,15 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 
 ## Estado actual
 
-**Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; juegos 1 y 3 a 8 con motor, bots, evaluacion, pruebas y escena (todas fusionadas en `main`; 1144 pruebas el 17 de octubre de 2026);
+**Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; juegos 1 y 3 a 8 con motor, bots, evaluacion, pruebas y escena (todas fusionadas en `main`; 1163 pruebas el 17 de octubre de 2026);
 CLI de duelos, series de rotacion, agregador de marcador, sitio publicado con marcador por categoria (<https://gerrypetrucci.github.io/enfrentando-a-las-ias/>, se despliega solo en cada push a `main` que toque `web/` o `data/`), reproductor vertical, voz local y
 herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentando-a-las-ias>.
 
 **Pendiente:**
 - [ ] Primer duelo real con modelos y grabar el episodio 1 (AL FINAL); antes, verificar los IDs de modelo en <https://openrouter.ai/models> (cambian cada pocos meses).
 - [ ] Kit de marca hecho (`marca/`); falta plan de contenido, dominio y cuentas, sitio multilenguaje e imagen para links (`marca/exportados/og-1200x630.png`).
-- [ ] Juego 2 Guerra de territorios: correr la prueba de humo con modelos gratis y hacer la escena.
+- [ ] Juego 2 Guerra de territorios: **hecho el 17 de octubre de 2026** el mapa guardado en la partida (`partida.mapa`) con 4 biomas (`continente`, `arido`, `mares`, `interior`; salen del seed y se fuerzan con `--bioma=`; solo cambian forma y aspecto, no las reglas); **falta la escena** (tarjeta de batalla, pantalla VS en las decisivas, revelación de los privados con la traición; detalle en `docs/decisiones-detalle.md`). La humo con modelos gratis ya se corrió (15-40 % de respuestas con JSON: no sirven); la prueba con modelos reales va AL FINAL.
+- [ ] Quinto bioma «cordillera» (apuntado el 17 de octubre de 2026): quedó fuera porque con el tinte de los reinos no se distingue del continente; rediseñar con montañas más anchas o un tinte más ligero.
 - [ ] Modo "bot escrito" para correr miles de partidas.
 - El detalle del estado de cada juego y las ideas de formato en la banca estan en `docs/decisiones-detalle.md`.
 
