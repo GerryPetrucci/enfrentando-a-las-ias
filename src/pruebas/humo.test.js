@@ -11,7 +11,8 @@ import { correrPartida } from '../arena.js';
 import { planDeSerie } from '../serie.js';
 import { NOMBRES_REINOS } from '../juegos/conquista/constantes.js';
 import conquista from '../juegos/conquista.js';
-import { resumirHumo } from '../humo.js';
+import { resumirHumo, MODELOS_DE_HUMO } from '../humo.js';
+import { CONTENDIENTES, esGratis } from '../modelos.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const USO = { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 };
@@ -69,13 +70,21 @@ test('resumirHumo junta las partidas de un modelo aunque cambie de asiento', asy
 });
 
 test('la prueba de humo se niega a correr con un modelo de pago, antes de tocar la red', () => {
-  const r = spawnSync(process.execPath, ['src/humo.js', '--modelos=claude,laguna'], { cwd: RAIZ, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, ['src/humo.js', '--modelos=claude,laguna', '--turnos=1', '--partidas=1'], { cwd: RAIZ, encoding: 'utf8', timeout: 30000 }); // 1 turno y 1 partida: tope de gasto si el seguro fallara
   assert.equal(r.status, 1);
   assert.match(r.stderr, /claude gasta credito/);
 });
 
+test('la prueba de humo se niega a correr con Ling (ya cobra) y sus modelos por defecto son todos gratis', () => {
+  // 1 turno y 1 partida: si el seguro fallara algun dia, esta prueba llamaria a la API de verdad (como mucho 2 llamadas) y no una serie entera
+  const r = spawnSync(process.execPath, ['src/humo.js', '--modelos=nemotron-super,ling', '--turnos=1', '--partidas=1'], { cwd: RAIZ, encoding: 'utf8', timeout: 30000 });
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /ling gasta credito/);
+  assert.ok(MODELOS_DE_HUMO.length >= 2 && MODELOS_DE_HUMO.every((id) => esGratis(CONTENDIENTES[id].modelo)), MODELOS_DE_HUMO.join(','));
+});
+
 test('la prueba de humo valida sus argumentos', () => {
-  for (const args of [['--modelos=laguna'], ['--modelos=laguna,ling', '--turnos=0'], ['--modelos=laguna,ling', '--turnos=31'], ['--modelos=agresivo,laguna']]) {
+  for (const args of [['--modelos=laguna'], ['--modelos=laguna,nemotron-super', '--turnos=0'], ['--modelos=laguna,nemotron-super', '--turnos=31'], ['--modelos=agresivo,laguna']]) {
     const r = spawnSync(process.execPath, ['src/humo.js', ...args], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 1, args.join(' '));
   }

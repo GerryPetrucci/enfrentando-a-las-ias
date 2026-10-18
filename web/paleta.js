@@ -22,7 +22,7 @@ export const PALETA = {
   'nemotron-ultra': { nombre: 'Nemotron Ultra', color: '#84CC16', texto: '#84CC16', gratis: true },
   'nemotron-super': { nombre: 'Nemotron Super', color: '#FACC15', texto: '#FACC15', gratis: true },
   laguna:   { nombre: 'Laguna',   color: '#06B6D4', texto: '#22D3EE', gratis: true },
-  ling:     { nombre: 'Ling',     color: '#E11D48', texto: '#FB7185', gratis: true },
+  ling:     { nombre: 'Ling',     color: '#E11D48', texto: '#FB7185' }, // ya no es gratis (17 oct 2026): se conserva su color propio
 };
 
 // Variantes economicas de practica: usan el color de la FAMILIA de su proveedor y solo cambian el nombre. `familia` le dice a

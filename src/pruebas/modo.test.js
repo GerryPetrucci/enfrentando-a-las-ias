@@ -7,13 +7,13 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { CONTENDIENTES, llamarModelo, esGratis, fijarModo, obtenerModo } from '../modelos.js';
-
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, ['src/correr.js', ...args], { cwd: RAIZ, encoding: 'utf8' });
 
-test('los 5 modelos de pago gastan credito y los 4 gratis no', () => {
+test('los modelos de pago gastan credito y los 3 gratis no (Ling dejo de ser gratis: el catalogo le cobra 0.075/0.225 por millon desde el 17 de octubre de 2026)', () => {
   for (const [id, c] of Object.entries(CONTENDIENTES)) assert.equal(esGratis(c.modelo), !!c.gratis, id);
-  assert.equal(Object.values(CONTENDIENTES).filter((c) => c.gratis).length, 4);
+  assert.deepEqual(Object.entries(CONTENDIENTES).filter(([, c]) => c.gratis).map(([id]) => id), ['nemotron-ultra', 'nemotron-super', 'laguna']);
+  assert.equal(esGratis(CONTENDIENTES.ling.modelo), false);
   assert.equal(esGratis('anthropic/claude-sonnet-5.5'), false);
   assert.equal(esGratis('cualquier/modelo:free'), true);
 });
