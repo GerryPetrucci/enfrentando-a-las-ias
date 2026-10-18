@@ -4,6 +4,7 @@
 // Sin DOM ni `window`; los modulos (linea y mesa) se cargan al pedirlos para que usar uno no cargue los demas.
 
 import { leerMapa } from './conquista-datos.js';
+import { conIntro } from './intro.js';
 
 const ESCENAS = {
   dudaapuesta: {
@@ -107,9 +108,15 @@ export function motivoDeNoReproducible(juegoId, partida) {
   return escenaDe(juegoId).comprobar?.(partida) ?? null; // cada juego puede exigir los datos que usa su escena
 }
 
-// La funcion construirLineaDeTiempo(partida, opciones) del juego.
+// Los beats de una partida: los del juego con la tarjeta de arranque delante (intro.js). Es el UNICO lugar donde se arma la lista que ven la pagina, las capturas, las partes y la voz.
+export async function armarLinea(juegoId, partida, opciones) {
+  return conIntro((await escenaDe(juegoId).linea()).construirLineaDeTiempo(partida, opciones), juegoId);
+}
+
+// La funcion (partida, opciones) -> beats del juego, con la tarjeta de arranque delante (el mismo contrato que antes).
 export async function lineaDe(juegoId) {
-  return (await escenaDe(juegoId).linea()).construirLineaDeTiempo;
+  const { construirLineaDeTiempo } = await escenaDe(juegoId).linea();
+  return (partida, opciones) => conIntro(construirLineaDeTiempo(partida, opciones), juegoId);
 }
 
 // El modulo de la mesa del juego (exporta la clase de la mesa; solo se carga en el navegador).

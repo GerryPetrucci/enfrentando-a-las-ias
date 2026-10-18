@@ -7,7 +7,7 @@
 
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
-import { escenaDe, juegosConEscena } from './lineas.js';
+import { escenaDe, juegosConEscena, armarLinea } from './lineas.js';
 import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
@@ -60,7 +60,7 @@ export async function iniciar() {
     const [linea, { Mesa }] = await Promise.all([escena.linea(), escena.mesa()]);
     if (miGeneracion !== generacion) return; // mientras se cargaban los modulos se abrio otra partida
     const camara = params.camara ?? escena.camaraPorDefecto;
-    let beats = recortarClip(linea.construirLineaDeTiempo(partida, { camara }), params.mano, params.hasta);
+    let beats = recortarClip(await armarLinea(entrada.juego, partida, { camara }), params.mano, params.hasta);
     if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
     marco.innerHTML = '';
     if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene ${escena.unidad === 'turno' ? 'ese turno' : `esa ${escena.unidad}`}.`); }
@@ -74,7 +74,8 @@ export async function iniciar() {
       Object.assign(m.raiz.style, { left: `${sitio.x}px`, top: `${sitio.y}px` });
       marco.append(m.raiz);
     });
-    mesas.forEach((m) => m.mostrarEstadoInicial(beats[0])); // antes de reproducir, la mesa ya muestra el estado con el que empieza el clip
+    const primero = beats.find((b) => b.tipo !== 'intro') ?? beats[0]; // la tarjeta de arranque no es de ningun juego: el estado inicial es el del primer beat de la partida
+    mesas.forEach((m) => m.mostrarEstadoInicial(primero)); // antes de reproducir, la mesa ya muestra el estado con el que empieza el clip
     const marcas = marcarTiempos(beats, voz, params.vel);
     const { desacordes } = resumenDeVoz(beats, voz);
     const avisoDesacorde = desacordes ? ` · La voz no coincide con ${desacordes} momentos de esta partida (¿es de otra?): esos duran su mínimo y no suenan.` : '';

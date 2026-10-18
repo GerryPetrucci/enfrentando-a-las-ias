@@ -19,7 +19,7 @@ import { existsSync, readFileSync, mkdirSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { escenaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
+import { escenaDe, motivoDeNoReproducible, armarLinea } from '../web/casino/lineas.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -116,7 +116,7 @@ async function principal() {
   try { await fetch(`${base}/escena.html`); } catch { console.error(`No hay servidor en ${base}. Abre otra terminal y corre: node src/servidor.js`); process.exit(1); }
   let linea;
   try { linea = await escenaDe(juego).linea(); } catch (e) { console.error(e.message); process.exit(1); }
-  const beats = linea.construirLineaDeTiempo(guardada);
+  const beats = await armarLinea(juego, guardada); // la misma lista (con la tarjeta de arranque) que arma la pagina: si no, el indice de un beat no coincide
   if (!beats.length) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
   const carpeta = resolve(a.salida ?? 'grabaciones/capturas-escena');
   mkdirSync(carpeta, { recursive: true });
