@@ -182,6 +182,7 @@ test('una partida de Guerra de territorios sin mapa, con un mapa roto o con comb
     (x) => { x.mapa.terreno = x.mapa.terreno.slice(1); },
     (x) => { for (const r of x.rondas) for (const c of r.combates ?? []) delete c.bandos; },
     (x) => { const c = x.rondas.flatMap((r) => r.combates ?? [])[0]; c.bandos = 'x'; },
+    (x) => { x.rondas[0].combates = { a: 1 }; }, // no es una lista: sale apagada y no tumba la lista de partidas
   ];
   for (const [i, quitar] of viejas.entries()) {
     const vieja = structuredClone(p); quitar(vieja);

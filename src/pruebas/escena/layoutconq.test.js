@@ -36,6 +36,11 @@ test('lo que hay que leer (tarjetas, cartel, flashback, subtitulos y pantalla fi
   assert.ok(dentro(v.feed, { x: 0, y: v.zona.y, ancho: v.ancho, alto: v.alto }), 'el feed va sobre el mapa aprobado');
 });
 
+test('la caja del flashback alcanza para el pacto cumplido: cabecera, y dos privados de 140 caracteres (quien + 3 lineas de cita) con su relleno', () => {
+  // cabecera 24 + 2 x (quien 24 x 1.2 + cita 3 x 32 x 1.22) + 4 espacios de 8 + relleno de 32 = unos 345 px (con holgura: 400)
+  for (const formato of FORMATOS) for (const m of MAPAS) assert.ok(colocarConquista(formato, m).flashback.alto >= 400, `${formato}: el flashback recorta el segundo privado`);
+});
+
 test('las piezas que no se pueden encimar no se tocan: cabecera, mapa, marcador, feed, subtitulos, cartel y flashback', () => {
   const PARES = [['cabecera', 'etiqueta'], ['cabecera', 'mapa'], ['etiqueta', 'mapa'], ['marcador', 'mapa'], ['marcador', 'feed'], ['marcador', 'subtitulos'], ['feed', 'subtitulos'], ['cartel', 'flashback']];
   for (const formato of FORMATOS) for (const m of MAPAS) {

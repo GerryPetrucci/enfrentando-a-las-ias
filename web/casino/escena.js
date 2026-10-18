@@ -163,7 +163,7 @@ export async function iniciar() {
   const nombres = listaDeArchivos(params.archivo);
   if (!nombres.length) {
     const juegos = juegosConEscena().map((id) => escenaDe(id).nombre).join(', ');
-    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano o ronda, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
+    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
   }
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {

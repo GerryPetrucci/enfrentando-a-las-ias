@@ -81,7 +81,7 @@ const ESCENAS = {
     // las partidas guardadas sin el mapa (o con uno ilegible) o con combates sin el detalle de sus bandos salen apagadas en la lista: la escena no recalcula reglas, solo lee lo guardado
     comprobar: (partida) => {
       const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
-      const completo = leerMapa(partida?.mapa) !== null && rondas.every((r) => (r?.combates ?? []).every((c) => Array.isArray(c?.bandos)));
+      const completo = leerMapa(partida?.mapa) !== null && rondas.every((r) => r?.combates === undefined || (Array.isArray(r.combates) && r.combates.every((c) => Array.isArray(c?.bandos))));
       return completo ? null : 'formato anterior: la partida se guardó con un motor que no escribía todos los datos que usa la escena';
     },
     linea: () => import('./linea-de-tiempo-conquista.js'),

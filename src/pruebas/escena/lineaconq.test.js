@@ -186,6 +186,54 @@ test('un pacto cumplido trae los privados que se cruzaron la pareja durante el p
   }
 });
 
+test('el pacto cumplido muestra de verdad los 2 privados mas recientes de la pareja DURANTE el pacto (no los del turno del cumplimiento ni los de antes) y los marca como revelados', () => {
+  const q = structuredClone(ejemplos[IDX.P18]);
+  const rc = q.rondas.find((r) => r.eventos.some((e) => e.tipo === 'pacto_cumplido')), cumplido = rc.eventos.find((e) => e.tipo === 'pacto_cumplido');
+  const mismaPareja = (e) => [e.k, e.con].sort().join() === [cumplido.k, cumplido.con].sort().join();
+  const firma = q.rondas.filter((r) => r.turno < rc.turno && r.eventos.some((e) => e.tipo === 'pacto' && mismaPareja(e))).at(-1);
+  assert.ok(firma, 'precondicion: el pacto se firmo en un turno anterior');
+  const priv = (texto) => ({ k: cumplido.k, a: cumplido.con, texto });
+  const anterior = q.rondas.find((r) => r.turno < firma.turno) ?? q.rondas[0];
+  if (anterior.turno < firma.turno) anterior.privados.push(priv('CUMPLIDO-ANTES-DEL-PACTO'));
+  const rAntes = q.rondas.find((r) => r.turno === rc.turno - 1);
+  firma.privados.push(priv('CUMPLIDO-A'), priv('CUMPLIDO-B'));
+  rAntes.privados.push(priv('CUMPLIDO-C'));
+  rc.privados.push(priv('CUMPLIDO-MISMO-TURNO'));
+  const beats = construirLineaDeTiempo(q);
+  const c = pasos(beats, 'cumplido').find((x) => x.beat.mano === rc.turno);
+  assert.deepEqual(c.textos.map((t) => t.texto), ['CUMPLIDO-B', 'CUMPLIDO-C'], 'los dos mas recientes de antes del turno del cumplimiento, en orden');
+  const final = paso(beats.at(-1), 'final');
+  assert.ok(!final.sinRevelar.some((m) => m.texto === 'CUMPLIDO-B' || m.texto === 'CUMPLIDO-C'), 'lo ya revelado no vuelve a salir en el final');
+  const antesDelCumplido = beats.filter((b) => b.mano < rc.turno || (b.mano === rc.turno && b.tipo !== 'resolucion'));
+  assert.deepEqual(dondeSale(antesDelCumplido, 'CUMPLIDO-B'), [], 'nada se adelanta al cumplimiento');
+});
+
+test('la linea de tiempo no lanza con datos raros que la lista deja pasar (JSON editado a mano o corrupto): lo ilegible se ignora', () => {
+  const alteraciones = {
+    'estado sin tropas': (q) => { delete q.rondas[2].estado.tropas; },
+    'eventos numero': (q) => { q.rondas[2].eventos = 5; },
+    'eventos objeto': (q) => { q.rondas[2].eventos = { a: 1 }; },
+    'evento null': (q) => { q.rondas[2].eventos.push(null); q.rondas[q.rondas.length - 1].eventos.push(null); },
+    'bando null': (q) => { q.rondas.flatMap((r) => r.combates)[0].bandos.push(null); },
+    'movimiento null': (q) => { q.rondas[2].movs.push(null); },
+    'privado null': (q) => { q.rondas[2].privados.push(null); },
+    'mensaje null': (q) => { q.rondas[2].mensajes.push(null); },
+  };
+  for (const [nombre, alterar] of Object.entries(alteraciones)) {
+    const q = structuredClone(ejemplos[IDX.P18]);
+    alterar(q);
+    let beats;
+    assert.doesNotThrow(() => { beats = construirLineaDeTiempo(q); }, nombre);
+    assert.ok(Array.isArray(beats), nombre);
+  }
+  // un estado ilegible (sin tropas) no llega a la mesa, que lo dibujaria: la resolucion de ese turno conserva el estado anterior
+  const q = structuredClone(ejemplos[IDX.P18]);
+  delete q.rondas[2].estado.tropas;
+  const resolucion = construirLineaDeTiempo(q).find((b) => b.tipo === 'resolucion' && b.mano === q.rondas[2].turno);
+  assert.ok(Array.isArray(paso(resolucion, 'estado').tropas), 'el estado de la resolucion trae tropas');
+  assert.deepEqual(paso(resolucion, 'estado').dueno, ejemplos[IDX.P18].rondas[1].estado.dueno, 'es el estado del turno anterior');
+});
+
 test('una respuesta ilegible o un reino caido de la API no se cuenta como decision: se dice que no respondio y pasa el turno', async () => {
   const p = await jugarConqConCaido(5, 4, 1), beats = construirLineaDeTiempo(p), nombre = p.jugadores[1].nombre;
   const conAviso = beats.filter((b) => b.tipo === 'ordenes' && b.reemplazo === true);

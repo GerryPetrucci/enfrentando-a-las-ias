@@ -68,6 +68,10 @@ export function textoDeBatalla(combate, nombre, nombreDeRegion = (d) => `R${d + 
 
 const claveDeEvento = (e) => `ev:${e.tipo}:${e.t}:${e.k}:${e.con ?? e.contra ?? e.por ?? e.de ?? ''}:${e.r ?? ''}`;
 
+// Lo que se lee de un registro guardado puede venir roto (JSON editado a mano o de un motor anterior): de una lista solo valen sus objetos; de un estado, el que trae duenos y tropas.
+const objetos = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object') : []);
+const estadoLegible = (e) => e && typeof e === 'object' && Array.isArray(e.dueno) && Array.isArray(e.tropas);
+
 export function construirLineaDeTiempo(partida, { camara } = {}) {
   void camara; // sin camara oculta
   const mapa = leerMapa(partida?.mapa), rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
@@ -96,11 +100,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
 
   rondas.forEach((r, i) => {
     const turno = Number.isInteger(r.turno) ? r.turno : i + 1;
-    const eventos = Array.isArray(r.eventos) ? r.eventos : [], movs = Array.isArray(r.movs) ? r.movs : [];
-    const combates = (Array.isArray(r.combates) ? r.combates : []).filter((c) => Array.isArray(c?.bandos));
-    const mensajes = Array.isArray(r.mensajes) ? r.mensajes : [], privados = Array.isArray(r.privados) ? r.privados : [];
+    const eventos = objetos(r.eventos), movs = objetos(r.movs);
+    const combates = objetos(r.combates).filter((c) => Array.isArray(c.bandos) && c.bandos.every((b) => b && typeof b === 'object'));
+    const mensajes = objetos(r.mensajes), privados = objetos(r.privados);
     const respuestas = Array.isArray(r.respuestas) ? r.respuestas : [];
-    const antes = previo, despues = r.estado && typeof r.estado === 'object' ? r.estado : previo;
+    const antes = previo, despues = estadoLegible(r.estado) ? r.estado : previo;
     privados.forEach((m, n) => privadosVistos.push({ turno, k: m.k, a: m.a, texto: m.texto, i: n }));
 
     // ---- ordenes ----
@@ -179,7 +183,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
         hechos.push({ clave, texto: `${nombre(e.k)} y ${nombre(e.con)} firman un pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' firmaron un pacto'] }, pacto: { k: e.k, con: e.con } });
       } else if (e.tipo === 'pacto_cumplido') {
         const ultimo = pactos.filter((p) => (p.a === e.k && p.b === e.con) || (p.a === e.con && p.b === e.k)).at(-1);
-        const entre = privadosVistos.filter((m) => ((m.k === e.k && m.a === e.con) || (m.k === e.con && m.a === e.k)) && m.turno >= (ultimo?.turno ?? turno) && !reveladas.has(idDe(m))).slice(-2);
+        const entre = privadosVistos.filter((m) => ((m.k === e.k && m.a === e.con) || (m.k === e.con && m.a === e.k)) && m.turno >= (ultimo?.turno ?? turno) && m.turno < turno && !reveladas.has(idDe(m))).slice(-2);
         entre.forEach((m) => reveladas.add(idDe(m)));
         hechos.push({ clave, texto: `${nombre(e.k)} y ${nombre(e.con)} cumplieron su pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' cumplieron su pacto'] }, cumplido: { k: e.k, con: e.con, textos: entre.map((m) => ({ turno: m.turno, k: m.k, a: m.a, texto: m.texto })) } });
       } else if (e.tipo === 'hambre') hechos.push({ clave, texto: `${nombre(e.k)} pasa hambre: -${tropas(e.n)}.`, feed: { icono: 'hambre', partes: [{ k: e.k }, ` pasa hambre: -${tropas(e.n)}`] } });
@@ -220,11 +224,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const metricas = partida.metricas ?? [];
     const ranking = partida.orden.map((k, pos) => ({
       k, posicion: pos + 1, puntos: partida.puntos[k] ?? 0, regiones: metricas[k]?.regiones ?? 0, honor: metricas[k]?.honor ?? null, cayoEn: metricas[k]?.cayoEn ?? null,
-      tropas: (previo?.dueno ?? []).reduce((s, d, r) => s + (d === k ? previo.tropas[r] : 0), 0),
+      tropas: (previo?.dueno ?? []).reduce((s, d, r) => s + (d === k ? (previo.tropas[r] ?? 0) : 0), 0),
     }));
     const candidatos = [];
     let primera = true;
-    for (const r of rondas) for (const e of r.eventos ?? []) {
+    for (const r of rondas) for (const e of objetos(r.eventos)) {
       const t = e.t ?? r.turno;
       if (e.tipo === 'conquista' && primera) { primera = false; candidatos.push({ peso: 1, turno: t, texto: `Primera conquista: ${nombre(e.k)} toma ${region(e.r)} de ${nombre(e.contra)}.` }); }
       else if (e.tipo === 'ruptura') candidatos.push({ peso: 2, turno: t, texto: `${nombre(e.k)} rompe su pacto con ${nombre(e.contra)}.` });
@@ -253,7 +257,7 @@ export function puntuarTurnos(partida) {
   const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
   const capitales = leerMapa(partida?.mapa)?.inicio.capitales ?? [];
   return rondas.map((r, i) => {
-    const eventos = Array.isArray(r?.eventos) ? r.eventos : [], combates = (Array.isArray(r?.combates) ? r.combates : []).filter((c) => Array.isArray(c?.bandos));
+    const eventos = objetos(r?.eventos), combates = objetos(r?.combates).filter((c) => Array.isArray(c.bandos) && c.bandos.every((b) => b && typeof b === 'object'));
     const cuenta = {};
     const suma = (m, n = 1) => { cuenta[m] = (cuenta[m] ?? 0) + n; };
     for (const c of combates) suma(esDecisiva(c, { eventos, capitales }).decisiva ? 'batalla decisiva' : 'batalla');

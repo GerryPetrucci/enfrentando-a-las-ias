@@ -29,7 +29,7 @@
 .mesa-conquista .cartel-conq { z-index:34; display:flex; align-items:center; justify-content:center; padding:0 24px; border-radius:16px; background:rgba(0,0,0,.82); border:3px solid var(--rojo); font:800 38px/1.05 var(--titulos); letter-spacing:.03em; text-transform:uppercase; text-align:center; opacity:0; pointer-events:none; }
 .mesa-conquista .cartel-conq .n { color:var(--t); }
 .f-16x9 .cartel-conq { font-size:34px; }
-.mesa-conquista .flash-conq { z-index:33; padding:16px 26px; border-radius:18px; background:linear-gradient(#17171cf2,#0c0c10f7); border:2.5px solid var(--oro); box-shadow:0 14px 44px #000b; opacity:0; pointer-events:none; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.mesa-conquista .flash-conq { height:auto !important; max-height:420px; z-index:33; padding:16px 26px; border-radius:18px; background:linear-gradient(#17171cf2,#0c0c10f7); border:2.5px solid var(--oro); box-shadow:0 14px 44px #000b; opacity:0; pointer-events:none; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
 .flash-conq .cab { display:flex; align-items:center; gap:10px; font:800 24px var(--titulos); letter-spacing:.16em; color:var(--oro); text-transform:uppercase; }
 .flash-conq .cab svg { width:26px; height:26px; stroke:var(--oro); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
 .flash-conq .quien { font:600 24px/1.2 var(--texto); color:#c9c9d2; }
