@@ -64,14 +64,15 @@ export const CONTENDIENTES = {
     lote: false,
   },
   // --- Modelos GRATIS: $0 por llamada, no gastan el saldo (solo cuentan para el tope diario de OpenRouter). ---
-  // Los 4 que respondieron bien al formato de los juegos en la prueba del 10 de octubre de 2026. Aparecen y
+  // Los que respondieron bien al formato de los juegos en la prueba del 10 de octubre de 2026 (eran 4; Ling dejo de ser gratis el 17). Aparecen y
   // desaparecen del catalogo y se saturan: sirven para practicar, no para publicar un torneo serio. (En la prueba de humo del
   // 9 de octubre de 2026 con la Guerra de territorios, Laguna y Ling dieron 1 respuesta util en 40 llamadas.)
   'nemotron-ultra': { nombre: 'Nemotron Ultra', modelo: 'nvidia/nemotron-3-ultra-550b-a55b:free', gratis: true, color: PALETA['nemotron-ultra'].color, inicial: 'U', razonamiento: 'medium', lote: false },
   'nemotron-super': { nombre: 'Nemotron Super', modelo: 'nvidia/nemotron-3-super-120b-a12b:free', gratis: true, color: PALETA['nemotron-super'].color, inicial: 'S', razonamiento: 'medium', lote: false },
   laguna: { nombre: 'Laguna', modelo: 'poolside/laguna-s-2.1:free', gratis: true, color: PALETA.laguna.color, inicial: 'A', razonamiento: null, lote: false },
-  // Este no lleva sufijo ":free": su precio en el catalogo era 0 el 10 de octubre de 2026, por eso se marca a mano.
-  ling: { nombre: 'Ling', modelo: 'inclusionai/ling-3.1-flash', gratis: true, color: PALETA.ling.color, inicial: 'I', razonamiento: null, lote: false },
+  // Ling no lleva sufijo ":free": su precio en el catalogo era 0 el 10 de octubre de 2026 y se marcaba a mano, pero el 17 de octubre el catalogo ya le cobraba
+  // 0.075/0.225 USD por millon (verificar-modelos.mjs lo detecto). Ya no es gratis: solo corre en modo pago.
+  ling: { nombre: 'Ling', modelo: 'inclusionai/ling-3.1-flash', color: PALETA.ling.color, inicial: 'I', razonamiento: null, lote: false },
 
   // --- Modelos ECONOMICOS de practica (decidido el 9 de octubre de 2026): la gama baja de cada proveedor, por lote (mitad de
   // precio): unos $0.08 por partida de 4 reinos, contra $0.34 de la gama media por lote. Sustituyen a los gratis para practicar,

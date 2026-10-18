@@ -2,7 +2,7 @@
 // CLI para correr un duelo o una serie y guardar el resultado en data/.
 //
 //   node src/correr.js --juego=dilema --a=claude --b=gpt --partidas=4 --modo=pago
-//   node src/correr.js --juego=dilema --a=laguna --b=ling --partidas=4 --modo=gratis
+//   node src/correr.js --juego=dilema --a=laguna --b=nemotron-super --partidas=4 --modo=gratis
 //   node src/correr.js --a=tomaydaca --b=siempre-t --partidas=2   (estrategias base: sin API, sin modo)
 //   node src/correr.js --juego=conquista --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago
 //   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4   (bots de control)

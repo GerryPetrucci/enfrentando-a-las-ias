@@ -70,7 +70,7 @@ pero falta escribir los bots (ver `docs/agregar-un-juego.md`).
 
 `node src/correr.js ... --modo=gratis|pago` es obligatorio cuando juega algun modelo; no hay valor por
 defecto. `gratis` solo admite los contendientes con `gratis: true` en `src/modelos.js` (hoy
-`nemotron-ultra`, `nemotron-super`, `laguna` y `ling`: $0 por llamada, no tocan el saldo); `pago` admite
+`nemotron-ultra`, `nemotron-super` y `laguna`, que se retira el 31 de octubre de 2026; `ling` dejó de ser gratis el 17: $0 por llamada, no tocan el saldo); `pago` admite
 tambien Claude, GPT, Gemini, Llama y DeepSeek. El seguro de verdad esta en `llamarModelo`: sin modo
 pago se niega a llamar a un modelo que gaste credito, aunque otro script lo intente. El resultado guarda
 `modo` en `data/*.json`. Comprar 10 USD solo sube el tope de modelos gratis de 50 a 1,000 por dia
