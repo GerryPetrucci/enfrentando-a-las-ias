@@ -43,15 +43,15 @@ const entero = (x) => Number.isInteger(x) && x >= 0;
 export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, reinos = 0 } = {}) {
   const nom = (k) => String(nombre(k));
   const memoria = {
-    expansion: false, // ¿el turno anterior hubo salidas a regiones sin dueño? (una racha se dice una vez)
+    expansion: false, // ¿el turno anterior hubo salidas a regiones sin dueno? (una racha se dice una vez)
     citas: new Map(), // reino -> los textos de el que ya se citaron
     hambre: new Map(), // reino -> { turno, racha, total }
     avisoBatalla: false, // ya hubo una batalla o ya se dijo «todavia no hay una sola»: no se dice (mas)
-    huella: null, ultimoCambio: 0, cambios: false, // el dueño de cada region al cierre del turno anterior (como texto), el ultimo turno en que algo cambio, y ¿cambio algo desde el ultimo panorama?
+    huella: null, ultimoCambio: 0, cambios: false, // el dueno de cada region al cierre del turno anterior (como texto), el ultimo turno en que algo cambio, y ¿cambio algo desde el ultimo panorama?
     panorama: null, // el ultimo panorama dicho: { sinCambios } (¿ya se dijo que el mapa no se mueve?)
   };
 
-  // «Ana, Beto y Cira salen a expandirse: mandan tropas a regiones sin dueño.» «Todos» solo si se sabe que son todos los que siguen en pie (`vivos`).
+  // «Ana, Beto y Cira salen a expandirse: mandan tropas a regiones sin dueno.» «Todos» solo si se sabe que son todos los que siguen en pie (`vivos`).
   function fraseDeExpansion(quienes, vivos) {
     const todos = quienes.length >= 2 && quienes.length === vivos;
     const sujeto = todos ? (vivos === 2 ? 'Los dos reinos' : 'Todos los reinos')
@@ -60,12 +60,15 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     return `${sujeto} ${uno ? 'sale' : 'salen'} a expandirse: ${uno ? 'manda' : 'mandan'} tropas a regiones sin dueño.`;
   }
 
-  // Los ataques contra regiones de otro reino: por parejas (hasta PARES_LITERALES) o contados; el detalle lo dan las tarjetas de batalla.
+  // Los ataques contra regiones de otro reino: por parejas (hasta PARES_LITERALES) o contados; el detalle lo dan las tarjetas de batalla. Los movimientos de un reino a una MISMA region son UN ataque
+  // (el motor los junta en un bando y da una sola batalla): se cuentan los objetivos distintos (reino, region), no los movimientos.
   function fraseDeOfensiva(ajenos) {
+    const objetivos = new Map();
+    ajenos.forEach((x, i) => objetivos.set(`${x.k}|${x.a ?? `#${i}`}`, { k: x.k, contra: x.contra })); // sin saber la region cada movimiento cuenta por separado
     const pares = new Map();
-    for (const a of ajenos) { const id = `${a.k}|${a.contra}`, p = pares.get(id) ?? { k: a.k, contra: a.contra, n: 0 }; p.n++; pares.set(id, p); }
+    for (const { k, contra } of objetivos.values()) { const id = `${k}|${contra}`, p = pares.get(id) ?? { k, contra, n: 0 }; p.n++; pares.set(id, p); }
     if (pares.size <= AJUSTES.PARES_LITERALES) return [...pares.values()].map((p) => `${nom(p.k)} lanza ${p.n === 1 ? 'un ataque' : `${enPalabras(p.n)} ataques`} contra ${nom(p.contra)}.`).join(' ');
-    return `Hay ${enPalabras(ajenos.length)} ataques contra otros reinos.`;
+    return `Hay ${enPalabras(objetivos.size)} ataques contra otros reinos.`;
   }
 
   // Un mensaje publico por turno, tal cual: el del reino al que menos se ha citado (reparto parejo; empata el de menor asiento), nunca uno ya citado, vacio o demasiado largo.
@@ -81,24 +84,27 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     return { texto: `${nom(m.k)} dice: «${m.texto}»`, clave: `msg:${turno}:${m.k}:${m.i}` };
   }
 
-  // ctx: { turno, ataques: [{ k, contra }] (TODOS los ataques del turno: `contra` es el dueño de la region atacada, -1 si no tiene), literales: [{ tipo: 'ataque' | 'privado' | 'ilegible', texto, clave }]
-  // (las lineas de hecho de hoy), mensajes: [{ k, texto }] (los publicos), vivos: reinos en pie al empezar el turno (si no se sabe, no se dice «todos») }  ->  { dicho, mudas, extras }
-  //   dicho  lo que se dice: [{ tipo: 'hecho' | 'comentario', texto, clave?, cubre? }]; `cubre` lista los hechos que la frase reemplaza
-  //   mudas  claves de hechos que no se dicen (la racha de expansion que ya se dijo)
+  // ctx: { turno, ataques: [{ k, a, contra }] (TODOS los ataques del turno, uno por movimiento: `a` es la region atacada y `contra` su dueno, -1 si no tiene), literales: [{ tipo: 'ataque' | 'privado' |
+  // 'ilegible', texto, clave, contra? }] (las lineas de hecho de hoy; las de ataque traen `contra`), mensajes: [{ k, texto }] (los publicos), vivos: reinos en pie al empezar el turno (si no se sabe,
+  // no se dice «todos») }  ->  { dicho, mudas, extras }
+  //   dicho  lo que se dice: [{ tipo: 'hecho' | 'comentario', texto, clave?, cubre? }]; `cubre` lista SOLO los hechos de los que habla esa frase
+  //   mudas  claves de hechos que no se dicen (los ataques de una racha de expansion que ya se dijo)
   //   extras hechos NUEVOS que el narrador cito (los mensajes publicos): el beat los suma a sus lineas
   function ordenes(c) {
     const ctx = c && typeof c === 'object' ? c : {};
     const ataques = objetos(ctx.ataques).filter((a) => entero(a.k)), literales = objetos(ctx.literales), mensajes = objetos(ctx.mensajes);
     const dicho = [], mudas = [], extras = [];
-    const reemplazadas = literales.filter((l) => l.tipo === 'ataque' && typeof l.clave === 'string').map((l) => l.clave);
+    const lineasDeAtaque = literales.filter((l) => l.tipo === 'ataque' && typeof l.clave === 'string');
+    const clavesDe = (cuales) => lineasDeAtaque.filter(cuales).map((l) => l.clave);
+    const deExpansion = clavesDe((l) => l.contra === -1), deOfensiva = clavesDe((l) => entero(l.contra));
+    mudas.push(...clavesDe((l) => l.contra !== -1 && !entero(l.contra))); // sin saber contra quien (dato roto): no se dice ni se da por cubierto
     const quienes = [...new Set(ataques.filter((a) => a.contra === -1).map((a) => a.k))].sort((a, b) => a - b);
     const ajenos = ataques.filter((a) => entero(a.contra));
-    const frases = [];
-    if (quienes.length && !memoria.expansion) frases.push(fraseDeExpansion(quienes, ctx.vivos));
+    if (quienes.length && !memoria.expansion) dicho.push({ tipo: 'comentario', texto: fraseDeExpansion(quienes, ctx.vivos), cubre: deExpansion });
+    else mudas.push(...deExpansion); // la racha sigue (o no hay salidas): sus hechos no se dicen
     memoria.expansion = quienes.length > 0;
-    if (ajenos.length) frases.push(fraseDeOfensiva(ajenos));
-    if (frases.length) dicho.push({ tipo: 'comentario', texto: frases.join(' '), cubre: reemplazadas });
-    else mudas.push(...reemplazadas);
+    if (ajenos.length) dicho.push({ tipo: 'comentario', texto: fraseDeOfensiva(ajenos), cubre: deOfensiva });
+    else mudas.push(...deOfensiva);
     const cita = elegirCita(mensajes, ctx.turno);
     if (cita) { dicho.push({ tipo: 'hecho', ...cita }); extras.push(cita); }
     for (const l of literales.filter((x) => x.tipo !== 'ataque' && typeof x.texto === 'string')) dicho.push({ tipo: 'hecho', texto: l.texto, clave: l.clave });
@@ -130,18 +136,20 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     return { texto: frase, porReino: ranking };
   }
 
-  // Quien va primero y quien cierra, con las regiones que se ven en el marcador (las sin dueno no cuentan, los reinos caidos tampoco). null si no hay con quien compararse.
-  // Si ninguna region cambio de dueno desde el ultimo panorama, no se repite: se dice UNA vez cuantos turnos lleva el mapa sin cambios y se calla hasta que algo cambie.
+  // Quien va primero y quien cierra, con las regiones que se ven en el marcador (las sin dueno no cuentan, los reinos caidos tampoco: con la lista `vivo` se respeta; sin ella, un reino sin regiones
+  // esta caido). null si no hay con quien compararse. Si ninguna region cambio de dueno desde el ultimo panorama, no se repite: se dice UNA vez desde hace cuantos turnos (solo habla de los duenos, no de
+  // las tropas, que si se mueven) y se calla hasta que algo cambie.
   function panorama(turno, estado) {
     const dueno = Array.isArray(estado?.dueno) ? estado.dueno : null;
     if (!dueno) return null;
-    const cuentas = Array.from({ length: Number.isInteger(reinos) ? reinos : 0 }, (_, k) => [k, dueno.filter((d) => d === k).length]).filter(([k]) => estado.vivo?.[k] !== false);
+    const enPie = (k, regionesDeK) => (Array.isArray(estado.vivo) ? estado.vivo[k] !== false : regionesDeK > 0);
+    const cuentas = Array.from({ length: Number.isInteger(reinos) ? reinos : 0 }, (_, k) => [k, dueno.filter((d) => d === k).length]).filter(([k, n]) => enPie(k, n));
     if (cuentas.length < 2) return null;
     if (memoria.panorama && !memoria.cambios) {
       if (memoria.panorama.sinCambios) return null;
       memoria.panorama.sinCambios = true;
       const n = turno - memoria.ultimoCambio;
-      return { tipo: 'comentario', texto: `Turno ${turno}: el mapa lleva ${enPalabras(n, 'm')} ${n === 1 ? 'turno' : 'turnos'} sin cambios.`, datos: { turno, cuentas, sinCambios: true } };
+      return { tipo: 'comentario', texto: `Turno ${turno}: ninguna región cambia de dueño desde hace ${enPalabras(n, 'm')} ${n === 1 ? 'turno' : 'turnos'}.`, datos: { turno, cuentas, sinCambios: true } };
     }
     memoria.cambios = false;
     memoria.panorama = { sinCambios: false };
@@ -161,11 +169,11 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     const turno = ctx.turno;
     const hechos = objetos(ctx.hechos).filter((h) => typeof h.clave === 'string' && typeof h.texto === 'string');
     if (Number(ctx.combates) > 0) memoria.avisoBatalla = true;
-    const huella = Array.isArray(ctx.despues?.dueno) ? ctx.despues.dueno.join() : null; // ¿cambio alguna region de dueno desde el turno anterior? (lo mira el panorama)
-    if (huella !== null) {
-      if (huella !== memoria.huella) { memoria.cambios = true; memoria.ultimoCambio = turno; }
-      memoria.huella = huella;
-    }
+    // ¿cambio alguna region de dueno desde el turno anterior? (lo mira el panorama). Un estado ilegible no se da por «sin cambios»: su huella es null y ningun mapa legible es igual a null, asi que el
+    // primer mapa que se vuelve a ver cuenta como cambio y el conteo empieza ahi.
+    const huella = Array.isArray(ctx.despues?.dueno) ? ctx.despues.dueno.join() : null;
+    if (huella !== memoria.huella) { memoria.cambios = true; memoria.ultimoCambio = turno; }
+    memoria.huella = huella;
     const esToma = (h) => h.tipo === 'toma' && entero(h.k);
     const tomas = hechos.filter(esToma), comercios = hechos.filter((h) => h.tipo === 'comercio');
     const agrupar = comercios.length >= 2;

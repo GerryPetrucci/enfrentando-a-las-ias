@@ -11,8 +11,8 @@ const NOMBRES = ['Ana', 'Beto', 'Cira', 'Dani', 'Eli'];
 const nombre = (k) => NOMBRES[k];
 const nuevo = (reinos = 4) => crearNarrador({ nombre, reinos });
 const ataque = (k, a, libre = true, contra = -1, n = 3) => ({ k, n, de: 0, a, libre, contra: libre ? -1 : contra });
-const literalDeAtaque = (turno, k, a) => ({ tipo: 'ataque', texto: `${nombre(k)} manda 3 tropas de R01 a R${a}.`, clave: `ord:${turno}:${k}:0:${a}` });
-const ordenes = (n, turno, ataques, extra = {}) => n.ordenes({ turno, ataques, literales: ataques.map((a, i) => literalDeAtaque(turno, a.k, a.a)).slice(0, 2), mensajes: [], vivos: 4, ...extra });
+const literalDeAtaque = (turno, k, a, contra = -1) => ({ tipo: 'ataque', texto: `${nombre(k)} manda 3 tropas de R01 a R${a}.`, clave: `ord:${turno}:${k}:0:${a}`, contra });
+const ordenes = (n, turno, ataques, extra = {}) => n.ordenes({ turno, ataques, literales: ataques.map((a) => literalDeAtaque(turno, a.k, a.a, a.contra)).slice(0, 2), mensajes: [], vivos: 4, ...extra });
 const textos = (r) => r.dicho.map((l) => l.texto);
 const sinCodigos = (r) => { for (const l of r.dicho.filter((x) => x.tipo === 'comentario')) assert.doesNotMatch(l.texto, /\bR\d+\b/, `una frase de contexto no lleva codigos de region: ${l.texto}`); };
 
@@ -77,13 +77,33 @@ test('ordenes: si no se sabe cuantos reinos siguen en pie no se dice «todos» (
   assert.equal(nuevo(4).ordenes({ ...sin, ataques: sin.ataques.slice(0, 2), vivos: 'x' }).dicho[0].texto, 'Ana y Beto salen a expandirse: mandan tropas a regiones sin dueño.');
 });
 
-test('ordenes: expansion y ofensiva en el mismo turno se dicen juntas (primero la expansion); la ofensiva se dice cada turno, la expansion solo al empezar la racha', () => {
+test('ordenes: dos movimientos de un reino a la MISMA region son un solo ataque (el motor los junta en un bando y da una batalla); a regiones distintas, uno por region', () => {
+  assert.deepEqual(textos(ordenes(nuevo(), 1, [ataque(0, '1', false, 1), ataque(0, '1', false, 1)])), ['Ana lanza un ataque contra Beto.']);
+  assert.deepEqual(textos(ordenes(nuevo(), 1, [ataque(0, '1', false, 1), ataque(0, '1', false, 1), ataque(0, '2', false, 1)])), ['Ana lanza dos ataques contra Beto.']);
+  // contados: tres objetivos distintos (no cuatro movimientos)
+  const contados = ordenes(nuevo(), 1, [ataque(0, '1', false, 1), ataque(0, '1', false, 1), ataque(2, '2', false, 3), ataque(1, '3', false, 0)]);
+  assert.deepEqual(textos(contados), ['Hay tres ataques contra otros reinos.']);
+  // dos reinos atacando la misma region cuentan cada uno (son dos bandos de la misma batalla)
+  assert.deepEqual(textos(ordenes(nuevo(), 1, [ataque(0, '1', false, 2), ataque(1, '1', false, 2)])), ['Ana lanza un ataque contra Cira. Beto lanza un ataque contra Cira.']);
+});
+
+test('ordenes: expansion y ofensiva en el mismo turno se dicen una tras otra (primero la expansion), cada frase cubre SUS hechos; la ofensiva se dice cada turno, la expansion solo al empezar la racha', () => {
   const n = nuevo();
-  const t1 = ordenes(n, 1, [ataque(0, '1'), ataque(1, '2'), ataque(2, '3', false, 3)]);
-  assert.deepEqual(textos(t1), ['Ana y Beto salen a expandirse: mandan tropas a regiones sin dueño. Cira lanza un ataque contra Dani.']);
-  assert.equal(t1.dicho.length, 1, 'una sola linea de contexto');
+  const t1 = ordenes(n, 1, [ataque(0, '1'), ataque(2, '3', false, 3), ataque(1, '2')]);
+  assert.deepEqual(textos(t1), ['Ana y Beto salen a expandirse: mandan tropas a regiones sin dueño.', 'Cira lanza un ataque contra Dani.']);
+  assert.deepEqual(t1.dicho.map((l) => l.cubre), [['ord:1:0:0:1'], ['ord:1:2:0:3']], 'la expansion cubre los ataques a regiones sin dueño; la ofensiva, los ataques contra otro reino');
+  assert.deepEqual(t1.mudas, []);
+  // la racha de expansion sigue: sus hechos se callan (y se anotan), pero la ofensiva del turno se dice y cubre SOLO los suyos
   const t2 = ordenes(n, 2, [ataque(0, '4'), ataque(2, '5', false, 3)]);
   assert.deepEqual(textos(t2), ['Cira lanza un ataque contra Dani.']);
+  assert.deepEqual(t2.dicho[0].cubre, ['ord:2:2:0:5'], 'no cubre el hecho de la racha que se calla');
+  assert.deepEqual(t2.mudas, ['ord:2:0:0:4'], 'el ataque de la racha que sigue queda como mudo, no como «cubierto» por una frase que habla de otra cosa');
+  // un ataque cuyo objetivo no se sabe (dato roto) no se dice ni se da por cubierto
+  const roto = nuevo().ordenes({ turno: 1, ataques: [], literales: [{ tipo: 'ataque', texto: 'x', clave: 'ord:1:0:0:9' }], mensajes: [], vivos: 4 });
+  assert.deepEqual([roto.dicho, roto.mudas], [[], ['ord:1:0:0:9']]);
+  // y una linea de ataque contra otro reino que el contexto no cuenta (datos que no cuadran) tampoco queda huerfana: ninguna frase habla de ella, asi que queda como muda
+  const huerfano = nuevo().ordenes({ turno: 1, ataques: [], literales: [{ tipo: 'ataque', texto: 'x', clave: 'ord:1:0:0:9', contra: 2 }], mensajes: [], vivos: 4 });
+  assert.deepEqual([huerfano.dicho, huerfano.mudas], [[], ['ord:1:0:0:9']]);
 });
 
 test('citas: un mensaje publico por turno, tal cual, del reino menos citado; no repite uno ya citado, ni cita uno de mas de 120 caracteres o vacio', () => {
@@ -113,7 +133,7 @@ test('citas: se elige por reparto parejo y no por el orden de la lista (si no, s
 
 test('ordenes: los privados y los avisos de respuesta ilegible se dicen tal cual, con su clave, despues del contexto y de la cita', () => {
   const n = nuevo();
-  const literales = [literalDeAtaque(1, 0, '1'), { tipo: 'privado', texto: 'Cira le escribe en privado a Dani.', clave: 'priv:1:2:3:0' }, { tipo: 'ilegible', texto: 'Eli no respondió bien: pasa el turno.', clave: 'ilegible:1:4' }];
+  const literales = [literalDeAtaque(1, 0, '1', -1), { tipo: 'privado', texto: 'Cira le escribe en privado a Dani.', clave: 'priv:1:2:3:0' }, { tipo: 'ilegible', texto: 'Eli no respondió bien: pasa el turno.', clave: 'ilegible:1:4' }];
   const r = n.ordenes({ turno: 1, ataques: [ataque(0, '1')], literales, mensajes: [{ k: 1, texto: 'hola' }], vivos: 4 });
   assert.deepEqual(textos(r), ['Ana sale a expandirse: manda tropas a regiones sin dueño.', 'Beto dice: «hola»', 'Cira le escribe en privado a Dani.', 'Eli no respondió bien: pasa el turno.']);
   assert.deepEqual(r.dicho.slice(2), [{ tipo: 'hecho', texto: 'Cira le escribe en privado a Dani.', clave: 'priv:1:2:3:0' }, { tipo: 'hecho', texto: 'Eli no respondió bien: pasa el turno.', clave: 'ilegible:1:4' }]);
@@ -203,14 +223,14 @@ test('resolucion: cada 5 turnos hay un panorama (quien va primero y quien cierra
   assert.deepEqual(textos(resolucion(nuevo(), 5, [], { despues: null })), [], 'sin estado legible no se inventa nada');
 });
 
-test('resolucion: si el mapa no cambia, el panorama lo dice una sola vez («lleva N turnos sin cambios», sin depender de un turno que quien ve solo esta parte no vio) y calla hasta que algo cambie; entonces cuenta el panorama otra vez', () => {
+test('resolucion: si ninguna region cambia de dueño, el panorama lo dice una sola vez («ninguna region cambia de dueño desde hace N turnos»: solo habla de los dueños, no de las tropas) y calla hasta que algo cambie; entonces cuenta el panorama otra vez', () => {
   const estado = (...cuentas) => ({ dueno: cuentas.flatMap((c, k) => Array(c).fill(k)), vivo: cuentas.map(() => true) });
   const quieto = estado(3, 9, 5, 2), n = nuevo();
   const turno = (t, despues) => textos(resolucion(n, t, [], { despues }));
   for (const t of [1, 2, 3, 4]) assert.deepEqual(turno(t, quieto), [], `turno ${t}: sin panorama`);
   assert.deepEqual(turno(5, quieto), ['Turno 5: Beto va primero con nueve regiones y Dani cierra con dos.']);
   for (const t of [6, 7, 8, 9]) turno(t, quieto);
-  assert.deepEqual(turno(10, quieto), ['Turno 10: el mapa lleva nueve turnos sin cambios.'], 'desde el turno 1 (la primera foto) no se ha movido ninguna region');
+  assert.deepEqual(turno(10, quieto), ['Turno 10: ninguna región cambia de dueño desde hace nueve turnos.'], 'desde el turno 1 (la primera foto) no se ha movido ninguna region');
   for (const t of [11, 12, 13, 14]) turno(t, quieto);
   assert.deepEqual(turno(15, quieto), [], 'ya se dijo que no cambia: no se repite');
   for (const t of [16, 17, 18, 19]) turno(t, quieto);
@@ -219,7 +239,7 @@ test('resolucion: si el mapa no cambia, el panorama lo dice una sola vez («llev
   const movido = estado(3, 9, 5, 2); movido.dueno[0] = 1;
   turno(21, quieto); turno(22, movido); turno(23, quieto); turno(24, quieto);
   assert.deepEqual(turno(25, quieto), ['Turno 25: Beto va primero con nueve regiones y Dani cierra con dos.'], 'hubo cambios: otra vez el panorama de siempre');
-  assert.deepEqual(turno(30, quieto), ['Turno 30: el mapa lleva siete turnos sin cambios.'], 'el ultimo cambio fue en el turno 23');
+  assert.deepEqual(turno(30, quieto), ['Turno 30: ninguna región cambia de dueño desde hace siete turnos.'], 'el ultimo cambio fue en el turno 23');
   // el primer panorama de un narrador es siempre el completo (no hay con que comparar)
   assert.deepEqual(textos(resolucion(nuevo(), 10, [], { despues: quieto })), ['Turno 10: Beto va primero con nueve regiones y Dani cierra con dos.']);
 });
@@ -238,6 +258,24 @@ test('ninguna frase presupone algo que quien ve solo esa parte o ese clip no vio
     assert.doesNotMatch(texto, /\bsigue(n)?\b/, texto);
     assert.doesNotMatch(texto, /\b(igual|mismo|misma) que en el turno\b/, texto);
   }
+});
+
+test('resolucion: un estado ilegible no se da por «sin cambios»: no hay panorama ese turno y el conteo de turnos sin cambios empieza donde se vuelve a ver el mapa', () => {
+  const estado = (...cuentas) => ({ dueno: cuentas.flatMap((c, k) => Array(c).fill(k)), vivo: cuentas.map(() => true) });
+  const quieto = estado(3, 9, 5, 2), n = nuevo();
+  const turno = (t, despues) => textos(resolucion(n, t, [], { despues }));
+  for (const t of [1, 2, 3, 4]) turno(t, quieto);
+  assert.deepEqual(turno(5, quieto), ['Turno 5: Beto va primero con nueve regiones y Dani cierra con dos.']);
+  for (const t of [6, 7, 8, 9]) turno(t, null); // cinco turnos... cuatro sin ver el estado
+  assert.deepEqual(turno(10, null), [], 'sin estado legible no se dice nada del mapa (y menos «sin cambios»)');
+  for (const t of [11, 12, 13, 14]) turno(t, quieto);
+  assert.deepEqual(turno(15, quieto), ['Turno 15: Beto va primero con nueve regiones y Dani cierra con dos.'], 'el mapa se movio sin que nadie lo viera: se cuenta otra vez el panorama de siempre');
+  assert.deepEqual(turno(20, quieto), ['Turno 20: ninguna región cambia de dueño desde hace nueve turnos.'], 'y de ahi en adelante se cuenta desde que se volvio a ver el mapa (turno 11)');
+});
+
+test('resolucion: sin la lista de reinos en pie, un reino sin regiones no cuenta como «el que cierra» (esta caido); con la lista se respeta lo que dice', () => {
+  assert.deepEqual(textos(resolucion(nuevo(), 5, [], { despues: { dueno: [0, 0, 1, 1, 1] } })), ['Turno 5: Beto va primero con tres regiones y Ana cierra con dos.']);
+  assert.deepEqual(textos(resolucion(nuevo(), 5, [], { despues: { dueno: [0, 0, 1, 1, 1], vivo: [true, true, true, true] } })), ['Turno 5: Beto va primero con tres regiones.'], 'dos reinos en pie empatados en cero: no se nombra a uno solo');
 });
 
 test('resolucion: un reino caido no entra al panorama ni se nombra como el que cierra, y con un solo reino vivo no hay panorama', () => {

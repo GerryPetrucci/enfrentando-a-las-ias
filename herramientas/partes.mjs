@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
-import { dividirEnDos, formatoDeTiempo, direccionDeGrabacion } from '../web/casino/escena-config.js';
+import { dividirEnDos, formatoDeTiempo, direccionDeGrabacion, momentosSinVoz } from '../web/casino/escena-config.js';
 
 export { formatoDeTiempo }; // sigue exportada desde aqui para quien ya la importaba de esta herramienta
 
@@ -28,9 +28,11 @@ async function principal() {
   const motivo = motivoDeNoReproducible(juegoId, partida);
   if (motivo) salir(`La partida ${numero} no se puede partir: ${motivo}.`);
   const voz = a.voz ? JSON.parse(readFileSync(resolve(a.voz), 'utf8')) : null;
-  const construir = await lineaDe(juegoId);
-  const d = dividirEnDos(construir(partida), voz);
+  const construir = await lineaDe(juegoId), beats = construir(partida);
+  const d = dividirEnDos(beats, voz);
   if (!d) salir('Esta partida es muy corta para partirla en dos (una sola ronda).');
+  const sinVoz = momentosSinVoz(beats, voz);
+  if (sinVoz) console.log(`AVISO: la voz no cubre ${sinVoz} ${sinVoz === 1 ? 'momento' : 'momentos'} con texto de esta partida (¿se narró antes de un cambio del texto?): se grabarían sin voz. Corre herramientas/narrar.mjs otra vez.`);
   for (const [n, p] of [[1, d.parte1], [2, d.parte2]]) {
     console.log(`Parte ${n}: rondas ${p.mano} a ${p.hasta} · ${formatoDeTiempo(p.ms)} ${voz ? 'con voz' : 'sin voz'}`);
     console.log(`  ${urlDeParte({ archivo: a.archivo, partida: numero, formato, parte: p, voz: a.voz })}`);

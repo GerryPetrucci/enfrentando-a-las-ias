@@ -33,7 +33,7 @@ export function leemeDe(paquete, contexto = {}) {
   const piezas = paquete.piezas.map((p) => [
     `### ${p.id} · ${p.titulo}`,
     `- Dirección para abrir y grabar: ${SERVIDOR}/${p.grabar.url}`,
-    `- Dura: ${formatoDeTiempo(p.grabar.ms)} de pieza; la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)} contando ${segundos(p.grabar.plan.margenMs)} s de negro al empezar, los dos fundidos y ${segundos(p.grabar.plan.colaMs)} s de negro al final. Detén la grabación con la pantalla en negro (al terminar el fundido final).`,
+    `- Dura: ${formatoDeTiempo(p.grabar.ms)} de pieza; la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)} contando ${segundos(p.grabar.plan.margenMs)} s de negro al empezar, los dos fundidos y ${segundos(p.grabar.plan.colaMs)} s de negro al final. Detén la grabación con la pantalla en negro, al menos ${segundos(p.grabar.plan.colaMs)} s después del fundido final (la página se queda negra: no hay prisa).`,
     `- Guarda la grabación (OBS graba la hoja en MKV) como: ${base}-${p.id}.mkv`,
     `- Recórtala (quita el negro sobrante, deja los fundidos y saca el 9:16, el 4:5 y el 16:9): node herramientas/recortar-formatos.mjs "grabaciones/${base}-${p.id}.mkv" ${base}-${p.id} --carpeta=grabaciones/listos`,
     `- Nota: ${p.grabar.nota}`,
@@ -52,7 +52,7 @@ export function leemeDe(paquete, contexto = {}) {
     '2. OBS ya debe estar en el perfil «Enfrentando-Hoja4K»: la hoja maestra de 3840 × 2160 a 30 fps, con una fuente de navegador de 3840 × 2160 (sin «Archivo local») que tenga marcado «Controlar audio mediante OBS». Si algo no coincide, mira el paso 0.1 de privado/contenido/guia-paso-a-paso.md.',
     '',
     `## Paso 1 · Grabar las ${paquete.piezas.length} piezas`,
-    'Para cada pieza: (a) pon su dirección en la *URL* de la fuente de navegador de OBS (la página arranca sola al cargar y termina en negro: no pasa nada si se reproduce una vez antes de grabar); (b) pulsa «Iniciar grabación»; (c) en las propiedades de la fuente pulsa «Actualizar caché de la página actual»: la pantalla se queda en negro ' + segundos(margenMs) + ' segundos, se aclara y empieza la pieza; (d) al terminar verás un fundido a negro: detén la grabación con la pantalla en negro (hay ' + segundos(colaMs) + ' segundos de margen); (e) renombra el `.mkv` de `grabaciones/` como se indica; (f) recórtalo con el comando de la pieza (necesita ffmpeg; si no encuentra el negro de los márgenes, no recorta ese lado y lo dice).',
+    'Para cada pieza: (a) pon su dirección en la *URL* de la fuente de navegador de OBS (la página arranca sola al cargar y termina en negro: no pasa nada si se reproduce una vez antes de grabar); (b) pulsa «Iniciar grabación»; (c) en las propiedades de la fuente pulsa «Actualizar caché de la página actual»: la pantalla se queda en negro ' + segundos(margenMs) + ' segundos, se aclara y empieza la pieza; (d) al terminar verás un fundido a negro: espera a ver la pantalla en negro al menos ' + segundos(colaMs) + ' segundos (la página se queda negra: no hay prisa; el recorte necesita ese negro para encontrar el final) y entonces detén la grabación; (e) renombra el `.mkv` de `grabaciones/` como se indica; (f) recórtalo con el comando de la pieza (necesita ffmpeg; si no encuentra el negro de los márgenes, no recorta ese lado y lo dice).',
     '',
     ...piezas,
     '## Paso 2 · Revisar cada video (no publiques ninguno sin marcar todo)',

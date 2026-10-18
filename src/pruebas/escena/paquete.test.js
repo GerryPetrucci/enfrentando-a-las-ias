@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { construirPaquete, ventanaDeClip, hashtagsDe, LIMITES } from '../../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
-import { dividirEnDos, duracionDeBeat, planDeGrabacion } from '../../../web/casino/escena-config.js';
+import { dividirEnDos, duracionDeBeat, planDeGrabacion, momentosSinVoz } from '../../../web/casino/escena-config.js';
 import { textoDeJuego } from '../../../web/casino/textos-juego.js';
 import { jugar as jugarDuda } from './ayudas.js';
 import { jugarMM } from './ayudas-mm.js';
@@ -94,6 +94,29 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
       assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1'], `${id}: ${pieza.id}`);
     }
   }
+});
+
+test('el paquete avisa si la voz no cubre los momentos con texto de la partida (se narro antes de un cambio del texto): se grabaria sin voz sin que nada lo diga', async () => {
+  const beats = await armarLinea('conquista', PARTIDAS.conquista);
+  const alDia = Object.fromEntries(beats.filter((b) => b.texto).map((b) => [b.id, { archivo: `data/voz/x-p1/${b.id}.ogg`, ms: 5000, fuente: b.texto }]));
+  assert.equal(momentosSinVoz(beats, alDia), 0);
+  const avisos = async (voz) => (await paqueteDe('conquista', PARTIDAS.conquista, { voz, rutaVoz: 'data/voz/x-p1/voz.json' })).paquete.advertencias;
+  assert.ok(!(await avisos(alDia)).some((a) => /voz/i.test(a)), 'una voz al dia no avisa de nada');
+  // una voz vieja: le falta un momento (los ids cambian cuando cambia el numero de beats) y otro dice otra cosa
+  const [a, b] = beats.filter((x) => x.texto && x.tipo !== 'intro').map((x) => x.id);
+  const vieja = { ...alDia, [b]: { ...alDia[b], fuente: 'otro texto' } };
+  delete vieja[a];
+  assert.equal(momentosSinVoz(beats, vieja), 2);
+  assert.match((await avisos(vieja)).join(' '), /La voz[\s\S]*?no cubre 2 momentos[\s\S]*?narrar\.mjs/i);
+  // sin voz (nada o vacia) no hay de que avisar: se graba sin voz a proposito
+  for (const nada of [null, undefined, {}]) assert.equal(momentosSinVoz(beats, nada), 0);
+  assert.equal(momentosSinVoz(null, alDia), 0);
+});
+
+test('un formato que no es la hoja se avisa: el LEEME y el recorte suponen la hoja maestra de 3840 x 2160', async () => {
+  const avisos = async (formato) => (await paqueteDe('conquista', PARTIDAS.conquista, { formato })).paquete.advertencias.join(' ');
+  assert.doesNotMatch(await avisos('hoja'), /formato/i);
+  for (const f of ['9x16', '16x9']) assert.match(await avisos(f), new RegExp(`formato es ${f}[^.]*hoja`, "i"));
 });
 
 test('la direccion de cada pieza lleva el numero de partida del archivo (una serie trae varias) y el formato que se pida', async () => {

@@ -109,6 +109,13 @@ export function entradaDeVoz(voz, beat) {
   return e;
 }
 
+// Cuantos momentos con algo que decir NO tienen su voz en `voz` (voz.json): la voz es de otra partida, o se narro antes de un cambio del texto (los ids de los beats cambian cuando cambia cuantos hay). Se
+// grabarian sin voz sin que nada lo diga (con limpio=1 el aviso de la pagina queda oculto): el paquete y partes.mjs lo avisan. Sin voz (nada o vacia) no hay de que avisar: 0.
+export function momentosSinVoz(beats, voz) {
+  if (!hayVoz(voz)) return 0;
+  return (Array.isArray(beats) ? beats : []).filter((b) => b?.texto && !entradaDeVoz(voz, b)).length;
+}
+
 // Cuantos beats tienen su audio y cuantos tienen uno de OTRO texto (la voz es de otra partida o el texto cambio despues de narrarla).
 export function resumenDeVoz(beats, voz) {
   let usados = 0, desacordes = 0;

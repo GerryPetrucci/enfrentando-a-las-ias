@@ -29,6 +29,11 @@ function conTemporal(fn) {
   const carpeta = mkdtempSync(join(tmpdir(), 'paquete-'));
   try { return fn(carpeta); } finally { rmSync(carpeta, { recursive: true, force: true }); }
 }
+// lo mismo para pruebas async: espera a que `fn` termine antes de borrar la carpeta (con conTemporal se borraba al primer await y la prueba volvia a crearla, dejando basura en el temporal del sistema)
+async function conTemporalAsync(fn) {
+  const carpeta = mkdtempSync(join(tmpdir(), 'paquete-'));
+  try { return await fn(carpeta); } finally { rmSync(carpeta, { recursive: true, force: true }); }
+}
 const guardar = (carpeta, partida, nombre = 'guerra.json') => {
   const ruta = join(carpeta, nombre);
   writeFileSync(ruta, JSON.stringify({ juego: partida.juego, partidas: [partida] }));
@@ -53,7 +58,7 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   assert.match(leeme, /bots|control/i, 'la advertencia de que es una partida de bots sale en el LEEME');
 }));
 
-test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporal(async (tmp) => {
+test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporalAsync(async (tmp) => {
   const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const carpeta = join(tmp, 'p');
@@ -96,8 +101,10 @@ test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si 
     const texto = leemeDe(paquete, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, nombreBase: 'guerra-p1' });
     assert.match(texto, /3 s de negro al empezar/);
     assert.match(texto, /4 s de negro al final/);
-    assert.match(texto, /hay 4 segundos de margen/);
+    assert.match(texto, /al menos 4 segundos/, 'se pide esperar a ver el negro de salida el tiempo que el recortador necesita para encontrarlo');
+    assert.match(texto, /al menos 4 s después del fundido final/);
     assert.match(texto, /negro 3 segundos/);
+    assert.doesNotMatch(texto, /al terminar el fundido final\)/, 'no invita a detener justo al acabar el fundido (sin negro de salida no hay recorte del final)');
   } finally {
     Object.assign(FUNDIDOS, guardado);
   }
@@ -160,6 +167,25 @@ test('paquete.mjs sale con 1 y dice por que ante: sin --archivo, archivo inexist
   }
   assert.ok(!existsSync(join(tmp, '..', `fuera-${basename(tmp)}`)), 'una salida con .. no escribe nada fuera');
   assert.ok(!existsSync(salida) || readdirSync(salida).length === 0, 'un error no deja carpetas a medias');
+}));
+
+test('partes.mjs avisa si la voz no cubre los momentos con texto de la partida (si no, se grabaria sin voz sin enterarse) y no avisa con una voz al dia ni sin voz', async () => conTemporalAsync(async (tmp) => {
+  const archivo = guardar(tmp, PARTIDA);
+  const beats = await armarLinea('conquista', PARTIDA);
+  const alDia = Object.fromEntries(beats.filter((b) => b.texto).map((b) => [b.id, { archivo: `data/voz/x-p1/${b.id}.ogg`, ms: 5000, fuente: b.texto }]));
+  const vieja = { ...alDia };
+  delete vieja[beats.find((b) => b.texto && b.tipo !== 'intro').id];
+  const partes = (voz) => {
+    const args = [`--archivo=${archivo}`];
+    if (voz) { const ruta = join(tmp, 'voz.json'); writeFileSync(ruta, JSON.stringify(voz)); args.push(`--voz=${ruta}`); }
+    return spawnSync(process.execPath, [join(RAIZ, 'herramientas', 'partes.mjs'), ...args], { encoding: 'utf8', timeout: 30000, cwd: RAIZ });
+  };
+  const conVieja = partes(vieja);
+  assert.equal(conVieja.status, 0, `${conVieja.stdout}${conVieja.stderr}`);
+  assert.match(conVieja.stdout, /AVISO: la voz no cubre 1 momento[^\n]*narrar\.mjs/i);
+  for (const voz of [alDia, null]) { const r = partes(voz); assert.equal(r.status, 0, `${r.stdout}${r.stderr}`); assert.doesNotMatch(r.stdout, /AVISO/, voz ? 'voz al dia' : 'sin voz'); }
+  // y las direcciones que imprime son las del paquete: para la hoja, sin barra y con margenes
+  assert.match(partes(alDia).stdout, /escena\.html\?[^\s]*formato=hoja[^\s]*grabar=1/);
 }));
 
 test('paquete.mjs arma por omision las direcciones para la hoja maestra de OBS (formato=hoja y grabar=1); --formato=9x16 las deja verticales', () => conTemporal((tmp) => {

@@ -46,7 +46,7 @@ test('los tiempos de los margenes y fundidos viven en un solo lugar: 2 s de negr
 
 test('el plan de grabacion suma margen + fundido + contenido + fundido + cola; los margenes son del grabador y no dependen de la velocidad de la partida', () => {
   assert.deepEqual(planDeGrabacion(60000), { margenMs: 2000, fundidoMs: 500, contenidoMs: 60000, colaMs: 2000, totalMs: 65000 });
-  assert.deepEqual(planDeGrabacion(60000, 2), planDeGrabacion(60000), 'la velocidad no los toca (el recortador los busca por su duracion)');
+  assert.equal(planDeGrabacion.length, 1, 'el plan no tiene parametro de velocidad: los margenes no se escalan (el recortador los busca por su duracion); el contenido ya viene a la velocidad de reproduccion');
   assert.equal(planDeGrabacion(0).totalMs, 5000, 'sin contenido quedan los margenes y los fundidos');
 });
 

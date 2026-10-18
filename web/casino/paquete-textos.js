@@ -3,7 +3,7 @@
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
 
-import { dividirEnDos, duracionDeBeat, formatoDeTiempo, planDeGrabacion, direccionDeGrabacion } from './escena-config.js';
+import { dividirEnDos, duracionDeBeat, formatoDeTiempo, planDeGrabacion, direccionDeGrabacion, momentosSinVoz } from './escena-config.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
 import { textoDeJuego } from './textos-juego.js';
 
@@ -66,6 +66,9 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     if (p.ms > MAX_VIDEO_MS) advertencias.push(`La parte ${n} dura ${formatoDeTiempo(p.ms)}: pasa de 3 minutos (el límite de los Shorts y de los Reels recomendados). Considera partir este juego en más partes o recortar al editar.`);
   }
+  const sinVoz = momentosSinVoz(lista, voz);
+  if (sinVoz) advertencias.push(`La voz (voz.json) no cubre ${sinVoz} ${sinVoz === 1 ? 'momento' : 'momentos'} con texto de esta partida: se grabarian sin voz. ¿Se narró antes de un cambio del texto? Corre herramientas/narrar.mjs otra vez y regenera el paquete con --forzar.`);
+  if (formato !== 'hoja') advertencias.push(`El formato es ${formato}: la dirección abre la escena a ese tamaño, pero el LEEME y el recorte suponen la hoja maestra de 3840 × 2160 (--formato=hoja, el valor por omisión). Úsalo solo para probar la escena.`);
   const jugadores = Array.isArray(partida.jugadores) ? partida.jugadores : [];
   const nombres = jugadores.map((j, i) => j?.nombre ?? `Jugador ${i + 1}`);
   if (jugadores.some((j) => j?.tipo !== 'modelo')) advertencias.push('Esta partida tiene jugadores de control (bots), no solo modelos de IA: sirve para probar, no es la que se publica como episodio.');

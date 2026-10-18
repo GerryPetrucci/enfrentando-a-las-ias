@@ -32,8 +32,8 @@ export function tamanoDeFormato(formato) {
 }
 
 // La direccion de la escena lista para capturar: sin sonido ni barra, arranca sola y (con `beat`) avanza al instante hasta ese momento y se queda ahi.
-export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null, grabar = false }) {
-  const q = new URLSearchParams({ archivo, partida: String(partida), formato, limpio: '1', auto: '1', sonido: '0', escala: '1' });
+export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null, grabar = false, sonido = false }) {
+  const q = new URLSearchParams({ archivo, partida: String(partida), formato, limpio: '1', auto: '1', sonido: sonido ? '1' : '0', escala: '1' });
   if (grabar) q.set('grabar', '1');
   if (beat !== null && beat !== undefined) q.set('detener', String(beat));
   if (vel) q.set('vel', String(vel));
@@ -201,13 +201,15 @@ async function principal() {
     // el modo de grabacion con OBS, medido en tiempo virtual: a mitad del margen la pagina sigue en negro, pasados el margen y el fundido ya corre el contenido y al final queda cerrada en negro.
     // Ademas del estado que dice la pagina (data-fundido) se mira el pixel: la cortina tiene que cubrir TODO el margen y el cierre (un destello de escena antes de aclararse arruinaria el primer cuadro grabado).
     const vel = Number(a.vel ?? 8), t = presupuestosDeGrabar(), alSegundo = (ms) => `a ${segundos(ms)} s`;
-    const momentos = [ // cuando, ms de tiempo virtual, velocidad, data-fundido esperado, ¿la captura es toda negra?, sufijo del PNG
-      [alSegundo(t.margen), t.margen, 1, 'margen', true, 'margen'], [alSegundo(t.contenido), t.contenido, 1, 'contenido', false, 'contenido'], ['al final', 600000, vel, 'negro', true, 'final']];
+    // el ultimo momento es igual al de «al final» pero CON sonido: Chrome sin cabeza no tiene audio listo (como un navegador que exige un clic) y la pagina no puede quedarse en negro esperandolo
+    const momentos = [ // cuando, ms de tiempo virtual, velocidad, data-fundido esperado, ¿la captura es toda negra?, sufijo del PNG, ¿con sonido?
+      [alSegundo(t.margen), t.margen, 1, 'margen', true, 'margen', false], [alSegundo(t.contenido), t.contenido, 1, 'contenido', false, 'contenido', false], ['al final', 600000, vel, 'negro', true, 'final', false],
+      ['al final, con sonido', 600000, vel, 'negro', true, 'final-sonido', true]];
     const informar = (bien, texto) => { console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${texto}`); if (!bien) fallos++; };
     for (const formato of formatos) {
-      for (const [cuando, ms, velocidad, fundido, negra, sufijo] of momentos) {
+      for (const [cuando, ms, velocidad, fundido, negra, sufijo, conSonido] of momentos) {
         const ruta = join(carpeta, `${nombre}-${formato}-grabar-${sufijo}.png`);
-        const r = ejecutarChrome(chrome, argsChrome(formato, ms, '--dump-dom', `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true })));
+        const r = ejecutarChrome(chrome, argsChrome(formato, ms, '--dump-dom', `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true, sonido: conSonido })));
         const visto = leerFundido(r.salida);
         informar(visto?.fundido === fundido, `${formato} ${cuando}: ${visto?.fundido ?? 'sin modo grabar'} (esperado ${fundido})`);
         if (fundido === 'negro' && !visto?.cerrada) { console.error(`  ERROR en ${formato}: la pagina no marco el cierre (data-cierre)`); fallos++; }

@@ -11,6 +11,8 @@ import {
   MIN_MS, MOTIVOS, TURNOS_TOPE, JUGADORES_TOPE, CAMARA_POR_DEFECTO,
 } from '../../../web/casino/linea-de-tiempo-conquista.js';
 import { ESCENARIOS, partidasDeEjemplo, jugarConqBots, jugarConqConCaido } from './ayudas-conq.js';
+import { enPalabras } from '../../../web/casino/narracion-conquista.js';
+import { duracionDeBeat } from '../../../web/casino/escena-config.js';
 
 const IDX = { P18: 0, P61: 1, P94: 2 };
 const ejemplos = await partidasDeEjemplo();
@@ -442,6 +444,10 @@ test('un turno cuya racha de expansion ya se dijo no dice nada de las ordenes y 
       assert.ok(!b.texto.includes('manda'), `${b.id}: la lista de «manda N tropas de R a R» ya no se dice`);
       callados++;
     }
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.dicho && x.texto === '')) {
+      assert.equal(duracionDeBeat(b, null, 1), b.minMs, `${b.id}: un momento mudo dura su minimo, sin voz que lo alargue`);
+      assert.ok(b.minMs >= 1000 && b.minMs <= 3000, `${b.id}: ${b.minMs} ms (el ritmo de un turno sin nada que decir)`);
+    }
     for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes')) {
       for (const l of b.lineas.filter((x) => x.clave.startsWith('priv:'))) assert.ok(b.dicho.some((d) => d.clave === l.clave && d.texto === l.texto), `${b.id}: el privado se dice tal cual`);
     }
@@ -476,6 +482,78 @@ test('el resumen cuenta TODOS los ataques del turno, no solo los 10 que se dibuj
   assert.equal(paso(b, 'flechas').lista.length, 10, 'solo se dibujan 10');
   assert.ok(paso(b, 'flechas').lista.every((f) => f.n === 5), 'el ataque pequeño contra otro reino no esta entre los dibujados');
   assert.match(b.texto, new RegExp(`${p.jugadores[0].nombre} lanza un ataque contra ${p.jugadores[antes[ajenas[0]]].nombre}\\.`), 'pero se dice');
+});
+
+// ---- lo que dice el narrador de los ataques y del hambre se comprueba contra los registros con un calculo INDEPENDIENTE (no con el codigo del narrador) ----
+const NUMERO = { un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10 };
+const aNumero = (palabra) => NUMERO[palabra] ?? Number(palabra);
+// los objetivos distintos (reino, region) de un turno contra regiones que son de OTRO reino: los movimientos de un reino a una misma region son UN ataque (el motor los junta en un bando)
+function ataquesContraOtros(p, turno) {
+  const antes = duenoAntes(p, turno), objetivos = new Set();
+  for (const m of p.rondas[turno - 1].movs) if (antes[m.d] >= 0 && antes[m.d] !== m.k) objetivos.add(`${m.k}|${m.d}`);
+  return objetivos.size;
+}
+function ataquesDichos(texto) {
+  const porPareja = [...texto.matchAll(/lanza (un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+) ataques? contra/g)].reduce((s, m) => s + (m[1] === 'un' ? 1 : aNumero(m[1])), 0);
+  const contados = /Hay (\S+) ataques contra otros reinos/.exec(texto);
+  return contados ? aNumero(contados[1]) : porPareja;
+}
+
+test('el numero de ataques que se dice sale de los objetivos distintos del turno, no de los movimientos: coincide con un calculo independiente sobre los registros (ejemplos y dos partidas del motor con movimientos dobles)', async () => {
+  const partidas = [...ejemplos, await jugarConqBots(28, ['agresivo', 'agresivo', 'agresivo', 'azar', 'azar']), await jugarConqBots(85, ['agresivo', 'agresivo', 'agresivo', 'azar', 'azar'])];
+  let turnosConAtaques = 0, conMovimientosDobles = 0;
+  for (const p of partidas) {
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes')) {
+      const total = ataquesContraOtros(p, b.mano), dicho = ataquesDichos(b.texto);
+      assert.equal(dicho, total, `${p.seed} turno ${b.mano}: dice ${dicho} ataques y hay ${total} objetivos distintos (${b.texto})`);
+      if (total) turnosConAtaques++;
+      const movimientos = p.rondas[b.mano - 1].movs.filter((m) => duenoAntes(p, b.mano)[m.d] >= 0 && duenoAntes(p, b.mano)[m.d] !== m.k).length;
+      if (movimientos > total) conMovimientosDobles++;
+    }
+  }
+  assert.ok(turnosConAtaques >= 5, `cobertura: ${turnosConAtaques} turnos con ataques contra otros reinos`);
+  assert.ok(conMovimientosDobles >= 2, `cobertura: ${conMovimientosDobles} turnos con movimientos dobles (si el motor cambio y ya no hay, buscar otros seeds como dicen las ayudas)`);
+});
+
+test('dos movimientos de un reino a la misma region de otro se dicen como UN ataque; a dos regiones, dos', () => {
+  const p = structuredClone(ejemplos[IDX.P18]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
+  const de1 = antes.flatMap((d, id) => (d === 1 ? [id] : []));
+  assert.ok(de1.length >= 2, 'precondicion: el reino 1 tiene dos regiones');
+  const ataca = (...regiones) => { r.movs = regiones.map((d) => ({ f: 0, d, n: 3, k: 0 })); return construirLineaDeTiempo(p).find((x) => x.tipo === 'ordenes' && x.mano === r.turno).texto; };
+  const rival = p.jugadores[1].nombre, yo = p.jugadores[0].nombre;
+  assert.match(ataca(de1[0], de1[0]), new RegExp(`${yo} lanza un ataque contra ${rival}\\.`));
+  assert.match(ataca(de1[0], de1[0], de1[1]), new RegExp(`${yo} lanza dos ataques contra ${rival}\\.`));
+});
+
+test('un estado ilegible en unos turnos no se da por «sin cambios»: el panorama de esos turnos calla y no afirma que ninguna region cambio de dueño', () => {
+  const p = structuredClone(ejemplos[IDX.P18]);
+  for (const idx of [5, 6, 7, 8, 9]) delete p.rondas[idx].estado.tropas; // los turnos 6 a 10 no traen un estado legible
+  const beats = construirLineaDeTiempo(p);
+  const panorama = (turno) => beats.filter((b) => b.mano === turno && b.dicho).flatMap((b) => b.dicho).filter((l) => l.datos?.cuentas);
+  assert.deepEqual(panorama(10), [], 'sin estado legible no hay panorama');
+  for (const b of beats.filter((x) => x.dicho && x.mano >= 6 && x.mano <= 15)) assert.doesNotMatch(b.texto, /ninguna región cambia de dueño/, `${b.id}: no puede afirmar que no hubo cambios`);
+});
+
+test('el hambre se cuenta en cada turno como dice el registro: primera vez, segundo turno seguido, y a partir del tercero cuantos lleva y cuanto perdio (o callada, anotada como muda)', () => {
+  const tropas = (n) => `${enPalabras(n)} ${n === 1 ? 'tropa' : 'tropas'}`;
+  let verificados = 0, callados = 0, largas = 0;
+  for (const p of ejemplos) {
+    const beats = construirLineaDeTiempo(p), previa = new Map();
+    for (const r of p.rondas) {
+      for (const e of r.eventos.filter((x) => x.tipo === 'hambre')) {
+        const antes = previa.get(e.k), seguida = antes?.turno === r.turno - 1, racha = seguida ? antes.racha + 1 : 1, total = (seguida ? antes.total : 0) + e.n;
+        previa.set(e.k, { turno: r.turno, racha, total });
+        const nombre = p.jugadores[e.k].nombre, clave = `ev:hambre:${e.t}:${e.k}::`;
+        const esperado = racha === 1 ? `${nombre} pasa hambre y pierde ${tropas(e.n)}.` : racha === 2 ? `${nombre} pasa hambre por segundo turno seguido y pierde ${tropas(e.n)}.`
+          : racha === 3 || racha % 5 === 0 ? `${nombre} lleva ${enPalabras(racha, 'm')} turnos con hambre y ya perdió ${tropas(total)}.` : null;
+        const b = beats.find((x) => x.tipo === 'resolucion' && x.mano === r.turno);
+        const dicha = b.dicho.find((l) => l.clave === clave);
+        if (esperado === null) { assert.ok(b.mudas.includes(clave) && !dicha, `${clave}: callada y anotada`); callados++; } else { assert.equal(dicha?.texto, esperado, clave); if (racha >= 3) largas++; }
+        verificados++;
+      }
+    }
+  }
+  assert.ok(verificados >= 6 && callados >= 1 && largas >= 1, `cobertura: ${verificados} hambres, ${callados} calladas y ${largas} largas en las partidas de ejemplo`);
 });
 
 test('si todos los reinos en pie salen a las regiones sin dueño, se dice «todos» (y si uno cayo, el que cayo no cuenta)', () => {

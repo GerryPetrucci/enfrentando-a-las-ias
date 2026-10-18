@@ -130,15 +130,9 @@ test('ventanaDeContenido ignora los negros cortos, no se confunde con un negro s
   for (const corto of [[{ inicio: 3, fin: 3.4 }], [{ inicio: 0, fin: 0.4 }], [{ inicio: 7.6, fin: 8 }], [{ inicio: 0, fin: 1.4 }, { inicio: 6.6, fin: 8 }]]) {
     assert.deepEqual([v(corto, 8).inicio, v(corto, 8).fin], [null, null], `un negro de menos de 1.5 s no es un margen: ${JSON.stringify(corto)}`);
   }
-  const enMedio = v([{ inicio: 4, fin: 6.5 }], 10);
-  assert.deepEqual([enMedio.inicio, enMedio.fin], [null, null], 'un solo negro en medio no es ni entrada ni salida');
-  assert.match(enMedio.avisos.join(' '), /medio/);
   const todo = v([{ inicio: 0, fin: 8.5 }], 8.5);
   assert.deepEqual([todo.inicio, todo.fin], [null, null]);
   assert.match(todo.avisos.join(' '), /toda negra|todo negro/);
-  const conMedio = v([{ inicio: 0, fin: 2 }, { inicio: 5, fin: 7 }, { inicio: 9, fin: 11 }], 11);
-  assert.deepEqual([conMedio.inicio, conMedio.fin], [1.85, 9.15], 'cuentan el primero y el ultimo');
-  assert.match(conMedio.avisos.join(' '), /medio/, 'avisa del negro del medio');
   assert.equal(v([{ inicio: 0, fin: 1.6 }], 5).inicio, 1.45);
   assert.equal(v([{ inicio: 0, fin: 1.55 }, { inicio: 3, fin: 5 }], 5).inicio, 1.4);
   // con un minimo mas chico (no es el caso normal) la holgura no se sale del video por ningun lado
@@ -148,20 +142,30 @@ test('ventanaDeContenido ignora los negros cortos, no se confunde con un negro s
   assert.deepEqual([ventanaDeContenido([{ inicio: 0, fin: 2 }], NaN).inicio, ventanaDeContenido([{ inicio: 0, fin: 2 }], undefined).fin], [null, null], 'sin duracion no se recorta');
 });
 
-test('ventanaDeContenido: un negro largo en medio nunca se toma por el margen de salida (la salida tiene que llegar al final del video), ni por el de entrada sin una salida detras', () => {
+test('ventanaDeContenido: la salida es el negro que llega al final y la entrada es el ULTIMO negro largo antes de ella (la pieza es lo que hay justo antes de la salida: lo anterior es de una pasada vieja de la pagina)', () => {
   const v = (negros, duracion) => ventanaDeContenido(negros, duracion);
-  // se detuvo la grabacion antes del fundido final y hay un negro de 2 s en medio: sin negro de salida, no se corta el video por la mitad
-  const detuvoAntes = v([{ inicio: 0, fin: 2 }, { inicio: 5, fin: 7 }], 10);
-  assert.deepEqual([detuvoAntes.inicio, detuvoAntes.fin], [1.85, null]);
-  assert.match(detuvoAntes.avisos.join(' '), /medio/);
-  assert.match(detuvoAntes.avisos.join(' '), /salida/);
-  // dos negros que no tocan ni el inicio ni el final: no son margenes
-  const sueltos = v([{ inicio: 1, fin: 3 }, { inicio: 5, fin: 7 }], 10);
-  assert.deepEqual([sueltos.inicio, sueltos.fin], [null, null]);
-  assert.match(sueltos.avisos.join(' '), /medio/);
-  // lo que antes de refrescar la pagina ya se grababa (el negro de entrada no empieza en 0) sigue valiendo si detras hay un negro que llega al final
+  // se pego la direccion y se grabo durante su primera pasada: negro de esa pasada, un trozo de ella, y despues el margen de la pieza de verdad y su salida
+  const primeraPasada = v([{ inicio: 0, fin: 2.3 }, { inicio: 8, fin: 10.4 }, { inicio: 130, fin: 133 }], 133);
+  assert.deepEqual([primeraPasada.inicio, primeraPasada.fin], [10.25, 130.15], 'la pieza empieza donde acaba el ULTIMO negro antes de la salida, no el primero');
+  assert.match(primeraPasada.avisos.join(' '), /antes del margen de entrada/, 'se dice que habia una pasada anterior en el archivo');
+  // algo se grababa antes de refrescar (el negro de entrada no empieza en 0): sigue valiendo
   const conPrevio = v([{ inicio: 1, fin: 3.2 }, { inicio: 9, fin: 11 }], 11);
   assert.deepEqual([conPrevio.inicio, conPrevio.fin], [3.05, 9.15]);
+  assert.deepEqual(conPrevio.avisos, [], 'un solo negro antes de la salida: nada que avisar');
+  // se detuvo antes del fundido final (sin salida): la entrada es el ultimo negro largo (los de antes son de otras pasadas) y el final no se recorta
+  const detuvoAntes = v([{ inicio: 0, fin: 2 }, { inicio: 5, fin: 7 }], 10);
+  assert.deepEqual([detuvoAntes.inicio, detuvoAntes.fin], [6.85, null]);
+  assert.match(detuvoAntes.avisos.join(' '), /salida/);
+  assert.match(detuvoAntes.avisos.join(' '), /antes del margen de entrada/);
+  // un solo negro que no toca el inicio ni el final (se empezo a grabar con la pagina ya en marcha): es la entrada; lo de antes se va
+  const suelto = v([{ inicio: 4, fin: 6.5 }], 10);
+  assert.deepEqual([suelto.inicio, suelto.fin], [6.35, null]);
+  // una grabacion con dos negros y sin salida, ninguno al inicio: el ultimo es la entrada
+  assert.equal(v([{ inicio: 1, fin: 3 }, { inicio: 5, fin: 7 }], 10).inicio, 6.85);
+  // blackdetect no encima intervalos, pero con una lista armada a mano un negro que empieza cuando la salida ya empezo nunca es la entrada: la ventana no se invierte
+  const encimado = v([{ inicio: 2, fin: 4 }, { inicio: 10, fin: 20 }, { inicio: 15, fin: 18 }], 20);
+  assert.deepEqual([encimado.inicio, encimado.fin], [3.85, 10.15]);
+  assert.deepEqual(encimado.avisos, [], 'el negro encimado no cuenta como una pasada anterior');
 });
 
 test('los argumentos de ffmpeg limitan la duracion de lo que se lee cuando se pide (despues de -ss y antes de -i), y sin ella no cambian', () => {
@@ -232,5 +236,20 @@ test('recortar-formatos no recorta lo que no tiene negro de margenes (la carta d
   r = recortar(sin, 'inicio', '--manual', '--inicio=1');
   assert.equal(r.status, 0, r.stderr || r.stdout);
   assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'inicio_9x16.mp4')) - 1) < 0.3, '--inicio=1 salta el primer segundo');
+});
+
+test('recortar-formatos recorta bien un MKV cuyos tiempos no empiezan en 0 (blackdetect da tiempos absolutos y la duracion de ffprobe no incluye ese desfase)', { skip: saltar }, () => {
+  const desfasado = join(dirDeMontaje(), 'desfasado.mkv');
+  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', grabacionConMargenes(), '-c', 'copy', '-output_ts_offset', '7', desfasado]);
+  assert.equal(g.status, 0, String(g.stderr));
+  const empieza = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=start_time', '-of', 'csv=p=0', desfasado], { encoding: 'utf8' }).stdout.trim());
+  assert.ok(empieza > 6.5, `precondicion: el archivo de prueba empieza en ${empieza} s y no en 0`);
+  const r = recortar(desfasado, 'desfasado');
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+  const esperado = 2 * F + CONTENIDO + NEGRO.antes + NEGRO.despues;
+  const f = join(dirDeMontaje(), 'desfasado_9x16.mp4'), d = duracionDe(f);
+  assert.ok(Math.abs(d - esperado) < 0.4, `dura ${d} y deberia durar ~${esperado} (si no recorto los dos lados, el desfase confundio a la deteccion)`);
+  assert.ok(brilloEn(f, 0) < 30 && brilloEn(f, d - 0.05) < 30 && brilloEn(f, d / 2) > 40, 'el recorte cae donde toca: abre y cierra en negro con el contenido en medio (-ss tambien cuenta desde el primer cuadro)');
+  assert.doesNotMatch(r.stdout, /AVISO/, 'encuentra los dos margenes');
 });
 

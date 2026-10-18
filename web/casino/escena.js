@@ -192,10 +192,15 @@ export async function iniciar() {
     a.click();
   };
 
+  // en modo grabar la barra de estado esta oculta (limpio=1) y la cortina lo tapa todo: un error sale SOBRE el negro (con data-fundido="error"); si no, se grabaria negro sin saber por que
+  const errorEnNegro = (texto) => { negro.textContent = texto || 'No se pudo armar la escena'; document.body.dataset.fundido = 'error'; };
+
   const nombres = listaDeArchivos(params.archivo);
   if (!nombres.length) {
     const juegos = juegosConEscena().map((id) => escenaDe(id).nombre).join(', ');
-    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
+    const ayuda = `Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio, grabar.`;
+    if (params.grabar) errorEnNegro(ayuda);
+    return aviso(ayuda);
   }
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {
@@ -205,12 +210,14 @@ export async function iniciar() {
     } catch { return { nombre, datos: null, error: `no pude leer data/${nombre}` }; }
   }));
   await abrir(cargados, { archivo: nombres[0], numero: params.partida });
-  if (params.auto && actual) {
+  if (params.auto && actual && params.grabar) {
+    // sin un clic el navegador puede negarse a abrir el audio (el de OBS no): si en 3 s no esta, se sigue sin sonido en vez de quedarse en negro para siempre
+    await Promise.race([sfx.preparar(), pausa(3000)]);
+    await reproducirGrabando();
+  } else if (params.auto && actual) {
     await sfx.preparar();
-    if (params.grabar) await reproducirGrabando(); else reproducir();
+    reproducir();
   } else if (params.grabar) {
-    // algo fallo antes de poder grabar: el mensaje sale sobre el negro (con limpio=1 la barra de estado esta oculta y se grabaria negro sin saber por que)
-    negro.textContent = document.getElementById('estado').textContent || 'No se pudo armar la escena';
-    document.body.dataset.fundido = 'error';
+    errorEnNegro(document.getElementById('estado').textContent); // algo fallo antes de poder grabar
   }
 }

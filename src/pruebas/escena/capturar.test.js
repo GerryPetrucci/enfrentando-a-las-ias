@@ -159,6 +159,11 @@ test('los momentos que mide --grabar salen de FUNDIDOS, no de numeros escritos a
   assert.ok(largo.margen < 6000 && largo.contenido > 7000, 'si cambian los tiempos, cambian los momentos');
 });
 
+test('la URL de captura apaga el sonido salvo que se pida (--grabar lo pide en una pasada: con sonido, un navegador sin audio listo no puede dejar la pagina en negro para siempre)', () => {
+  assert.equal(new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: 'hoja' })).searchParams.get('sonido'), '0');
+  assert.equal(new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: 'hoja', sonido: true, grabar: true })).searchParams.get('sonido'), '1');
+});
+
 test('leerFundido lee en que punto de la grabacion esta la pagina y si ya se cerro en negro', () => {
   assert.deepEqual(leerFundido('<body data-fundido="margen">'), { fundido: 'margen', cerrada: false });
   assert.deepEqual(leerFundido('<body data-fundido="negro" data-cierre="1" data-terminada="1">'), { fundido: 'negro', cerrada: true });

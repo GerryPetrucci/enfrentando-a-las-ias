@@ -51,9 +51,10 @@ export function negrosDe(texto) {
   return [...texto.matchAll(/black_start:(-?[\d.]+)\s+black_end:(-?[\d.]+)/g)].map((m) => ({ inicio: Number(m[1]), fin: Number(m[2]) }));
 }
 
-// De que segundo a que segundo queda el contenido. El margen de SALIDA es el negro largo que llega al final del video (el contenido acaba donde empieza); el de ENTRADA, el negro largo que arranca con el
-// video (el contenido empieza donde acaba) o, si se grabo algo antes de refrescar la pagina, el primer negro largo que tiene detras una salida. Cualquier otro negro largo esta en medio de la pieza:
-// no es margen, no se toca y se avisa (si no, un negro en medio cortaria el video por la mitad). `inicio` o `fin` en null = ese lado no se recorta; `avisos` dice por que.
+// De que segundo a que segundo queda el contenido. El margen de SALIDA es el negro largo que llega al final del video (el contenido acaba donde empieza). El de ENTRADA es el ULTIMO negro largo antes
+// de la salida (o, sin salida, el ultimo de todos): la pieza es lo que hay justo antes de la salida, asi que lo anterior es de otra pasada de la pagina que quedo en el mismo archivo (se pego la
+// direccion, que se reproduce una vez sola, y se grabo durante ella) y se va; la hoja nunca tiene 1.5 s de negro dentro de la pieza (media hoja es el fondo del tapiz). `inicio` o `fin` en null = ese
+// lado no se recorta; `avisos` dice por que.
 export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo } = {}) {
   const sin = (avisos) => ({ inicio: null, fin: null, avisos });
   if (!Array.isArray(negros) || !Number.isFinite(duracion) || duracion <= 0) return sin(['No pude medir la grabacion: no recorto el negro.']);
@@ -61,12 +62,12 @@ export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo } =
   const alInicio = (n) => n.inicio <= NEGRO.tolerancia, alFinal = (n) => n.fin >= duracion - NEGRO.tolerancia;
   if (largos.length === 1 && alInicio(largos[0]) && alFinal(largos[0])) return sin(['La grabacion es toda negra: ¿esta bien la fuente de OBS? No recorto nada.']);
   const salida = largos.findLast(alFinal) ?? null; // el negro que llega al final
-  const entrada = largos.find((n) => n !== salida && (salida || alInicio(n))) ?? null; // el que arranca con el video o, con una salida detras, el primero (algo se grabo antes de refrescar)
-  const enMedio = largos.filter((n) => n !== entrada && n !== salida);
+  const previos = largos.filter((n) => n !== salida && (!salida || n.fin <= salida.inicio));
+  const entrada = previos.at(-1) ?? null; // el ultimo negro largo antes de la salida
   const avisos = [];
-  if (enMedio.length) avisos.push(`Hay negro en medio de la grabacion (${enMedio.map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): no es margen, no lo toco; revisa la pieza.`);
+  if (previos.length > 1) avisos.push(`Hay negro antes del margen de entrada (${previos.slice(0, -1).map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): es de una pasada anterior de la pagina en el mismo archivo; lo recorto.`);
   if (!entrada) avisos.push('No encontre el negro de entrada: ¿grabaste con la direccion del paquete (lleva grabar=1)? No recorto el inicio.');
-  if (!salida) avisos.push('No encontre el negro de salida: ¿detuviste la grabacion antes del fundido final? No recorto el final.');
+  if (!salida) avisos.push(`No encontre el negro de salida (hace falta que la grabacion termine con al menos ${NEGRO.minimo} s de negro): ¿detuviste la grabacion antes de que terminara el fundido final, o sin esperar esos segundos de negro? No recorto el final.`);
   return { inicio: entrada ? redondear(Math.max(0, entrada.fin - NEGRO.antes)) : null, fin: salida ? redondear(Math.min(duracion, salida.inicio + NEGRO.despues)) : null, avisos };
 }
 
@@ -98,9 +99,12 @@ function medidasDe(entrada) {
   return r.stdout.trim();
 }
 
+// Lo que dura el video contado desde su primer cuadro: ffprobe da el instante en que TERMINA (duration) y el instante en que EMPIEZA (start_time; un MKV de OBS puede no empezar en 0), y blackdetect
+// cuenta los tiempos desde el primer cuadro, asi que se resta.
 function duracionDe(entrada) {
-  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', entrada], { encoding: 'utf8' });
-  return Number(String(r.stdout).trim());
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration,start_time', '-of', 'default=noprint_wrappers=1', entrada], { encoding: 'utf8' });
+  const lee = (clave) => Number(new RegExp(`${clave}=([\\d.]+)`).exec(String(r.stdout))?.[1]);
+  return lee('duration') - (lee('start_time') || 0); // start_time=N/A -> 0
 }
 
 // Detecta los negros sobre una copia reducida (no hace falta el 4K para saber si un cuadro es negro) y devuelve el contenido: { inicio, fin, avisos, duracion }.
