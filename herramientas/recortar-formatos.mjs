@@ -6,7 +6,11 @@
 //   node herramientas/recortar-formatos.mjs GRABACION.mkv ep01
 //   node herramientas/recortar-formatos.mjs GRABACION.mkv ep01 --carpeta=salida --crf=17 --inicio=3.5
 //
-// --inicio=SEGUNDOS  salta el principio (la cuenta regresiva de la escena antes de que empiece la partida)
+// Una grabacion hecha con la direccion del paquete (grabar=1) trae negro al empezar y al terminar: se detecta y se recorta solo, dejando los fundidos (mas abajo, NEGRO). Si no encuentra
+// uno de los dos margenes (una grabacion vieja, la carta de ajuste) no recorta ese lado y lo dice.
+//
+// --inicio=SEGUNDOS  salta el principio (manda sobre el inicio detectado)
+// --manual           no detecta el negro: solo recorta lo que pidas con --inicio
 // --crf=N            calidad de H.264: 17 casi sin perdida (por defecto); sube a 20 si los archivos pesan demasiado
 
 import { spawnSync } from 'node:child_process';
@@ -26,9 +30,47 @@ export function filtro(formatos = FORMATOS) {
   return partes.join(';');
 }
 
-export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = null, formatos = FORMATOS }) {
+// ---- El negro de los margenes de la grabacion --------------------------------------------------------------------------------------------------
+// Una grabacion hecha con la direccion del paquete (grabar=1) empieza con unos segundos de negro, se aclara, cuenta la pieza, se funde a negro y se queda en negro hasta que se detiene la grabacion.
+// Esos margenes son para grabar sin perder el principio ni adivinar el final: en el video que se publica sobran (los primeros 3 segundos deciden la retencion). Se detectan con blackdetect de ffmpeg
+// y se recorta de un poco antes de que se aclare a un poco despues de que quede negro, para que el video empiece y termine DENTRO de los fundidos.
+// Calibrado el 18 de octubre de 2026 con una captura real de la hoja y fundidos de media onda senoidal: con umbral 0.03 el negro termina ~0.07 s despues de empezar el fundido de entrada y empieza ~0.03 s antes de acabar el de salida.
+export const NEGRO = { umbral: 0.03, minimo: 1.5, antes: 0.15, despues: 0.15 };
+
+// Los intervalos [{ inicio, fin }] (segundos) que escribe blackdetect en la salida de ffmpeg. Cualquier otra cosa -> [].
+export function negrosDe(texto) {
+  if (typeof texto !== 'string') return [];
+  return [...texto.matchAll(/black_start:(-?[\d.]+)\s+black_end:(-?[\d.]+)/g)].map((m) => ({ inicio: Number(m[1]), fin: Number(m[2]) }));
+}
+
+// De que segundo a que segundo queda el contenido: el primer negro largo es el margen de entrada (el contenido empieza donde acaba) y el ultimo es el de salida (el contenido acaba donde empieza).
+// Un solo negro largo es la entrada si arranca con el video y la salida si llega al final; en medio no es ninguno. `inicio` o `fin` en null = ese lado no se recorta; `avisos` dice por que.
+export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo, antes = NEGRO.antes, despues = NEGRO.despues } = {}) {
+  const sin = (avisos) => ({ inicio: null, fin: null, avisos });
+  if (!Array.isArray(negros) || !Number.isFinite(duracion) || duracion <= 0) return sin(['No pude medir la grabacion: no recorto el negro.']);
+  const largos = negros.filter((n) => n && Number.isFinite(n.inicio) && Number.isFinite(n.fin) && n.fin - n.inicio >= minimo).sort((a, b) => a.inicio - b.inicio);
+  const TOLERANCIA = 0.25; // blackdetect termina en el ultimo cuadro, no en la duracion
+  const alInicio = (n) => n.inicio <= TOLERANCIA, alFinal = (n) => n.fin >= duracion - TOLERANCIA;
+  const avisos = [];
+  let entrada = null, salida = null;
+  if (largos.length === 1 && alInicio(largos[0]) && alFinal(largos[0])) return sin(['La grabacion es toda negra: ¿esta bien la fuente de OBS? No recorto nada.']);
+  if (largos.length >= 2) {
+    entrada = largos[0]; salida = largos.at(-1);
+    if (largos.length > 2) avisos.push(`Hay negro en medio de la grabacion (${largos.slice(1, -1).map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): no lo toco, revisa la pieza.`);
+  } else if (largos.length === 1) {
+    if (alInicio(largos[0])) entrada = largos[0]; else if (alFinal(largos[0])) salida = largos[0];
+    else avisos.push(`Hay un solo negro y esta en medio de la grabacion (${largos[0].inicio.toFixed(1)} s a ${largos[0].fin.toFixed(1)} s): no es el margen de entrada ni el de salida, no recorto.`);
+  }
+  if (!entrada) avisos.push('No encontre el negro de entrada: ¿grabaste con la direccion del paquete (lleva grabar=1)? No recorto el inicio.');
+  if (!salida) avisos.push('No encontre el negro de salida: ¿detuviste la grabacion antes del fundido final? No recorto el final.');
+  const redondear = (x) => Math.round(x * 1000) / 1000;
+  return { inicio: entrada ? redondear(Math.max(0, entrada.fin - antes)) : null, fin: salida ? redondear(Math.min(duracion, salida.inicio + despues)) : null, avisos };
+}
+
+export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = null, duracion = null, formatos = FORMATOS }) {
   const args = ['-hide_banner', '-loglevel', 'error', '-y'];
   if (inicio !== null) args.push('-ss', String(inicio));
+  if (duracion !== null) args.push('-t', String(duracion)); // opcion de entrada: lo que se lee desde `inicio`
   args.push('-i', entrada, '-filter_complex', filtro(formatos));
   Object.keys(formatos).forEach((k, i) => {
     args.push(
@@ -53,12 +95,24 @@ function medidasDe(entrada) {
   return r.stdout.trim();
 }
 
+function duracionDe(entrada) {
+  const r = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', entrada], { encoding: 'utf8' });
+  return Number(String(r.stdout).trim());
+}
+
+// Detecta los negros sobre una copia reducida (no hace falta el 4K para saber si un cuadro es negro) y devuelve el contenido: { inicio, fin, avisos, duracion }.
+function contenidoDe(entrada) {
+  const duracion = duracionDe(entrada);
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-i', entrada, '-an', '-vf', `scale=480:270:flags=neighbor,blackdetect=d=0.5:pix_th=${NEGRO.umbral}`, '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  return { ...ventanaDeContenido(negrosDe(r.stderr), duracion), duracion };
+}
+
 // Solo corre como programa, no al importarlo desde las pruebas.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const posicionales = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const opciones = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, ...v] = a.slice(2).split('='); return [k, v.join('=') || true]; }));
   const [entrada, nombre] = posicionales;
-  if (!entrada || !nombre) salir('Uso: node herramientas/recortar-formatos.mjs GRABACION.mkv NOMBRE [--carpeta=salida] [--crf=17] [--inicio=segundos]');
+  if (!entrada || !nombre) salir('Uso: node herramientas/recortar-formatos.mjs GRABACION.mkv NOMBRE [--carpeta=salida] [--crf=17] [--inicio=segundos] [--manual]');
   if (!existsSync(entrada)) salir(`El archivo no existe: ${entrada}`);
 
   const esperado = `${HOJA.ancho}x${HOJA.alto}`;
@@ -67,10 +121,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 
   const carpeta = resolve(typeof opciones.carpeta === 'string' ? opciones.carpeta : '.');
   mkdirSync(carpeta, { recursive: true });
+  let inicio = typeof opciones.inicio === 'string' ? Number(opciones.inicio) : null, duracion = null;
+  if (opciones.manual !== true) {
+    // el negro de los margenes (grabar=1): --inicio manda sobre el inicio detectado; --manual apaga la deteccion
+    const c = contenidoDe(entrada);
+    for (const aviso of c.avisos) console.log(`  AVISO: ${aviso}`);
+    if (inicio === null && c.inicio !== null) inicio = c.inicio;
+    if (c.fin !== null) duracion = Math.max(0.1, Math.round((c.fin - (inicio ?? 0)) * 1000) / 1000);
+    if (c.inicio !== null || c.fin !== null) console.log(`  Recorto el negro de los margenes: me quedo con ${inicio === null ? 'el inicio' : `desde ${inicio} s`}${duracion === null ? ' hasta el final' : ` durante ${duracion} s`} (de ${c.duracion.toFixed(1)} s grabados).`);
+  }
   const args = argumentosFfmpeg({
-    entrada, nombre, carpeta,
+    entrada, nombre, carpeta, inicio, duracion,
     crf: typeof opciones.crf === 'string' ? Number(opciones.crf) : 17,
-    inicio: typeof opciones.inicio === 'string' ? Number(opciones.inicio) : null,
   });
   console.log(`\n  Recortando ${entrada} en ${Object.keys(FORMATOS).length} formatos...`);
   const r = spawnSync('ffmpeg', args, { stdio: ['ignore', 'inherit', 'inherit'] });
