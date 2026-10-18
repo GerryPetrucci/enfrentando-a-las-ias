@@ -63,7 +63,7 @@ export async function iniciar() {
     let beats = recortarClip(linea.construirLineaDeTiempo(partida, { camara }), params.mano, params.hasta);
     if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
     marco.innerHTML = '';
-    if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene esa ${escena.unidad === 'mano' ? 'mano' : 'ronda'}.`); }
+    if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene ${escena.unidad === 'turno' ? 'ese turno' : `esa ${escena.unidad}`}.`); }
     azarSonido = crearAzar(seedDeTexto(`sonido:${partida.seed}`));
     const formatos = params.formato === 'hoja' ? ['9x16', '16x9'] : [params.formato];
     const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon, vel: params.vel }));

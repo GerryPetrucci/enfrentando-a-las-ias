@@ -26,7 +26,7 @@ test('los parametros se leen y se validan: lo ilegible vuelve al valor por defec
   for (const [q, esperado] of [
     ['formato=1x1', { formato: '9x16' }], ['formato=4x5', { formato: '9x16' }],
     ['camara=10', { camara: null }], ['camara=-1', { camara: null }], ['camara=x', { camara: null }], ['camara=0', { camara: 0 }], ['camara=9', { camara: 9 }],
-    ['ronda=4', { mano: 4 }], ['mano=2&ronda=5', { mano: 2 }], ['ronda=0', { mano: 1 }], ['ronda=3&hasta=6', { mano: 3, hasta: 6 }],
+    ['ronda=4', { mano: 4 }], ['turno=7', { mano: 7 }], ['turno=0', { mano: 1 }], ['turno=x', { mano: 1 }], ['turno=3&hasta=6', { mano: 3, hasta: 6 }], ['mano=2&turno=9', { mano: 2 }], ['ronda=2&turno=9', { mano: 2 }], ['mano=2&ronda=5', { mano: 2 }], ['ronda=0', { mano: 1 }], ['ronda=3&hasta=6', { mano: 3, hasta: 6 }],
     ['vel=0', { vel: 1 }], ['vel=abc', { vel: 1 }], ['vel=100', { vel: 8 }], ['vel=0.01', { vel: 0.25 }],
     ['partida=0', { partida: 1 }], ['partida=-3', { partida: 1 }], ['partida=x', { partida: 1 }],
     ['mano=0', { mano: 1 }], ['mano=x', { mano: 1 }],

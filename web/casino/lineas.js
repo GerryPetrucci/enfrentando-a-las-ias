@@ -3,6 +3,8 @@
 // Es el registro que usan la pagina (escena.html), el catalogo de partidas y el generador de voz (herramientas/narrar.mjs): un juego nuevo con escena se agrega aqui.
 // Sin DOM ni `window`; los modulos (linea y mesa) se cargan al pedirlos para que usar uno no cargue los demas.
 
+import { leerMapa } from './conquista-datos.js';
+
 const ESCENAS = {
   dudaapuesta: {
     nombre: 'Duda y apuesta',
@@ -76,6 +78,12 @@ const ESCENAS = {
     jugadores: 5,
     camaraPorDefecto: 0, // sin camara oculta: el publico lo ve todo; lo que se retrasa son los mensajes privados (se revelan con la traicion, el pacto cumplido o el final)
     unidad: 'turno',
+    // las partidas guardadas sin el mapa (o con uno ilegible) o con combates sin el detalle de sus bandos salen apagadas en la lista: la escena no recalcula reglas, solo lee lo guardado
+    comprobar: (partida) => {
+      const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
+      const completo = leerMapa(partida?.mapa) !== null && rondas.every((r) => (r?.combates ?? []).every((c) => Array.isArray(c?.bandos)));
+      return completo ? null : 'formato anterior: la partida se guardó con un motor que no escribía todos los datos que usa la escena';
+    },
     linea: () => import('./linea-de-tiempo-conquista.js'),
     mesa: () => import('./mesa-conquista.js'),
   },

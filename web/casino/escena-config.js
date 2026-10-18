@@ -39,7 +39,7 @@ export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
 // &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
   const q = new URLSearchParams(search ?? '');
-  const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda')) ?? 1); // ronda= es sinonimo de mano= (los juegos que juegan por rondas)
+  const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda') ?? q.get('turno')) ?? 1); // ronda= y turno= son sinonimos de mano= (los juegos que juegan por rondas o por turnos)
   const hastaPedida = entero(q.get('hasta'));
   const vel = Number(q.get('vel'));
   const camara = entero(q.get('camara'));
