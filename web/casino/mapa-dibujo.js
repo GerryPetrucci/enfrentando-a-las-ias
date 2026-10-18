@@ -1,0 +1,184 @@
+// El dibujo del mapa de la Guerra de territorios en canvas: terreno de pixel art, tinte y bordes de cada reino, fichas por region (recurso, tropas, fortaleza, capital, edificio,
+// Maravilla), flechas de ordenes y el estallido de una batalla. La web no puede importar de src/, asi que el mapa llega ya leido de la partida (conquista-datos.js: leerMapa).
+// El aspecto es el del prototipo aprobado (privado/prototipos/mundo-regiones.html); las funciones puras (geometria, centros, bordes) se prueban en Node y el dibujo se verifica con
+// capturas (herramientas/capturar-escena.mjs). Cada funcion de dibujo recibe el contexto 2D y no toca nada fuera del espacio del mapa.
+//
+// `colores[k]` es el color del reino k: un texto, o una lista de textos para uno multicolor (Gemini: se alternan por celda).
+
+import { TINTE_DE_REINO, LETRA_DE_EDIFICIO, MARAVILLA_TURNOS } from './conquista-datos.js';
+
+const FUENTE = 'ui-sans-serif, system-ui, "Segoe UI", sans-serif';
+const BOSQUE = 4, MONTANA = 5;
+
+function hash2(ix, iy, seed) {
+  let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 1442695041)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const sombrear = (hex, f) => { const n = parseInt(hex.slice(1), 16), q = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f))); return `rgb(${q(16)},${q(8)},${q(0)})`; };
+const colorDe = (colores, k, x = 0, y = 0) => { const c = colores?.[k]; return Array.isArray(c) ? c[(x + y) % c.length] : (c ?? '#888888'); };
+export const colorSolido = (colores, k) => { const c = colores?.[k]; return Array.isArray(c) ? c[0] : (c ?? '#888888'); };
+
+// ---- lo puro ----
+// La celda entera (T) y el desplazamiento (ox, oy) con que el mapa cabe, centrado, en `rect`.
+export function geometriaDelMapa(mapa, rect) {
+  const T = Math.max(1, Math.floor(Math.min(rect.ancho / mapa.ancho, rect.alto / mapa.alto)));
+  return { T, ox: rect.x + Math.floor((rect.ancho - mapa.ancho * T) / 2), oy: rect.y + Math.floor((rect.alto - mapa.alto * T) / 2) };
+}
+
+// El centro (en pixeles del lienzo) de una region, o null si no existe: la celda que el motor eligio como su centro.
+export function centroDeRegion(mapa, id, g) {
+  const r = mapa.regs[id];
+  if (!r) return null;
+  return { x: g.ox + (r.centro % mapa.ancho) * g.T + g.T / 2, y: g.oy + Math.floor(r.centro / mapa.ancho) * g.T + g.T / 2 };
+}
+
+// Los bordes entre celdas de regiones distintas (o de una region y el mar), una sola vez cada uno, en unidades de celda: un borde vertical esta en la linea x entre las
+// celdas (x - 1, y) y (x, y); uno horizontal, en la linea y entre (x, y - 1) y (x, y). r1 es la region de la izquierda o de arriba, r2 la de la derecha o de abajo.
+const CACHE_BORDES = new WeakMap(); // los bordes de un mapa no cambian: se calculan una vez (los pide cada repintado de reinos y cada contorno)
+export function bordesDeRegion(mapa) {
+  if (CACHE_BORDES.has(mapa)) return CACHE_BORDES.get(mapa);
+  const { ancho, alto, region } = mapa, bordes = [];
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const a = region[y * ancho + x];
+    if (x < ancho - 1) { const b = region[y * ancho + x + 1]; if (a !== b && (a >= 0 || b >= 0)) bordes.push({ x: x + 1, y, horizontal: false, r1: a, r2: b }); }
+    if (y < alto - 1) { const b = region[(y + 1) * ancho + x]; if (a !== b && (a >= 0 || b >= 0)) bordes.push({ x, y: y + 1, horizontal: true, r1: a, r2: b }); }
+  }
+  CACHE_BORDES.set(mapa, bordes);
+  return bordes;
+}
+
+// ---- terreno ----
+export function pintarTerreno(ctx, mapa, g, paleta) {
+  const { ancho, terreno } = mapa, T = g.T;
+  for (let i = 0; i < terreno.length; i++) {
+    const x = g.ox + (i % ancho) * T, y = g.oy + Math.floor(i / ancho) * T, v = terreno[i];
+    ctx.fillStyle = sombrear(paleta[v] ?? paleta[0], 1 + (hash2(i, 77, 5) - 0.5) * 2 * (v >= 2 ? 0.09 : 0.05));
+    ctx.fillRect(x, y, T, T);
+    if (v === BOSQUE) { ctx.fillStyle = '#1f4d28'; ctx.fillRect(x + T * 0.2, y + T * 0.25, T * 0.2, T * 0.2); ctx.fillRect(x + T * 0.55, y + T * 0.5, T * 0.2, T * 0.2); }
+    if (v === MONTANA) { ctx.fillStyle = '#b9bbc4'; ctx.beginPath(); ctx.moveTo(x + T / 2, y + T * 0.15); ctx.lineTo(x + T * 0.85, y + T * 0.8); ctx.lineTo(x + T * 0.15, y + T * 0.8); ctx.closePath(); ctx.fill(); }
+  }
+}
+
+// ---- reinos: tinte sobre sus regiones y bordes (oscuros entre regiones del mismo dueno, del color del reino donde cambia de dueno) ----
+export function pintarReinos(ctx, mapa, g, dueno, colores, tinte = TINTE_DE_REINO) {
+  const { ancho, region } = mapa, T = g.T;
+  ctx.globalAlpha = tinte;
+  for (let i = 0; i < region.length; i++) {
+    const r = region[i], k = r >= 0 ? dueno[r] : -1;
+    if (!(k >= 0)) continue;
+    const cx = i % ancho, cy = Math.floor(i / ancho);
+    ctx.fillStyle = colorDe(colores, k, cx, cy);
+    ctx.fillRect(g.ox + cx * T, g.oy + cy * T, T, T);
+  }
+  ctx.globalAlpha = 1;
+  const oscuros = [], porColor = new Map();
+  const duenoDe = (r) => (r >= 0 ? dueno[r] ?? -1 : -1);
+  const linea = (b, lado) => { // lado: -1 hacia r1 (izquierda o arriba), +1 hacia r2
+    const px = g.ox + b.x * T + (b.horizontal ? 0 : lado * 1.5), py = g.oy + b.y * T + (b.horizontal ? lado * 1.5 : 0);
+    return b.horizontal ? [px, py, px + T, py] : [px, py, px, py + T];
+  };
+  for (const b of bordesDeRegion(mapa)) {
+    const k1 = duenoDe(b.r1), k2 = duenoDe(b.r2);
+    if (k1 >= 0 && k1 === k2) { oscuros.push(linea(b, 0)); continue; }
+    if (k1 < 0 && k2 < 0) { oscuros.push(linea(b, 0)); continue; }
+    for (const [k, lado] of [[k1, -1], [k2, 1]]) if (k >= 0) { const c = colorSolido(colores, k); if (!porColor.has(c)) porColor.set(c, []); porColor.get(c).push(linea(b, lado)); }
+  }
+  const trazar = (lineas, estilo, ancho) => {
+    ctx.strokeStyle = estilo; ctx.lineWidth = ancho; ctx.beginPath();
+    for (const [x1, y1, x2, y2] of lineas) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); }
+    ctx.stroke();
+  };
+  trazar(oscuros, 'rgba(0,0,0,.45)', 1);
+  for (const [c, lineas] of porColor) trazar(lineas, c, 3);
+}
+
+// El contorno de una region (para resaltarla en una batalla): un solo trazo con todos sus bordes. Una region que no existe no dibuja nada.
+export function pintarContorno(ctx, mapa, g, id, color, grosor = 4) {
+  if (!mapa.regs[id]) return;
+  const T = g.T;
+  ctx.strokeStyle = color; ctx.lineWidth = grosor; ctx.lineCap = 'square'; ctx.beginPath();
+  for (const b of bordesDeRegion(mapa)) {
+    if (b.r1 !== id && b.r2 !== id) continue;
+    const x = g.ox + b.x * T, y = g.oy + b.y * T;
+    ctx.moveTo(x, y); ctx.lineTo(b.horizontal ? x + T : x, b.horizontal ? y : y + T);
+  }
+  ctx.stroke();
+}
+
+// ---- fichas por region ----
+export function pintarIcono(ctx, tipo, x, y, r) {
+  ctx.save(); ctx.translate(x, y); ctx.lineWidth = Math.max(1.5, r / 7); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  if (tipo === 'Comida') { ctx.strokeStyle = '#e8c547'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.5, r * 0.9); ctx.lineTo(i * r * 0.5, -r * 0.6); ctx.stroke(); ctx.fillStyle = '#e8c547'; ctx.beginPath(); ctx.ellipse(i * r * 0.5, -r * 0.7, r * 0.22, r * 0.4, 0, 0, 7); ctx.fill(); } }
+  if (tipo === 'Madera') { ctx.fillStyle = '#9a6b3f'; ctx.strokeStyle = '#4a2f18'; ctx.beginPath(); ctx.roundRect(-r, -r * 0.45, r * 2, r * 0.9, r * 0.3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d2a56b'; ctx.beginPath(); ctx.ellipse(r * 0.75, 0, r * 0.28, r * 0.42, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+  if (tipo === 'Roca') { ctx.fillStyle = '#a9adb8'; ctx.strokeStyle = '#5b5e68'; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(-r * 0.6, -r * 0.5); ctx.lineTo(0, -r * 0.9); ctx.lineTo(r * 0.8, -r * 0.2); ctx.lineTo(r, r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  if (tipo === 'Hierro') { ctx.fillStyle = '#8fb3d9'; ctx.strokeStyle = '#3d5a7a'; ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.5); ctx.lineTo(r * 0.6, -r * 0.5); ctx.lineTo(r, r * 0.5); ctx.lineTo(-r, r * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  if (tipo === 'Oro') { ctx.fillStyle = '#f1c84b'; ctx.strokeStyle = '#9a7412'; ctx.beginPath(); ctx.arc(0, 0, r * 0.95, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.stroke(); }
+  if (tipo === 'Caballos') { ctx.strokeStyle = '#d9d2c2'; ctx.lineWidth = Math.max(2.5, r / 4); ctx.beginPath(); ctx.arc(0, r * 0.1, r * 0.8, Math.PI * 0.15, Math.PI * 0.85, true); ctx.stroke(); }
+  ctx.restore();
+}
+function torre(ctx, x, y, nivel, color, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = '#0b0b0e'; ctx.fillRect(-9, -9, 18, 18); ctx.fillStyle = color; ctx.fillRect(-7, -4, 14, 12); ctx.fillRect(-7, -9, 4, 5); ctx.fillRect(-2, -9, 4, 5); ctx.fillRect(3, -9, 4, 5);
+  ctx.fillStyle = '#fff3c4'; for (let i = 0; i < nivel; i++) ctx.fillRect(-5 + i * 6, 5, 4, 3);
+  ctx.restore();
+}
+function estrella(ctx, x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = '#fff3c4'; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 6 : 13; if (i) ctx.lineTo(r * Math.cos(a), r * Math.sin(a)); else ctx.moveTo(r * Math.cos(a), r * Math.sin(a)); }
+  ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+}
+function texto(ctx, s, x, y, tam, peso = 800, color = '#f2f0ed', alineacion = 'center') {
+  ctx.fillStyle = color; ctx.font = `${peso} ${tam}px ${FUENTE}`; ctx.textAlign = alineacion; ctx.textBaseline = 'middle'; ctx.fillText(String(s), x, y);
+}
+
+// `estado` es la foto del mapa (registro.estado o estadoInicial): duenos, tropas, fortaleza, edificios (letra) y si estan danados, y la Maravilla.
+export function pintarFichas(ctx, mapa, g, estado, colores) {
+  const T = g.T, rad = Math.max(13, T * 0.62), capitales = mapa.inicio.capitales;
+  for (const reg of mapa.regs) {
+    const c = centroDeRegion(mapa, reg.id, g), x = c.x, y = c.y, k = estado?.dueno?.[reg.id] ?? -1;
+    if (reg.rec) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y - rad * 1.15, rad * 0.72, 0, 7); ctx.fill(); pintarIcono(ctx, reg.rec, x, y - rad * 1.15, rad * 0.5); }
+    if (k >= 0) {
+      const col = colorSolido(colores, k);
+      ctx.fillStyle = 'rgba(8,8,12,.9)'; ctx.beginPath(); ctx.arc(x, y + rad * 0.3, rad, 0, 7); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
+      texto(ctx, estado.tropas?.[reg.id] ?? 0, x, y + rad * 0.34, rad * 1.15);
+      const fort = estado.fort?.[reg.id] ?? 0;
+      if (fort > 0) torre(ctx, x - rad * 1.25, y + rad * 0.3, fort, col, rad / 24);
+      if (capitales.includes(reg.id)) estrella(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
+      const letra = estado.edif?.[reg.id];
+      if (letra) {
+        const ex = x + rad * 1.25, ey = y + rad * 0.3;
+        ctx.fillStyle = '#0b0b0e'; ctx.fillRect(ex - rad * 0.45, ey - rad * 0.45, rad * 0.9, rad * 0.9); texto(ctx, (LETRA_DE_EDIFICIO[letra] ?? letra)[0].toUpperCase(), ex, ey + 1, rad * 0.75, 800, '#fff3c4');
+        if (estado.dan?.[reg.id]) { ctx.strokeStyle = '#d8584e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex - rad * 0.5, ey + rad * 0.5); ctx.lineTo(ex + rad * 0.5, ey - rad * 0.5); ctx.stroke(); }
+      }
+    } else if (!reg.rec) {
+      ctx.globalAlpha = 0.55; texto(ctx, reg.nombre, x, y, Math.max(11, T * 0.5), 600, '#ffffff'); ctx.globalAlpha = 1;
+    }
+    const m = estado?.maravilla;
+    if (m && m.r === reg.id) {
+      ctx.fillStyle = '#f1c84b'; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - rad * 3.1); ctx.lineTo(x + rad * 0.8, y - rad * 2.3); ctx.lineTo(x, y - rad * 1.5); ctx.lineTo(x - rad * 0.8, y - rad * 2.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+      texto(ctx, `${m.n ?? 0}/${MARAVILLA_TURNOS}`, x, y - rad * 2.3, rad * 0.6, 800, '#0b0b0e');
+    }
+  }
+}
+
+// ---- ordenes y batalla ----
+export function pintarFlecha(ctx, desde, hasta, color, n, rad = 13) {
+  const dx = hasta.x - desde.x, dy = hasta.y - desde.y, L = Math.hypot(dx, dy);
+  if (!(L > 0)) return;
+  const ux = dx / L, uy = dy / L, sx = desde.x + ux * rad * 1.5, sy = desde.y + uy * rad * 1.5, ex = hasta.x - ux * rad * 1.7, ey = hasta.y - uy * rad * 1.7;
+  ctx.save(); ctx.lineCap = 'round';
+  ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.strokeStyle = color; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.fillStyle = color; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex + ux * 22, ey + uy * 22); ctx.lineTo(ex - uy * 14, ey + ux * 14); ctx.lineTo(ex + uy * 14, ey - ux * 14); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+  ctx.fillStyle = 'rgba(8,8,12,.92)'; ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(mx - 19, my - 14, 38, 28, 14); ctx.fill(); ctx.stroke();
+  texto(ctx, n, mx, my + 1, 19);
+  ctx.restore();
+}
+
+export function pintarEstallido(ctx, x, y, r) {
+  ctx.save(); ctx.fillStyle = 'rgba(255,230,140,.95)'; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 3; ctx.beginPath();
+  for (let i = 0; i < 18; i++) { const a = (Math.PI * 2 * i) / 18, rr = i % 2 ? r * 0.5 : r; if (i) ctx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); else ctx.moveTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); }
+  ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r * 0.25, 0, 7); ctx.fill(); ctx.restore();
+}

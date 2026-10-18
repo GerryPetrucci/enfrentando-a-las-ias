@@ -63,7 +63,7 @@ export async function iniciar() {
     let beats = recortarClip(linea.construirLineaDeTiempo(partida, { camara }), params.mano, params.hasta);
     if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
     marco.innerHTML = '';
-    if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene esa ${escena.unidad === 'mano' ? 'mano' : 'ronda'}.`); }
+    if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene ${escena.unidad === 'turno' ? 'ese turno' : `esa ${escena.unidad}`}.`); }
     azarSonido = crearAzar(seedDeTexto(`sonido:${partida.seed}`));
     const formatos = params.formato === 'hoja' ? ['9x16', '16x9'] : [params.formato];
     const mesas = formatos.map((f, i) => new Mesa(f, partida, { sfx: i === 0 ? sfx : mudo, razon: params.razon, vel: params.vel }));
@@ -163,7 +163,7 @@ export async function iniciar() {
   const nombres = listaDeArchivos(params.archivo);
   if (!nombres.length) {
     const juegos = juegosConEscena().map((id) => escenaDe(id).nombre).join(', ');
-    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano o ronda, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
+    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
   }
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {

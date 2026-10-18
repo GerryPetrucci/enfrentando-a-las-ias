@@ -16,6 +16,7 @@ import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
 import { jugarSub } from './ayudas-sub.js';
 import { jugarFuga } from './ayudas-fuga.js';
+import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
   assert.ok(juegosConEscena().includes('dudaapuesta'));
@@ -34,28 +35,29 @@ test('todos los juegos registrados traen sus datos completos y una camara por de
     assert.ok(typeof e.nombre === 'string' && e.nombre.length > 0, id);
     assert.ok(Number.isInteger(e.jugadores) && e.jugadores >= 2 && e.jugadores <= 5, `${id}: jugadores`);
     assert.ok(Number.isInteger(e.camaraPorDefecto) && e.camaraPorDefecto >= 0 && e.camaraPorDefecto <= e.jugadores, `${id}: camara por defecto`);
-    assert.ok(['mano', 'ronda'].includes(e.unidad), `${id}: unidad`);
+    assert.ok(['mano', 'ronda', 'turno'].includes(e.unidad), `${id}: unidad`);
   }
 });
 
 test('un juego sin escena da un error que dice cuales hay', async () => {
-  assert.throws(() => escenaDe('conquista'), /no hay escena.*"conquista".*dudaapuesta/);
+  assert.throws(() => escenaDe('dilema'), /no hay escena.*"dilema".*dudaapuesta/);
   for (const raro of [undefined, null, '', 7, 'toString', '__proto__']) assert.throws(() => escenaDe(raro), /no hay escena/, String(raro));
-  await assert.rejects(() => lineaDe('conquista'), /no hay escena/);
+  await assert.rejects(() => lineaDe('dilema'), /no hay escena/);
 });
 
-test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
-  // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo
-  const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
+test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', async () => {
+  // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo; la Guerra de territorios, una partida real con su mapa
+  const real = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
+  const partida = (id) => (id === 'conquista' ? real : { juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
-    { nombre: 'conquista.json', datos: { partidas: [partida('conquista')] } },
+    { nombre: 'dilema.json', datos: { partidas: [partida('dilema')] } },
   ]);
-  for (const e of c.filter((x) => x.archivo !== 'conquista.json')) assert.equal(e.valida, true, e.archivo);
-  const sin = c.find((x) => x.archivo === 'conquista.json');
+  for (const e of c.filter((x) => x.archivo !== 'dilema.json')) assert.equal(e.valida, true, e.archivo);
+  const sin = c.find((x) => x.archivo === 'dilema.json');
   assert.equal(sin.valida, false);
-  assert.match(sin.motivo, /conquista/);
-  assert.equal(sin.juego, 'conquista');
+  assert.match(sin.motivo, /dilema/);
+  assert.equal(sin.juego, 'dilema');
 });
 
 test('la linea de tiempo de cada juego registrado exporta lo que la herramienta de capturas necesita: construirla y comprobar el estado de su escena', async () => {
@@ -158,10 +160,48 @@ test('una partida de La Fuga guardada con el motor anterior (sin la alarma de an
   }
 });
 
+test('Guerra de territorios esta registrada: cinco jugadores, sin camara, unidad turno; la lista cuenta sus turnos y la palabra "turnos"', async () => {
+  const e = escenaDe('conquista');
+  assert.deepEqual([e.nombre, e.jugadores, e.camaraPorDefecto, e.unidad], ['Guerra de territorios', 5, 0, 'turno']);
+  assert.equal(typeof e.linea, 'function');
+  assert.equal(typeof e.mesa, 'function');
+  const p = await jugarConqBots(ESCENARIOS[1].seed, ESCENARIOS[1].bots);
+  const [entrada] = catalogarPartidas([{ nombre: 'guerra.json', datos: { partidas: [p] } }]);
+  assert.equal(entrada.valida, true, entrada.motivo);
+  assert.equal(entrada.manos, p.rondas.length);
+  assert.match(entrada.titulo, new RegExp(` · ${p.rondas.length} turnos$`));
+  assert.equal(typeof (await lineaDe('conquista')), 'function');
+});
+
+test('una partida de Guerra de territorios sin mapa, con un mapa roto o con combates sin bandos (motor anterior) sale apagada con "formato anterior"; los combates sin bandos solo importan si hay combates', async () => {
+  const p = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
+  assert.equal(motivoDeNoReproducible('conquista', p), null);
+  const viejas = [
+    (x) => { delete x.mapa; },
+    (x) => { x.mapa = { ancho: 3, alto: 3 }; },
+    (x) => { x.mapa.terreno = x.mapa.terreno.slice(1); },
+    (x) => { for (const r of x.rondas) for (const c of r.combates ?? []) delete c.bandos; },
+    (x) => { const c = x.rondas.flatMap((r) => r.combates ?? [])[0]; c.bandos = 'x'; },
+    (x) => { x.rondas[0].combates = { a: 1 }; }, // no es una lista: sale apagada y no tumba la lista de partidas
+  ];
+  for (const [i, quitar] of viejas.entries()) {
+    const vieja = structuredClone(p); quitar(vieja);
+    const e = catalogarPartidas([{ nombre: 'vieja.json', datos: { partidas: [vieja] } }])[0];
+    assert.equal(e.valida, false, `caso ${i}`);
+    assert.match(e.motivo, /formato anterior/, `caso ${i}`);
+    assert.equal(e.partida, null);
+  }
+  // un turno sin combates no necesita bandos: quitar los combates de TODOS los turnos no apaga la partida
+  const sinCombates = structuredClone(p);
+  for (const r of sinCombates.rondas) r.combates = [];
+  assert.equal(motivoDeNoReproducible('conquista', sinCombates), null);
+  for (const raro of [null, undefined, 7, {}]) assert.equal(typeof motivoDeNoReproducible('conquista', raro), 'string');
+});
+
 test('motivoDeNoReproducible dice por que una partida no se puede reproducir: otro juego, sin rondas, formato anterior; una buena da null', async () => {
   const buena = await jugarSub(1);
   assert.equal(motivoDeNoReproducible('subasta', buena), null);
-  assert.match(motivoDeNoReproducible('conquista', buena), /conquista.*no tiene escena/);
+  assert.match(motivoDeNoReproducible('dilema', buena), /dilema.*no tiene escena/);
   assert.match(motivoDeNoReproducible(undefined, buena), /otro juego.*no tiene escena/);
   assert.equal(motivoDeNoReproducible('subasta', { ...buena, rondas: [] }), 'sin rondas');
   const vieja = structuredClone(buena);

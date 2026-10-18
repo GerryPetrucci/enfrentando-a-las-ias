@@ -39,6 +39,24 @@ test('honor: +1 cada 3 turnos hasta 10 y +1 por pacto cumplido', () => {
   assert.equal(E.stats[0].cumplidos, 1);
 });
 
+test('un pacto que termina cumplido deja el evento pacto_cumplido para la pareja; si se rompio (pactoOk en false) no sale', () => {
+  const E = nuevoEstado(3);
+  E.turno = 6; // se juega el turno 7: un pacto cuyo ultimo turno vigente fue el 6 se cumplio
+  E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 6;
+  E.reinos[0].pactoOk[1] = E.reinos[1].pactoOk[0] = true;
+  const ctx = contexto(E);
+  honorYPactos(ctx);
+  assert.deepEqual(ctx.eventos.filter((e) => e.tipo === 'pacto_cumplido'), [{ tipo: 'pacto_cumplido', k: 0, con: 1, t: 7 }]);
+
+  const roto = nuevoEstado(3);
+  roto.turno = 6;
+  roto.reinos[0].pactos[1] = roto.reinos[1].pactos[0] = 6;
+  roto.reinos[0].pactoOk[1] = roto.reinos[1].pactoOk[0] = false; // se rompio: no hay cumplimiento
+  const ctx2 = contexto(roto);
+  honorYPactos(ctx2);
+  assert.equal(ctx2.eventos.filter((e) => e.tipo === 'pacto_cumplido').length, 0);
+});
+
 test('muerte subita: desde el turno 29 se acaban todos los pactos', () => {
   const E = nuevoEstado(3);
   E.turno = 28;

@@ -90,6 +90,22 @@ export function jugarCompleta(k, seed, nombresBots = ['agresivo', 'pacifico', 'e
   return { E, llamadas, registros };
 }
 
+// Todo el texto que ven las IAs en una partida completa de bots: la vista de cada reino vivo en cada turno, antes de que juegue. Lo usa la huella de vista.test.js,
+// que protege el prompt de cualquier cambio de datos del motor (la escena de la Guerra de territorios agrega campos a los registros: el texto no se puede mover).
+export function vistasDePartida(seed, k = 4, nombresBots = ['agresivo', 'pacifico', 'economico', 'azar']) {
+  const E = crearEstado(crearRng(seed), { jugadores: k, mapa: mapaDe(seed, k) }), rngBots = crearRng((seed ^ 0xb07) >>> 0), vistas = [];
+  while (E.ganador === null) {
+    const jugadas = E.reinos.map((r, s) => {
+      if (!r.vivo) return null;
+      vistas.push(vistaTexto(E, s));
+      return normalizarRespuesta(BOTS[nombresBots[s % nombresBots.length]](E, s, rngBots));
+    });
+    aplicarTurno(E, jugadas);
+    if (E.turno > 31) throw new Error('la partida no termina');
+  }
+  return vistas;
+}
+
 // --- Tamano del prompt: lo usan prompt.test.js y herramientas/medir-prompt.mjs, para medir lo mismo ---
 export const CARACTERES_POR_TOKEN = 1.97; // Claude en espanol (los demas modelos cuentan menos tokens)
 export const TOPE_TOKENS_ENTRADA = 4450;  // excepcion aprobada de la Guerra de territorios (CLAUDE.md)

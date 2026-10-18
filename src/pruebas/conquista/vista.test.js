@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nuevoEstado, R } from './ayudas.js';
+import { createHash } from 'node:crypto';
+import { nuevoEstado, R, vistasDePartida } from './ayudas.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
+import { resumenPublico } from '../../juegos/conquista/texto.js';
 
 test('la vista trae lo tuyo y lo publico', () => {
   const E = nuevoEstado(4), v = vistaTexto(E, 0);
@@ -71,4 +73,24 @@ test('pactos, propuesta abierta, ofertas y privados recibidos aparecen solo para
   assert.ok(v.includes('Privados recibidos: Ambar: "ven conmigo"'));
   assert.ok(v.includes('Tu nota del turno anterior: "tomar R12"'));
   assert.ok(!vistaTexto(E, 1).includes('ven conmigo'));
+});
+
+test('el resumen publico (lo que ven las IAs del turno anterior) ignora el evento pacto_cumplido', () => {
+  assert.deepEqual(resumenPublico([{ tipo: 'pacto_cumplido', k: 0, con: 1, t: 7 }]), []);
+  assert.deepEqual(resumenPublico([{ tipo: 'pacto', k: 0, con: 1, t: 5 }, { tipo: 'pacto_cumplido', k: 0, con: 1, t: 7 }]).length, 1);
+});
+
+// Huellas calculadas el 17 de octubre de 2026 con el motor de ANTES de los datos de la escena (bandos de cada combate, evento pacto_cumplido): lo que ven las IAs es EL CONTRATO y esos
+// cambios de datos no pueden mover ni un caracter. Cada huella cubre la vista de cada reino vivo en cada turno de una partida completa de bots.
+const HUELLAS_DE_LAS_VISTAS = {
+  1: '53a109e7cc9331e97936615ae0125ecc66ded444',
+  2: '61067a9fe199e12e264efcc4c3c506cde0b6d421',
+  3: '59cba0a43a22a2b3a200b453ae063968feb626fa',
+};
+
+test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {
+  for (const [seed, esperada] of Object.entries(HUELLAS_DE_LAS_VISTAS)) {
+    const huella = createHash('sha1').update(vistasDePartida(Number(seed)).join('\u0000')).digest('hex');
+    assert.equal(huella, esperada, `seed ${seed}: lo que ven las IAs cambio`);
+  }
 });

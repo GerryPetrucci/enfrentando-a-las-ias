@@ -27,6 +27,7 @@ export function honorYPactos(ctx) {
       R[a].honor = Math.min(HONOR.maximo, R[a].honor + HONOR.cumplido);
       R[b].honor = Math.min(HONOR.maximo, R[b].honor + HONOR.cumplido);
       E.stats[a].cumplidos++; E.stats[b].cumplidos++;
+      ctx.evt({ tipo: 'pacto_cumplido', k: a, con: b }); // lo lee la escena del video; resumenPublico lo ignora (el texto de las IAs no cambia)
     }
   }
   if (t >= TURNOS - 1) for (const r of R) { r.pactos.fill(0); r.pactoOk.fill(false); } // muerte subita: turnos 29 y 30
