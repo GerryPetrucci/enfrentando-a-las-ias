@@ -40,7 +40,7 @@ const entero = (x) => Number.isInteger(x) && x >= 0;
 //   nombre(k) -> nombre del reino k · reinos -> cuantos reinos tiene la partida
 export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, reinos = 0 } = {}) {
   const nom = (k) => String(nombre(k));
-  const memoria = { expansion: false, anunciada: false, citas: new Map(), citados: new Set(), hambre: new Map(), hubo: false, sinBatalla: false };
+  const memoria = { expansion: false, anunciada: false, citas: new Map(), citados: new Set(), hambre: new Map(), hubo: false, sinBatalla: false, duenoPrevio: null, cambios: false, panorama: null };
 
   // «Ana, Beto y Cira salen a expandirse: mandan tropas a regiones sin dueño.» la primera vez; despues de una pausa, «vuelven a expandirse».
   function fraseDeExpansion(quienes, vivos) {
@@ -99,7 +99,7 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     return { dicho, mudas, extras };
   }
 
-  // El hambre en tres escalones por reino: la primera vez, que sigue, y cuantos turnos lleva y cuanto ha perdido.
+  // El hambre en escalones por reino: la primera vez, que sigue, y al tercer turno seguido cuantos lleva y cuanto ha perdido; despues solo cada cinco (el feed la sigue mostrando). null = callada.
   function textoDeHambre(h, turno) {
     if (!entero(h.k) || !Number.isFinite(h.n) || !Number.isInteger(turno)) return h.texto;
     const previa = memoria.hambre.get(h.k), seguida = previa?.turno === turno - 1;
@@ -107,7 +107,8 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     memoria.hambre.set(h.k, { turno, racha, total });
     if (racha === 1) return `${nom(h.k)} pasa hambre y pierde ${tropas(h.n)}.`;
     if (racha === 2) return `${nom(h.k)} sigue pasando hambre: pierde ${tropas(h.n)} más.`;
-    return `${nom(h.k)} lleva ${enPalabras(racha, 'm')} turnos con hambre y ya perdió ${tropas(total)}.`;
+    if (racha === 3 || racha % 5 === 0) return `${nom(h.k)} lleva ${enPalabras(racha, 'm')} turnos con hambre y ya perdió ${tropas(total)}.`;
+    return null;
   }
 
   // Las regiones sin dueno que se tomaron sin lucha, por reino. «Todavia no hay una sola batalla» una vez, y solo si de verdad no ha habido ningun combate.
@@ -123,10 +124,11 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
       frase = `Se reparten ${regiones(tomas.length)} sin dueño: ${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}.`;
     }
     if (!memoria.hubo && !memoria.sinBatalla) { memoria.sinBatalla = true; frase += ' Todavía no hay una sola batalla.'; }
-    return frase;
+    return { texto: frase, porReino: ranking };
   }
 
   // Quien va primero y quien cierra, con las regiones que se ven en el marcador (las sin dueno no cuentan, los reinos caidos tampoco). null si no hay con quien compararse.
+  // Si ninguna region cambio de dueno desde el ultimo panorama, no se repite: se dice UNA vez que el mapa sigue igual y se calla hasta que algo cambie.
   function panorama(turno, estado) {
     const dueno = Array.isArray(estado?.dueno) ? estado.dueno : null;
     if (!dueno) return null;
@@ -134,6 +136,13 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     const ks = Array.from({ length: total }, (_, k) => k).filter((k) => estado.vivo?.[k] !== false);
     if (ks.length < 2) return null;
     const cuentas = ks.map((k) => [k, dueno.filter((d) => d === k).length]);
+    if (memoria.panorama && !memoria.cambios) {
+      if (memoria.panorama.dicho) return null;
+      memoria.panorama.dicho = true;
+      return { tipo: 'comentario', texto: `Turno ${turno}: el mapa sigue igual que en el turno ${memoria.panorama.turno}.`, datos: { turno, cuentas, sinCambios: true } };
+    }
+    memoria.cambios = false;
+    memoria.panorama = { turno, dicho: false };
     const tope = Math.max(...cuentas.map(([, n]) => n)), piso = Math.min(...cuentas.map(([, n]) => n));
     const lideres = cuentas.filter(([, n]) => n === tope).map(([k]) => k), ultimos = cuentas.filter(([, n]) => n === piso).map(([k]) => k);
     let texto;
@@ -150,20 +159,29 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     const turno = ctx.turno;
     const hechos = objetos(ctx.hechos).filter((h) => typeof h.clave === 'string' && typeof h.texto === 'string');
     if (Number(ctx.combates) > 0) memoria.hubo = true;
+    const dueno = Array.isArray(ctx.despues?.dueno) ? ctx.despues.dueno : null; // ¿cambio alguna region de dueno desde el turno anterior? (lo mira el panorama)
+    if (dueno) {
+      if (!memoria.duenoPrevio || memoria.duenoPrevio.length !== dueno.length || dueno.some((d, r) => d !== memoria.duenoPrevio[r])) memoria.cambios = true;
+      memoria.duenoPrevio = dueno;
+    }
     const tomas = hechos.filter((h) => h.tipo === 'toma' && entero(h.k)), comercios = hechos.filter((h) => h.tipo === 'comercio');
     const agrupar = comercios.length >= 2;
-    const dicho = [];
+    const dicho = [], mudas = [];
     for (const h of hechos) {
       if (h.tipo === 'toma' || (h.tipo === 'comercio' && agrupar)) continue;
-      dicho.push({ tipo: 'hecho', texto: h.tipo === 'hambre' ? textoDeHambre(h, turno) : h.texto, clave: h.clave });
+      const texto = h.tipo === 'hambre' ? textoDeHambre(h, turno) : h.texto;
+      if (texto === null) mudas.push(h.clave); else dicho.push({ tipo: 'hecho', texto, clave: h.clave });
     }
     if (agrupar) dicho.push({ tipo: 'comentario', texto: `Hay ${enPalabras(comercios.length)} intercambios comerciales entre los reinos.`, cubre: comercios.map((h) => h.clave) });
-    if (tomas.length) dicho.push({ tipo: 'comentario', texto: fraseDeTomas(tomas), cubre: tomas.map((h) => h.clave) });
+    if (tomas.length) {
+      const f = fraseDeTomas(tomas);
+      dicho.push({ tipo: 'comentario', texto: f.texto, cubre: tomas.map((h) => h.clave), datos: { porReino: f.porReino } }); // `datos`: las cifras que dice la frase, para que una prueba las compare con los registros
+    }
     if (Number.isInteger(turno) && turno > 0 && turno % AJUSTES.PANORAMA_CADA === 0 && ctx.ultimo !== true) {
       const p = panorama(turno, ctx.despues);
       if (p) dicho.push(p);
     }
-    return { dicho, mudas: [], extras: [] };
+    return { dicho, mudas, extras: [] };
   }
 
   return { ordenes, resolucion };

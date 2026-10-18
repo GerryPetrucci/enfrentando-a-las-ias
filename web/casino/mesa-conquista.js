@@ -296,7 +296,7 @@ export class Mesa extends MesaBase {
     await this.esperar(ms * 0.5);
   }
 
-  // Los subtitulos son los hechos del beat; con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).
+  // Los subtitulos son lo que se dice del beat (`dicho`: hechos tal cual y frases de contexto en cursiva); con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).
   mostrarSubtitulos(beat) {
     super.mostrarSubtitulos(beat);
     const r = beat.pasos?.find((p) => p.tipo === 'razones');

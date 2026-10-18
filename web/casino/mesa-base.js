@@ -51,7 +51,7 @@ export class MesaBase {
   sonar(paso) { for (const e of eventosDePaso(paso)) this.sfx[e](); }
   nombre(s) { return this.partida.jugadores[s]?.nombre ?? `Jugador ${s + 1}`; }
   mostrarSubtitulos(beat) {
-    const dichas = beat.lineas.map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' ');
+    const dichas = (beat.dicho ?? beat.lineas).map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' '); // `dicho` (si el beat lo trae) es lo que se oye: los subtitulos lo siguen
     const razon = this.razon && beat.razon ? `<div class="razon"><small>${esc(this.nombre(beat.asiento))} piensa</small>${esc(beat.razon)}</div>` : '';
     this.subtitulos.innerHTML = `${dichas}${razon}`;
     this.ajustarSubtitulos();

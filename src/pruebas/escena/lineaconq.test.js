@@ -336,6 +336,186 @@ test('el final trae el ranking, quien cayo y cuando, los momentos clave y la mar
   }
 });
 
+// ---- la narracion con interpretacion (narracion-conquista.js): lo que se dice y se subtitula es `dicho`; los hechos completos siguen en `lineas` ----
+import { estadoInicial } from '../../../web/casino/conquista-datos.js';
+const CON_DICHO = ['ordenes', 'resolucion'];
+const duenoAntes = (p, turno) => (turno === 1 ? estadoInicial(p).dueno : p.rondas[turno - 2].estado.dueno);
+
+test('ordenes y resolucion llevan lo que se dice (`dicho`); `texto` es eso mismo unido, `lineas` sigue siendo la lista de hechos y los demas beats no cambian', () => {
+  for (const [i, p] of ejemplos.entries()) {
+    for (const b of construirLineaDeTiempo(p)) {
+      const id = `${ESCENARIOS[i].id} ${b.id}`;
+      assert.equal(Array.isArray(b.dicho), CON_DICHO.includes(b.tipo), `${id}: solo ordenes y resolucion narran con interpretacion`);
+      assert.equal(b.texto, (b.dicho ?? b.lineas).map((l) => l.texto).join(' '), `${id}: texto = lo que se dice`);
+      assert.ok(b.lineas.every((l) => l.tipo === 'hecho' && typeof l.texto === 'string'), `${id}: lineas son hechos`);
+      if (b.dicho) {
+        assert.ok(Array.isArray(b.mudas), `${id}: mudas`);
+        assert.ok(b.dicho.every((l) => ['hecho', 'comentario'].includes(l.tipo) && l.texto.length > 0), `${id}: cada linea dicha es un hecho o un comentario con texto`);
+      }
+    }
+  }
+});
+
+test('ninguna linea de hecho se pierde: cada clave de lineas se dice, la cubre una frase de contexto o queda anotada como muda, y solo una vez', () => {
+  let cubiertas = 0, mudas = 0;
+  for (const [i, p] of ejemplos.entries()) {
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.dicho)) {
+      const hechos = b.lineas.map((l) => l.clave).sort();
+      const cuentan = [...b.dicho.filter((l) => l.tipo === 'hecho').map((l) => l.clave), ...b.dicho.flatMap((l) => l.cubre ?? []), ...b.mudas].sort();
+      assert.deepEqual(cuentan, hechos, `${ESCENARIOS[i].id} ${b.id}: lo dicho, lo cubierto y lo mudo tienen que ser exactamente los hechos`);
+      cubiertas += b.dicho.reduce((s, l) => s + (l.cubre?.length ?? 0), 0);
+      mudas += b.mudas.length;
+    }
+  }
+  assert.ok(cubiertas > 0, 'cobertura: alguna frase de contexto tiene que reemplazar hechos en las partidas de ejemplo');
+});
+
+test('las frases de contexto no llevan codigos de region ni nombres de regiones, y las citas son mensajes publicos de ese turno, tal cual, y tambien un hecho de sus lineas', () => {
+  let citas = 0, comentarios = 0;
+  for (const [i, p] of ejemplos.entries()) {
+    const nombres = (k) => p.jugadores[k].nombre;
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.dicho)) {
+      for (const l of b.dicho.filter((x) => x.tipo === 'comentario')) { comentarios++; assert.doesNotMatch(l.texto, /\bR\d+\b/, `${ESCENARIOS[i].id} ${b.id}: ${l.texto}`); }
+      for (const l of b.dicho.filter((x) => x.clave?.startsWith('msg:'))) {
+        const [, turno, k, n] = l.clave.split(':').map((x, j) => (j ? Number(x) : x));
+        const m = p.rondas[turno - 1].mensajes[n];
+        assert.ok(m && m.k === k && b.mano === turno, `${l.clave}: el mensaje no existe en ese turno`);
+        assert.equal(l.texto, `${nombres(k)} dice: «${m.texto.trim()}»`);
+        assert.ok(b.lineas.some((x) => x.clave === l.clave && x.texto === l.texto), `${l.clave}: la cita es un hecho nuevo y va tambien en las lineas`);
+        citas++;
+      }
+    }
+  }
+  assert.ok(comentarios > 0 && citas > 0, `cobertura: ${comentarios} frases de contexto y ${citas} citas`);
+});
+
+test('las cifras de las frases de contexto son las de los registros: las tomas por reino (region sin dueno antes, de ese reino despues) y el panorama (regiones del marcador de los reinos en pie)', () => {
+  let tomas = 0, panoramas = 0;
+  for (const [i, p] of ejemplos.entries()) {
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.dicho)) {
+      const id = `${ESCENARIOS[i].id} ${b.id}`;
+      for (const l of b.dicho.filter((x) => x.cubre?.length && x.cubre.every((c) => c.startsWith('toma:')))) {
+        const porReino = new Map();
+        for (const clave of l.cubre) {
+          const [, turno, d] = clave.split(':').map(Number);
+          assert.equal(turno, b.mano, `${id}: una toma de otro turno`);
+          assert.equal(duenoAntes(p, turno)[d], -1, `${id}: ${clave} no era una region sin dueño`);
+          const k = p.rondas[turno - 1].estado.dueno[d];
+          assert.ok(k >= 0, `${id}: ${clave} no quedo de nadie`);
+          porReino.set(k, (porReino.get(k) ?? 0) + 1);
+        }
+        assert.deepEqual([...porReino].sort((a, c) => c[1] - a[1] || a[0] - c[0]), l.datos.porReino, `${id}: las tomas por reino`);
+        tomas++;
+      }
+      for (const l of b.dicho.filter((x) => x.datos?.cuentas)) {
+        const estado = p.rondas[b.mano - 1].estado, ks = estado.dueno.length ? p.jugadores.map((_, k) => k).filter((k) => estado.vivo[k] !== false) : [];
+        assert.deepEqual(l.datos.cuentas, ks.map((k) => [k, estado.dueno.filter((d) => d === k).length]), `${id}: el panorama no coincide con el marcador`);
+        assert.equal(l.datos.turno, b.mano);
+        assert.ok(b.mano % 5 === 0 && b.tipo === 'resolucion', `${id}: un panorama solo cada 5 turnos y en la resolucion`);
+        panoramas++;
+      }
+    }
+  }
+  assert.ok(tomas > 0 && panoramas > 0, `cobertura: ${tomas} resumenes de tomas y ${panoramas} panoramas`);
+});
+
+test('el panorama no se dice en el turno final de una partida terminada (viene la pantalla del final) y si en una partida cortada', () => {
+  // una partida que termina en el turno 10 (multiplo de 5): su ultimo turno trae el final, no el panorama
+  const terminada = structuredClone(ejemplos[IDX.P18]);
+  terminada.rondas = terminada.rondas.slice(0, 10);
+  const bt = construirLineaDeTiempo(terminada);
+  assert.equal(bt.at(-1).tipo, 'final', 'la partida de prueba termina en el turno 10');
+  const panorama = (beats) => beats.filter((b) => b.mano === 10).some((b) => b.dicho?.some((l) => l.datos?.cuentas));
+  assert.equal(panorama(bt), false, 'no hay panorama en el ultimo turno de una partida terminada');
+  const corta = structuredClone(terminada);
+  corta.truncada = true;
+  const bc = construirLineaDeTiempo(corta);
+  assert.equal(bc.some((b) => b.tipo === 'final'), false);
+  assert.equal(panorama(bc), true, 'una partida cortada en el turno 10 si dice su panorama');
+});
+
+test('un turno cuya racha de expansion ya se dijo no dice nada de las ordenes y su beat dura lo minimo; un privado se sigue diciendo tal cual', () => {
+  let callados = 0;
+  for (const p of ejemplos) {
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes' && x.mudas.length)) {
+      assert.ok(b.mudas.every((c) => c.startsWith('ord:')), `${b.id}: solo se callan los ataques de una racha`);
+      assert.ok(!b.texto.includes('manda'), `${b.id}: la lista de «manda N tropas de R a R» ya no se dice`);
+      callados++;
+    }
+    for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes')) {
+      for (const l of b.lineas.filter((x) => x.clave.startsWith('priv:'))) assert.ok(b.dicho.some((d) => d.clave === l.clave && d.texto === l.texto), `${b.id}: el privado se dice tal cual`);
+    }
+  }
+  assert.ok(callados > 0, 'cobertura: alguna racha de expansion continua en las partidas de ejemplo');
+});
+
+test('en lo rutinario ya no se leen listas de «X manda N tropas de R a R» ni de «X toma R»: eso sigue en los hechos y en el feed, y lo que se dice es el contexto', async () => {
+  const LISTA_DE_ORDENES = / manda \S+ tropas? de /, LISTA_DE_TOMAS = / toma R\d+/;
+  const partidas = [...ejemplos, await jugarConqBots(7, ['agresivo', 'pacifico', 'economico', 'azar'])];
+  let ordenesLiterales = 0, tomasLiterales = 0, contexto = 0;
+  for (const p of partidas) {
+    for (const b of construirLineaDeTiempo(p).filter((x) => CON_DICHO.includes(x.tipo))) {
+      assert.doesNotMatch(b.texto, LISTA_DE_ORDENES, `${b.id}: se sigue leyendo la lista de ordenes`);
+      assert.doesNotMatch(b.texto, LISTA_DE_TOMAS, `${b.id}: se sigue leyendo la lista de tomas`);
+      const literal = b.lineas.map((l) => l.texto).join(' ');
+      if (LISTA_DE_ORDENES.test(literal)) ordenesLiterales++;
+      if (LISTA_DE_TOMAS.test(literal)) tomasLiterales++;
+      contexto += b.dicho.filter((l) => l.tipo === 'comentario').length;
+    }
+  }
+  assert.ok(ordenesLiterales > 0 && tomasLiterales > 0, `cobertura: los hechos si traen ${ordenesLiterales} listas de ordenes y ${tomasLiterales} de tomas (si no, esta prueba no prueba nada)`);
+  assert.ok(contexto > 0, 'y en su lugar hay frases de contexto');
+});
+
+test('el resumen cuenta TODOS los ataques del turno, no solo los 10 que se dibujan: un ataque contra otro reino que no cabe en el dibujo igual se dice', () => {
+  const p = structuredClone(ejemplos[IDX.P18]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
+  const libres = antes.flatMap((d, id) => (d === -1 ? [id] : [])), ajenas = antes.flatMap((d, id) => (d >= 1 ? [id] : []));
+  assert.ok(libres.length >= 11 && ajenas.length >= 1, 'precondicion: hacen falta 11 regiones sin dueño y una de otro reino');
+  r.movs = [...libres.slice(0, 11).map((d) => ({ f: 0, d, n: 5, k: 0 })), { f: 0, d: ajenas[0], n: 1, k: 0 }];
+  const b = construirLineaDeTiempo(p).find((x) => x.tipo === 'ordenes' && x.mano === r.turno);
+  assert.equal(paso(b, 'flechas').lista.length, 10, 'solo se dibujan 10');
+  assert.ok(paso(b, 'flechas').lista.every((f) => f.n === 5), 'el ataque pequeño contra otro reino no esta entre los dibujados');
+  assert.match(b.texto, new RegExp(`${p.jugadores[0].nombre} lanza un ataque contra ${p.jugadores[antes[ajenas[0]]].nombre}\\.`), 'pero se dice');
+});
+
+test('si todos los reinos en pie salen a las regiones sin dueño, se dice «todos» (y si uno cayo, el que cayo no cuenta)', () => {
+  const p = structuredClone(ejemplos[IDX.P18]);
+  const libres = estadoInicial(p).dueno.flatMap((d, id) => (d === -1 ? [id] : []));
+  p.rondas[0].movs = p.jugadores.map((_, k) => ({ f: 0, d: libres[k], n: 3, k }));
+  const turno1 = (q) => construirLineaDeTiempo(q).find((x) => x.tipo === 'ordenes' && x.mano === 1);
+  assert.match(turno1(p).texto, /^Todos los reinos salen a expandirse: mandan tropas a regiones sin dueño\./);
+  const sinUno = structuredClone(p);
+  sinUno.rondas[0].movs = sinUno.rondas[0].movs.slice(1);
+  assert.doesNotMatch(turno1(sinUno).texto, /^Todos los reinos/, 'si falta uno de los reinos ya no son todos');
+});
+
+test('el hambre, el comercio y las tomas se cuentan como el narrador manda (con el tipo de cada hecho), y sus hechos siguen completos en las lineas', () => {
+  const p = structuredClone(ejemplos[IDX.P18]);
+  const evento = (r, e) => r.eventos.push({ ...e, t: r.turno });
+  [2, 3, 4].forEach((idx) => { p.rondas[idx].eventos = p.rondas[idx].eventos.filter((e) => e.tipo !== 'hambre'); evento(p.rondas[idx], { tipo: 'hambre', k: 0, n: 2 }); }); // la partida de ejemplo ya trae hambre: se deja solo la de este reino
+  evento(p.rondas[5], { tipo: 'comercio', k: 0, con: 1 }); evento(p.rondas[5], { tipo: 'comercio', k: 2, con: 3 });
+  const beats = construirLineaDeTiempo(p), res = (turno) => beats.find((b) => b.tipo === 'resolucion' && b.mano === turno);
+  const nombre = p.jugadores[0].nombre;
+  assert.ok(res(3).dicho.some((l) => l.texto === `${nombre} pasa hambre y pierde dos tropas.`), 'primer turno de hambre');
+  assert.ok(res(4).dicho.some((l) => l.texto === `${nombre} sigue pasando hambre: pierde dos tropas más.`), 'segundo');
+  assert.ok(res(5).dicho.some((l) => l.texto === `${nombre} lleva tres turnos con hambre y ya perdió seis tropas.`), 'tercero');
+  for (const turno of [3, 4, 5]) assert.ok(res(turno).lineas.some((l) => /pasa hambre: -2 tropas/.test(l.texto)), `turno ${turno}: el hecho completo sigue en las lineas`);
+  const comercios = res(6).dicho.find((l) => l.cubre?.every((c) => c.startsWith('ev:comercio:')));
+  assert.match(comercios.texto, /^Hay dos intercambios comerciales entre los reinos\.$/);
+  assert.equal(comercios.cubre.length, 2);
+});
+
+test('mostrarSubtitulos dice lo que se dice (`dicho`): los comentarios en cursiva y, sin `dicho`, la lista de hechos de siempre', async () => {
+  const { MesaBase } = await import('../../../web/casino/mesa-base.js');
+  const mesa = new MesaBase('9x16', { jugadores: [{ nombre: 'Ana' }] }, { sfx: {}, vel: 1 }, {});
+  mesa.subtitulos = { innerHTML: '' };
+  mesa.ajustarSubtitulos = () => {};
+  mesa.mostrarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }], dicho: [{ tipo: 'comentario', texto: 'Ana toma una región sin dueño.' }, { tipo: 'hecho', texto: 'Ana dice: «hola»' }] });
+  assert.equal(mesa.subtitulos.innerHTML, '<em>Ana toma una región sin dueño.</em> Ana dice: «hola»');
+  mesa.mostrarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }] });
+  assert.equal(mesa.subtitulos.innerHTML, 'Ana toma R07.');
+});
+
 test('mejoresTurnos elige por batallas decisivas, traiciones, caidas y Maravilla; beatsDeEstado y erroresDeEstado sirven a la herramienta de capturas', () => {
   const p = ejemplos[IDX.P94], beats = construirLineaDeTiempo(p);
   const top = mejoresTurnos(p, 3);
