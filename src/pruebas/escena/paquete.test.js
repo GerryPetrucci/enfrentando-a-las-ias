@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { construirPaquete, ventanaDeClip, hashtagsDe, LIMITES } from '../../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
-import { dividirEnDos, duracionDeBeat } from '../../../web/casino/escena-config.js';
+import { dividirEnDos, duracionDeBeat, planDeGrabacion } from '../../../web/casino/escena-config.js';
 import { textoDeJuego } from '../../../web/casino/textos-juego.js';
 import { jugar as jugarDuda } from './ayudas.js';
 import { jugarMM } from './ayudas-mm.js';
@@ -91,7 +91,17 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
     for (const pieza of paquete.piezas) {
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
-      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), '9x16', '1', '1'], `${id}: ${pieza.id}`);
+      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), '9x16', '1', '1', '1'], `${id}: ${pieza.id}`);
+    }
+  }
+});
+
+test('cada pieza trae lo que dura todo lo grabado: margen de negro + fundido + la pieza + fundido + cola, que es lo que se espera ante OBS', async () => {
+  for (const [id, partida] of Object.entries(PARTIDAS)) {
+    const { paquete } = await paqueteDe(id, partida);
+    for (const p of paquete.piezas) {
+      assert.equal(p.grabar.grabacionMs, Math.round(planDeGrabacion(p.grabar.ms).totalMs), `${id} ${p.id}`);
+      assert.equal(p.grabar.grabacionMs - p.grabar.ms, 5000, `${id} ${p.id}: 2 s + 0.5 s + 0.5 s + 2 s de margenes y fundidos`);
     }
   }
 });

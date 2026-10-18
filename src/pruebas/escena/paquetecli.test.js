@@ -73,9 +73,16 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   const texto = leemeDe(paquete, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, nombreBase: 'guerra-p1' });
   for (const p of paquete.piezas) {
     assert.ok(texto.includes(`http://localhost:4321/${p.grabar.url}`), `${p.id}: falta su direccion`);
-    assert.ok(texto.includes(`guerra-p1-${p.id}.mp4`), `${p.id}: falta el nombre del archivo`);
+    assert.ok(texto.includes(`guerra-p1-${p.id}.mkv`), `${p.id}: falta el nombre de la grabacion (OBS graba la hoja en MKV)`);
     assert.ok(texto.includes(`Dura: ${formatoDeTiempo(p.grabar.ms)} `), `${p.id}: falta la duracion`);
+    assert.ok(texto.includes(`la grabación completa dura ${formatoDeTiempo(p.grabar.grabacionMs)}`), `${p.id}: falta lo que dura todo lo grabado, con los margenes`);
+    assert.ok(texto.includes(`node herramientas/recortar-formatos.mjs "grabaciones/guerra-p1-${p.id}.mkv" guerra-p1-${p.id} --carpeta=grabaciones/listos`), `${p.id}: falta el comando exacto de recorte`);
   }
+  assert.doesNotMatch(texto, /guerra-p1-[\w-]+\.mp4/, 'lo que se guarda de OBS es la hoja en MKV: el MP4 sale del recorte (y esos si se nombran _9x16.mp4, no asi)');
+  assert.doesNotMatch(texto, /1080 × 1920/, 'la fuente de OBS es la hoja de 3840 × 2160');
+  assert.match(texto, /3840 × 2160/, 'dice como esta la fuente de OBS');
+  assert.match(texto, /negro/i, 'explica el margen y el fundido de negro');
+  assert.match(texto, /Actualizar caché de la página actual/, 'dice como arrancar la grabacion');
   for (const frase of ['generado por IA', 'primeros 3 segundos', 'GANCHO']) assert.ok(texto.toLowerCase().includes(frase.toLowerCase()), `la lista de revision no dice: ${frase}`);
   assert.ok(texto.includes(PARTIDA.juego.nombre));
 });
@@ -137,4 +144,17 @@ test('paquete.mjs sale con 1 y dice por que ante: sin --archivo, archivo inexist
   }
   assert.ok(!existsSync(join(tmp, '..', `fuera-${basename(tmp)}`)), 'una salida con .. no escribe nada fuera');
   assert.ok(!existsSync(salida) || readdirSync(salida).length === 0, 'un error no deja carpetas a medias');
+}));
+
+test('paquete.mjs arma por omision las direcciones para la hoja maestra de OBS (formato=hoja y grabar=1); --formato=9x16 las deja verticales', () => conTemporal((tmp) => {
+  const archivo = guardar(tmp, PARTIDA);
+  const hoja = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's1')}`]);
+  assert.equal(hoja.status, 0, `${hoja.stdout}${hoja.stderr}`);
+  const leemeHoja = readFileSync(join(tmp, 's1', 'guerra-p1', 'LEEME.md'), 'utf8');
+  const direcciones = leemeHoja.match(/http:\/\/localhost:4321\/escena\.html\?[^\s)]+/g) ?? [];
+  assert.ok(direcciones.length >= 3, 'las direcciones de las piezas salen en el LEEME');
+  for (const d of direcciones) { const q = new URL(d).searchParams; assert.equal(q.get('formato'), 'hoja', d); assert.equal(q.get('grabar'), '1', d); assert.equal(q.get('auto'), '1', d); }
+  const vertical = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's2')}`, '--formato=9x16']);
+  assert.equal(vertical.status, 0, `${vertical.stdout}${vertical.stderr}`);
+  assert.match(readFileSync(join(tmp, 's2', 'guerra-p1', 'LEEME.md'), 'utf8'), /formato=9x16/);
 }));
