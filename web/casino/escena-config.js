@@ -35,8 +35,21 @@ export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
   return { sonar, detener };
 }
 
+// Los margenes de la grabacion con OBS (modo grabar=1): la pagina arranca sola al refrescar la fuente, asi que empieza en negro (margen), se aclara (fundido), cuenta la partida y
+// vuelve a negro (fundido) y se queda en negro (cola) hasta que se cierra. Un solo lugar: la pagina, el paquete y el recortador leen estos tiempos.
+export const FUNDIDOS = { margenMs: 2000, fundidoMs: 500, colaMs: 2000 };
+
+// Lo que dura todo lo grabado: margen + fundido de entrada + contenido + fundido de salida + cola. `contenidoMs` ya viene a la velocidad de reproduccion (marcarTiempos con vel);
+// los margenes y fundidos se escalan con `vel` igual que todo lo demas. Basura -> contenido cero y velocidad 1.
+export function planDeGrabacion(contenidoMs, vel = 1) {
+  const v = Number.isFinite(vel) && vel > 0 ? vel : 1;
+  const contenido = Number.isFinite(contenidoMs) && contenidoMs > 0 ? contenidoMs : 0;
+  const margenMs = FUNDIDOS.margenMs / v, fundidoMs = FUNDIDOS.fundidoMs / v, colaMs = FUNDIDOS.colaMs / v;
+  return { margenMs, fundidoMs, contenidoMs: contenido, colaMs, totalMs: margenMs + fundidoMs + contenido + fundidoMs + colaMs };
+}
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
-// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
+// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &grabar=1 (con auto: margenes y fundidos de negro para grabar) &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
   const q = new URLSearchParams(search ?? '');
   const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda') ?? q.get('turno')) ?? 1); // ronda= y turno= son sinonimos de mano= (los juegos que juegan por rondas o por turnos)
@@ -55,6 +68,7 @@ export function leerParametros(search) {
     vel: Number.isFinite(vel) && vel > 0 ? Math.min(8, Math.max(0.25, vel)) : 1,
     razon: bandera(q.get('razon')),
     auto: bandera(q.get('auto')),
+    grabar: bandera(q.get('auto')) && bandera(q.get('grabar')), // sin auto la pagina no arranca sola: no hay nada que enmarcar
     limpio: bandera(q.get('limpio')),
     voz: esRutaRelativa(q.get('voz')) ? q.get('voz') : null,
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',
