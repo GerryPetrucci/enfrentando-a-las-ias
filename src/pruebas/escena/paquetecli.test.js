@@ -15,6 +15,7 @@ import { formatoDeTiempo } from '../../../herramientas/partes.mjs';
 import { construirPaquete } from '../../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
 import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
+import { jugarTD } from './ayudas-td.js';
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
 const PARTIDA = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
@@ -76,6 +77,15 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   }
   for (const frase of ['generado por IA', 'primeros 3 segundos', 'GANCHO']) assert.ok(texto.toLowerCase().includes(frase.toLowerCase()), `la lista de revision no dice: ${frase}`);
   assert.ok(texto.includes(PARTIDA.juego.nombre));
+});
+
+test('el LEEME avisa de las piezas que duran mas de 2:20 (lo que admite X con una cuenta gratis) y no avisa de las que caben', async () => {
+  const construir = async (id, partida) => construirPaquete({ partida, beats: await armarLinea(id, partida), destacadas: await destacadasDe(id, partida, 10), archivo: 'pruebas/x.json', partidaNumero: 1, enlace: ENLACE });
+  const largo = leemeDe(await construir('tripledado', await jugarTD(1)), { archivo: 'pruebas/x.json', partidaNumero: 1, nombreBase: 'x-p1' });
+  assert.match(largo, /### parte-1[\s\S]*?no cabe en X con una cuenta gratis/);
+  const pieza = (texto, id) => texto.split('### ').find((s) => s.startsWith(id));
+  const corto = leemeDe(await construir('conquista', PARTIDA), { archivo: 'pruebas/x.json', partidaNumero: 1, nombreBase: 'x-p1' });
+  assert.doesNotMatch(pieza(corto, 'clip-1'), /no cabe en X/, 'un clip de 23 s cabe en X');
 });
 
 test('paquete.mjs no pisa una carpeta existente sin --forzar; con --forzar la reescribe', () => conTemporal((tmp) => {

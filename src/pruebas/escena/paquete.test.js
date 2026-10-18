@@ -176,6 +176,15 @@ test('las advertencias: partida cortada, de bots, de La Fuga (siempre en serie),
   assert.deepEqual(sinBeats.piezas, []);
 });
 
+test('una parte que pasa de 3 minutos (el limite de los Shorts y de los Reels recomendados) se avisa; las que no, no', async () => {
+  const largo = (await paqueteDe('tripledado', PARTIDAS.tripledado)).paquete;
+  assert.ok(largo.piezas[0].grabar.ms > 180000, 'precondicion: Triple dado dura mas de 3 minutos por parte');
+  assert.match(largo.advertencias.join(' '), /parte 1 dura \d+:\d\d: pasa de 3 minutos/);
+  const corto = (await paqueteDe('conquista', PARTIDAS.conquista)).paquete;
+  assert.ok(corto.piezas.every((p) => p.grabar.ms <= 180000));
+  assert.doesNotMatch(corto.advertencias.join(' '), /3 minutos/);
+});
+
 test('con nombres larguisimos de jugadores el texto de X y el titulo de YouTube se acortan por el gancho y siguen dentro de su limite', async () => {
   const q = structuredClone(PARTIDAS.conquista);
   q.jugadores.forEach((j, i) => { j.nombre = `Jugador con un nombre exageradamente largo número ${i} ${'x'.repeat(220)}`; });

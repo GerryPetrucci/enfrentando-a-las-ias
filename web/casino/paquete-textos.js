@@ -11,7 +11,8 @@ import { textoDeJuego } from './textos-juego.js';
 export const LIMITES = { x: 280, tiktok: 2200, instagram: 2200, youtubeTitulo: 100, youtubeDescripcion: 5000 };
 export const AVISO = 'Contenido generado por IA. Proyecto independiente, sin afiliación con los proveedores de los modelos.';
 const AVISO_CORTO = 'Generado por IA · Proyecto independiente';
-const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_CLIPS = 3;
+const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_CLIPS = 3, MAX_VIDEO_MS = 180000; // 3 minutos: lo que admiten los Shorts y los Reels que se recomiendan a quien no te sigue (por verificar)
+const mmss = (ms) => `${Math.floor(ms / 60000)}:${String(Math.min(59, Math.round((ms % 60000) / 1000))).padStart(2, '0')}`;
 const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama']];
 const UNIDADES = { mano: 'Mano', ronda: 'Ronda', turno: 'Turno' };
 
@@ -65,6 +66,9 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   const partes = dividirEnDos(lista, voz);
   if (!partes) return vacio('la partida es muy corta para partirla en dos videos');
 
+  for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
+    if (p.ms > MAX_VIDEO_MS) advertencias.push(`La parte ${n} dura ${mmss(p.ms)}: pasa de 3 minutos (el límite de los Shorts y de los Reels recomendados). Considera partir este juego en más partes o recortar al editar.`);
+  }
   const jugadores = Array.isArray(partida.jugadores) ? partida.jugadores : [];
   const nombres = jugadores.map((j, i) => j?.nombre ?? `Jugador ${i + 1}`);
   if (jugadores.some((j) => j?.tipo !== 'modelo')) advertencias.push('Esta partida tiene jugadores de control (bots), no solo modelos de IA: sirve para probar, no es la que se publica como episodio.');

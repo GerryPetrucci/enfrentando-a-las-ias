@@ -17,6 +17,7 @@ import { formatoDeTiempo } from './partes.mjs';
 const ENLACE_DEL_SITIO = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const SERVIDOR = 'http://localhost:4321';
 const REDES = ['tiktok', 'instagram', 'x', 'youtube'];
+const LIMITE_X_MS = 140000; // lo que admite X con una cuenta gratis (por verificar en la pantalla de X)
 
 // El LEEME de una carpeta de paquete: pasos numerados y precisos. `contexto`: { archivo, partidaNumero, enlace, nombreBase }.
 export function leemeDe(paquete, contexto = {}) {
@@ -28,6 +29,7 @@ export function leemeDe(paquete, contexto = {}) {
     `- Dura: ${formatoDeTiempo(p.grabar.ms)} (la escena termina sola; detén la grabación 2 segundos después de que acabe).`,
     `- Guarda el video como: ${base}-${p.id}.mp4`,
     `- Nota: ${p.grabar.nota}`,
+    ...(p.grabar.ms > LIMITE_X_MS ? [`- ⚠ Dura más de 2:20: no cabe en X con una cuenta gratis (en X sube un clip en su lugar).`] : []),
     `- Textos: textos/${p.id}-tiktok.txt, textos/${p.id}-instagram.txt, textos/${p.id}-youtube.txt, textos/${p.id}-x.txt${p.comentarioFijado ? `, textos/${p.id}-comentario.txt` : ''}`,
     '',
   ].join('\n'));
