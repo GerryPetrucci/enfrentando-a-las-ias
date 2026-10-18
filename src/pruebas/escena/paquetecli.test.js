@@ -5,13 +5,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { escribirPaquete, leemeDe } from '../../../herramientas/paquete.mjs';
 import { formatoDeTiempo } from '../../../herramientas/partes.mjs';
+import { carpetaDeVoz } from '../../../herramientas/narrar.mjs';
 import { construirPaquete } from '../../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
 import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
@@ -87,6 +88,24 @@ test('el LEEME avisa de las piezas que duran mas de 2:20 (lo que admite X con un
   const corto = leemeDe(await construir('conquista', PARTIDA), { archivo: 'pruebas/x.json', partidaNumero: 1, nombreBase: 'x-p1' });
   assert.doesNotMatch(pieza(corto, 'clip-1'), /no cabe en X/, 'un clip de 23 s cabe en X');
 });
+
+test('paquete.mjs usa solo la voz que narrar.mjs dejo para esa partida (sin que haya que escribir su ruta), y con --sinvoz no la usa', () => conTemporal((tmp) => {
+  const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida');
+  const carpetaVoz = join(tmp, carpetaDeVoz(archivo, 1));
+  mkdirSync(carpetaVoz, { recursive: true });
+  writeFileSync(join(carpetaVoz, 'voz.json'), '{}');
+  const con = lanzar([`--archivo=${archivo}`, `--salida=${salida}`], { cwd: tmp });
+  assert.equal(con.status, 0, `${con.stdout}${con.stderr}`);
+  assert.match(con.stdout, /voz/i, 'dice que uso la voz que encontro');
+  const leeme = readFileSync(join(salida, 'guerra-p1', 'LEEME.md'), 'utf8');
+  assert.match(leeme, /voz=data%2Fvoz%2F/, 'la direccion lleva la voz');
+  const sin = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 'salida2')}`, '--sinvoz'], { cwd: tmp });
+  assert.equal(sin.status, 0, `${sin.stdout}${sin.stderr}`);
+  assert.doesNotMatch(readFileSync(join(tmp, 'salida2', 'guerra-p1', 'LEEME.md'), 'utf8'), /voz=/);
+  const ninguna = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 'salida3')}`], { cwd: join(tmp, 'salida') });
+  assert.equal(ninguna.status, 0, `${ninguna.stdout}${ninguna.stderr}`);
+  assert.doesNotMatch(readFileSync(join(tmp, 'salida3', 'guerra-p1', 'LEEME.md'), 'utf8'), /voz=/, 'sin voz generada no se pone ninguna');
+}));
 
 test('paquete.mjs no pisa una carpeta existente sin --forzar; con --forzar la reescribe', () => conTemporal((tmp) => {
   const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida'), leeme = join(salida, 'guerra-p1', 'LEEME.md');

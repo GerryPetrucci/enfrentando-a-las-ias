@@ -3,9 +3,10 @@
 // texto por pieza y por red (TikTok, Instagram, YouTube y X, mas el comentario fijado). Las piezas son las dos partes y hasta 3 clips destacados; los textos salen de web/casino/paquete-textos.js
 // (solo hechos de la partida, nunca privados ni razones). No llama a ningun modelo, no sube nada y no gasta saldo.
 //
-//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=data/voz/NOMBRE-p1/voz.json] [--salida=grabaciones/paquetes] [--enlace=URL] [--formato=9x16] [--forzar]
+//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=RUTA/voz.json | --sinvoz] [--salida=grabaciones/paquetes] [--enlace=URL] [--formato=9x16] [--forzar]
 //
-// Escribe `<salida>/<NOMBRE>-p<N>/` (LEEME.md y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que reescribe todo lo que hay en ella). `grabaciones/` no se versiona.
+// La voz: si ya corriste herramientas/narrar.mjs para esa partida, se usa sola (la ruta que ese programa deja en data/voz/); --voz la indica a mano y --sinvoz no usa ninguna.
+// Escribe `<salida>/<NOMBRE>-p<N>/` (LEEME.md y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que vuelve a escribir los archivos del paquete; lo que sobre de una corrida anterior se queda). `grabaciones/` no se versiona.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
@@ -13,6 +14,7 @@ import { pathToFileURL } from 'node:url';
 import { armarLinea, destacadasDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { construirPaquete } from '../web/casino/paquete-textos.js';
 import { formatoDeTiempo } from './partes.mjs';
+import { carpetaDeVoz } from './narrar.mjs';
 
 const ENLACE_DEL_SITIO = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const SERVIDOR = 'http://localhost:4321';
@@ -94,12 +96,17 @@ async function principal() {
   const juegoId = partida.juego?.id ?? datos.juego?.id;
   const motivo = motivoDeNoReproducible(juegoId, partida);
   if (motivo) salir(`La partida ${numero} no se puede empaquetar: ${motivo}.`);
-  let voz = null;
-  if (a.voz) { try { voz = JSON.parse(readFileSync(resolve(a.voz), 'utf8')); } catch (e) { salir(`No pude leer la voz ${a.voz}: ${e.message}`); } }
+  // la voz: la que pasas con --voz o, si no, la que narrar.mjs dejo para esta partida (sin escribir su ruta); --sinvoz no usa ninguna
+  let rutaVoz = a.sinvoz ? null : a.voz ?? null, voz = null;
+  if (!rutaVoz && !a.sinvoz) {
+    const candidata = `${carpetaDeVoz(a.archivo, numero)}/voz.json`;
+    if (existsSync(resolve(candidata))) { rutaVoz = candidata; console.log(`Usando la voz que encontré para esta partida: ${candidata} (con --sinvoz no se usa).`); }
+  }
+  if (rutaVoz) { try { voz = JSON.parse(readFileSync(resolve(rutaVoz), 'utf8')); } catch (e) { salir(`No pude leer la voz ${rutaVoz}: ${e.message}`); } }
 
   const beats = await armarLinea(juegoId, partida), destacadas = await destacadasDe(juegoId, partida, 10);
   const enlace = a.enlace ?? ENLACE_DEL_SITIO;
-  const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz: a.voz ?? null, formato: a.formato ?? '9x16', enlace, totalPartidas: datos.partidas.length });
+  const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz, formato: a.formato ?? '9x16', enlace, totalPartidas: datos.partidas.length });
   if (!paquete.piezas.length) salir(`No se puede publicar esta partida: ${paquete.advertencias.join(' ')}`);
 
   const nombreBase = `${basename(a.archivo).replace(/[^\w.-]+/g, '_').replace(/\.json$/, '')}-p${numero}`;

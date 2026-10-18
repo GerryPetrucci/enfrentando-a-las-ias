@@ -14,6 +14,8 @@ const AVISO_CORTO = 'Generado por IA · Proyecto independiente';
 const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_CLIPS = 3, MAX_VIDEO_MS = 180000; // 3 minutos: lo que admiten los Shorts y los Reels que se recomiendan a quien no te sigue (por verificar)
 const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama']];
 const UNIDADES = { mano: 'Mano', ronda: 'Ronda', turno: 'Turno' };
+const PUNTOS_EN_PANTALLA = ['fuga', 'conquista']; // los juegos cuyo final muestra los mismos puntos que guarda `partida.puntos`
+const MAX_INVALIDAS = 0.25; // desde esta fraccion de jugadas invalidas por llamada se avisa de un modelo caido o que no responde bien
 
 // #IAvsIA, los del juego y los de los modelos que juegan (descriptivos), nunca mas de 5.
 export function hashtagsDe(textos, jugadores) {
@@ -23,18 +25,18 @@ export function hashtagsDe(textos, jugadores) {
 }
 
 // La ventana de unidades (manos, rondas o turnos) de un clip: parte de la unidad elegida y la extiende con las siguientes y luego con las anteriores hasta pasar `minMs` sin pasar `maxMs`.
-// `desdeIndice` es la primera unidad que se puede usar (1 deja fuera la primera, que lleva la tarjeta de arranque). `ajustada` dice si cayo entre los dos limites. null si la unidad no existe.
-export function ventanaDeClip(beats, mano, { minMs = MIN_CLIP_MS, maxMs = MAX_CLIP_MS, voz = null, desdeIndice = 0 } = {}) {
+// `desdeIndice` es la primera unidad que se puede usar (1 deja fuera la primera, que lleva la tarjeta de arranque) y `hastaIndice` la ultima (la ultima unidad de la partida trae el beat final con el resultado). `ajustada` dice si cayo entre los dos limites. null si la unidad no existe.
+export function ventanaDeClip(beats, mano, { minMs = MIN_CLIP_MS, maxMs = MAX_CLIP_MS, voz = null, desdeIndice = 0, hastaIndice = Infinity } = {}) {
   const lista = Array.isArray(beats) ? beats : [];
   const unidades = [...new Set(lista.map((b) => b.mano))];
   const i0 = unidades.indexOf(mano);
-  if (i0 < 0 || i0 < desdeIndice) return null;
+  if (i0 < 0 || i0 < desdeIndice || i0 > hastaIndice) return null;
   const msDe = new Map(unidades.map((m) => [m, 0])); // lo que dura cada unidad, sumado una sola vez
   for (const b of lista) msDe.set(b.mano, msDe.get(b.mano) + duracionDeBeat(b, voz, 1));
   const dur = (m) => msDe.get(m);
   let a = i0, z = i0, ms = dur(mano);
   while (ms < minMs) {
-    if (z + 1 < unidades.length && ms + dur(unidades[z + 1]) <= maxMs) { z++; ms += dur(unidades[z]); }
+    if (z + 1 < unidades.length && z + 1 <= hastaIndice && ms + dur(unidades[z + 1]) <= maxMs) { z++; ms += dur(unidades[z]); }
     else if (a - 1 >= desdeIndice && ms + dur(unidades[a - 1]) <= maxMs) { a--; ms += dur(unidades[a]); }
     else break;
   }
@@ -73,14 +75,22 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   const jugadores = Array.isArray(partida.jugadores) ? partida.jugadores : [];
   const nombres = jugadores.map((j, i) => j?.nombre ?? `Jugador ${i + 1}`);
   if (jugadores.some((j) => j?.tipo !== 'modelo')) advertencias.push('Esta partida tiene jugadores de control (bots), no solo modelos de IA: sirve para probar, no es la que se publica como episodio.');
+  jugadores.forEach((j, i) => {
+    const invalidas = partida.metricas?.[i]?.jugadasInvalidas, llamadas = partida.usoPorJugador?.[i]?.llamadas;
+    if (j?.tipo === 'modelo' && Number.isFinite(invalidas) && Number.isFinite(llamadas) && llamadas > 0 && invalidas / llamadas >= MAX_INVALIDAS) {
+      advertencias.push(`${nombres[i]} tuvo ${invalidas} jugadas inválidas en ${llamadas} llamadas: un modelo caído o que no responde bien. Los fallos se publican tal cual, pero decide si esta partida sirve como episodio.`);
+    }
+  });
   if (juego === 'fuga' && totalPartidas < 2) advertencias.push('La Fuga se publica siempre como serie con los asientos rotados: esta partida sola no es la que se publica.');
 
   const hayGanador = Number.isInteger(partida.ganador) && partida.ganador >= 0 && partida.ganador < nombres.length && partida.empate !== true;
   const ganador = hayGanador ? nombres[partida.ganador] : null;
   const puntos = Array.isArray(partida.puntos) ? partida.puntos : [];
   const ranking = nombres.map((n, i) => ({ n, p: puntos[i] })).filter((x) => Number.isFinite(x.p)).sort((a, b) => b.p - a.p).map((x) => `${x.n} ${x.p}`).join(' · ');
+  const ordenFinal = (Array.isArray(partida.orden) ? partida.orden : []).filter((i) => nombres[i] !== undefined).map((i) => nombres[i]).join(' · ');
   const resultado = hayGanador ? `En esta partida ganó ${ganador}.` : 'Esta partida terminó en empate.';
-  const lineaPuntos = ranking ? `Puntos: ${ranking}.` : '';
+  // solo se escriben cifras que el video muestra: los puntos del juego en La Fuga y en Guerra de territorios; en los demas juegos `puntos` es el marcador (4/2/0) y no sale en pantalla: ahi va el orden final
+  const lineaPuntos = PUNTOS_EN_PANTALLA.includes(juego) ? (ranking ? `Puntos: ${ranking}.` : '') : (ordenFinal ? `Orden final: ${ordenFinal}.` : '');
   const nota = 'Una partida suelta no es un ranking: es lo que pasó con estas reglas y este seed.';
   const serie = totalPartidas > 1 ? `Partida ${partidaNumero} de ${totalPartidas} de la serie. ` : '';
   const hashtags = hashtagsDe(t, jugadores), tags = (n) => hashtags.slice(0, n).join(' ');
@@ -124,10 +134,10 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     });
   }
 
-  const clips = [];
+  const clips = [], nUnidades = new Set(lista.map((b) => b.mano)).size;
   for (const d of Array.isArray(destacadas) ? destacadas : []) {
     if (clips.length >= MAX_CLIPS) break;
-    const w = ventanaDeClip(lista, d?.unidad, { voz, desdeIndice: 1 });
+    const w = ventanaDeClip(lista, d?.unidad, { voz, desdeIndice: 1, hastaIndice: nUnidades - 2 }); // ni la primera unidad (tarjeta de arranque) ni la ultima (el final: adelantaria el resultado)
     if (w && !clips.some(({ w: o }) => !(w.hasta < o.mano || w.mano > o.hasta))) clips.push({ w, d }); // sin encimarse con otro clip
   }
   clips.forEach(({ w, d }, i) => {

@@ -56,6 +56,10 @@ test('ventanaDeClip extiende la unidad elegida con sus vecinas hasta pasar el mi
   const largo = ventanaDeClip(beats, mitad, { minMs: 10, maxMs: 11, desdeIndice: 1 });
   assert.equal(largo.ajustada, false, 'una sola unidad ya pasa del maximo: se dice');
   assert.deepEqual([largo.mano, largo.hasta], [mitad, mitad]);
+  const hastaIndice = manos.length - 2;
+  assert.equal(ventanaDeClip(beats, manos.at(-1), { desdeIndice: 1, hastaIndice }), null, 'la ultima unidad (trae el final) no puede ser un clip');
+  const casi = ventanaDeClip(beats, manos[hastaIndice], { minMs: 10 ** 9, maxMs: 10 ** 9 + 1, desdeIndice: 1, hastaIndice });
+  assert.ok(casi.hasta <= manos[hastaIndice], 'la ventana no se extiende hasta la ultima unidad');
   const sinTope = ventanaDeClip(beats, manos[1], { minMs: 20000, maxMs: 40000, desdeIndice: 1 });
   assert.ok(sinTope.mano >= manos[1], 'no se pasa de la segunda unidad hacia atras');
 });
@@ -67,7 +71,12 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
     assert.deepEqual(ids.slice(0, 2), ['parte-1', 'parte-2'], id);
     assert.equal(new Set(ids).size, ids.length, `${id}: ids unicos`);
     const clips = paquete.piezas.filter((p) => p.tipo === 'clip');
-    assert.ok(clips.length >= 1 && clips.length <= 3, `${id}: ${clips.length} clips`);
+    const unidades = new Set(beats.map((b) => b.mano)), ultima = beats.at(-1).mano;
+    assert.ok(clips.length <= 3 && (unidades.size < 6 || clips.length >= 1), `${id}: ${clips.length} clips de ${unidades.size} unidades`);
+    for (const c of clips) {
+      assert.ok(c.grabar.hasta < ultima, `${id}: ${c.id} llega a la ultima unidad y trae el final de la partida (adelanta el resultado)`);
+      assert.ok(beats.filter((b) => b.mano >= c.grabar.desde && b.mano <= c.grabar.hasta).every((b) => b.tipo !== 'final'), `${id}: ${c.id} lleva el beat final`);
+    }
     const d = dividirEnDos(beats);
     const [p1, p2] = paquete.piezas;
     assert.deepEqual([p1.grabar.desde, p1.grabar.hasta, p2.grabar.desde, p2.grabar.hasta], [d.parte1.mano, d.parte1.hasta, d.parte2.mano, d.parte2.hasta]);
@@ -99,7 +108,7 @@ test('la direccion de grabacion lleva la voz cuando hay y la duracion se mide co
 test('los textos de cada red caben en su limite, llevan el aviso de IA y de independencia, y la linea de gancho esta marcada para que alguien la confirme', async () => {
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida);
-    assert.ok(paquete.piezas.length >= 3, id);
+    assert.ok(paquete.piezas.length >= 2, id); // las dos partes (una partida muy corta puede no tener clips: el final no se puede adelantar)
     for (const p of paquete.piezas) {
       const t = p.textos;
       for (const red of ['tiktok', 'instagram', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
@@ -124,10 +133,12 @@ test('el resultado solo sale en la parte 2 y dice "en esta partida"; las partes 
     const { paquete } = await paqueteDe(id, partida);
     const gan = partida.jugadores[partida.ganador]?.nombre, [p1, p2, ...clips] = paquete.piezas;
     const todo = (p) => textosPlanos(p).join('\n');
-    assert.ok(!/Puntos:|En esta partida ganó/.test(todo(p1)), `${id}: la parte 1 adelanta el resultado`);
-    for (const c of clips) assert.ok(!/Puntos:|En esta partida ganó/.test(todo(c)), `${id}: un clip adelanta el resultado`);
+    assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(p1)), `${id}: la parte 1 adelanta el resultado`);
+    for (const c of clips) assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(c)), `${id}: un clip adelanta el resultado`);
     if (gan && partida.empate !== true) assert.match(p2.textos.instagram, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 dice quien gano`);
-    assert.match(p2.textos.instagram, /Puntos: /);
+    // solo se escriben cifras que el video muestra: los puntos del juego en La Fuga y en Guerra de territorios; en los demas, el orden final (los puntos del marcador no salen en pantalla)
+    assert.match(p2.textos.instagram, id === 'fuga' || id === 'conquista' ? /Puntos: / : /Orden final: /, id);
+    if (id !== 'fuga' && id !== 'conquista') assert.doesNotMatch(p2.textos.instagram, /Puntos: /, `${id}: puntos del marcador que no se ven en el video`);
     assert.match(p2.textos.youtube.descripcion, /no es un ranking/i, `${id}: una partida suelta no es un ranking`);
     assert.ok(p1.comentarioFijado && p2.comentarioFijado && clips.every((c) => c.comentarioFijado === null), id);
     assert.match(p1.comentarioFijado, /sin retoques|no se retocan/);
@@ -196,6 +207,28 @@ test('con nombres larguisimos de jugadores el texto de X y el titulo de YouTube 
     assert.match(p.textos.x, /\[GANCHO: .+\]/);
     assert.match(p.textos.x, /generad[oa] por IA/i, 'el aviso de IA sobrevive al recorte');
   }
+});
+
+test('el orden final sigue el orden real de la partida (con sus desempates), no el de los puntos del marcador', async () => {
+  const td = PARTIDAS.tripledado, nombres = td.jugadores.map((j) => j.nombre);
+  const { paquete } = await paqueteDe('tripledado', td);
+  assert.ok(paquete.piezas[1].textos.instagram.includes(`Orden final: ${td.orden.map((i) => nombres[i]).join(' · ')}.`));
+  const revuelto = { ...structuredClone(td), orden: [...td.orden].reverse() };
+  assert.ok((await paqueteDe('tripledado', revuelto)).paquete.piezas[1].textos.instagram.includes(`Orden final: ${revuelto.orden.map((i) => nombres[i]).join(' · ')}.`));
+});
+
+test('se avisa de un modelo que casi no respondio (caido o ilegible): una partida asi sirve para ver el fallo, no como episodio; una sana no avisa', async () => {
+  const { jugarConqConCaido } = await import('./ayudas-conq.js');
+  const caida = await jugarConqConCaido(18, 3, 1);
+  const a = (await paqueteDe('conquista', caida)).paquete;
+  assert.match(a.advertencias.join(' '), /Caido tuvo 30 jugadas inválidas en 30 llamadas/);
+  const sana = structuredClone(PARTIDAS.mayormenor);
+  sana.jugadores.forEach((j) => { j.tipo = 'modelo'; });
+  sana.metricas.forEach((m) => { m.jugadasInvalidas = 1; });
+  const b = (await paqueteDe('mayormenor', sana)).paquete;
+  assert.doesNotMatch(b.advertencias.join(' '), /inválidas/, 'una jugada invalida de 18 no es un modelo caido');
+  const bots = (await paqueteDe('conquista', PARTIDAS.conquista)).paquete;
+  assert.doesNotMatch(bots.advertencias.join(' '), /inválidas/, 'los bots no cuentan');
 });
 
 test('el paquete es determinista: dos construcciones iguales dan lo mismo', async () => {
