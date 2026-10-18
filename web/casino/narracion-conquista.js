@@ -88,7 +88,8 @@ export function crearNarrador({ nombre = (k) => `Jugador ${Number(k) + 1}`, rein
     const libres = ataques.filter((a) => a.libre === true), ajenos = ataques.filter((a) => a.libre !== true && entero(a.contra));
     const frases = [];
     const quienes = [...new Set(libres.map((a) => a.k))].sort((a, b) => a - b);
-    if (quienes.length && !memoria.expansion) frases.push(fraseDeExpansion(quienes, Number.isInteger(ctx.vivos) ? ctx.vivos : reinos));
+    // si no se sabe cuantos reinos siguen en pie, no se dice «todos» (podria incluir a uno caido)
+    if (quienes.length && !memoria.expansion) frases.push(fraseDeExpansion(quienes, Number.isInteger(ctx.vivos) ? ctx.vivos : null));
     memoria.expansion = quienes.length > 0;
     if (ajenos.length) frases.push(fraseDeOfensiva(ajenos));
     if (frases.length) dicho.push({ tipo: 'comentario', texto: frases.join(' '), cubre: reemplazadas });

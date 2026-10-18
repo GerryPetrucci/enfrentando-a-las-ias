@@ -43,24 +43,22 @@ export function negrosDe(texto) {
   return [...texto.matchAll(/black_start:(-?[\d.]+)\s+black_end:(-?[\d.]+)/g)].map((m) => ({ inicio: Number(m[1]), fin: Number(m[2]) }));
 }
 
-// De que segundo a que segundo queda el contenido: el primer negro largo es el margen de entrada (el contenido empieza donde acaba) y el ultimo es el de salida (el contenido acaba donde empieza).
-// Un solo negro largo es la entrada si arranca con el video y la salida si llega al final; en medio no es ninguno. `inicio` o `fin` en null = ese lado no se recorta; `avisos` dice por que.
+// De que segundo a que segundo queda el contenido. El margen de SALIDA es el negro largo que llega al final del video (el contenido acaba donde empieza); el de ENTRADA, el negro largo que arranca con el
+// video (el contenido empieza donde acaba) o, si se grabo algo antes de refrescar la pagina, el primer negro largo que tiene detras una salida. Cualquier otro negro largo esta en medio de la pieza:
+// no es margen, no se toca y se avisa (si no, un negro en medio cortaria el video por la mitad). `inicio` o `fin` en null = ese lado no se recorta; `avisos` dice por que.
 export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo, antes = NEGRO.antes, despues = NEGRO.despues } = {}) {
   const sin = (avisos) => ({ inicio: null, fin: null, avisos });
   if (!Array.isArray(negros) || !Number.isFinite(duracion) || duracion <= 0) return sin(['No pude medir la grabacion: no recorto el negro.']);
   const largos = negros.filter((n) => n && Number.isFinite(n.inicio) && Number.isFinite(n.fin) && n.fin - n.inicio >= minimo).sort((a, b) => a.inicio - b.inicio);
   const TOLERANCIA = 0.25; // blackdetect termina en el ultimo cuadro, no en la duracion
   const alInicio = (n) => n.inicio <= TOLERANCIA, alFinal = (n) => n.fin >= duracion - TOLERANCIA;
-  const avisos = [];
-  let entrada = null, salida = null;
   if (largos.length === 1 && alInicio(largos[0]) && alFinal(largos[0])) return sin(['La grabacion es toda negra: ¿esta bien la fuente de OBS? No recorto nada.']);
-  if (largos.length >= 2) {
-    entrada = largos[0]; salida = largos.at(-1);
-    if (largos.length > 2) avisos.push(`Hay negro en medio de la grabacion (${largos.slice(1, -1).map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): no lo toco, revisa la pieza.`);
-  } else if (largos.length === 1) {
-    if (alInicio(largos[0])) entrada = largos[0]; else if (alFinal(largos[0])) salida = largos[0];
-    else avisos.push(`Hay un solo negro y esta en medio de la grabacion (${largos[0].inicio.toFixed(1)} s a ${largos[0].fin.toFixed(1)} s): no es el margen de entrada ni el de salida, no recorto.`);
-  }
+  const salida = largos.length && alFinal(largos.at(-1)) ? largos.at(-1) : null;
+  const primero = largos[0];
+  const entrada = primero && primero !== salida && (alInicio(primero) || (salida && primero.fin < salida.inicio)) ? primero : null;
+  const enMedio = largos.filter((n) => n !== entrada && n !== salida);
+  const avisos = [];
+  if (enMedio.length) avisos.push(`Hay negro en medio de la grabacion (${enMedio.map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): no es margen, no lo toco; revisa la pieza.`);
   if (!entrada) avisos.push('No encontre el negro de entrada: ¿grabaste con la direccion del paquete (lleva grabar=1)? No recorto el inicio.');
   if (!salida) avisos.push('No encontre el negro de salida: ¿detuviste la grabacion antes del fundido final? No recorto el final.');
   const redondear = (x) => Math.round(x * 1000) / 1000;

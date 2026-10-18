@@ -147,6 +147,22 @@ test('ventanaDeContenido ignora los negros cortos, no se confunde con un negro s
   assert.deepEqual([ventanaDeContenido([{ inicio: 0, fin: 2 }], NaN).inicio, ventanaDeContenido([{ inicio: 0, fin: 2 }], undefined).fin], [null, null], 'sin duracion no se recorta');
 });
 
+test('ventanaDeContenido: un negro largo en medio nunca se toma por el margen de salida (la salida tiene que llegar al final del video), ni por el de entrada sin una salida detras', () => {
+  const v = (negros, duracion) => ventanaDeContenido(negros, duracion);
+  // se detuvo la grabacion antes del fundido final y hay un negro de 2 s en medio: sin negro de salida, no se corta el video por la mitad
+  const detuvoAntes = v([{ inicio: 0, fin: 2 }, { inicio: 5, fin: 7 }], 10);
+  assert.deepEqual([detuvoAntes.inicio, detuvoAntes.fin], [1.85, null]);
+  assert.match(detuvoAntes.avisos.join(' '), /medio/);
+  assert.match(detuvoAntes.avisos.join(' '), /salida/);
+  // dos negros que no tocan ni el inicio ni el final: no son margenes
+  const sueltos = v([{ inicio: 1, fin: 3 }, { inicio: 5, fin: 7 }], 10);
+  assert.deepEqual([sueltos.inicio, sueltos.fin], [null, null]);
+  assert.match(sueltos.avisos.join(' '), /medio/);
+  // lo que antes de refrescar la pagina ya se grababa (el negro de entrada no empieza en 0) sigue valiendo si detras hay un negro que llega al final
+  const conPrevio = v([{ inicio: 1, fin: 3.2 }, { inicio: 9, fin: 11 }], 11);
+  assert.deepEqual([conPrevio.inicio, conPrevio.fin], [3.05, 9.15]);
+});
+
 test('los argumentos de ffmpeg limitan la duracion de lo que se lee cuando se pide (despues de -ss y antes de -i), y sin ella no cambian', () => {
   const con = argumentosFfmpeg({ entrada: 'g.mkv', nombre: 'ep01', carpeta: 'sal', inicio: 1.9, duracion: 4.7 }).join(' ');
   assert.ok(con.includes('-ss 1.9 -t 4.7 -i g.mkv'), con);

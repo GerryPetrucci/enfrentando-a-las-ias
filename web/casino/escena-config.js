@@ -69,6 +69,8 @@ export function leerParametros(search) {
     razon: bandera(q.get('razon')),
     auto: bandera(q.get('auto')),
     grabar: bandera(q.get('auto')) && bandera(q.get('grabar')), // sin auto la pagina no arranca sola: no hay nada que enmarcar
+    detener: entero(q.get('detener')), // para capturas: avanza al instante hasta ese beat y se queda ahi (null = reproduccion normal)
+    grabando: bandera(q.get('auto')) && bandera(q.get('grabar')) && entero(q.get('detener')) === null, // grabar con margenes y fundidos: una captura que se detiene en un beat no espera ni se funde
     limpio: bandera(q.get('limpio')),
     voz: esRutaRelativa(q.get('voz')) ? q.get('voz') : null,
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',

@@ -87,6 +87,22 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   assert.ok(texto.includes(PARTIDA.juego.nombre));
 });
 
+test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si cambian los tiempos, cambia lo que se le pide a quien graba', async () => {
+  const { FUNDIDOS } = await import('../../../web/casino/escena-config.js');
+  const guardado = { ...FUNDIDOS };
+  try {
+    Object.assign(FUNDIDOS, { margenMs: 3000, colaMs: 4000 });
+    const paquete = construirPaquete({ partida: PARTIDA, beats: await armarLinea('conquista', PARTIDA), destacadas: [], archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
+    const texto = leemeDe(paquete, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, nombreBase: 'guerra-p1' });
+    assert.match(texto, /3 s de negro al empezar/);
+    assert.match(texto, /4 s de negro al final/);
+    assert.match(texto, /hay 4 segundos de margen/);
+    assert.match(texto, /negro 3 segundos/);
+  } finally {
+    Object.assign(FUNDIDOS, guardado);
+  }
+});
+
 test('el LEEME avisa de las piezas que duran mas de 2:20 (lo que admite X con una cuenta gratis) y no avisa de las que caben', async () => {
   const construir = async (id, partida) => construirPaquete({ partida, beats: await armarLinea(id, partida), destacadas: await destacadasDe(id, partida, 10), archivo: 'pruebas/x.json', partidaNumero: 1, enlace: ENLACE });
   const largo = leemeDe(await construir('tripledado', await jugarTD(1)), { archivo: 'pruebas/x.json', partidaNumero: 1, nombreBase: 'x-p1' });

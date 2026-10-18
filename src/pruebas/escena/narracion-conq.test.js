@@ -70,6 +70,13 @@ test('ordenes: un ataque contra otro reino se nombra por parejas (hasta 2) y con
   sinCodigos(tres);
 });
 
+test('ordenes: si no se sabe cuantos reinos siguen en pie no se dice «todos» (podria incluir a uno caido): se nombra o se cuenta', () => {
+  const sin = { turno: 1, ataques: [ataque(0, '1'), ataque(1, '2'), ataque(2, '3'), ataque(3, '4')], literales: [], mensajes: [] };
+  assert.equal(nuevo(4).ordenes(sin).dicho[0].texto, 'Cuatro reinos salen a expandirse: mandan tropas a regiones sin dueño.');
+  assert.equal(nuevo(4).ordenes({ ...sin, vivos: 4 }).dicho[0].texto, 'Todos los reinos salen a expandirse: mandan tropas a regiones sin dueño.');
+  assert.equal(nuevo(4).ordenes({ ...sin, ataques: sin.ataques.slice(0, 2), vivos: 'x' }).dicho[0].texto, 'Ana y Beto salen a expandirse: mandan tropas a regiones sin dueño.');
+});
+
 test('ordenes: expansion y ofensiva en el mismo turno se dicen juntas (primero la expansion); la ofensiva se dice cada turno, la expansion solo al empezar la racha', () => {
   const n = nuevo();
   const t1 = ordenes(n, 1, [ataque(0, '1'), ataque(1, '2'), ataque(2, '3', false, 3)]);

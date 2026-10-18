@@ -23,6 +23,7 @@ import { inflateSync } from 'node:zlib';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { escenaDe, motivoDeNoReproducible, armarLinea } from '../web/casino/lineas.js';
+import { FUNDIDOS } from '../web/casino/escena-config.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -118,6 +119,11 @@ export function pngEsNegro(buffer, umbral = 8) {
   } catch { return false; }
 }
 
+// Los momentos (ms de tiempo virtual) en que --grabar mira la pagina, sacados de FUNDIDOS: uno a la mitad del margen de negro y otro con la partida ya corriendo (pasados el margen, el fundido y un rato mas).
+export function presupuestosDeGrabar(f = FUNDIDOS) {
+  return { margen: Math.round(f.margenMs / 2), contenido: f.margenMs + f.fundidoMs + 1500 };
+}
+
 // En que punto de la grabacion esta la pagina (data-fundido: margen, entrando, contenido, saliendo o negro) y si ya se cerro en negro (data-cierre); null si no esta en modo grabar.
 export function leerFundido(dom) {
   const texto = String(dom ?? '');
@@ -203,9 +209,10 @@ async function principal() {
         `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true })]);
       return { png: existsSync(ruta) ? readFileSync(ruta) : null, consola: r.consola };
     };
+    const t = presupuestosDeGrabar(), enSegundos = (ms) => `a ${Number((ms / 1000).toFixed(1))} s`;
     for (const formato of formatos) {
-      const margen = leerFundido(esperar(formato, 1000, 1).salida);
-      const contenido = leerFundido(esperar(formato, 2000 + 500 + 1500, 1).salida);
+      const margen = leerFundido(esperar(formato, t.margen, 1).salida);
+      const contenido = leerFundido(esperar(formato, t.contenido, 1).salida);
       const r = esperar(formato, 600000, vel);
       const fin = leerFundido(r.salida);
       const verificar = (etiqueta, obtenido, esperado) => {
@@ -213,12 +220,12 @@ async function principal() {
         console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${formato} ${etiqueta}: ${obtenido?.fundido ?? 'sin modo grabar'} (esperado ${esperado})`);
         if (!bien) fallos++;
       };
-      verificar('a 1 s', margen, 'margen');
-      verificar('a 4 s', contenido, 'contenido');
+      verificar(enSegundos(t.margen), margen, 'margen');
+      verificar(enSegundos(t.contenido), contenido, 'contenido');
       verificar('al final', fin, 'negro');
       if (!fin?.cerrada) { console.error(`  ERROR en ${formato}: la pagina no marco el cierre (data-cierre)`); fallos++; }
       revisar(`${formato} (grabar)`, r.consola);
-      for (const [etiqueta, presupuesto, velocidad, nombre, negra] of [['a 1 s', 1000, 1, 'margen', true], ['a 4 s', 4000, 1, 'contenido', false], ['al final', 600000, vel, 'final', true]]) {
+      for (const [etiqueta, presupuesto, velocidad, nombre, negra] of [[enSegundos(t.margen), t.margen, 1, 'margen', true], [enSegundos(t.contenido), t.contenido, 1, 'contenido', false], ['al final', 600000, vel, 'final', true]]) {
         const { png, consola } = captura(formato, presupuesto, velocidad, nombre);
         const bien = png !== null && pngEsNegro(png) === negra;
         console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${formato} ${etiqueta}: la captura ${png === null ? 'no se pudo tomar' : pngEsNegro(png) ? 'es toda negra' : 'tiene contenido'} (esperado ${negra ? 'toda negra' : 'con contenido'})`);

@@ -19,10 +19,10 @@ export async function iniciar() {
   document.body.classList.toggle('limpio', params.limpio);
   const aviso = (t) => { document.getElementById('estado').textContent = t; };
   const negro = document.getElementById('negro'); // la cortina del modo grabacion (la clase `grabar` de <html> la deja opaca desde el primer instante)
-  const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
-  const grabando = params.grabar && detenerEn === null; // una captura que se detiene en un beat no espera margenes ni se funde
+  const detenerEn = params.detener; // para capturas: avanza al instante hasta ese beat y se queda ahi (null = reproduccion normal)
+  const grabando = params.grabando; // grabar con margenes y fundidos (una captura que se detiene en un beat no espera ni se funde)
   if (params.grabar) document.body.dataset.fundido = 'margen';
-  if (params.grabar && !grabando) negro.style.opacity = 0;
+  if (params.grabar && !grabando) negro.style.opacity = 0; // la clase `grabar` de <html> la dejo opaca desde el primer instante: aqui se retira
   const marco = document.getElementById('marco');
   const selector = document.getElementById('selPartida');
   const botones = ['btnPlay', 'btnReiniciar', 'btnTiempos'].map((id) => document.getElementById(id));

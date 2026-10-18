@@ -148,6 +148,17 @@ test('la URL de captura solo lleva grabar=1 cuando se pide: las capturas y --com
   assert.equal(grabando.searchParams.get('vel'), '8');
 });
 
+import { presupuestosDeGrabar } from '../../../herramientas/capturar-escena.mjs';
+import { FUNDIDOS } from '../../../web/casino/escena-config.js';
+
+test('los momentos que mide --grabar salen de FUNDIDOS, no de numeros escritos a mano: uno dentro del margen y otro ya con la partida corriendo', () => {
+  const normal = presupuestosDeGrabar();
+  assert.ok(normal.margen > 0 && normal.margen < FUNDIDOS.margenMs, 'el primer momento cae dentro del margen de negro');
+  assert.ok(normal.contenido > FUNDIDOS.margenMs + FUNDIDOS.fundidoMs, 'el segundo cae despues del fundido de entrada');
+  const largo = presupuestosDeGrabar({ margenMs: 6000, fundidoMs: 1000, colaMs: 2000 });
+  assert.ok(largo.margen < 6000 && largo.contenido > 7000, 'si cambian los tiempos, cambian los momentos');
+});
+
 test('leerFundido lee en que punto de la grabacion esta la pagina y si ya se cerro en negro', () => {
   assert.deepEqual(leerFundido('<body data-fundido="margen">'), { fundido: 'margen', cerrada: false });
   assert.deepEqual(leerFundido('<body data-fundido="negro" data-cierre="1" data-terminada="1">'), { fundido: 'negro', cerrada: true });

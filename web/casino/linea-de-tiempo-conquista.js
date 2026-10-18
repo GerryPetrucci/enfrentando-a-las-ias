@@ -125,7 +125,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       ...ilegibles.map((s) => ({ tipo: 'ilegible', texto: `${nombre(s)} no respondió bien: pasa el turno.`, clave: `ilegible:${turno}:${s}` })),
     ];
     // lo que se dice de las ordenes: el narrador resume los ataques (TODOS, no solo los 10 que se dibujan), cita un mensaje publico y deja literales los privados y los avisos
-    const vivosAntes = Array.isArray(antes?.vivo) ? antes.vivo.filter((v) => v !== false).length : mapa.k;
+    const vivosAntes = Array.isArray(antes?.vivo) ? antes.vivo.filter((v) => v !== false).length : null; // sin la lista de reinos en pie no se sabe: el narrador no dira «todos»
     const narrado = narrador.ordenes({
       turno, literales: lineasOrdenes, mensajes, vivos: vivosAntes,
       ataques: flechasTodas.filter((f) => f.ataque).map((f) => ({ k: f.k, n: f.n, libre: antes?.dueno?.[f.a] === -1, contra: antes?.dueno?.[f.a] })),
