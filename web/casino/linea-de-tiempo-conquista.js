@@ -28,8 +28,8 @@ export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 
 export const MOTIVOS = { diferencia: 'diferencia menor al 10 %', tres: 'tres bandos', capital: 'cae una capital', ruptura: 'ataque tras romper un pacto' };
 const MAX_TARJETAS = 3, MAX_FLECHAS = 10, MAX_FLECHAS_QUE_NO_ATACAN = 5, MAX_SIN_REVELAR = 3, MOMENTOS_MAX = 6;
 
-const f2 = (n) => String(Math.round(Number(n) * 100) / 100);
-const tropas = (n) => `${n} ${n === 1 ? 'tropa' : 'tropas'}`;
+export const f2 = (n) => String(Math.round(Number(n) * 100) / 100);
+export const tropas = (n) => `${n} ${n === 1 ? 'tropa' : 'tropas'}`;
 
 // Cuanto duran el beat de ordenes y el de resolucion segun lo que pasa en el turno (el de cada batalla sale de MIN_MS.batalla o MIN_MS.vs).
 export function ritmoDeTurno({ batallas = 0, actividad = false } = {}) {

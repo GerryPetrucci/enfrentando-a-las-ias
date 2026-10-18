@@ -7,15 +7,14 @@
 // y la resolucion actualiza el mapa, el marcador y el feed. Al final, el ranking, los momentos clave y los privados que nunca salieron.
 
 import { colocarConquista } from './layout-conquista.js';
-import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza, PACTO_TURNOS } from './conquista-datos.js';
-import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono } from './mapa-dibujo.js';
+import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza } from './conquista-datos.js';
+import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, colorSolido } from './mapa-dibujo.js';
+import { f2, tropas } from './linea-de-tiempo-conquista.js';
 import { estiloJugador, esc } from './kit.js';
 import { colorDe, franjasDe } from '../paleta.js';
 import { MesaBase, el, poner } from './mesa-base.js';
 
 const MAX_FEED = 7;
-const f2 = (n) => String(Math.round(Number(n) * 100) / 100);
-const tropas = (n) => `${n} ${n === 1 ? 'tropa' : 'tropas'}`;
 const SVG = (cuerpo) => `<svg class="ico" viewBox="0 0 24 24">${cuerpo}</svg>`;
 const ICONOS = {
   espada: SVG('<path d="M5 19L19 5M19 19L5 5"/>'),
@@ -39,7 +38,7 @@ export class Mesa extends MesaBase {
     this.mapa = mapa;
     this.geom = geometriaDelMapa(mapa, this.L.mapa);
     this.colores = (partida.jugadores ?? []).map((j) => franjasDe(j.id) ?? colorDe(j.id, j.color));
-    this.estado = null; this.turno = 1; this.flechasPintadas = 0;
+    this.turno = 1; this.flechasPintadas = 0;
     this.armar();
   }
 
@@ -67,7 +66,6 @@ export class Mesa extends MesaBase {
   partesHTML(partes) { return partes.map((p) => (typeof p === 'string' ? esc(p) : this.nombreHTML(p.k))).join(''); }
   centro(r) { return centroDeRegion(this.mapa, r, this.geom); }
   radioFicha() { return Math.max(13, this.geom.T * 0.62); }
-  colorSolido(k) { const c = this.colores[k]; return Array.isArray(c) ? c[0] : (c ?? '#888888'); }
   limpiarLienzo(canvas) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); }
   opacidad(nodo) { return Number(getComputedStyle(nodo).opacity); }
   mostrar(nodo, ms = 350, frames = [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'translateY(0)' }]) { nodo.getAnimations().forEach((x) => x.cancel()); nodo.style.opacity = 1; this.anim(nodo, frames, { duration: ms, easing: 'ease-out' }); }
@@ -77,34 +75,33 @@ export class Mesa extends MesaBase {
   pintarMarcador(estado) {
     const c = this.cMarcador, g = c.getContext('2d'), k = this.mapa.k, { width: ancho, height: alto } = c;
     g.clearRect(0, 0, ancho, alto);
-    const fila = alto / k, tam = Math.min(26, fila * 0.55), compacto = this.formato === '16x9';
+    const fam = getComputedStyle(this.raiz).fontFamily, fila = alto / k, tam = Math.min(26, fila * 0.55), compacto = this.formato === '16x9';
     for (let s = 0; s < k; s++) {
       const y = s * fila + fila / 2, vivo = estado.vivo?.[s] !== false;
       g.globalAlpha = vivo ? 1 : 0.4;
       const col = this.colores[s];
       g.fillStyle = Array.isArray(col) ? (() => { const gr = g.createLinearGradient(0, y - fila * 0.4, 0, y + fila * 0.4); col.forEach((x, i) => gr.addColorStop(i / (col.length - 1), x)); return gr; })() : col;
       g.beginPath(); g.roundRect(8, y - fila * 0.38, 8, fila * 0.76, 4); g.fill();
-      g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 ${tam}px ${getComputedStyle(this.raiz).fontFamily}`;
-      g.fillStyle = colorDe(this.partida.jugadores[s]?.id, this.colorSolido(s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
+      g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 ${tam}px ${fam}`;
+      g.fillStyle = colorDe(this.partida.jugadores[s]?.id, colorSolido(this.colores, s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
       const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = (estado.dueno ?? []).reduce((a, d, r) => a + (d === s ? estado.tropas[r] : 0), 0);
       const pactos = (estado.pactos?.[s] ?? []).flatMap((v, j) => (j !== s && v >= this.turno ? [this.nombre(j)] : []));
-      g.font = `600 ${Math.round(tam * 0.62)}px ${getComputedStyle(this.raiz).fontFamily}`; g.fillStyle = vivo ? '#6fbf8a' : '#d8584e';
+      g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = vivo ? '#6fbf8a' : '#d8584e';
       if (!compacto) g.fillText(vivo ? (pactos.length ? `pacto con ${pactos.join(', ')}` : 'sin pactos') : 'cayó', 26, y + fila * 0.26, 200);
       const x0 = compacto ? 190 : 230, paso = compacto ? 112 : 118;
       RECURSOS.forEach((r, j) => {
         const x = x0 + j * paso;
         pintarIcono(g, r, x, y, tam * 0.5);
-        g.fillStyle = '#f2f0ed'; g.font = `800 ${tam}px ${getComputedStyle(this.raiz).fontFamily}`; g.textAlign = 'left'; g.fillText(String(estado.stock?.[s]?.[r] ?? 0), x + tam * 0.9, y + 1);
+        g.fillStyle = '#f2f0ed'; g.font = `800 ${tam}px ${fam}`; g.textAlign = 'left'; g.fillText(String(estado.stock?.[s]?.[r] ?? 0), x + tam * 0.9, y + 1);
       });
-      g.textAlign = 'right'; g.fillStyle = '#f2f0ed'; g.font = `700 ${Math.round(tam * 0.92)}px ${getComputedStyle(this.raiz).fontFamily}`;
+      g.textAlign = 'right'; g.fillStyle = '#f2f0ed'; g.font = `700 ${Math.round(tam * 0.92)}px ${fam}`;
       g.fillText(`${regiones} reg.`, ancho - 14, y - (compacto ? 0 : fila * 0.14));
-      if (!compacto) { g.font = `600 ${Math.round(tam * 0.62)}px ${getComputedStyle(this.raiz).fontFamily}`; g.fillStyle = '#9a9aa6'; g.fillText(`${tr} tropas · honor ${estado.honor?.[s] ?? 0}`, ancho - 14, y + fila * 0.26); }
+      if (!compacto) { g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = '#9a9aa6'; g.fillText(`${tr} tropas · honor ${estado.honor?.[s] ?? 0}`, ancho - 14, y + fila * 0.26); }
       g.globalAlpha = 1;
     }
   }
 
   pintarMapa(estado) {
-    this.estado = estado;
     this.limpiarLienzo(this.cReinos);
     const g = this.cReinos.getContext('2d');
     pintarReinos(g, this.mapa, this.geom, estado.dueno, this.colores);
@@ -185,7 +182,7 @@ export class Mesa extends MesaBase {
     const fl = beat.pasos.find((p) => p.tipo === 'flechas');
     if (fl?.lista?.length) {
       const g = this.cFlechas.getContext('2d');
-      for (const f of fl.lista) { const a = this.centro(f.de), b = this.centro(f.a); if (a && b) pintarFlecha(g, a, b, this.colorSolido(f.k), f.n, this.radioFicha()); }
+      for (const f of fl.lista) { const a = this.centro(f.de), b = this.centro(f.a); if (a && b) pintarFlecha(g, a, b, colorSolido(this.colores, f.k), f.n, this.radioFicha()); }
       this.flechasPintadas = fl.lista.length;
       this.anim(this.cFlechas, [{ opacity: 0 }, { opacity: 1 }], { duration: 450 });
       this.sonar(fl);
@@ -238,7 +235,7 @@ export class Mesa extends MesaBase {
     const g = this.cFlechas.getContext('2d'), destino = this.centro(t.d);
     this.mostrar(this.vela, 350, [{ opacity: 0 }, { opacity: 1 }]);
     pintarContorno(g, this.mapa, this.geom, t.d, '#ffffff', 5);
-    for (const m of movs.filter((x) => x.d === t.d)) { pintarContorno(g, this.mapa, this.geom, m.f, '#e0b25c', 3); const a = this.centro(m.f); if (a && destino) pintarFlecha(g, a, destino, this.colorSolido(m.k), m.n, this.radioFicha()); }
+    for (const m of movs.filter((x) => x.d === t.d)) { pintarContorno(g, this.mapa, this.geom, m.f, '#e0b25c', 3); const a = this.centro(m.f); if (a && destino) pintarFlecha(g, a, destino, colorSolido(this.colores, m.k), m.n, this.radioFicha()); }
     if (destino) pintarEstallido(g, destino.x, destino.y, 34);
     this.flechasPintadas = movs.filter((x) => x.d === t.d).length;
     // la tarjeta va en la mitad del mapa donde NO esta la batalla

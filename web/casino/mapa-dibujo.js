@@ -18,7 +18,7 @@ function hash2(ix, iy, seed) {
 }
 const sombrear = (hex, f) => { const n = parseInt(hex.slice(1), 16), q = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f))); return `rgb(${q(16)},${q(8)},${q(0)})`; };
 const colorDe = (colores, k, x = 0, y = 0) => { const c = colores?.[k]; return Array.isArray(c) ? c[(x + y) % c.length] : (c ?? '#888888'); };
-const colorSolido = (colores, k) => { const c = colores?.[k]; return Array.isArray(c) ? c[0] : (c ?? '#888888'); };
+export const colorSolido = (colores, k) => { const c = colores?.[k]; return Array.isArray(c) ? c[0] : (c ?? '#888888'); };
 
 // ---- lo puro ----
 // La celda entera (T) y el desplazamiento (ox, oy) con que el mapa cabe, centrado, en `rect`.
@@ -36,13 +36,16 @@ export function centroDeRegion(mapa, id, g) {
 
 // Los bordes entre celdas de regiones distintas (o de una region y el mar), una sola vez cada uno, en unidades de celda: un borde vertical esta en la linea x entre las
 // celdas (x - 1, y) y (x, y); uno horizontal, en la linea y entre (x, y - 1) y (x, y). r1 es la region de la izquierda o de arriba, r2 la de la derecha o de abajo.
+const CACHE_BORDES = new WeakMap(); // los bordes de un mapa no cambian: se calculan una vez (los pide cada repintado de reinos y cada contorno)
 export function bordesDeRegion(mapa) {
+  if (CACHE_BORDES.has(mapa)) return CACHE_BORDES.get(mapa);
   const { ancho, alto, region } = mapa, bordes = [];
   for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
     const a = region[y * ancho + x];
     if (x < ancho - 1) { const b = region[y * ancho + x + 1]; if (a !== b && (a >= 0 || b >= 0)) bordes.push({ x: x + 1, y, horizontal: false, r1: a, r2: b }); }
     if (y < alto - 1) { const b = region[(y + 1) * ancho + x]; if (a !== b && (a >= 0 || b >= 0)) bordes.push({ x, y: y + 1, horizontal: true, r1: a, r2: b }); }
   }
+  CACHE_BORDES.set(mapa, bordes);
   return bordes;
 }
 
