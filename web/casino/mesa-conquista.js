@@ -10,6 +10,7 @@ import { colocarConquista } from './layout-conquista.js';
 import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza } from './conquista-datos.js';
 import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, colorSolido } from './mapa-dibujo.js';
 import { f2, tropas } from './linea-de-tiempo-conquista.js';
+import { nombreDeReino } from './reinos-conquista.js';
 import { estiloJugador, esc } from './kit.js';
 import { colorDe, franjasDe } from '../paleta.js';
 import { MesaBase, el, poner } from './mesa-base.js';
@@ -84,11 +85,15 @@ export class Mesa extends MesaBase {
       g.beginPath(); g.roundRect(8, y - fila * 0.38, 8, fila * 0.76, 4); g.fill();
       g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 ${tam}px ${fam}`;
       g.fillStyle = colorDe(this.partida.jugadores[s]?.id, colorSolido(this.colores, s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
+      const x0 = compacto ? 240 : 230, paso = compacto ? 112 : 118; // donde empieza la columna de recursos y lo que mide cada una
+      // el reino del asiento junto al nombre del modelo (las IAs hablan de «Azur» o «Rosa» en sus mensajes): en gris y solo si cabe antes de los recursos
+      const reino = nombreDeReino(s), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
+      g.font = `600 ${Math.round(tam * 0.6)}px ${fam}`;
+      if (reino && xReino + g.measureText(reino).width < x0 - 8) { g.fillStyle = '#9a9aa6'; g.fillText(reino, xReino, y - (compacto ? 0 : fila * 0.12)); }
       const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = (estado.dueno ?? []).reduce((a, d, r) => a + (d === s ? estado.tropas[r] : 0), 0);
       const pactos = (estado.pactos?.[s] ?? []).flatMap((v, j) => (j !== s && v >= this.turno ? [this.nombre(j)] : []));
       g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = vivo ? '#6fbf8a' : '#d8584e';
       if (!compacto) g.fillText(vivo ? (pactos.length ? `pacto con ${pactos.join(', ')}` : 'sin pactos') : 'cayó', 26, y + fila * 0.26, 200);
-      const x0 = compacto ? 190 : 230, paso = compacto ? 112 : 118;
       RECURSOS.forEach((r, j) => {
         const x = x0 + j * paso;
         pintarIcono(g, r, x, y, tam * 0.5);
