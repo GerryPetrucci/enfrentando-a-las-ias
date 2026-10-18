@@ -28,7 +28,7 @@ antes de conectar modelos de verdad.
 ```bash
 cp .env.example .env      # pon tu llave de https://openrouter.ai/keys
 node src/correr.js --juego=dilema --a=claude --b=gpt --partidas=4 --modo=pago
-node src/correr.js --juego=dilema --a=laguna --b=ling --partidas=4 --modo=gratis
+node src/correr.js --juego=dilema --a=laguna --b=nemotron-super --partidas=4 --modo=gratis
 node src/marcador.js
 ```
 
