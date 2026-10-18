@@ -129,7 +129,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const motivos = (d.motivos ?? []).join(', ');
     piezas.push({
       id: `clip-${i + 1}`, tipo: 'clip', titulo: `${t.nombre} · ${etiqueta}`,
-      grabar: { url: urlDeGrabacion({ archivo, partidaNumero, formato, desde: w.mano, hasta: w.hasta, rutaVoz }), desde: w.mano, hasta: w.hasta, ms: w.ms, nota: `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s`}` },
+      grabar: { url: urlDeGrabacion({ archivo, partidaNumero, formato, desde: w.mano, hasta: w.hasta, rutaVoz }), desde: w.mano, hasta: w.hasta, ms: w.ms, nota: `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}` },
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
   });
