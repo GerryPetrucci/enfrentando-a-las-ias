@@ -89,11 +89,36 @@ export class MesaBase {
 
   // ---- el beat ----
   async ejecutar(beat, ms) {
+    if (beat?.tipo === 'intro') return this.ejecutarIntro(beat, ms); // la tarjeta de arranque es la misma para todos los juegos: no pasa por METODOS ni por los subtitulos
     const t0 = performance.now();
     this.mostrarSubtitulos(beat);
     const metodo = this.constructor.METODOS?.[beat.tipo]; // cada mesa declara METODOS: tipo de beat -> nombre del metodo que lo anima
     if (metodo) await this[metodo](beat, ms);
     await this.esperar(ms - (performance.now() - t0) * this.vel); // lo que ya paso, a velocidad 1
+  }
+
+  // ---- la tarjeta de arranque (intro.js): nombre del juego, su regla y como se gana, a pantalla completa, dentro de la zona segura; entra, se queda y sale en lo que dura el beat ----
+  async ejecutarIntro(beat, ms) {
+    const paso = Array.isArray(beat.pasos) ? beat.pasos.find((p) => p.tipo === 'intro') : null;
+    if (!this.introEl) {
+      this.introEl = el('intro-juego');
+      const z = this.L?.zona ?? { x: 0, y: 0, ancho: this.L?.ancho ?? 0, alto: this.L?.alto ?? 0 };
+      poner(this.introEl, z);
+      this.raiz.append(this.introEl);
+    }
+    const nodo = this.introEl, FUNDIDO = 450;
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.innerHTML = paso
+      ? `<div class="ij-cat">${esc(paso.categoria)}</div><div class="ij-nombre">${esc(paso.nombre)}</div><div class="ij-regla">${esc(paso.regla)}</div><div class="ij-gana">${esc(paso.gana)}</div>`
+        + '<div class="ij-pie">Contenido generado por IA · Proyecto independiente</div>'
+      : '';
+    nodo.style.opacity = 1;
+    this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
+    await this.esperar(Math.max(0, ms - FUNDIDO));
+    this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: FUNDIDO, easing: 'ease-in', fill: 'forwards' });
+    await this.esperar(Math.min(FUNDIDO, ms));
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.style.opacity = 0;
   }
 
   // Lo que cada mesa tiene que dar (para quien la use sin saberlo): estadoVisible() y mostrarEstadoInicial(beat).
