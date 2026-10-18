@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometriaDelMapa, centroDeRegion, bordesDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido } from '../../../web/casino/mapa-dibujo.js';
+import { geometriaDelMapa, centroDeRegion, bordesDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono } from '../../../web/casino/mapa-dibujo.js';
 import { leerMapa, estadoInicial, paletaDe } from '../../../web/casino/conquista-datos.js';
 import { colocarConquista } from '../../../web/casino/layout-conquista.js';
 import { crearMapa, serializarMapa, BIOMAS, CONFIG } from '../../mapa.js';
@@ -101,6 +101,23 @@ test('pintarFichas dibuja las fichas de una partida real sin lanzar y solo pone 
   assert.equal(escalas(b.llamadas), 2 * capitalesN, 'una torre por capital fortificada');
   for (const ultimo of p.rondas.filter((r) => r.estado)) assert.doesNotThrow(() => pintarFichas(ctxFalso().ctx, m, g, ultimo.estado, colores));
   assert.doesNotThrow(() => pintarFichas(ctxFalso().ctx, m, g, { ...estado, maravilla: { r: 3, k: 1, n: 2, t0: 4 } }, colores));
+});
+
+test('pintarContorno traza solo los bordes de la region pedida y pintarIcono dibuja los 6 recursos', () => {
+  const m = mapaDe(5, 3), g = geometriaDelMapa(m, colocarConquista('9x16', m).mapa);
+  for (const id of [0, 5, m.regs.length - 1]) {
+    const { ctx, llamadas, propiedades } = ctxFalso();
+    pintarContorno(ctx, m, g, id, '#ffffff', 4);
+    const esperados = bordesDeRegion(m).filter((b) => b.r1 === id || b.r2 === id).length;
+    assert.equal(llamadas.filter(([n]) => n === 'moveTo').length, esperados, `region ${id}`);
+    assert.ok(esperados > 0);
+    assert.ok(propiedades.some(([n, v]) => n === 'strokeStyle' && v === '#ffffff') && propiedades.some(([n, v]) => n === 'lineWidth' && v === 4));
+  }
+  const sin = ctxFalso();
+  assert.doesNotThrow(() => pintarContorno(sin.ctx, m, g, 999, '#fff', 4), 'una region que no existe no dibuja ni lanza');
+  assert.equal(sin.llamadas.length, 0, 'ni una llamada para una region que no existe');
+  for (const tipo of ['Comida', 'Madera', 'Roca', 'Hierro', 'Oro', 'Caballos']) { const { ctx, llamadas } = ctxFalso(); pintarIcono(ctx, tipo, 20, 20, 12); assert.ok(llamadas.length > 2, tipo); }
+  const raro = ctxFalso(); assert.doesNotThrow(() => pintarIcono(raro.ctx, 'Plutonio', 20, 20, 12));
 });
 
 test('pintarFlecha y pintarEstallido dibujan sin lanzar y la flecha lleva su numero', () => {

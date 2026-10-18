@@ -108,7 +108,7 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   const p1 = await jugar(1), p2 = await jugar(2, PRUDENTES);
   const cargados = [
     { nombre: 'a.json', datos: { juego: p1.juego, partidas: [p1, p2] } },
-    { nombre: 'conquista.json', datos: { juego: { id: 'conquista' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
+    { nombre: 'dilema.json', datos: { juego: { id: 'dilema' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
     { nombre: 'roto.json', datos: null, error: 'JSON invalido' },
     { nombre: 'vacio.json', datos: { partidas: [] } },
     { nombre: 'sinrondas.json', datos: { juego: { id: 'dudaapuesta' }, partidas: [{ jugadores: [], rondas: [] }] } },
@@ -119,14 +119,14 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
   assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
   assert.equal(c[0].partida, p1);
-  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'conquista']);
+  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'dilema']);
   const manos = Math.max(...p1.rondas.map((r) => r.mano));
   assert.equal(c[0].manos, manos);
   assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
   assert.match(c[1].titulo, /Partida 2 — Prudente vs Prudente vs Prudente vs Prudente/);
   const [sin, roto, vacio, sinRondas, sinPartidas] = c.slice(2);
   assert.deepEqual([sin.valida, sin.partida], [false, null]);
-  assert.match(sin.motivo, /conquista/);
+  assert.match(sin.motivo, /dilema/);
   assert.match(roto.motivo, /JSON invalido/);
   assert.match(vacio.motivo, /no trae partidas/);
   assert.match(sinPartidas.motivo, /no trae partidas/);
@@ -146,7 +146,7 @@ test('catalogarPartidas marca las partidas cortadas', async () => {
 test('primeraValida elige la partida pedida si sirve y, si no, la primera que sirva', async () => {
   const p = await jugar(1);
   const c = catalogarPartidas([
-    { nombre: 'otro.json', datos: { juego: { id: 'conquista' }, partidas: [{ rondas: [{}] }] } },
+    { nombre: 'otro.json', datos: { juego: { id: 'dilema' }, partidas: [{ rondas: [{}] }] } },
     { nombre: 'a.json', datos: { juego: p.juego, partidas: [p, p] } },
     { nombre: 'b.json', datos: { juego: p.juego, partidas: [p] } },
   ]);

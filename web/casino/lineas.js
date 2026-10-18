@@ -71,6 +71,14 @@ const ESCENAS = {
     linea: () => import('./linea-de-tiempo-solitario.js'),
     mesa: () => import('./mesa-solitario.js'),
   },
+  conquista: {
+    nombre: 'Guerra de territorios',
+    jugadores: 5,
+    camaraPorDefecto: 0, // sin camara oculta: el publico lo ve todo; lo que se retrasa son los mensajes privados (se revelan con la traicion, el pacto cumplido o el final)
+    unidad: 'turno',
+    linea: () => import('./linea-de-tiempo-conquista.js'),
+    mesa: () => import('./mesa-conquista.js'),
+  },
 };
 
 export const juegosConEscena = () => Object.keys(ESCENAS);

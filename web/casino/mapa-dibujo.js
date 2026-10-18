@@ -91,8 +91,21 @@ export function pintarReinos(ctx, mapa, g, dueno, colores, tinte = TINTE_DE_REIN
   for (const [c, lineas] of porColor) trazar(lineas, c, 3);
 }
 
+// El contorno de una region (para resaltarla en una batalla): un solo trazo con todos sus bordes. Una region que no existe no dibuja nada.
+export function pintarContorno(ctx, mapa, g, id, color, grosor = 4) {
+  if (!mapa.regs[id]) return;
+  const T = g.T;
+  ctx.strokeStyle = color; ctx.lineWidth = grosor; ctx.lineCap = 'square'; ctx.beginPath();
+  for (const b of bordesDeRegion(mapa)) {
+    if (b.r1 !== id && b.r2 !== id) continue;
+    const x = g.ox + b.x * T, y = g.oy + b.y * T;
+    ctx.moveTo(x, y); ctx.lineTo(b.horizontal ? x + T : x, b.horizontal ? y : y + T);
+  }
+  ctx.stroke();
+}
+
 // ---- fichas por region ----
-function icono(ctx, tipo, x, y, r) {
+export function pintarIcono(ctx, tipo, x, y, r) {
   ctx.save(); ctx.translate(x, y); ctx.lineWidth = Math.max(1.5, r / 7); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   if (tipo === 'Comida') { ctx.strokeStyle = '#e8c547'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.5, r * 0.9); ctx.lineTo(i * r * 0.5, -r * 0.6); ctx.stroke(); ctx.fillStyle = '#e8c547'; ctx.beginPath(); ctx.ellipse(i * r * 0.5, -r * 0.7, r * 0.22, r * 0.4, 0, 0, 7); ctx.fill(); } }
   if (tipo === 'Madera') { ctx.fillStyle = '#9a6b3f'; ctx.strokeStyle = '#4a2f18'; ctx.beginPath(); ctx.roundRect(-r, -r * 0.45, r * 2, r * 0.9, r * 0.3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d2a56b'; ctx.beginPath(); ctx.ellipse(r * 0.75, 0, r * 0.28, r * 0.42, 0, 0, 7); ctx.fill(); ctx.stroke(); }
@@ -121,7 +134,7 @@ export function pintarFichas(ctx, mapa, g, estado, colores) {
   const T = g.T, rad = Math.max(13, T * 0.62), capitales = mapa.inicio.capitales;
   for (const reg of mapa.regs) {
     const c = centroDeRegion(mapa, reg.id, g), x = c.x, y = c.y, k = estado?.dueno?.[reg.id] ?? -1;
-    if (reg.rec) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y - rad * 1.15, rad * 0.72, 0, 7); ctx.fill(); icono(ctx, reg.rec, x, y - rad * 1.15, rad * 0.5); }
+    if (reg.rec) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y - rad * 1.15, rad * 0.72, 0, 7); ctx.fill(); pintarIcono(ctx, reg.rec, x, y - rad * 1.15, rad * 0.5); }
     if (k >= 0) {
       const col = colorSolido(colores, k);
       ctx.fillStyle = 'rgba(8,8,12,.9)'; ctx.beginPath(); ctx.arc(x, y + rad * 0.3, rad, 0, 7); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();

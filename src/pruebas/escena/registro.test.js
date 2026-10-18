@@ -34,14 +34,14 @@ test('todos los juegos registrados traen sus datos completos y una camara por de
     assert.ok(typeof e.nombre === 'string' && e.nombre.length > 0, id);
     assert.ok(Number.isInteger(e.jugadores) && e.jugadores >= 2 && e.jugadores <= 5, `${id}: jugadores`);
     assert.ok(Number.isInteger(e.camaraPorDefecto) && e.camaraPorDefecto >= 0 && e.camaraPorDefecto <= e.jugadores, `${id}: camara por defecto`);
-    assert.ok(['mano', 'ronda'].includes(e.unidad), `${id}: unidad`);
+    assert.ok(['mano', 'ronda', 'turno'].includes(e.unidad), `${id}: unidad`);
   }
 });
 
 test('un juego sin escena da un error que dice cuales hay', async () => {
-  assert.throws(() => escenaDe('conquista'), /no hay escena.*"conquista".*dudaapuesta/);
+  assert.throws(() => escenaDe('dilema'), /no hay escena.*"dilema".*dudaapuesta/);
   for (const raro of [undefined, null, '', 7, 'toString', '__proto__']) assert.throws(() => escenaDe(raro), /no hay escena/, String(raro));
-  await assert.rejects(() => lineaDe('conquista'), /no hay escena/);
+  await assert.rejects(() => lineaDe('dilema'), /no hay escena/);
 });
 
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', () => {
@@ -49,13 +49,13 @@ test('el catalogo de partidas usa el registro: un juego registrado vale y uno si
   const partida = (id) => ({ juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
-    { nombre: 'conquista.json', datos: { partidas: [partida('conquista')] } },
+    { nombre: 'dilema.json', datos: { partidas: [partida('dilema')] } },
   ]);
-  for (const e of c.filter((x) => x.archivo !== 'conquista.json')) assert.equal(e.valida, true, e.archivo);
-  const sin = c.find((x) => x.archivo === 'conquista.json');
+  for (const e of c.filter((x) => x.archivo !== 'dilema.json')) assert.equal(e.valida, true, e.archivo);
+  const sin = c.find((x) => x.archivo === 'dilema.json');
   assert.equal(sin.valida, false);
-  assert.match(sin.motivo, /conquista/);
-  assert.equal(sin.juego, 'conquista');
+  assert.match(sin.motivo, /dilema/);
+  assert.equal(sin.juego, 'dilema');
 });
 
 test('la linea de tiempo de cada juego registrado exporta lo que la herramienta de capturas necesita: construirla y comprobar el estado de su escena', async () => {
@@ -161,7 +161,7 @@ test('una partida de La Fuga guardada con el motor anterior (sin la alarma de an
 test('motivoDeNoReproducible dice por que una partida no se puede reproducir: otro juego, sin rondas, formato anterior; una buena da null', async () => {
   const buena = await jugarSub(1);
   assert.equal(motivoDeNoReproducible('subasta', buena), null);
-  assert.match(motivoDeNoReproducible('conquista', buena), /conquista.*no tiene escena/);
+  assert.match(motivoDeNoReproducible('dilema', buena), /dilema.*no tiene escena/);
   assert.match(motivoDeNoReproducible(undefined, buena), /otro juego.*no tiene escena/);
   assert.equal(motivoDeNoReproducible('subasta', { ...buena, rondas: [] }), 'sin rondas');
   const vieja = structuredClone(buena);

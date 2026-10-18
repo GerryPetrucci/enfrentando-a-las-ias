@@ -42,6 +42,13 @@ export function eventosDePaso(paso) {
     case 'actuar': return paso.sale === true ? ['gana'] : paso.resultado === 'tropezo' ? ['tic'] : paso.resultado === 'cayo' ? ['pierde'] : [];
     case 'tentacion': return paso.clase === 'oferta' ? ['duda'] : ['ficha'];
     case 'medidor': return ['tic'];
+    // Guerra de territorios (mapa, mensajes, privados, feed, razones, estado y final son mudos a proposito: el texto y el mapa hablan solos)
+    case 'flechas': return paso.lista?.length ? ['carta'] : [];
+    case 'tarjeta': return ['anuncio'];
+    case 'cartel': return ['duda'];
+    case 'flashback': return ['voltear'];
+    case 'conquistas': return paso.lista?.length ? ['gana'] : [];
+    case 'pacto': case 'cumplido': return ['ficha'];
     case 'sello': return paso.sello === 'igual' ? [] : [['justo', 'cumplido', 'acierta'].includes(paso.sello) ? 'gana' : 'pierde'];
     default: return [];
   }

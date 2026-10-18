@@ -283,14 +283,18 @@ export function beatsDeEstado(beats, max = 6) {
   return turnos.map((m) => beats.findIndex((b) => b.mano === m && b.tipo === 'ordenes')).filter((i) => i >= 0);
 }
 
-// Lo que la mesa informa de si misma al detenerse (data-estado): al empezar un turno no debe quedar nada visible del anterior.
+// Lo que la mesa informa de si misma al detenerse (data-estado) justo despues del beat de ordenes de un turno: ahi SI estan a la vista las flechas de ese turno, pero no puede quedar
+// nada del anterior (flechas de mas, tarjetas, carteles, flashbacks ni el panel del final).
 export function erroresDeEstado(estado, beat) {
   if (!estado) return ['la escena no informo su estado (data-estado)'];
   const errores = [];
+  const propias = beat?.pasos?.find((p) => p.tipo === 'flechas')?.lista?.length ?? 0;
   if (estado.tarjetas !== 0) errores.push(`quedan ${estado.tarjetas} tarjetas de batalla visibles al empezar ${beat.id}: son del turno anterior`);
   if (estado.carteles !== 0) errores.push(`quedan ${estado.carteles} carteles de traicion visibles al empezar ${beat.id}: son del turno anterior`);
   if (estado.flashbacks !== 0) errores.push(`quedan ${estado.flashbacks} flashbacks visibles al empezar ${beat.id}: son del turno anterior`);
-  if (estado.flechas !== 0) errores.push(`quedan ${estado.flechas} flechas de ordenes visibles al empezar ${beat.id}: son del turno anterior`);
+  if (estado.flechas !== propias) errores.push(`hay ${estado.flechas} flechas de ordenes visibles al empezar ${beat.id} y este turno tiene ${propias}: ${estado.flechas > propias ? 'sobran las del turno anterior' : 'faltan'}`);
+  if (!Number.isInteger(estado.filasMarcador) || !Number.isInteger(estado.reinos)) errores.push(`la escena no informo su marcador al empezar ${beat.id}`);
+  else if (estado.filasMarcador !== estado.reinos) errores.push(`el marcador tiene ${estado.filasMarcador} filas con tinta al empezar ${beat.id} y la partida tiene ${estado.reinos} reinos`);
   if (estado.panel > 0.01) errores.push(`panel visible (${estado.panel}) al empezar ${beat.id}: es del final anterior`);
   return errores;
 }

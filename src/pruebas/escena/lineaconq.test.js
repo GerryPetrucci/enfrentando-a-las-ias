@@ -302,9 +302,16 @@ test('mejoresTurnos elige por batallas decisivas, traiciones, caidas y Maravilla
   assert.equal(idx.length, 4);
   assert.ok(idx.every((i) => beats[i].tipo === 'ordenes' && beats[i].mano >= 2));
   assert.deepEqual(beatsDeEstado(null), []);
-  const limpio = { tarjetas: 0, carteles: 0, flashbacks: 0, flechas: 0, panel: 0 };
-  assert.deepEqual(erroresDeEstado(limpio, beats[idx[0]]), []);
-  assert.ok(erroresDeEstado({ ...limpio, tarjetas: 1 }, beats[idx[0]]).length === 1);
-  assert.ok(erroresDeEstado({ ...limpio, carteles: 1, flashbacks: 2 }, beats[idx[0]]).length === 2);
+  // al terminar el beat de ordenes de un turno SI estan a la vista las flechas de ese turno: lo que no puede haber son las del anterior ni nada de batalla, traicion o final
+  const b = beats[idx[0]], propias = paso(b, 'flechas').lista.length;
+  const limpio = { tarjetas: 0, carteles: 0, flashbacks: 0, flechas: propias, panel: 0, reinos: 5, filasMarcador: 5 };
+  assert.deepEqual(erroresDeEstado(limpio, b), []);
+  assert.equal(erroresDeEstado({ ...limpio, filasMarcador: 0 }, b).length, 1, 'marcador vacio: ningun reino con tinta');
+  assert.equal(erroresDeEstado({ ...limpio, filasMarcador: 3 }, b).length, 1, 'al marcador le faltan filas');
+  assert.equal(erroresDeEstado({ ...limpio, reinos: undefined, filasMarcador: undefined }, b).length, 1, 'la escena no informo su marcador');
+  assert.ok(erroresDeEstado({ ...limpio, tarjetas: 1 }, b).length === 1);
+  assert.ok(erroresDeEstado({ ...limpio, carteles: 1, flashbacks: 2 }, b).length === 2);
+  assert.equal(erroresDeEstado({ ...limpio, flechas: propias + 2 }, b).length, 1, 'flechas que sobran: son del turno anterior');
+  assert.equal(erroresDeEstado({ ...limpio, flechas: Math.max(0, propias - 1) }, b).length, propias > 0 ? 1 : 0, 'flechas que faltan');
   assert.equal(erroresDeEstado(null, beats[0]).length, 1);
 });

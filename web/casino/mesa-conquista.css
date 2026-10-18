@@ -1,0 +1,91 @@
+/* La escena de la Guerra de territorios (mesa-conquista.js): mapa de pixel art sobre fondo oscuro, feed tipo lobby, tarjeta de batalla (A), pantalla VS, cartel de traicion, flashback
+   del privado, marcador y pantalla final. Reusa lo comun de mesa.css (.escena, .cabecera, .etiqueta-ia, .subtitulos). Las posiciones las pone la mesa con layout-conquista.js; aqui
+   solo el aspecto. El color de cada IA llega por --c, --t y --fondo (web/paleta.js), nunca se define aqui. */
+
+.mesa-conquista .fieltro { background:radial-gradient(ellipse 90% 30% at 50% 0%, rgba(224,178,92,.12), rgba(224,178,92,0) 70%), var(--noche); }
+.mesa-conquista .fieltro::after, .mesa-conquista .riel, .mesa-conquista .luz, .mesa-conquista .marca-agua { display:none; }
+.mesa-conquista canvas.lienzo { position:absolute; left:0; top:0; pointer-events:none; }
+.mesa-conquista canvas.l-terreno { z-index:1; } .mesa-conquista canvas.l-reinos { z-index:2; } .mesa-conquista canvas.l-flechas { z-index:3; } .mesa-conquista canvas.l-marcador { z-index:15; }
+.mesa-conquista .vela { z-index:4; background:rgba(6,6,10,.58); opacity:0; pointer-events:none; }
+.mesa-conquista .cabecera .tit { font-size:36px; }
+.mesa-conquista .cabecera .mano { font-size:40px; }
+.mesa-conquista .etiqueta-ia { background:rgba(224,178,92,.10); border-color:var(--oro); color:var(--oro); font-weight:700; font-size:22px; }
+.mesa-conquista .subtitulos { font-size:27px; padding:12px 16px; border-radius:16px; justify-content:flex-start; text-align:left; align-items:flex-start; }
+.f-16x9.mesa-conquista .subtitulos { font-size:30px; justify-content:center; align-items:center; text-align:center; }
+.mesa-conquista .subtitulos .razon { font-size:.8em; }
+
+/* ---------- feed ---------- */
+.mesa-conquista .feed-conq { z-index:20; display:flex; flex-direction:column; justify-content:flex-end; gap:6px; pointer-events:none; overflow:hidden; }
+.feed-conq .it { display:flex; align-items:center; gap:10px; padding:7px 14px 7px 8px; border-radius:12px; background:rgba(8,8,12,.9); font:600 26px/1.18 var(--texto); position:relative; border:2.5px solid transparent; flex:none; }
+.feed-conq .it .barra { width:6px; align-self:stretch; border-radius:3px; background:var(--c, #888); flex:none; }
+.feed-conq .it .ico { width:26px; height:26px; flex:none; stroke:#f2f0ed; fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.feed-conq .it .txt { min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.feed-conq .it .n { font-weight:800; color:var(--t, #f2f0ed); text-shadow:0 0 4px #000c; }
+.feed-conq .it.alerta { border-color:var(--rojo); }
+.feed-conq .it.alerta .ico { stroke:var(--rojo); }
+.f-16x9 .feed-conq .it { font-size:28px; }
+
+/* ---------- cartel de traicion y flashback ---------- */
+.mesa-conquista .cartel-conq { z-index:34; display:flex; align-items:center; justify-content:center; padding:0 24px; border-radius:16px; background:rgba(0,0,0,.82); border:3px solid var(--rojo); font:800 38px/1.05 var(--titulos); letter-spacing:.03em; text-transform:uppercase; text-align:center; opacity:0; pointer-events:none; }
+.mesa-conquista .cartel-conq .n { color:var(--t); }
+.f-16x9 .cartel-conq { font-size:34px; }
+.mesa-conquista .flash-conq { z-index:33; padding:16px 26px; border-radius:18px; background:linear-gradient(#17171cf2,#0c0c10f7); border:2.5px solid var(--oro); box-shadow:0 14px 44px #000b; opacity:0; pointer-events:none; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.flash-conq .cab { display:flex; align-items:center; gap:10px; font:800 24px var(--titulos); letter-spacing:.16em; color:var(--oro); text-transform:uppercase; }
+.flash-conq .cab svg { width:26px; height:26px; stroke:var(--oro); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.flash-conq .quien { font:600 24px/1.2 var(--texto); color:#c9c9d2; }
+.flash-conq .quien .n { color:var(--t); font-weight:800; }
+.flash-conq .cita { font:italic 600 32px/1.22 var(--texto); color:var(--hueso); overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; }
+.flash-conq .cita + .cita { margin-top:4px; }
+
+/* ---------- tarjeta de batalla (A) y pantalla VS (C) ---------- */
+.mesa-conquista .tarjeta-conq { z-index:32; border-radius:26px; background:rgba(10,10,14,.95); border:3px solid var(--oro); box-shadow:0 18px 60px #000c; padding:18px 22px; display:flex; flex-direction:column; gap:10px; opacity:0; pointer-events:none; overflow:hidden; }
+.tarjeta-conq .tc-titulo { font:800 38px/1 var(--titulos); letter-spacing:.08em; color:var(--oro); text-align:center; text-transform:uppercase; }
+.tarjeta-conq .tc-cols { display:flex; gap:10px; flex:1; min-height:0; }
+.tarjeta-conq .tc-col { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; }
+.tarjeta-conq .tc-rol { font:700 20px var(--titulos); letter-spacing:.2em; color:var(--suave); text-transform:uppercase; }
+.tarjeta-conq .tc-nom { font:800 44px/1 var(--titulos); letter-spacing:.03em; text-transform:uppercase; color:var(--t); max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tarjeta-conq .tc-trp { font:600 26px var(--texto); color:var(--suave); }
+.tarjeta-conq .tc-trp b { font:800 76px/1 var(--titulos); color:var(--hueso); margin-right:8px; }
+.tarjeta-conq .tc-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:38px; }
+.tarjeta-conq .tc-chips span { font:700 22px var(--texto); padding:5px 14px; border-radius:20px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.4); white-space:nowrap; }
+.tarjeta-conq .tc-chips span.oro { border-color:var(--oro); }
+.tarjeta-conq .tc-f { font:800 60px/1 var(--titulos); color:var(--hueso); }
+.tarjeta-conq .tc-f small { display:block; font:700 18px var(--texto); letter-spacing:.2em; color:var(--suave); }
+.tarjeta-conq .tc-barra { display:flex; gap:4px; height:26px; flex:none; margin:2px 6px; }
+.tarjeta-conq .tc-barra i { display:block; height:100%; border-radius:13px; background:var(--fondo, #888); transition:flex-grow .6s ease-out; flex-grow:1; }
+.tarjeta-conq .tc-veredicto { border:3px solid var(--verde); border-radius:18px; background:rgba(0,0,0,.6); padding:10px 14px; text-align:center; font:800 31px/1.1 var(--titulos); letter-spacing:.04em; text-transform:uppercase; opacity:0; flex:none; }
+.tarjeta-conq .tc-veredicto.mal { border-color:var(--rojo); }
+.tarjeta-conq .tc-veredicto .n { color:var(--t); }
+.mesa-conquista .tarjeta-vs { z-index:32; padding:0; border:0; border-top:6px solid var(--oro); border-bottom:6px solid var(--oro); border-radius:0; background:rgba(8,8,12,.97); position:absolute; opacity:0; pointer-events:none; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 18px 60px #000c; }
+.tarjeta-vs .vs-titulo { font:800 30px/1 var(--titulos); letter-spacing:.12em; color:var(--oro); text-align:center; padding:12px 0 0; text-transform:uppercase; }
+.tarjeta-vs .vs-cols { display:flex; flex:1; min-height:0; position:relative; }
+.tarjeta-vs .vs-col { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:0 8px; background:linear-gradient(135deg, color-mix(in srgb, var(--c, #888) 30%, transparent), transparent 70%); }
+.tarjeta-vs .vs-rol { font:700 22px var(--titulos); letter-spacing:.2em; color:#dcdce2; text-transform:uppercase; }
+.tarjeta-vs .vs-nom { font:800 54px/1 var(--titulos); text-transform:uppercase; color:var(--t); max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tarjeta-vs .vs-trp { font:800 170px/.95 var(--titulos); color:var(--hueso); }
+.tarjeta-vs .vs-lbl { font:600 28px var(--texto); color:#dcdce2; }
+.tarjeta-vs .vs-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.tarjeta-vs .vs-chips span { font:700 22px var(--texto); padding:4px 14px; border-radius:20px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.45); }
+.tarjeta-vs .vs-f { font:800 50px/1 var(--titulos); color:var(--hueso); }
+.tarjeta-vs .vs-medio { position:absolute; left:50%; top:46%; width:120px; height:120px; margin:-60px 0 0 -60px; border-radius:50%; background:var(--oro); border:6px solid #0b0b0e; display:flex; align-items:center; justify-content:center; font:800 68px var(--titulos); color:#0b0b0e; z-index:2; }
+.tarjeta-vs .tc-barra { margin:6px 40px; }
+.tarjeta-vs .tc-veredicto { margin:0 24px 12px; }
+.f-16x9 .tarjeta-vs .vs-trp { font-size:120px; }
+.f-16x9 .tarjeta-vs .vs-nom { font-size:44px; }
+
+/* ---------- pantalla final ---------- */
+.mesa-conquista .panel-conq { z-index:36; border-radius:26px; background:rgba(8,8,12,.97); border:3px solid var(--oro); box-shadow:0 22px 70px #000d; padding:22px 26px; display:flex; flex-direction:column; gap:12px; opacity:0; pointer-events:none; overflow:hidden; }
+.panel-conq .pf-titulo { font:800 46px/1 var(--titulos); letter-spacing:.08em; color:var(--oro); text-align:center; text-transform:uppercase; }
+.panel-conq .pf-sub { font:700 24px var(--titulos); letter-spacing:.14em; color:var(--suave); text-align:center; text-transform:uppercase; }
+.panel-conq .pf-fila { display:flex; align-items:center; gap:14px; padding:8px 14px; border-radius:16px; background:rgba(255,255,255,.05); border:3px solid var(--c, #888); }
+.panel-conq .pf-fila.cayo { opacity:.6; border-style:dashed; }
+.panel-conq .pf-pos { font:800 42px var(--titulos); width:44px; color:var(--oro); text-align:center; }
+.panel-conq .pf-nom { flex:1; min-width:0; font:800 36px/1 var(--titulos); text-transform:uppercase; color:var(--t); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.panel-conq .pf-datos { font:600 22px var(--texto); color:#c9c9d2; text-align:right; white-space:nowrap; }
+.panel-conq .pf-pts { font:800 40px var(--titulos); color:var(--hueso); min-width:92px; text-align:right; }
+.panel-conq h3 { font:800 26px var(--titulos); letter-spacing:.14em; color:var(--oro); text-transform:uppercase; margin-top:4px; }
+.panel-conq .pf-mom { font:600 24px/1.25 var(--texto); color:#dcdce2; }
+.panel-conq .pf-mom b { color:var(--oro); font-weight:800; margin-right:8px; }
+.panel-conq .pf-priv { font:italic 600 24px/1.25 var(--texto); color:var(--hueso); }
+.panel-conq .pf-priv small { font:700 20px var(--texto); font-style:normal; color:var(--suave); display:block; }
+.panel-conq .pf-marca { align-self:center; padding:6px 22px; border-radius:20px; border:3px solid var(--oro); font:800 28px var(--titulos); letter-spacing:.1em; color:var(--oro); text-transform:uppercase; }
