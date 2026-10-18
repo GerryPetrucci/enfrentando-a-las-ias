@@ -489,6 +489,19 @@ test('si todos los reinos en pie salen a las regiones sin dueño, se dice «todo
   assert.doesNotMatch(turno1(sinUno).texto, /^Todos los reinos/, 'si falta uno de los reinos ya no son todos');
 });
 
+test('si el estado del turno anterior no dice quienes siguen en pie, no se dice «todos» aunque salgan todos los reinos (podria haber uno caido)', () => {
+  const p = structuredClone(ejemplos[IDX.P18]);
+  const antes = p.rondas[0].estado;
+  delete antes.vivo;
+  const libres = antes.dueno.flatMap((d, id) => (d === -1 ? [id] : []));
+  assert.ok(libres.length >= p.jugadores.length, 'precondicion: regiones sin dueño para todos los reinos');
+  p.rondas[0].movs = []; // el turno 1 sin salidas: la de los reinos en el turno 2 empieza una racha (una racha que sigue no se dice)
+  p.rondas[1].movs = p.jugadores.map((_, k) => ({ f: 0, d: libres[k], n: 3, k }));
+  const b = construirLineaDeTiempo(p).find((x) => x.tipo === 'ordenes' && x.mano === 2);
+  assert.doesNotMatch(b.texto, /^Todos los reinos/);
+  assert.match(b.texto, /^Cinco reinos salen a expandirse/, 'se cuentan: son 5 y no se sabe si siguen en pie');
+});
+
 test('el hambre, el comercio y las tomas se cuentan como el narrador manda (con el tipo de cada hecho), y sus hechos siguen completos en las lineas', () => {
   const p = structuredClone(ejemplos[IDX.P18]);
   const evento = (r, e) => r.eventos.push({ ...e, t: r.turno });
@@ -497,12 +510,21 @@ test('el hambre, el comercio y las tomas se cuentan como el narrador manda (con 
   const beats = construirLineaDeTiempo(p), res = (turno) => beats.find((b) => b.tipo === 'resolucion' && b.mano === turno);
   const nombre = p.jugadores[0].nombre;
   assert.ok(res(3).dicho.some((l) => l.texto === `${nombre} pasa hambre y pierde dos tropas.`), 'primer turno de hambre');
-  assert.ok(res(4).dicho.some((l) => l.texto === `${nombre} sigue pasando hambre: pierde dos tropas más.`), 'segundo');
+  assert.ok(res(4).dicho.some((l) => l.texto === `${nombre} pasa hambre por segundo turno seguido y pierde dos tropas.`), 'segundo');
   assert.ok(res(5).dicho.some((l) => l.texto === `${nombre} lleva tres turnos con hambre y ya perdió seis tropas.`), 'tercero');
   for (const turno of [3, 4, 5]) assert.ok(res(turno).lineas.some((l) => /pasa hambre: -2 tropas/.test(l.texto)), `turno ${turno}: el hecho completo sigue en las lineas`);
   const comercios = res(6).dicho.find((l) => l.cubre?.every((c) => c.startsWith('ev:comercio:')));
   assert.match(comercios.texto, /^Hay dos intercambios comerciales entre los reinos\.$/);
   assert.equal(comercios.cubre.length, 2);
+});
+
+test('dichoDe: lo que se dice de un beat es su `dicho` si lo trae y, si no, sus hechos; con basura, nada', async () => {
+  const { dichoDe } = await import('../../../web/casino/linea-comun.js');
+  const hechos = [{ tipo: 'hecho', texto: 'a', clave: 'a' }], dicho = [{ tipo: 'comentario', texto: 'b' }];
+  assert.equal(dichoDe({ lineas: hechos, dicho }), dicho);
+  assert.equal(dichoDe({ lineas: hechos }), hechos);
+  assert.deepEqual(dichoDe({ lineas: hechos, dicho: [] }), [], 'un dicho vacio es callar: no se cae a los hechos');
+  for (const basura of [null, undefined, {}, { lineas: 'x' }, { dicho: 'x' }, 7]) assert.deepEqual(dichoDe(basura), []);
 });
 
 test('mostrarSubtitulos dice lo que se dice (`dicho`): los comentarios en cursiva y, sin `dicho`, la lista de hechos de siempre', async () => {

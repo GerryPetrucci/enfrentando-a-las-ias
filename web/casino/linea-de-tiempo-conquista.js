@@ -19,7 +19,7 @@
 //
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
-import { duracion } from './linea-comun.js';
+import { duracion, objetos } from './linea-comun.js';
 import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, estadoInicial, leerMapa } from './conquista-datos.js';
 import { crearNarrador } from './narracion-conquista.js';
 
@@ -71,8 +71,7 @@ export function textoDeBatalla(combate, nombre, nombreDeRegion = (d) => `R${d + 
 
 const claveDeEvento = (e) => `ev:${e.tipo}:${e.t}:${e.k}:${e.con ?? e.contra ?? e.por ?? e.de ?? ''}:${e.r ?? ''}`;
 
-// Lo que se lee de un registro guardado puede venir roto (JSON editado a mano o de un motor anterior): de una lista solo valen sus objetos; de un estado, el que trae duenos y tropas.
-const objetos = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object') : []);
+// Lo que se lee de un registro guardado puede venir roto (JSON editado a mano o de un motor anterior): de una lista solo valen sus objetos (`objetos`); de un estado, el que trae duenos y tropas.
 const estadoLegible = (e) => e && typeof e === 'object' && Array.isArray(e.dueno) && Array.isArray(e.tropas);
 
 export function construirLineaDeTiempo(partida, { camara } = {}) {
@@ -90,11 +89,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
   // `dicho` (opcional): lo que se dice si no son los hechos tal cual (el narrador lo elige); `mudas`: claves de hechos que no se dicen. `texto` es siempre lo que se dice.
   const crear = (turno, tipo, registro, { lineas = [], dicho = null, mudas = [], pasos = [], reemplazo = false, asiento = null, minMs = MIN_MS[tipo] } = {}) => {
     const hechos = lineas.map((l) => ({ tipo: 'hecho', texto: l.texto, clave: l.clave }));
-    const habladas = dicho ? dicho.map((l) => ({ tipo: l.tipo, texto: l.texto, ...(l.clave ? { clave: l.clave } : {}), ...(l.cubre ? { cubre: l.cubre } : {}), ...(l.datos ? { datos: l.datos } : {}) })) : null;
-    const texto = (habladas ?? hechos).map((l) => l.texto).join(' ');
-    beats.push({ id: `t${turno}-${beats.length}-${tipo}`, mano: turno, tipo, registro, asiento, camara: [], texto, lineas: hechos, ...(habladas ? { dicho: habladas, mudas } : {}), minMs: duracion(minMs, texto), reemplazo, pasos });
+    const texto = (dicho ?? hechos).map((l) => l.texto).join(' ');
+    beats.push({ id: `t${turno}-${beats.length}-${tipo}`, mano: turno, tipo, registro, asiento, camara: [], texto, lineas: hechos, ...(dicho ? { dicho, mudas } : {}), minMs: duracion(minMs, texto), reemplazo, pasos });
   };
   const narrador = crearNarrador({ nombre, reinos: mapa.k });
+  const terminada = partida.truncada !== true && Array.isArray(partida.orden) && Array.isArray(partida.puntos); // solo una partida terminada trae el beat final (y por eso su ultimo turno no lleva panorama)
 
   if (previo) {
     const ks = Array.from({ length: mapa.k }, (_, k) => nombre(k));
@@ -128,7 +127,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const vivosAntes = Array.isArray(antes?.vivo) ? antes.vivo.filter((v) => v !== false).length : null; // sin la lista de reinos en pie no se sabe: el narrador no dira «todos»
     const narrado = narrador.ordenes({
       turno, literales: lineasOrdenes, mensajes, vivos: vivosAntes,
-      ataques: flechasTodas.filter((f) => f.ataque).map((f) => ({ k: f.k, n: f.n, libre: antes?.dueno?.[f.a] === -1, contra: antes?.dueno?.[f.a] })),
+      ataques: flechasTodas.filter((f) => f.ataque).map((f) => ({ k: f.k, contra: antes?.dueno?.[f.a] })), // contra: el dueño de la region atacada (-1 si no tiene)
     });
     const feedOrdenes = [
       ...mensajes.map((m) => ({ icono: 'msg', partes: [{ k: m.k }, `: «${m.texto}»`], alerta: false })),
@@ -218,8 +217,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     }
     const razones = respuestas.flatMap((x, s) => (x && typeof x.razon === 'string' && x.razon.trim() ? [{ k: s, texto: x.razon.trim() }] : []));
     // lo que se dice de la resolucion: las tomas sin lucha, el hambre repetida y los comercios se cuentan; lo demas (pactos, caidas, conquistas, Maravilla...) tal cual; y cada 5 turnos un panorama
-    const esUltimo = partida.truncada !== true && Array.isArray(partida.orden) && Array.isArray(partida.puntos) && i === rondas.length - 1; // el turno que cierra una partida terminada: viene el final
-    const narradoResolucion = narrador.resolucion({ turno, hechos, combates: combates.length, despues, ultimo: esUltimo });
+    const narradoResolucion = narrador.resolucion({ turno, hechos, combates: combates.length, despues, ultimo: terminada && i === rondas.length - 1 }); // el turno que cierra una partida terminada: viene el final
     crear(turno, 'resolucion', i, {
       lineas: hechos.map((h) => ({ texto: h.texto, clave: h.clave })), dicho: narradoResolucion.dicho, mudas: narradoResolucion.mudas, minMs: ritmo.resolucion,
       pasos: [
@@ -236,7 +234,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
 
   // ---- final: solo si la partida termino (una partida cortada se reproduce hasta donde llego) ----
   const ultimo = rondas.at(-1);
-  if (partida.truncada !== true && Array.isArray(partida.orden) && Array.isArray(partida.puntos)) {
+  if (terminada) {
     const metricas = partida.metricas ?? [];
     const ranking = partida.orden.map((k, pos) => ({
       k, posicion: pos + 1, puntos: partida.puntos[k] ?? 0, regiones: metricas[k]?.regiones ?? 0, honor: metricas[k]?.honor ?? null, cayoEn: metricas[k]?.cayoEn ?? null,

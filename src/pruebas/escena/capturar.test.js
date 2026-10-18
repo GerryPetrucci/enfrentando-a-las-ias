@@ -190,6 +190,31 @@ test('pngEsNegro: una captura toda negra lo es; un solo pixel con contenido o un
   for (const basura of [null, undefined, Buffer.alloc(0), Buffer.from('no es un png'), 'x']) assert.equal(pngEsNegro(basura), false);
 });
 
+test('pngEsNegro deshace los cinco filtros de PNG (Ninguno, Sub, Up, Promedio y Paeth) sobre una imagen con ruido de hasta 8, y ve un pixel claro escondido bajo cualquiera', () => {
+  const ancho = 24, alto = 10, canales = 4, fila = ancho * canales;
+  let semilla = 7;
+  const azar = () => { semilla = (semilla * 1103515245 + 12345) & 0x7fffffff; return (semilla >> 8) % 9; };
+  const imagen = Buffer.alloc(alto * fila);
+  for (let i = 0; i < imagen.length; i++) imagen[i] = i % canales === 3 ? 255 : azar(); // ruido oscuro, alfa opaco
+  const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
+  // el codificador de referencia de PNG: cada fila con su filtro (`tipos[y % tipos.length]`), restando el predictor
+  const codificar = (pixeles, tipos) => Object.fromEntries(Array.from({ length: alto }, (_, y) => {
+    const bytes = Buffer.alloc(1 + fila); bytes[0] = tipos[y % tipos.length];
+    for (let i = 0; i < fila; i++) {
+      const izq = i >= canales ? pixeles[y * fila + i - canales] : 0, arr = y ? pixeles[(y - 1) * fila + i] : 0, arrIzq = y && i >= canales ? pixeles[(y - 1) * fila + i - canales] : 0;
+      const predictor = [0, izq, arr, (izq + arr) >> 1, paeth(izq, arr, arrIzq)][bytes[0]];
+      bytes[1 + i] = (pixeles[y * fila + i] - predictor) & 255;
+    }
+    return [y, bytes];
+  }));
+  const claro = Buffer.from(imagen); claro.set([200, 3, 3], 7 * fila + 13 * canales); // un pixel rojo en la fila 7
+  for (const tipos of [[0], [1], [2], [3], [4], [0, 1, 2, 3, 4]]) {
+    assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], codificar(imagen, tipos))), true, `ruido oscuro con los filtros ${tipos}`);
+    assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], codificar(claro, tipos))), false, `un pixel claro con los filtros ${tipos}`);
+  }
+  assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], { 3: Buffer.from([7, ...new Uint8Array(fila)]) })), false, 'un filtro que no existe no se juzga como negro');
+});
+
 test('pngEsNegro entiende los filtros de PNG (Sub y Up): Chrome comprime con ellos', () => {
   // fila 0 con filtro Sub (1): los bytes son diferencias con el pixel de la izquierda; todo cero = negro. fila 1 con filtro Up (2): diferencias con la fila de arriba.
   const ancho = 8, alto = 2;

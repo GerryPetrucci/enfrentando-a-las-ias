@@ -23,7 +23,7 @@ import { inflateSync } from 'node:zlib';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { escenaDe, motivoDeNoReproducible, armarLinea } from '../web/casino/lineas.js';
-import { FUNDIDOS } from '../web/casino/escena-config.js';
+import { FUNDIDOS, segundos } from '../web/casino/escena-config.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -85,9 +85,12 @@ export function leerDesfase(dom) {
 }
 export const desfaseAceptable = (d) => !!d && Math.abs(d.desfaseMs) <= Math.max(1500, 0.04 * d.esperadoMs);
 
-// ¿Una captura PNG (RGB o RGBA de 8 bits, sin entrelazar: lo que escribe Chrome) es toda negra? Sin dependencias: se descomprime con zlib y se deshacen los filtros a mano. Cuenta el
-// mayor de R, G y B de cada pixel contra `umbral` (el alfa no cuenta); lo que no se puede leer no es negro (false), asi una captura rota nunca pasa por la cortina.
-export function pngEsNegro(buffer, umbral = 8) {
+const UMBRAL_NEGRO = 8; // el mayor de R, G y B que aun cuenta como negro en una captura (el ruido de compresion)
+const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
+
+// ¿Una captura PNG (RGB o RGBA de 8 bits, sin entrelazar: lo que escribe Chrome) es toda negra? Sin dependencias: se descomprime con zlib y se deshacen los filtros en sitio, mirando cada color al
+// reconstruirlo (el alfa no cuenta). Lo que no se puede leer no es negro (false): asi una captura rota nunca pasa por la cortina.
+export function pngEsNegro(buffer) {
   try {
     const b = Buffer.isBuffer(buffer) ? buffer : null;
     if (!b || b.length < 33 || b.readUInt32BE(0) !== 0x89504e47) return false;
@@ -102,18 +105,15 @@ export function pngEsNegro(buffer, umbral = 8) {
     if (!canales || prof !== 8 || entrelazado !== 0 || !ancho || !alto) return false;
     const crudo = inflateSync(Buffer.concat(datos)), fila = ancho * canales;
     if (crudo.length < alto * (fila + 1)) return false;
-    let previa = Buffer.alloc(fila);
     for (let y = 0; y < alto; y++) {
-      const filtro = crudo[y * (fila + 1)], actual = Buffer.from(crudo.subarray(y * (fila + 1) + 1, (y + 1) * (fila + 1)));
+      const ini = y * (fila + 1) + 1, filtro = crudo[ini - 1];
+      if (filtro > 4) return false;
       for (let i = 0; i < fila; i++) {
-        const izq = i >= canales ? actual[i - canales] : 0, arr = previa[i], arrIzq = i >= canales ? previa[i - canales] : 0;
-        let base = 0;
-        if (filtro === 1) base = izq; else if (filtro === 2) base = arr; else if (filtro === 3) base = (izq + arr) >> 1;
-        else if (filtro === 4) { const p = izq + arr - arrIzq, pa = Math.abs(p - izq), pb = Math.abs(p - arr), pc = Math.abs(p - arrIzq); base = pa <= pb && pa <= pc ? izq : pb <= pc ? arr : arrIzq; } else if (filtro !== 0) return false;
-        actual[i] = (actual[i] + base) & 255;
+        const izq = i >= canales ? crudo[ini + i - canales] : 0, arr = y ? crudo[ini + i - fila - 1] : 0, arrIzq = y && i >= canales ? crudo[ini + i - fila - 1 - canales] : 0;
+        const base = filtro === 1 ? izq : filtro === 2 ? arr : filtro === 3 ? (izq + arr) >> 1 : filtro === 4 ? paeth(izq, arr, arrIzq) : 0;
+        const v = crudo[ini + i] = (crudo[ini + i] + base) & 255;
+        if (v > UMBRAL_NEGRO && i % canales !== 3) return false; // el cuarto canal de un RGBA es el alfa
       }
-      for (let x = 0; x < ancho; x++) if (Math.max(actual[x * canales], actual[x * canales + 1], actual[x * canales + 2]) > umbral) return false;
-      previa = actual;
     }
     return true;
   } catch { return false; }
@@ -143,6 +143,9 @@ export function buscarChrome(env = process.env, existe = existsSync) {
   if (env.CHROME_PATH && existe(env.CHROME_PATH)) return env.CHROME_PATH;
   return CANDIDATOS.find((r) => existe(r)) ?? null;
 }
+
+// Los argumentos de Chrome sin cabeza de toda captura: ventana del tamano del formato y `presupuesto` ms de tiempo virtual; `resto` agrega lo propio (--dump-dom, --screenshot=..., la direccion).
+const argsChrome = (formato, presupuesto, ...resto) => ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, `--virtual-time-budget=${presupuesto}`, ...resto];
 
 function ejecutarChrome(chrome, argumentos) {
   const r = spawnSync(chrome, argumentos, { encoding: 'utf8', timeout: 180000, maxBuffer: 64 * 1024 * 1024 });
@@ -183,8 +186,7 @@ async function principal() {
   if (a.completa) {
     for (const formato of formatos) {
       const vel = Number(a.vel ?? 8);
-      const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=600000', '--dump-dom',
-        urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel, voz: a.voz })]);
+      const r = ejecutarChrome(chrome, argsChrome(formato, 600000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel, voz: a.voz })));
       const termino = /data-terminada="1"/.test(r.salida);
       console.log(`  ${formato}: ${termino ? 'la partida termino de reproducirse' : 'NO termino de reproducirse'}`);
       if (!termino) fallos++;
@@ -196,48 +198,28 @@ async function principal() {
       revisar(`${formato} (completa)`, r.consola);
     }
   } else if (a.grabar) {
-    // el modo de grabacion con OBS, medido en tiempo virtual: a 1 s sigue el margen en negro, pasados el margen y el fundido ya corre el contenido y al final la pagina queda cerrada en negro
-    const vel = Number(a.vel ?? 8);
-    const esperar = (formato, presupuesto, velocidad) => ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`,
-      `--virtual-time-budget=${presupuesto}`, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true })]);
-    // ademas del estado que dice la pagina, se mira el pixel: la cortina de negro tiene que cubrir TODO el margen y el cierre (un destello de escena antes de aclararse arruinaria el primer cuadro grabado)
-    const carpetaGrabar = resolve(a.salida ?? 'grabaciones/capturas-escena');
-    mkdirSync(carpetaGrabar, { recursive: true });
-    const captura = (formato, presupuesto, velocidad, nombre) => {
-      const ruta = join(carpetaGrabar, `${a.archivo.replace(/[^\w.-]+/g, '_').replace(/\.json$/, '')}-${formato}-grabar-${nombre}.png`);
-      const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, `--virtual-time-budget=${presupuesto}`,
-        `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true })]);
-      return { png: existsSync(ruta) ? readFileSync(ruta) : null, consola: r.consola };
-    };
-    const t = presupuestosDeGrabar(), enSegundos = (ms) => `a ${Number((ms / 1000).toFixed(1))} s`;
+    // el modo de grabacion con OBS, medido en tiempo virtual: a mitad del margen la pagina sigue en negro, pasados el margen y el fundido ya corre el contenido y al final queda cerrada en negro.
+    // Ademas del estado que dice la pagina (data-fundido) se mira el pixel: la cortina tiene que cubrir TODO el margen y el cierre (un destello de escena antes de aclararse arruinaria el primer cuadro grabado).
+    const vel = Number(a.vel ?? 8), t = presupuestosDeGrabar(), alSegundo = (ms) => `a ${segundos(ms)} s`;
+    const momentos = [ // cuando, ms de tiempo virtual, velocidad, data-fundido esperado, ¿la captura es toda negra?, sufijo del PNG
+      [alSegundo(t.margen), t.margen, 1, 'margen', true, 'margen'], [alSegundo(t.contenido), t.contenido, 1, 'contenido', false, 'contenido'], ['al final', 600000, vel, 'negro', true, 'final']];
+    const informar = (bien, texto) => { console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${texto}`); if (!bien) fallos++; };
     for (const formato of formatos) {
-      const margen = leerFundido(esperar(formato, t.margen, 1).salida);
-      const contenido = leerFundido(esperar(formato, t.contenido, 1).salida);
-      const r = esperar(formato, 600000, vel);
-      const fin = leerFundido(r.salida);
-      const verificar = (etiqueta, obtenido, esperado) => {
-        const bien = obtenido?.fundido === esperado;
-        console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${formato} ${etiqueta}: ${obtenido?.fundido ?? 'sin modo grabar'} (esperado ${esperado})`);
-        if (!bien) fallos++;
-      };
-      verificar(enSegundos(t.margen), margen, 'margen');
-      verificar(enSegundos(t.contenido), contenido, 'contenido');
-      verificar('al final', fin, 'negro');
-      if (!fin?.cerrada) { console.error(`  ERROR en ${formato}: la pagina no marco el cierre (data-cierre)`); fallos++; }
-      revisar(`${formato} (grabar)`, r.consola);
-      for (const [etiqueta, presupuesto, velocidad, nombre, negra] of [[enSegundos(t.margen), t.margen, 1, 'margen', true], [enSegundos(t.contenido), t.contenido, 1, 'contenido', false], ['al final', 600000, vel, 'final', true]]) {
-        const { png, consola } = captura(formato, presupuesto, velocidad, nombre);
-        const bien = png !== null && pngEsNegro(png) === negra;
-        console.log(`  ${bien ? 'ok   ' : 'FALLO'} ${formato} ${etiqueta}: la captura ${png === null ? 'no se pudo tomar' : pngEsNegro(png) ? 'es toda negra' : 'tiene contenido'} (esperado ${negra ? 'toda negra' : 'con contenido'})`);
-        if (!bien) fallos++;
-        revisar(`${formato} captura ${etiqueta}`, consola);
+      for (const [cuando, ms, velocidad, fundido, negra, sufijo] of momentos) {
+        const ruta = join(carpeta, `${nombre}-${formato}-grabar-${sufijo}.png`);
+        const r = ejecutarChrome(chrome, argsChrome(formato, ms, '--dump-dom', `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true })));
+        const visto = leerFundido(r.salida);
+        informar(visto?.fundido === fundido, `${formato} ${cuando}: ${visto?.fundido ?? 'sin modo grabar'} (esperado ${fundido})`);
+        if (fundido === 'negro' && !visto?.cerrada) { console.error(`  ERROR en ${formato}: la pagina no marco el cierre (data-cierre)`); fallos++; }
+        const png = existsSync(ruta) ? readFileSync(ruta) : null, esNegra = png !== null && pngEsNegro(png);
+        informar(png !== null && esNegra === negra, `${formato} ${cuando}: la captura ${png === null ? 'no se pudo tomar' : esNegra ? 'es toda negra' : 'tiene contenido'} (esperado ${negra ? 'toda negra' : 'con contenido'})`);
+        revisar(`${formato} (grabar ${cuando})`, r.consola);
       }
     }
   } else if (a.estado) {
     for (const formato of formatos) {
       for (const beat of linea.beatsDeEstado(beats, Number(a.manos ?? 6))) {
-        const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=10000', '--dump-dom',
-          urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })]);
+        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })));
         const errores = linea.erroresDeEstado(leerEstado(r.salida), beats[beat]);
         console.log(`  ${errores.length ? 'FALLO' : 'ok   '} ${formato} ${beats[beat].id}`);
         for (const e of errores) console.error(`  ERROR: ${e}`);
@@ -250,8 +232,7 @@ async function principal() {
     for (const formato of formatos) {
       for (const beat of lista) {
         const archivo = join(carpeta, `${nombre}-${formato}-beat${String(beat).padStart(3, '0')}-${beats[beat]?.tipo ?? 'x'}.png`);
-        const r = ejecutarChrome(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, '--virtual-time-budget=10000',
-          `--screenshot=${archivo}`, urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })]);
+        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, `--screenshot=${archivo}`, urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })));
         const hecho = existsSync(archivo) && statSync(archivo).size > 5000;
         console.log(`  ${hecho ? 'ok ' : 'FALLO'} ${archivo}`);
         if (!hecho) fallos++;

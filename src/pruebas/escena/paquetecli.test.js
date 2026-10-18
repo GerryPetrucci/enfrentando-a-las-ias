@@ -75,7 +75,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
     assert.ok(texto.includes(`http://localhost:4321/${p.grabar.url}`), `${p.id}: falta su direccion`);
     assert.ok(texto.includes(`guerra-p1-${p.id}.mkv`), `${p.id}: falta el nombre de la grabacion (OBS graba la hoja en MKV)`);
     assert.ok(texto.includes(`Dura: ${formatoDeTiempo(p.grabar.ms)} `), `${p.id}: falta la duracion`);
-    assert.ok(texto.includes(`la grabación completa dura ${formatoDeTiempo(p.grabar.grabacionMs)}`), `${p.id}: falta lo que dura todo lo grabado, con los margenes`);
+    assert.ok(texto.includes(`la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)}`), `${p.id}: falta lo que dura todo lo grabado, con los margenes`);
     assert.ok(texto.includes(`node herramientas/recortar-formatos.mjs "grabaciones/guerra-p1-${p.id}.mkv" guerra-p1-${p.id} --carpeta=grabaciones/listos`), `${p.id}: falta el comando exacto de recorte`);
   }
   assert.doesNotMatch(texto, /guerra-p1-[\w-]+\.mp4/, 'lo que se guarda de OBS es la hoja en MKV: el MP4 sale del recorte (y esos si se nombran _9x16.mp4, no asi)');

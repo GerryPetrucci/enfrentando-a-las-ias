@@ -18,6 +18,7 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOJA, FORMATOS } from './formatos.mjs';
+import { FUNDIDOS } from '../web/casino/escena-config.js';
 
 // [0:v]split=N[s0]..[sN];[s0]crop=ancho:alto:x:y[f0];...
 export function filtro(formatos = FORMATOS) {
@@ -35,7 +36,14 @@ export function filtro(formatos = FORMATOS) {
 // Esos margenes son para grabar sin perder el principio ni adivinar el final: en el video que se publica sobran (los primeros 3 segundos deciden la retencion). Se detectan con blackdetect de ffmpeg
 // y se recorta de un poco antes de que se aclare a un poco despues de que quede negro, para que el video empiece y termine DENTRO de los fundidos.
 // Calibrado el 18 de octubre de 2026 con una captura real de la hoja y fundidos de media onda senoidal: con umbral 0.03 el negro termina ~0.07 s despues de empezar el fundido de entrada y empieza ~0.03 s antes de acabar el de salida.
-export const NEGRO = { umbral: 0.03, minimo: 1.5, antes: 0.15, despues: 0.15 };
+// El minimo de un margen sale de FUNDIDOS (escena-config.js): tres cuartos del mas corto de los dos que espera la pagina (1.5 s con los tiempos de hoy); un negro mas corto no es margen.
+export const NEGRO = {
+  umbral: 0.03, // blackdetect: cuanto cuenta como negro un pixel (fraccion del rango de luma)
+  minimo: (0.75 * Math.min(FUNDIDOS.margenMs, FUNDIDOS.colaMs)) / 1000, // s
+  antes: 0.15, despues: 0.15, // holguras: se corta 0.15 s antes de que se aclare y 0.15 s despues de que quede negro (los fundidos se quedan)
+  tolerancia: 0.25, // blackdetect termina en el ultimo cuadro, no en la duracion
+};
+const redondear = (x) => Math.round(x * 1000) / 1000;
 
 // Los intervalos [{ inicio, fin }] (segundos) que escribe blackdetect en la salida de ffmpeg. Cualquier otra cosa -> [].
 export function negrosDe(texto) {
@@ -46,23 +54,20 @@ export function negrosDe(texto) {
 // De que segundo a que segundo queda el contenido. El margen de SALIDA es el negro largo que llega al final del video (el contenido acaba donde empieza); el de ENTRADA, el negro largo que arranca con el
 // video (el contenido empieza donde acaba) o, si se grabo algo antes de refrescar la pagina, el primer negro largo que tiene detras una salida. Cualquier otro negro largo esta en medio de la pieza:
 // no es margen, no se toca y se avisa (si no, un negro en medio cortaria el video por la mitad). `inicio` o `fin` en null = ese lado no se recorta; `avisos` dice por que.
-export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo, antes = NEGRO.antes, despues = NEGRO.despues } = {}) {
+export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo } = {}) {
   const sin = (avisos) => ({ inicio: null, fin: null, avisos });
   if (!Array.isArray(negros) || !Number.isFinite(duracion) || duracion <= 0) return sin(['No pude medir la grabacion: no recorto el negro.']);
   const largos = negros.filter((n) => n && Number.isFinite(n.inicio) && Number.isFinite(n.fin) && n.fin - n.inicio >= minimo).sort((a, b) => a.inicio - b.inicio);
-  const TOLERANCIA = 0.25; // blackdetect termina en el ultimo cuadro, no en la duracion
-  const alInicio = (n) => n.inicio <= TOLERANCIA, alFinal = (n) => n.fin >= duracion - TOLERANCIA;
+  const alInicio = (n) => n.inicio <= NEGRO.tolerancia, alFinal = (n) => n.fin >= duracion - NEGRO.tolerancia;
   if (largos.length === 1 && alInicio(largos[0]) && alFinal(largos[0])) return sin(['La grabacion es toda negra: ¿esta bien la fuente de OBS? No recorto nada.']);
-  const salida = largos.length && alFinal(largos.at(-1)) ? largos.at(-1) : null;
-  const primero = largos[0];
-  const entrada = primero && primero !== salida && (alInicio(primero) || (salida && primero.fin < salida.inicio)) ? primero : null;
+  const salida = largos.findLast(alFinal) ?? null; // el negro que llega al final
+  const entrada = largos.find((n) => n !== salida && (salida || alInicio(n))) ?? null; // el que arranca con el video o, con una salida detras, el primero (algo se grabo antes de refrescar)
   const enMedio = largos.filter((n) => n !== entrada && n !== salida);
   const avisos = [];
   if (enMedio.length) avisos.push(`Hay negro en medio de la grabacion (${enMedio.map((n) => `${n.inicio.toFixed(1)} s a ${n.fin.toFixed(1)} s`).join(', ')}): no es margen, no lo toco; revisa la pieza.`);
   if (!entrada) avisos.push('No encontre el negro de entrada: ¿grabaste con la direccion del paquete (lleva grabar=1)? No recorto el inicio.');
   if (!salida) avisos.push('No encontre el negro de salida: ¿detuviste la grabacion antes del fundido final? No recorto el final.');
-  const redondear = (x) => Math.round(x * 1000) / 1000;
-  return { inicio: entrada ? redondear(Math.max(0, entrada.fin - antes)) : null, fin: salida ? redondear(Math.min(duracion, salida.inicio + despues)) : null, avisos };
+  return { inicio: entrada ? redondear(Math.max(0, entrada.fin - NEGRO.antes)) : null, fin: salida ? redondear(Math.min(duracion, salida.inicio + NEGRO.despues)) : null, avisos };
 }
 
 export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = null, duracion = null, formatos = FORMATOS }) {
@@ -125,7 +130,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const c = contenidoDe(entrada);
     for (const aviso of c.avisos) console.log(`  AVISO: ${aviso}`);
     if (inicio === null && c.inicio !== null) inicio = c.inicio;
-    if (c.fin !== null) duracion = Math.max(0.1, Math.round((c.fin - (inicio ?? 0)) * 1000) / 1000);
+    if (c.fin !== null) duracion = Math.max(0.1, redondear(c.fin - (inicio ?? 0)));
     if (c.inicio !== null || c.fin !== null) console.log(`  Recorto el negro de los margenes: me quedo con ${inicio === null ? 'el inicio' : `desde ${inicio} s`}${duracion === null ? ' hasta el final' : ` durante ${duracion} s`} (de ${c.duracion.toFixed(1)} s grabados).`);
   }
   const args = argumentosFfmpeg({

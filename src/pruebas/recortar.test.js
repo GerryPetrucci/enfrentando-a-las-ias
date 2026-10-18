@@ -4,15 +4,16 @@
 //
 //   npm test
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { filtro, argumentosFfmpeg, negrosDe, ventanaDeContenido } from '../../herramientas/recortar-formatos.mjs';
+import { filtro, argumentosFfmpeg, negrosDe, ventanaDeContenido, NEGRO } from '../../herramientas/recortar-formatos.mjs';
 import { FORMATOS } from '../../herramientas/formatos.mjs';
+import { FUNDIDOS } from '../../web/casino/escena-config.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const hayFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('ffprobe', ['-version']).status === 0;
@@ -171,14 +172,26 @@ test('los argumentos de ffmpeg limitan la duracion de lo que se lee cuando se pi
   assert.ok(!argumentosFfmpeg({ entrada: 'g.mkv', nombre: 'ep01', carpeta: 'sal' }).includes('-t'));
 });
 
-// una grabacion sintetica como la de OBS con grabar=1: negro 2 s, fundido de 0.5 s, 3.5 s de contenido, fundido de 0.5 s y 2 s de negro (8.5 s en total), con audio
-function grabacionConMargenes(dir, nombre = 'conmargenes.mkv') {
-  const maestro = join(dir, nombre);
-  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=3840x2160:r=30:d=8.5', '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:d=8.5',
-    '-vf', 'fade=t=in:st=2:d=0.5,fade=t=out:st=6:d=0.5,format=yuv420p', '-c:v', 'libx264', '-crf', '14', '-preset', 'veryfast', '-c:a', 'aac', maestro]);
+test('el minimo de un margen sale de FUNDIDOS (tres cuartos del mas corto): si la pagina cambia sus tiempos, el recortador sigue buscando los margenes de verdad', () => {
+  assert.equal(NEGRO.minimo, 1.5, 'con 2 s de margen y de cola, un negro de 1.5 s o mas es un margen');
+  assert.equal((0.75 * Math.min(FUNDIDOS.margenMs, FUNDIDOS.colaMs)) / 1000, NEGRO.minimo);
+});
+
+// ---- con ffmpeg de verdad (se saltan sin ffmpeg): una grabacion sintetica como la de OBS con grabar=1, con los tiempos de FUNDIDOS ----
+// margen de negro, fundido de entrada, un poco de contenido, fundido de salida y cola de negro, con audio. Se arma UNA vez para todas las pruebas de abajo y se borra al final (codificar 4K cuesta).
+const M = FUNDIDOS.margenMs / 1000, F = FUNDIDOS.fundidoMs / 1000, C = FUNDIDOS.colaMs / 1000, CONTENIDO = 1.5, TOTAL = M + F + CONTENIDO + F + C;
+let montaje = null;
+const dirDeMontaje = () => (montaje ??= mkdtempSync(join(tmpdir(), 'recorte-')));
+after(() => { if (montaje) rmSync(montaje, { recursive: true, force: true }); });
+function grabacionConMargenes() {
+  const maestro = join(dirDeMontaje(), 'conmargenes.mkv');
+  if (existsSync(maestro)) return maestro;
+  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', `testsrc2=s=3840x2160:r=30:d=${TOTAL}`, '-f', 'lavfi', '-i', `sine=frequency=440:sample_rate=48000:d=${TOTAL}`,
+    '-vf', `fade=t=in:st=${M}:d=${F},fade=t=out:st=${M + F + CONTENIDO}:d=${F},format=yuv420p`, '-c:v', 'libx264', '-crf', '14', '-preset', 'veryfast', '-c:a', 'aac', maestro]);
   assert.equal(g.status, 0, String(g.stderr));
   return maestro;
 }
+const recortar = (...args) => spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', ...args, `--carpeta=${dirDeMontaje()}`], { cwd: RAIZ, encoding: 'utf8' });
 const duracionDe = (archivo) => Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', archivo], { encoding: 'utf8' }).stdout.trim());
 // brillo medio (0 a 255) del cuadro mas cercano al segundo `t`
 const brilloEn = (archivo, t) => {
@@ -188,46 +201,36 @@ const brilloEn = (archivo, t) => {
   return px.reduce((s, x) => s + x, 0) / px.length;
 };
 
-test('recortar-formatos quita el negro de los margenes de una grabacion hecha con grabar=1 y deja los fundidos: dura ~4.8 s, abre y cierra en negro, y conserva el audio', { skip: saltar }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'recorte-'));
-  try {
-    const maestro = grabacionConMargenes(dir);
-    const r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', maestro, 'ep', `--carpeta=${dir}`], { cwd: RAIZ, encoding: 'utf8' });
-    assert.equal(r.status, 0, r.stderr || r.stdout);
-    for (const k of Object.keys(FORMATOS)) {
-      const f = join(dir, `ep_${k}.mp4`), d = duracionDe(f);
-      assert.ok(d > 4.4 && d < 5.3, `${k}: dura ${d} (esperado ~4.8: 0.15 de negro + fundido + 3.5 de contenido + fundido + 0.15 de negro)`);
-      assert.ok(brilloEn(f, 0) < 30, `${k}: abre en negro (brillo ${brilloEn(f, 0)})`);
-      assert.ok(brilloEn(f, d - 0.05) < 30, `${k}: cierra en negro`);
-      assert.ok(brilloEn(f, d / 2) > 40, `${k}: en medio hay contenido`);
-      const a = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', f], { encoding: 'utf8' });
-      assert.equal(a.stdout.trim(), 'aac', `${k}: conserva el audio`);
-    }
-    assert.match(r.stdout, /negro/i, 'cuenta que recorto');
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
+test('recortar-formatos quita el negro de los margenes de una grabacion hecha con grabar=1 y deja los fundidos: abre y cierra en negro, con contenido en medio, y conserva el audio', { skip: saltar }, () => {
+  const r = recortar(grabacionConMargenes(), 'ep');
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+  const esperado = 2 * F + CONTENIDO + NEGRO.antes + NEGRO.despues; // los dos fundidos, el contenido y un poco de negro de holgura a cada lado
+  for (const k of Object.keys(FORMATOS)) {
+    const f = join(dirDeMontaje(), `ep_${k}.mp4`), d = duracionDe(f), alAbrir = brilloEn(f, 0);
+    assert.ok(Math.abs(d - esperado) < 0.4, `${k}: dura ${d} (esperado ~${esperado})`);
+    assert.ok(alAbrir < 30, `${k}: abre en negro (brillo ${alAbrir})`);
+    assert.ok(brilloEn(f, d - 0.05) < 30, `${k}: cierra en negro`);
+    assert.ok(brilloEn(f, d / 2) > 40, `${k}: en medio hay contenido`);
+    const a = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', f], { encoding: 'utf8' });
+    assert.equal(a.stdout.trim(), 'aac', `${k}: conserva el audio`);
   }
+  assert.match(r.stdout, /negro/i, 'cuenta que recorto');
 });
 
 test('recortar-formatos no recorta lo que no tiene negro de margenes (la carta de ajuste, las grabaciones viejas) y lo dice; --manual apaga la deteccion y --inicio sigue mandando', { skip: saltar }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'recorte-'));
-  try {
-    const sin = join(dir, 'sin.mkv');
-    const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=3840x2160:r=30:d=3', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '14', '-preset', 'veryfast', sin]);
-    assert.equal(g.status, 0, String(g.stderr));
-    let r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', sin, 'sin', `--carpeta=${dir}`], { cwd: RAIZ, encoding: 'utf8' });
-    assert.equal(r.status, 0, r.stderr || r.stdout);
-    assert.ok(Math.abs(duracionDe(join(dir, 'sin_9x16.mp4')) - 3) < 0.3, 'sin negro no se recorta nada');
-    assert.match(r.stdout, /no encontr/i, 'avisa que no encontro los margenes');
+  const sin = join(dirDeMontaje(), 'sin.mkv');
+  const g = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=3840x2160:r=30:d=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '14', '-preset', 'veryfast', sin]);
+  assert.equal(g.status, 0, String(g.stderr));
+  let r = recortar(sin, 'sin');
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'sin_9x16.mp4')) - 2) < 0.3, 'sin negro no se recorta nada');
+  assert.match(r.stdout, /no encontr/i, 'avisa que no encontro los margenes');
 
-    const maestro = grabacionConMargenes(dir);
-    r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', maestro, 'manual', `--carpeta=${dir}`, '--manual'], { cwd: RAIZ, encoding: 'utf8' });
-    assert.equal(r.status, 0, r.stderr || r.stdout);
-    assert.ok(Math.abs(duracionDe(join(dir, 'manual_9x16.mp4')) - 8.5) < 0.3, '--manual deja la grabacion entera');
-    r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', maestro, 'inicio', `--carpeta=${dir}`, '--manual', '--inicio=2'], { cwd: RAIZ, encoding: 'utf8' });
-    assert.equal(r.status, 0, r.stderr || r.stdout);
-    assert.ok(Math.abs(duracionDe(join(dir, 'inicio_9x16.mp4')) - 6.5) < 0.3, '--inicio=2 salta los 2 primeros segundos');
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  r = recortar(grabacionConMargenes(), 'manual', '--manual');
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'manual_9x16.mp4')) - TOTAL) < 0.3, '--manual deja la grabacion entera');
+  r = recortar(sin, 'inicio', '--manual', '--inicio=1');
+  assert.equal(r.status, 0, r.stderr || r.stdout);
+  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'inicio_9x16.mp4')) - 1) < 0.3, '--inicio=1 salta el primer segundo');
 });
+

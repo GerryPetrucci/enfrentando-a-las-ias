@@ -10,7 +10,7 @@
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena, armarLinea } from './lineas.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, planDeGrabacion } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -19,10 +19,7 @@ export async function iniciar() {
   document.body.classList.toggle('limpio', params.limpio);
   const aviso = (t) => { document.getElementById('estado').textContent = t; };
   const negro = document.getElementById('negro'); // la cortina del modo grabacion (la clase `grabar` de <html> la deja opaca desde el primer instante)
-  const detenerEn = params.detener; // para capturas: avanza al instante hasta ese beat y se queda ahi (null = reproduccion normal)
-  const grabando = params.grabando; // grabar con margenes y fundidos (una captura que se detiene en un beat no espera ni se funde)
-  if (params.grabar) document.body.dataset.fundido = 'margen';
-  if (params.grabar && !grabando) negro.style.opacity = 0; // la clase `grabar` de <html> la dejo opaca desde el primer instante: aqui se retira
+  if (params.grabar) document.body.dataset.fundido = 'margen'; // se anota desde ya: una captura a mitad del margen lo lee
   const marco = document.getElementById('marco');
   const selector = document.getElementById('selPartida');
   const botones = ['btnPlay', 'btnReiniciar', 'btnTiempos'].map((id) => document.getElementById(id));
@@ -94,65 +91,63 @@ export async function iniciar() {
   }
   const montarSeguro = (entrada) => montar(entrada).catch((e) => { console.error('escena: no se pudo armar', e); document.body.dataset.error = String(e); aviso(`No pude armar la escena: ${e.message}`); });
 
+  // Reproduce la partida montada; devuelve true si llego al final (false si ya corria, se detuvo en un beat, se abrio otra partida o fallo).
   async function reproducir() {
-    if (corriendo || !actual) return;
+    if (corriendo || !actual) return false;
     const { beats, marcas, mesas } = actual;
     const miGeneracion = generacion;
     corriendo = true;
     window.escenaTerminada = false;
     const inicio = performance.now();
+    let completa = false;
     try {
       for (const [i, beat] of beats.entries()) {
-        const rapido = detenerEn !== null && i <= Number(detenerEn);
+        const rapido = params.detener !== null && i <= params.detener;
         mesas.forEach((m) => { m.rapido = rapido; });
         const audio = entradaDeVoz(voz, beat)?.archivo;
         if (audio && params.sonido && esRutaRelativa(audio)) reproductorDeVoz.sonar(audio, params.vel);
         await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel
-        if (miGeneracion !== generacion) return; // mientras tanto se abrio otra partida
-        if (detenerEn !== null && i === Number(detenerEn)) {
+        if (miGeneracion !== generacion) return false; // mientras tanto se abrio otra partida
+        if (params.detener !== null && i === params.detener) {
           // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)
           document.getAnimations().forEach((x) => { try { x.finish(); } catch { /* una animacion sin fin no cuenta */ } });
-          window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return;
+          window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return false;
         }
       }
       window.escenaTerminada = true;
       document.body.dataset.duracionMs = (performance.now() - inicio).toFixed(1); // medido contra lo que dice la linea de tiempo exportada
       document.body.dataset.esperadaMs = String(marcas.at(-1).finMs);
       document.body.dataset.terminada = '1'; // la herramienta de capturas lo busca para saber que la partida llego al final
+      completa = true;
     } catch (e) {
       console.error('escena: la reproduccion se detuvo', e);
       document.body.dataset.error = String(e);
     }
     if (miGeneracion === generacion) corriendo = false;
+    return completa;
   }
 
   // ---- el modo de grabacion con OBS: margen en negro, fundido de entrada, la partida, fundido de salida y negro hasta que se cierre la pagina ----
   const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
   async function fundirNegro(hasta, ms) {
-    negro.getAnimations().forEach((a) => a.cancel());
-    const desde = hasta === 1 ? 0 : 1;
-    negro.style.opacity = String(desde);
-    negro.animate([{ opacity: desde }, { opacity: hasta }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
+    negro.animate([{ opacity: 1 - hasta }, { opacity: hasta }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
     await pausa(ms); // como las mesas: se espera con un temporizador, no con la promesa de la animacion (sin pantalla real, como en las capturas, esa no avanza)
     negro.getAnimations().forEach((a) => a.cancel());
     negro.style.opacity = String(hasta);
   }
   async function reproducirGrabando() {
-    const plan = planDeGrabacion(actual.marcas.at(-1).finMs, params.vel);
     const miGeneracion = generacion;
     const fase = (f) => { document.body.dataset.fundido = f; };
-    fase('margen');
-    await pausa(plan.margenMs);
+    await pausa(FUNDIDOS.margenMs); // el margen de negro: la pagina ya esta montada y los sonidos cargados
     if (miGeneracion !== generacion) return;
     fase('entrando');
-    await fundirNegro(0, plan.fundidoMs);
+    await fundirNegro(0, FUNDIDOS.fundidoMs);
     fase('contenido');
-    await reproducir();
-    if (miGeneracion !== generacion || !window.escenaTerminada) return; // si la partida fallo a medias se deja a la vista: cerrar en negro taparia el fallo
+    const termino = await reproducir();
+    if (!termino || miGeneracion !== generacion) return; // si la partida fallo a medias se deja a la vista: cerrar en negro taparia el fallo
     fase('saliendo');
-    await fundirNegro(1, plan.fundidoMs);
+    await fundirNegro(1, FUNDIDOS.fundidoMs);
     fase('negro');
-    window.escenaCerrada = true;
     document.body.dataset.cierre = '1';
   }
 
@@ -212,8 +207,8 @@ export async function iniciar() {
   await abrir(cargados, { archivo: nombres[0], numero: params.partida });
   if (params.auto && actual) {
     await sfx.preparar();
-    if (grabando) await reproducirGrabando(); else reproducir();
-  } else if (grabando) {
+    if (params.grabar) await reproducirGrabando(); else reproducir();
+  } else if (params.grabar) {
     // algo fallo antes de poder grabar: el mensaje sale sobre el negro (con limpio=1 la barra de estado esta oculta y se grabaria negro sin saber por que)
     negro.textContent = document.getElementById('estado').textContent || 'No se pudo armar la escena';
     document.body.dataset.fundido = 'error';
