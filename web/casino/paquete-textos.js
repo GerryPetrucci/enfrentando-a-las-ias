@@ -3,16 +3,15 @@
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
 
-import { dividirEnDos, duracionDeBeat } from './escena-config.js';
+import { dividirEnDos, duracionDeBeat, formatoDeTiempo } from './escena-config.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
 import { textoDeJuego } from './textos-juego.js';
 
 // Lo que admite cada red (por verificar de nuevo en privado/contenido/guia-paso-a-paso.md); el paquete se queda siempre por debajo.
 export const LIMITES = { x: 280, tiktok: 2200, instagram: 2200, youtubeTitulo: 100, youtubeDescripcion: 5000 };
-export const AVISO = 'Contenido generado por IA. Proyecto independiente, sin afiliación con los proveedores de los modelos.';
+const AVISO = 'Contenido generado por IA. Proyecto independiente, sin afiliación con los proveedores de los modelos.';
 const AVISO_CORTO = 'Generado por IA · Proyecto independiente';
 const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_CLIPS = 3, MAX_VIDEO_MS = 180000; // 3 minutos: lo que admiten los Shorts y los Reels que se recomiendan a quien no te sigue (por verificar)
-const mmss = (ms) => `${Math.floor(ms / 60000)}:${String(Math.min(59, Math.round((ms % 60000) / 1000))).padStart(2, '0')}`;
 const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama']];
 const UNIDADES = { mano: 'Mano', ronda: 'Ronda', turno: 'Turno' };
 
@@ -30,7 +29,9 @@ export function ventanaDeClip(beats, mano, { minMs = MIN_CLIP_MS, maxMs = MAX_CL
   const unidades = [...new Set(lista.map((b) => b.mano))];
   const i0 = unidades.indexOf(mano);
   if (i0 < 0 || i0 < desdeIndice) return null;
-  const dur = (m) => lista.filter((b) => b.mano === m).reduce((s, b) => s + duracionDeBeat(b, voz, 1), 0);
+  const msDe = new Map(unidades.map((m) => [m, 0])); // lo que dura cada unidad, sumado una sola vez
+  for (const b of lista) msDe.set(b.mano, msDe.get(b.mano) + duracionDeBeat(b, voz, 1));
+  const dur = (m) => msDe.get(m);
   let a = i0, z = i0, ms = dur(mano);
   while (ms < minMs) {
     if (z + 1 < unidades.length && ms + dur(unidades[z + 1]) <= maxMs) { z++; ms += dur(unidades[z]); }
@@ -67,7 +68,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   if (!partes) return vacio('la partida es muy corta para partirla en dos videos');
 
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
-    if (p.ms > MAX_VIDEO_MS) advertencias.push(`La parte ${n} dura ${mmss(p.ms)}: pasa de 3 minutos (el límite de los Shorts y de los Reels recomendados). Considera partir este juego en más partes o recortar al editar.`);
+    if (p.ms > MAX_VIDEO_MS) advertencias.push(`La parte ${n} dura ${formatoDeTiempo(p.ms)}: pasa de 3 minutos (el límite de los Shorts y de los Reels recomendados). Considera partir este juego en más partes o recortar al editar.`);
   }
   const jugadores = Array.isArray(partida.jugadores) ? partida.jugadores : [];
   const nombres = jugadores.map((j, i) => j?.nombre ?? `Jugador ${i + 1}`);
@@ -89,51 +90,52 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
 
   const textosDe = ({ sug, encabezado, parte, tipo }) => {
     const dicho = parte === 2 ? `${resultado} ` : '';
+    const final = parte === 2 ? [resultado, lineaPuntos] : []; // el resultado solo sale en la parte 2
     const gancho = (resto, limite) => `[GANCHO: ${cabeGancho(sug, resto, limite)}]`;
     const cuerpo = tipo === 'clip' ? `${t.nombre}: un momento de la partida. La partida completa está en el perfil.` : `${encabezado}. ${serie}${dicho}Lo que se mira: ${t.mide}.`;
     const tiktok = [`[GANCHO: ${sug}]`, cuerpo, AVISO_CORTO, tags(5)].join('\n');
     const detalle = tipo === 'clip' ? [`${t.nombre}: un momento de la partida.`, `${t.regla} ${t.gana}`, 'La partida completa está en el perfil.']
-      : [`${encabezado}. ${serie}`.trim(), `${t.regla} ${t.gana}`, ...(parte === 2 ? [resultado, lineaPuntos] : []), `Lo que se mira: ${t.mide}.`];
+      : [`${encabezado}. ${serie}`.trim(), `${t.regla} ${t.gana}`, ...final, `Lo que se mira: ${t.mide}.`];
     const instagram = [`[GANCHO: ${sug}]`, '', ...detalle.filter(Boolean), '', AVISO, '', tags(5)].join('\n');
-    const armarResto = (conResultado) => `\n${tipo === 'clip' ? `${t.nombre}.` : `${encabezado}. ${conResultado ? dicho : ''}`}${AVISO_CORTO}\n${tags(2)}`;
-    const restoX = armarResto(true).length <= LIMITES.x - 80 ? armarResto(true) : armarResto(false); // con un nombre larguisimo el resultado no cabe: X lo omite (las otras redes lo llevan)
+    const armarResto = (conResultado) => `\n${encabezado}. ${conResultado ? dicho : ''}${AVISO_CORTO}\n${tags(2)}`; // en un clip el encabezado es el nombre del juego y `dicho` es vacio
+    const conResultado = armarResto(true);
+    const restoX = conResultado.length <= LIMITES.x - 80 ? conResultado : armarResto(false); // con un nombre larguisimo el resultado no cabe: X lo omite (las otras redes lo llevan)
     const x = `${gancho(restoX.length, LIMITES.x)}${restoX}`;
-    const colaTitulo = ` | ${tipo === 'clip' ? t.nombre : encabezado}`;
+    const colaTitulo = ` | ${encabezado}`;
     const titulo = `${gancho(colaTitulo.length, LIMITES.youtubeTitulo)}${colaTitulo}`;
     const descripcion = [
       tipo === 'clip' ? `${t.nombre}: un momento de la partida.` : `${encabezado}${serie ? ` · ${serie.trim()}` : ''}`, '',
       `Cómo se juega: ${t.regla}`, `Cómo se gana: ${t.gana}`, `Lo que se mira: ${t.mide}.`, '',
-      ...(parte === 2 ? [resultado, lineaPuntos] : []), nota, mismoPrompt, metodologia, '', AVISO, tags(5),
-    ].filter((l, i, a) => l !== undefined && !(l === '' && (i === 0 || a[i - 1] === ''))).join('\n');
+      ...final, nota, mismoPrompt, metodologia, '', AVISO, tags(5),
+    ].filter((l, i, a) => !(l === '' && (i === 0 || a[i - 1] === ''))).join('\n');
     return { tiktok, instagram, x, youtube: { titulo, descripcion } };
   };
   const comentarioFijado = `Cómo se mide: todas las IAs reciben el mismo prompt (seed ${partida.seed}) y las jugadas no se retocan: lo que ves es lo que registró el motor, sin retoques. ${nota} ${metodologia}\n¿A quién ponemos contra quién la próxima vez?`.trim();
 
   const piezas = [];
-  const introMs = lista.find((b) => b.tipo === 'intro') ? duracionDeBeat(lista.find((b) => b.tipo === 'intro'), voz, 1) : 0;
+  const intro = lista.find((b) => b.tipo === 'intro'), introMs = intro ? duracionDeBeat(intro, voz, 1) : 0;
+  const urlDe = (desde, hasta) => urlDeGrabacion({ archivo, partidaNumero, formato, desde, hasta, rutaVoz });
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : `Ganó ${ganador}`) : 'Terminó en empate';
     piezas.push({
       id: `parte-${n}`, tipo: 'parte', titulo: `${t.nombre} · Parte ${n} de 2`,
-      grabar: { url: urlDeGrabacion({ archivo, partidaNumero, formato, desde: p.mano, hasta: p.hasta, rutaVoz }), desde: p.mano, hasta: p.hasta, ms: Math.round(p.ms), nota: n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.' },
+      grabar: { url: urlDe(p.mano, p.hasta), desde: p.mano, hasta: p.hasta, ms: Math.round(p.ms), nota: n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.' },
       textos: textosDe({ sug, encabezado: `${t.nombre} · Parte ${n} de 2`, parte: n, tipo: 'parte' }), comentarioFijado,
     });
   }
 
-  const ocupadas = [], clips = [];
+  const clips = [];
   for (const d of Array.isArray(destacadas) ? destacadas : []) {
     if (clips.length >= MAX_CLIPS) break;
     const w = ventanaDeClip(lista, d?.unidad, { voz, desdeIndice: 1 });
-    if (!w || ocupadas.some(([a, z]) => !(w.hasta < a || w.mano > z))) continue;
-    ocupadas.push([w.mano, w.hasta]);
-    clips.push({ w, d });
+    if (w && !clips.some(({ w: o }) => !(w.hasta < o.mano || w.mano > o.hasta))) clips.push({ w, d }); // sin encimarse con otro clip
   }
   clips.forEach(({ w, d }, i) => {
     const etiqueta = w.mano === w.hasta ? `${unidad} ${w.mano}` : `${unidad}s ${w.mano} a ${w.hasta}`;
     const motivos = (d.motivos ?? []).join(', ');
     piezas.push({
       id: `clip-${i + 1}`, tipo: 'clip', titulo: `${t.nombre} · ${etiqueta}`,
-      grabar: { url: urlDeGrabacion({ archivo, partidaNumero, formato, desde: w.mano, hasta: w.hasta, rutaVoz }), desde: w.mano, hasta: w.hasta, ms: w.ms, nota: `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}` },
+      grabar: { url: urlDe(w.mano, w.hasta), desde: w.mano, hasta: w.hasta, ms: w.ms, nota: `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}` },
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
   });

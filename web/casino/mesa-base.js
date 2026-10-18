@@ -8,6 +8,7 @@
 import { htmlLogo, htmlPlaca, esc } from './kit.js';
 import { eventosDePaso } from './sonido.js';
 
+const ETIQUETA_IA = 'Contenido generado por IA · Proyecto independiente'; // el aviso fijo de toda escena (y el pie de la tarjeta de arranque)
 export const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
 export const poner = (nodo, r) => Object.assign(nodo.style, { left: `${r.x}px`, top: `${r.y}px`, width: `${r.ancho}px`, height: `${r.alto}px` });
 export const centro = (r, fx = 0.5) => ({ x: r.x + r.ancho * fx, y: r.y + r.alto / 2 });
@@ -31,7 +32,7 @@ export class MesaBase {
     raiz.append(el('fieltro'), el('riel'), el('luz'), el('marca-agua', htmlLogo('')));
     this.cabecera = el('fijo cabecera', `${htmlLogo('logo')}<div class="tit">${esc(titulo)}</div><div class="mano"></div>`);
     poner(this.cabecera, L.cabecera);
-    this.etiqueta = el('fijo etiqueta-ia', 'Contenido generado por IA · Proyecto independiente');
+    this.etiqueta = el('fijo etiqueta-ia', ETIQUETA_IA);
     poner(this.etiqueta, L.etiqueta);
     this.subtitulos = el('fijo subtitulos');
     poner(this.subtitulos, L.subtitulos);
@@ -110,7 +111,7 @@ export class MesaBase {
     nodo.getAnimations().forEach((a) => a.cancel());
     nodo.innerHTML = paso
       ? `<div class="ij-cat">${esc(paso.categoria)}</div><div class="ij-nombre">${esc(paso.nombre)}</div><div class="ij-regla">${esc(paso.regla)}</div><div class="ij-gana">${esc(paso.gana)}</div>`
-        + '<div class="ij-pie">Contenido generado por IA · Proyecto independiente</div>'
+        + `<div class="ij-pie">${ETIQUETA_IA}</div>`
       : '';
     nodo.style.opacity = 1;
     this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });

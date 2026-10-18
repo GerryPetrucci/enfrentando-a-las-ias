@@ -9,9 +9,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
-import { dividirEnDos } from '../web/casino/escena-config.js';
+import { dividirEnDos, formatoDeTiempo } from '../web/casino/escena-config.js';
 
-export const formatoDeTiempo = (ms) => `${Math.floor(ms / 60000)}:${String(Math.round((ms % 60000) / 1000)).padStart(2, '0').replace(/^60$/, '59')}`;
+export { formatoDeTiempo }; // sigue exportada desde aqui para quien ya la importaba de esta herramienta
 
 export function urlDeParte({ archivo, partida, formato, parte, voz }) {
   const q = new URLSearchParams({ archivo, partida: String(partida), ronda: String(parte.mano), hasta: String(parte.hasta), formato, auto: '1' });

@@ -29,7 +29,7 @@ export function leemeDe(paquete, contexto = {}) {
     `- Dura: ${formatoDeTiempo(p.grabar.ms)} (la escena termina sola; detén la grabación 2 segundos después de que acabe).`,
     `- Guarda el video como: ${base}-${p.id}.mp4`,
     `- Nota: ${p.grabar.nota}`,
-    ...(p.grabar.ms > LIMITE_X_MS ? [`- ⚠ Dura más de 2:20: no cabe en X con una cuenta gratis (en X sube un clip en su lugar).`] : []),
+    ...(p.grabar.ms > LIMITE_X_MS ? [`- ⚠ Dura más de ${formatoDeTiempo(LIMITE_X_MS)}: no cabe en X con una cuenta gratis (en X sube un clip en su lugar).`] : []),
     `- Textos: textos/${p.id}-tiktok.txt, textos/${p.id}-instagram.txt, textos/${p.id}-youtube.txt, textos/${p.id}-x.txt${p.comentarioFijado ? `, textos/${p.id}-comentario.txt` : ''}`,
     '',
   ].join('\n'));

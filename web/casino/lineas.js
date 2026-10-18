@@ -110,7 +110,7 @@ export function motivoDeNoReproducible(juegoId, partida) {
 
 // Los beats de una partida: los del juego con la tarjeta de arranque delante (intro.js). Es el UNICO lugar donde se arma la lista que ven la pagina, las capturas, las partes y la voz.
 export async function armarLinea(juegoId, partida, opciones) {
-  return conIntro((await escenaDe(juegoId).linea()).construirLineaDeTiempo(partida, opciones), juegoId);
+  return (await lineaDe(juegoId))(partida, opciones);
 }
 
 // La funcion (partida, opciones) -> beats del juego, con la tarjeta de arranque delante (el mismo contrato que antes).

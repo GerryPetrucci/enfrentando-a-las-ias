@@ -62,6 +62,9 @@ export function leerParametros(search) {
 }
 
 // Los beats de las manos mano..hasta. Un clip empieza al abrir su primera mano; el final de la partida va solo si el clip llega a la ultima mano.
+// m:ss de una duracion en ms (la usan las herramientas de partes y de paquete y los textos del paquete).
+export const formatoDeTiempo = (ms) => `${Math.floor(ms / 60000)}:${String(Math.round((ms % 60000) / 1000)).padStart(2, '0').replace(/^60$/, '59')}`;
+
 export const recortarClip = (beats, mano, hasta) => (Array.isArray(beats) ? beats.filter((b) => b.mano >= mano && b.mano <= hasta) : []);
 
 export const hayVoz = (voz) => !!voz && typeof voz === 'object' && Object.keys(voz).length > 0;
