@@ -8,6 +8,7 @@ import { vistaTexto } from './conquista/vista.js';
 import { resultadoDe } from './conquista/resultado.js';
 import { nombresDeReinos } from './conquista/nombres.js';
 import { evaluarSerie } from './conquista/evaluacion.js';
+import { reconstruirPrompts } from './conquista/replay.js';
 import { REGLAS, FORMATO } from './conquista/reglas-texto.js';
 import { TURNOS } from './conquista/constantes.js';
 import { BOTS, INFO_BOTS } from './conquista-bots.js';
@@ -51,6 +52,7 @@ export default {
     return registro;
   },
   resultado: resultadoDe,
+  reconstruirPrompts, // lo que vio cada IA en cada turno de una partida guardada (rejugada): lo usa la publicacion (src/publicar.js)
   evaluar: evaluarSerie, // al final de la serie: caracteristicas de cada IA y comentario (correr.js lo guarda y lo imprime)
   // a quien hay que preguntarle en el turno siguiente: solo a los reinos vivos (un reino caido no cuesta llamadas)
   activos: (E) => E.reinos.map((r) => r.vivo),
