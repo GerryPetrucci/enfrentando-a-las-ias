@@ -20,9 +20,13 @@ export const UMBRALES = {
   turnosParaPasivo: 8, // sin atacar a nadie solo es notable en una partida de al menos esta duracion
 };
 export const PRIORIDAD = ['camino', 'palabra', 'obediencia', 'conquista', 'negociacion'];
+// Como se llama cada una en la ficha de la pantalla final (texto publico), en el orden en que se muestran.
+export const ETIQUETAS = { obediencia: 'Obediencia', palabra: 'Palabra', negociacion: 'Negociación', conquista: 'Conquista', camino: 'Camino a la victoria' };
 
 const nombreDe = (p, s) => p.jugadores?.[s]?.nombre ?? `Jugador ${s + 1}`;
-const eventosDe = (p) => (Array.isArray(p.rondas) ? p.rondas : []).flatMap((r) => (Array.isArray(r?.eventos) ? r.eventos : []).map((e) => ({ ...e, t: e.t ?? r.turno })));
+const objeto = (x) => x && typeof x === 'object' && !Array.isArray(x);
+// Los eventos de toda la partida, cada uno con su turno; lo que no es un evento (un dato roto o editado a mano) se ignora.
+const eventosDe = (p) => (Array.isArray(p.rondas) ? p.rondas : []).flatMap((r) => (Array.isArray(r?.eventos) ? r.eventos : []).filter(objeto).map((e) => ({ ...e, t: e.t ?? r.turno })));
 
 // Lo que se cuenta de UN asiento en UNA partida.
 export function contarPartida(p, s) {
@@ -30,7 +34,7 @@ export function contarPartida(p, s) {
   const propios = (tipo, campo = 'k') => eventos.filter((e) => e.tipo === tipo && e[campo] === s);
   let ataques = 0, ganados = 0;
   for (const r of Array.isArray(p.rondas) ? p.rondas : []) for (const c of Array.isArray(r?.combates) ? r.combates : []) {
-    if (!Array.isArray(c?.bandos) || !c.bandos.some((b) => b?.k === s && !b.defensor)) continue;
+    if (!objeto(c) || !Array.isArray(c.bandos) || !c.bandos.some((b) => b?.k === s && !b.defensor)) continue;
     ataques++;
     if (c.k === s) ganados++;
   }

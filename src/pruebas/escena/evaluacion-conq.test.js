@@ -131,6 +131,19 @@ test('evaluarSerie junta las partidas de cada jugador por su id (aunque roten lo
   for (const mala of [null, undefined, [], [null], 'x', [partida({ truncada: true })]]) assert.deepEqual(evaluarSerie(mala), { partidas: 0, jugadores: [], comentario: [] });
 });
 
+test('con datos rotos o editados a mano (eventos, combates, metricas, jugadores nulos) la evaluacion no lanza y lo ilegible se ignora', () => {
+  const base = partida({ eventos: [{ tipo: 'conquista', k: 0, contra: 1, r: 1, t: 2 }], combates: [{ t: 2, k: 0, bandos: [{ k: 0, defensor: false }, { k: 1, defensor: true }], resultado: 'captura' }] });
+  const rota = { ...base, rondas: [null, 7, { eventos: [null, 3, 'x', { tipo: 'conquista', k: 0, contra: 1, r: 2, t: 4 }], combates: [null, 'x', { bandos: null }, { bandos: [null, { k: 0 }] }] }, ...base.rondas] };
+  const e = evaluarPartida(rota);
+  assert.equal(e.jugadores.length, 3);
+  const c = contarPartida(rota, 0);
+  assert.deepEqual([c.conquistas, c.ataques], [2, 2], 'cuenta lo legible: 2 conquistas y 2 ataques (el del combate de verdad y el del bando legible entre basura; los combates sin bandos validos no cuentan)');
+  for (const mala of [{ ...base, metricas: [null, 7, undefined] }, { ...base, jugadores: [null, { id: 5 }, {}] }, { ...base, usoPorJugador: null }, { ...base, rondas: [] }]) {
+    assert.doesNotThrow(() => evaluarPartida(mala));
+    assert.doesNotThrow(() => evaluarSerie([mala]));
+  }
+});
+
 test('sumar: honor es el peor de las partidas y el turno o el nombre solo se guardan si hay una sola partida', () => {
   const a = { ...c0, honor: 5, turnoCompleto: 9, deQuienTomo: 'GPT', conquistas: 1 }, b = { ...c0, honor: 2, conquistas: 2 };
   const dos = sumar([a, b]);

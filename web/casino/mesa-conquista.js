@@ -32,7 +32,7 @@ const ICONOS = {
 
 // Los metodos se llaman con verbos distintos de los campos (this.feedEl, this.tarjetaEl... son piezas del DOM): un campo con el mismo nombre taparia al metodo.
 export class Mesa extends MesaBase {
-  static METODOS = { apertura: 'abrir', ordenes: 'mostrarOrdenes', traicion: 'mostrarTraicion', batalla: 'mostrarBatalla', resolucion: 'resolver', final: 'terminar' };
+  static METODOS = { apertura: 'abrir', ordenes: 'mostrarOrdenes', traicion: 'mostrarTraicion', batalla: 'mostrarBatalla', resolucion: 'resolver', rasgos: 'mostrarRasgos', final: 'terminar' };
 
   constructor(formato, partida, opciones) {
     const mapa = leerMapa(partida?.mapa);
@@ -310,6 +310,17 @@ export class Mesa extends MesaBase {
     }
     this.agregarFeed(beat.pasos.find((p) => p.tipo === 'feed')?.lista);
     await this.esperar(ms * 0.6);
+  }
+
+  // La ficha de una IA antes del ranking: su nombre, su puesto y sus cinco caracteristicas (las notables resaltadas), en la pantalla del final; cada ficha reemplaza a la anterior.
+  async mostrarRasgos(beat, ms) {
+    for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.vela]) this.ocultar(n); // el panel del final lo ocupa la ficha: nada de batalla, traicion ni flashback encima
+    const r = beat.pasos.find((p) => p.tipo === 'rasgos');
+    const reino = nombreDeReino(r.k, this.partida.reinos);
+    const filas = r.filas.map((f) => `<div class="rg-fila${f.notable ? ' nota' : ''}"><b>${esc(f.etiqueta)}</b><span>${esc(f.frase)}</span></div>`).join('');
+    this.finalEl.innerHTML = `<div class="pf-titulo">Cómo jugó</div><div class="rg-cab" style="${estiloJugador(this.partida.jugadores[r.k])}"><span class="rg-pos">${esc(r.posicion)}º</span><span class="rg-nom">${esc(this.nombre(r.k))}</span>${reino ? `<span class="rg-reino">${esc(reino)}</span>` : ''}</div>${filas}`;
+    this.mostrar(this.finalEl, 450);
+    await this.esperar(ms * 0.5);
   }
 
   async terminar(beat, ms) {

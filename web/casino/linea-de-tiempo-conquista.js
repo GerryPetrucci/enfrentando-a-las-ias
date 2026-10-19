@@ -2,7 +2,8 @@
 // (mesa-conquista.js) los ejecuta; aqui no se decide ni se recalcula nada que el motor no haya registrado: las fuerzas de cada tarjeta son las de `registro.combates[].bandos`.
 //
 // Un beat: { id, mano, tipo, registro, asiento, camara, texto, lineas, dicho?, mudas?, minMs, reemplazo, pasos }   (mano es el numero de turno: asi se llama la unidad de un clip en todas las escenas)
-//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (0 a 3, la de mayor importancia primero) | resolucion | final (solo si la partida termino)
+//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (0 a 3, la de mayor importancia primero) | resolucion | rasgos (una ficha por IA, en el orden del
+//             ranking: sus cinco caracteristicas, evaluacion-conquista.js) | final (el ranking; los dos solo si la partida termino)
 //   camara    siempre vacia: no hay camara oculta (el publico lo ve todo); lo secreto (los mensajes privados) se RETRASA: se revela con la traicion, el pacto cumplido o el final
 //   lineas    [{ tipo: 'hecho', texto, clave }]: los hechos los escribe el codigo y son siempre verdaderos; `clave` identifica el hecho (las pruebas cuentan que ninguno se pierda ni se repita)
 //   dicho     (solo ordenes y resolucion) lo que de verdad se dice y se subtitula, elegido por narracion-conquista.js: [{ tipo: 'hecho' | 'comentario', texto, clave?, cubre?, datos? }]; un hecho de
@@ -15,19 +16,20 @@
 //     cartel {k,contra,perdida,honorAntes,honorDespues} · flashback {de,a,turnoDelMensaje,texto} (el ultimo privado de quien rompe hacia su victima)
 //     tarjeta {variante:'A'|'C',d,nombre,terr,fort,resultado,quedan,decisiva,motivos,diferencia,ganador,bandos,cubre}
 //     conquistas {lista:[{k,contra,r,sinLucha}]} · pacto {k,con} · cumplido {k,con,textos:[{turno,k,a,texto}]} · feed {lista:[{icono,partes,alerta}]}
-//     razones {lista:[{k,texto}]} (solo en la resolucion: salen junto a la consecuencia, nunca antes) · final {ranking,momentos,sinRevelar,ganoPorMaravilla,bioma}
+//     razones {lista:[{k,texto}]} (solo en la resolucion: salen junto a la consecuencia, nunca antes) · rasgos {k,posicion,filas:[{clave,etiqueta,frase,notable}]} · final {ranking,momentos,sinRevelar,ganoPorMaravilla,bioma}
 //
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
 import { duracion, objetos } from './linea-comun.js';
 import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, estadoInicial, leerMapa } from './conquista-datos.js';
 import { crearNarrador } from './narracion-conquista.js';
+import { evaluarPartida, ETIQUETAS } from './evaluacion-conquista.js';
 
 export { TURNOS_TOPE };
 export const JUGADORES_TOPE = 5;
 export const CAMARA_POR_DEFECTO = 0;
 // Tiempos minimos a velocidad 1 (sin voz): el turno tranquilo dura 2.5 s, el normal 5 s y el que tiene una batalla decisiva 7.5 s; la voz o la lectura lo alargan si hace falta.
-export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 2000, vs: 4500, resolucion: 1500, final: 8000 };
+export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 2000, vs: 4500, resolucion: 1500, rasgos: 3500, final: 8000 };
 export const MOTIVOS = { diferencia: 'diferencia menor al 10 %', tres: 'tres bandos', capital: 'cae una capital', ruptura: 'ataque tras romper un pacto' };
 const MAX_TARJETAS = 3, MAX_FLECHAS = 10, MAX_FLECHAS_QUE_NO_ATACAN = 5, MAX_SIN_REVELAR = 3, MOMENTOS_MAX = 6;
 
@@ -254,6 +256,18 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     }
     const momentos = candidatos.sort((a, b) => b.peso - a.peso || a.turno - b.turno).slice(0, MOMENTOS_MAX).sort((a, b) => a.turno - b.turno || b.peso - a.peso).map(({ turno, texto }) => ({ turno, texto }));
     const sinRevelar = privadosVistos.filter((m) => !reveladas.has(idDe(m))).slice(-MAX_SIN_REVELAR).map((m) => ({ turno: m.turno, k: m.k, a: m.a, texto: m.texto }));
+    // Antes del ranking, una ficha por IA (en el orden del ranking) con sus cinco caracteristicas: la voz dice lo mas notable y la pantalla las muestra todas. La ultima resolucion ya dijo quien gano.
+    const evaluacion = evaluarPartida(partida).jugadores;
+    partida.orden.forEach((k, pos) => {
+      const e = evaluacion[k];
+      if (!e) return;
+      const texto = `${nombre(k)}: ${e.destacadas.join('; ')}.`, clave = `rasgos:${k}`;
+      crear(ultimo.turno ?? rondas.length, 'rasgos', rondas.length - 1, {
+        asiento: k, lineas: [{ texto, clave }],
+        dicho: [...(pos === 0 ? [{ tipo: 'comentario', texto: 'Así jugó cada una.' }] : []), { tipo: 'comentario', texto, cubre: [clave] }], mudas: [],
+        pasos: [{ tipo: 'rasgos', k, posicion: pos + 1, filas: Object.keys(ETIQUETAS).map((c) => ({ clave: c, etiqueta: ETIQUETAS[c], frase: e.caracteristicas[c].frase, notable: e.caracteristicas[c].notable })) }],
+      });
+    });
     const ganador = partida.ganador ?? partida.orden[0];
     const lineas = [{ texto: `${nombre(ganador)} gana la partida${partida.ganoPorMaravilla === true ? ' por la Maravilla' : ''}.`, clave: 'final:ganador' }];
     crear(ultimo.turno ?? rondas.length, 'final', rondas.length - 1, {

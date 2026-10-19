@@ -31,7 +31,7 @@ test('cada turno cuenta su historia en orden (ordenes, traiciones, batallas, res
   for (const [i, p] of ejemplos.entries()) {
     const beats = construirLineaDeTiempo(p);
     assert.equal(new Set(beats.map((b) => b.id)).size, beats.length, `${ESCENARIOS[i].id}: ids unicos`);
-    for (const [turno, bs] of por(beats.filter((b) => b.tipo !== 'final'))) {
+    for (const [turno, bs] of por(beats.filter((b) => b.tipo !== 'final' && b.tipo !== 'rasgos'))) {
       const tipos = bs.map((b) => b.tipo).join(',');
       assert.match(tipos, turno === 1 ? /^apertura,ordenes(,traicion)*(,batalla)*,resolucion$/ : /^ordenes(,traicion)*(,batalla)*,resolucion$/, `${ESCENARIOS[i].id} turno ${turno}`);
     }
@@ -347,7 +347,7 @@ test('ordenes y resolucion llevan lo que se dice (`dicho`); `texto` es eso mismo
   for (const [i, p] of ejemplos.entries()) {
     for (const b of construirLineaDeTiempo(p)) {
       const id = `${ESCENARIOS[i].id} ${b.id}`;
-      assert.equal(Array.isArray(b.dicho), CON_DICHO.includes(b.tipo), `${id}: solo ordenes y resolucion narran con interpretacion`);
+      assert.equal(Array.isArray(b.dicho), [...CON_DICHO, 'rasgos'].includes(b.tipo), `${id}: solo ordenes, resolucion y las fichas del final narran con interpretacion`);
       assert.equal(b.texto, (b.dicho ?? b.lineas).map((l) => l.texto).join(' '), `${id}: texto = lo que se dice`);
       assert.ok(b.lineas.every((l) => l.tipo === 'hecho' && typeof l.texto === 'string'), `${id}: lineas son hechos`);
       if (b.dicho) {
