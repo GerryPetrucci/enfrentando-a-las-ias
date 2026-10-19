@@ -176,6 +176,16 @@ cambiar); los modelos de practica comparten el de su familia y los demas jugador
 al juego los nombres segun quien se sienta (`opcionesDeAgentes`), el estado los guarda, la lectura de ordenes (`normalizar(respuesta, estado)`), la vista, el resumen del turno y los bots los usan, la partida guarda `reinos` y
 el marcador de la escena lo muestra junto al nombre del modelo, con acento (`web/casino/reinos-conquista.js`); una partida vieja sin `reinos` cae a los nombres por asiento.
 
+### Guerra de territorios: evaluacion y fichas al final (decidido el 19 de octubre de 2026)
+
+Cada juego es independiente y al final se analizan las caracteristicas de todos los modelos; Guerra de territorios no la tenia y ninguna escena la mostraba en el video. Cinco caracteristicas aprobadas por el
+usuario (`web/casino/evaluacion-conquista.js`, un solo modulo puro que importan la escena y el motor; `juego.evaluar` para la serie): **obediencia** (ordenes legales sobre las totales y turnos sin respuesta; notable
+por debajo de 0.75 o con un turno perdido), **palabra** (pactos rotos y honor), **negociacion** (pactos y comercios por turno; notable con 0.8 o mas, 0.2 o menos o nada), **conquista** (regiones, conquistas a otros
+reinos, batallas ganadas, si cayo; notable si cayo, conquisto 3 o mas o no ataco a nadie en 8 turnos o mas) y **camino a la victoria** (Maravilla completada, tomada, perdida o construida, o ganar por territorio). Hasta 3
+destacadas por IA, en ese orden de prioridad; todo sale de lo guardado, sin llamadas extra, y nunca cambia ni oculta una jugada. En el video: despues de la ultima resolucion (que ya dice quien gana) viene una ficha por IA,
+en el orden del ranking (beat `rasgos`: pantalla con las cinco filas y las notables resaltadas, y la voz dice las destacadas, precedida de «Así jugó cada una.»), y el video cierra con el ranking (`final`). Una partida
+cortada no tiene fichas. Las escenas de los otros juegos todavia no muestran su evaluacion.
+
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
 Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rondas con la estructura de los concursos de eliminacion
