@@ -49,7 +49,7 @@ Lo que la consola y la arena usan si el juego lo ofrece (todo opcional):
 Tres reglas que no conviene romper:
 
 1. **`vista` nunca filtra informacion secreta.** Es el unico lugar donde se
-   decide que sabe cada jugador. Un bug aqui invalida la temporada entera.
+   decide que sabe cada jugador. Un bug aqui invalida todas las partidas de ese juego.
 2. **`normalizar` nunca lanza error.** Recibe `null`, texto basura o un objeto
    mal formado y siempre devuelve una jugada legal, marcada con `invalida: true`.
    Un modelo caido no debe tumbar la grabacion.

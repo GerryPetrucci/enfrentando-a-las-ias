@@ -11,7 +11,7 @@ modelo no lo permite, con su valor por defecto. **Nunca el maximo** (`high`, `xh
 caros (el razonamiento oculto se cobra como salida) y no cambia lo que se mide. Es igual para todas las IAs y se congela
 junto con el prompt y los demas parametros de llamada. **Estado: implementado** en `src/parametros.js` (`PARAMETROS` y `cuerpoDeLlamada`). Cada contendiente declara en `src/modelos.js`
 su campo `razonamiento` (`"medium"` si el modelo admite ese nivel, `null` si no tiene niveles) y
-`node herramientas/verificar-modelos.mjs` lo compara con el catalogo de OpenRouter: correrlo antes de cada temporada y antes
+`node herramientas/verificar-modelos.mjs` lo compara con el catalogo de OpenRouter: correrlo antes de cada corrida con modelos y antes
 de gastar. Claude Sonnet 5.5 razona en `high` por defecto, por eso se le manda `medium` explicito. Segun el catalogo del 9 de
 octubre de 2026, Claude (Sonnet y Haiku 5.5) y GPT-6 ignoran `temperature`: el 0.7 se manda igual a todos, pero con ellos no
 tiene efecto. Lo que se le mando a cada modelo queda en `parametros` de cada resultado. Medido el 10 de octubre de 2026: con
@@ -82,8 +82,16 @@ mayor, el activo gana la diferencia; el predictor gana o pierde lo apostado (car
 en la ronda 18 o antes si alguien queda sin fichas; gana quien tiene mas. Puntos del marcador: ganador 4, perdedor 0, empate 2 y 2. **No tiene regla oculta**: lo secreto es lo que el
 rival decide a la vez y el orden del crupier. Categoria "Estrategia de eliminación". **18 turnos y 36 llamadas** por partida (sin excepcion), en vivo. Bots de control: `azar`,
 `prudente`, `contador`, `temerario`, `contrario`. Evaluacion al final de la serie con cinco caracteristicas (obediencia, lectura, audacia, provecho y constancia). **Estado:** motor,
-bots, evaluacion y pruebas listos; faltan la prueba con modelos y la escena del reproductor con voz (diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
-`privado/planes/plan-mayormenor-motor.md`).
+bots, evaluacion, pruebas y escena listos, y primera corrida con modelos reales hecha (abajo); diseno en `privado/spec/mayor-o-menor-diseno.md`, plan en
+`privado/planes/plan-mayormenor-motor.md`.
+
+**Primera corrida con modelos reales (18 de octubre de 2026, con orden expresa y tope de $2):** Claude (`anthropic/claude-sonnet-5.5`) contra GPT (`openai/gpt-6.1-sol`), razonamiento medio, en vivo
+(en vivo la consola no tiene `--tope`: se corrio con un vigilante que lee el saldo cada 15 s y corta el comando si el gasto pasa del tope). Un ensayo de 2 rondas (4 llamadas, $0.021) y una serie de
+2 partidas (72 llamadas, 145,156 tokens); gasto total **$0.45** segun el saldo de la cuenta (el vigilante midio $0.377: el saldo de OpenRouter tarda en reflejar las ultimas llamadas, asi que un vigilante
+subestima ~15 %). Resultado guardado en `data/2026-10-18-mayormenor-claude-vs-gpt.json` (oficial). Medido por llamada: Claude ~2,170 tokens de
+entrada y ~205 de salida, GPT ~1,470 y ~190 (el razonamiento medio da pocos tokens de salida), o sea ~$0.007 y ~$0.005: una partida cuesta ~$0.21 (lo estimado era $0.43). Una de 36 respuestas de
+Claude no trajo JSON valido y se reemplazo por una jugada legal. GPT gano las dos partidas (fichas 161-70 y 226-56) sin ser superado en fichas en ninguna ronda; igualo la carta del crupier 10 veces
+para anular las apuestas del predictor y aposto todo 7 veces cuando contaba que no podia perder. Con voz, cada partida dura ~7:56 (casi 4:00 por parte): no cabe como Short ni como Reel.
 
 ### Juego 7: Triple dado (decidido el 11 de octubre de 2026)
 
@@ -132,6 +140,51 @@ sale completo en una sola toma, sin post-produccion de audio, y la linea de tiem
 Nada de voz en tiempo real. Hay dos capas de texto: los **hechos** (los escribe el codigo, siempre verdaderos) y el **comentario** (la
 capa editorial; nunca cambia ni oculta una jugada). La voz se declara como contenido generado por IA donde la plataforma lo pida y
 no imita a ninguna persona real. Motor de voz: **gratuito y local** (decidido el 11 de octubre de 2026). **Elegido el 16 de octubre de 2026** entre 7 voces de 3 motores: Piper (MIT) con una voz en español de México (Apache-2.0; su nombre técnico no se muestra en público: ver `privado/terminos/voz-narradora.md`, con licencias, cuidados y el respaldo Kokoro). **Estado:** `herramientas/narrar.mjs` hecho: genera un audio por momento y un `voz.json` en `data/voz/` (ignorado por git), y la escena lo usa con `?voz=`. Detalle en `privado/planes/plan-voz-narradora.md`.
+
+### Narracion interpretada de Guerra de territorios y fundidos de grabacion (decidido el 18 de octubre de 2026)
+
+Durante la prueba de la primera publicacion el usuario pidio dos cosas y dijo «hazlo por tu cuenta, confio en ti»; las decisiones son del asistente y se revisan en el diff de la rama `narracion-y-fundidos`. Spec: `privado/spec/narracion-y-fundidos-diseno.md`; plan: `privado/planes/plan-narracion-y-fundidos.md`.
+
+**Narracion.** La voz leia listas («Agresivo manda 9 tropas de R17 a R07», siete veces «X toma R07»). Ahora cada beat de ordenes y resolucion trae `dicho` (lo que se oye y se subtitula; `texto` es eso unido; `dichoDe(beat)` en `linea-comun.js` es el accesor) y `mudas`; `lineas` sigue con los hechos que el beat sabe contar (resolucion: todos; ordenes: los 2 ataques mas grandes, los 2 primeros privados del turno, los avisos y los mensajes citados) y el resto sigue en pantalla (feed, mapa, flechas), asi que no se oculta ninguna jugada; una prueba exige que cada clave de `lineas` se diga, la cubra una frase de contexto (`cubre`) o este en `mudas`. Tres registros (`web/casino/narracion-conquista.js`, ajustes arriba): **literal** (privados, traiciones, batallas, pactos, caidas, conquistas, Maravilla, final), **contexto** (frase tipo `comentario`, en cursiva) y **silencio**. Como cada juego se publica en dos partes y en clips, **ninguna frase presupone algo que quien ve solo esa parte no vio** («vuelve a», «sigue», «igual que en el turno N» estan prohibidos por una prueba). Reglas: la racha de expansion se dice una vez («salen a expandirse»; una racha nueva se dice completa otra vez; «todos» solo si se sabe quienes siguen en pie); los ataques contra otro reino por parejas (hasta 2) o contados (todos, no solo los 10 que se dibujan; dos movimientos de un reino a la MISMA region son un solo ataque, porque el motor los junta en un bando y da una batalla, asi que se cuentan objetivos y no movimientos; cada frase cubre solo SUS hechos y los de la racha de expansion que se calla quedan en `mudas`); un mensaje publico por turno citado tal cual, del reino menos citado; las tomas sin dueño por reino y «todavia no hay una sola batalla» solo si es verdad; el hambre en escalones («pasa hambre», «por segundo turno seguido», «lleva tres turnos...»; callada desde el cuarto turno seguido, salvo cada cinco); comercios contados; panorama en los turnos 5, 10, 15... (no en el ultimo de una partida terminada) y, si ninguna region cambio de dueño desde el panorama anterior, «Turno 25: ninguna región cambia de dueño desde hace N turnos» una sola vez (solo habla de los dueños, no de las tropas, que si se mueven) y luego calla hasta que algo cambie; un estado ilegible nunca se da por «sin cambios» (el conteo empieza donde se vuelve a ver el mapa) y un reino caido no entra al panorama. Sin modelos: reglas sobre los registros. En la partida de bots de ejemplo el turno 1 pasa de 29 s a ~23 s de voz; la partida entera dura casi lo mismo (239 s contra 241 s). Los otros 6 juegos no cambian (el mecanismo `dicho` queda disponible). Limite conocido: la memoria del narrador es de toda la partida y las partes se publican por ventanas, asi que una parte puede abrir en silencio o con una racha ya empezada; no se puede re-narrar por ventana (la voz se genera una vez por partida).
+
+**Fundidos de grabacion.** `grabar=1` (con `auto=1` y sin `detener=`) en la direccion de cada pieza (`direccionDeGrabacion` en `escena-config.js`, compartida por el paquete y `partes.mjs`): la pagina nace cubierta de negro, espera 2 s, se aclara en 0.5 s, **despues** cuenta la pieza (voz y efectos incluidos), se funde a negro en 0.5 s y se queda en negro; los margenes no se escalan con `vel` (son del grabador); `data-fundido` y `data-cierre` lo dicen y `node herramientas/capturar-escena.mjs --archivo=... --grabar` lo verifica (estado y pixeles). El paquete usa `hoja` por omision, cada pieza trae su `plan` y su LEEME cuenta el procedimiento real; `recortar-formatos.mjs` detecta el negro (blackdetect, umbral 0.03 calibrado con una captura real; el minimo de un margen sale de `FUNDIDOS`) y recorta de 0.15 s antes de que se aclare a 0.15 s despues de que quede negro. Politica de los margenes: la **salida** es el negro largo que llega al final del video; la **entrada** es el ULTIMO negro largo antes de la salida (la pieza es lo que hay justo antes), asi que un negro anterior es de otra pasada de la pagina que quedo en el mismo archivo (se pego la direccion, que se reproduce una sola vez, y se grabo durante ella): se avisa y se recorta; sin salida (se detuvo antes del fundido final) la entrada es el ultimo negro largo y el final no se recorta; sin margenes no recorta y lo dice; un video todo negro no se toca. La duracion que usa es la del formato menos su `start_time` (un MKV de OBS puede no empezar en 0 y blackdetect da tiempos absolutos; la primera grabacion real, el 18 de octubre de 2026, parte 1 de la partida de ejemplo, tuvo `start_time` 0: negros de 0 a 1.53 s y de 123.97 a 126.9 s, el recorte dejo 0.13 s de negro y el fundido de entrada al inicio, termino en negro y el primer sonido llego a los 0.76 s; el MP4 dura 2:02.8 contra 2:01 de pieza, la diferencia son los dos fundidos y el negro de las orillas). Si el audio no se prepara en 3 s (sin un clic un navegador puede negarse; el de OBS no) la pieza sigue sin sonido en vez de quedarse en negro para siempre, y un error en grabacion se escribe sobre el negro (`errorEnNegro`) en vez de dejar la pantalla negra para siempre. El paquete y `partes.mjs` avisan si la voz generada no cubre todos los momentos con texto (se narro antes de un cambio del texto: `momentosSinVoz`) y el paquete si la pieza no es `hoja`.
+
+### Guerra de territorios: primera corrida con modelos reales (18 de octubre de 2026)
+
+Con orden expresa («Autorizo Guerra con Claude, GPT, Gemini y DeepSeek, 2 partidas, tope $3»), en vivo y con el vigilante de saldo (la consola no tiene `--tope` en vivo): un ensayo de 3 turnos (12 llamadas,
+$0.089, sin errores) y la serie de 2 partidas (99 llamadas, 355,438 tokens); gasto total **$1.03** de $3 segun el saldo de la cuenta (el vigilante midio $1.017). Guardada en `data/2026-10-18-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json` (oficial).
+Medido: ~26 s por turno en vivo y ~$0.035 por turno de 4 llamadas; por llamada, Claude ~3,600 tokens de entrada y ~280 de salida, GPT ~2,400 y ~1,000, Gemini ~2,200 y ~1,800 (el de mas salida), DeepSeek ~2,600 y ~300.
+Las dos partidas terminaron por Maravilla antes del turno 30: la 1 en 10 turnos (gana GPT, 5-3-1-0 para GPT, Gemini, DeepSeek, Claude) y la 2 en 16 (gana Gemini tras conquistar la Maravilla de GPT, que cayo en el turno
+11; DeepSeek rompio tres veces su pacto con Claude y quedo con 1 de honor). Serie: Gemini 8, GPT 5, DeepSeek 4, Claude 1 (2 partidas con 4 jugadores: serie desbalanceada, mismo mapa). **Respuestas cortadas por
+`max_tokens` (4000): 5 de 99, todas de Gemini** (3 seguidas en los turnos 7 a 9 de la partida 1 y 2 en la 2; 5 de sus 26 llamadas); el juego las reemplaza por «pasa el turno» y se dice en el video. La regla de CLAUDE.md
+(se mide y se decide con el usuario, sin subir el razonamiento) queda en manos del usuario: mantener 4000 (parametros congelados e iguales para todos) o subirlo y repetir la serie.
+Con voz: partida 1 = 5:25 (partes de 2:44 y 2:41, caben en Shorts, Reels y TikTok) y partida 2 = 7:50 (partes de 4:05 y 3:45, pasan de 3 minutos). Los modelos hablan de los reinos por su nombre de color (Azur,
+Ambar, Violeta, Rosa, Marfil: asiento 0 a 4): el marcador de la escena los muestra junto al nombre del modelo (`web/casino/reinos-conquista.js`; en 16:9 la columna de recursos empieza en 240 px). Revision de contenido:
+325 textos de las IAs escaneados con una lista de palabras ofensivas sin resultados y leidos a mano (el mas duro: «No te muevas o serás el siguiente», de DeepSeek en la partida 2).
+
+### Guerra de territorios: reglas 1.1.0 (decidido el 18 de octubre de 2026, tras la primera corrida real)
+
+**Maravilla: costo x1.5 y cuenta de 8 turnos** (antes 10 Roca + 8 Madera + 6 Hierro + 6 Oro y 5 turnos; ahora 15 + 12 + 9 + 9). Con modelos reales decidio 2 de 2 partidas: GPT la pago hacia el turno 4 (son 30 recursos y
+la produccion normal mas algun trueque alcanzan) y 5 turnos no dan tiempo a una coalicion (en la partida 1 DeepSeek y Claude reaccionaron con 3 turnos por delante y no llegaron; en la 2 Gemini capturo la capital en el
+turno 11). Con bots no se puede calibrar: con el motor actual solo la construyen 5-8 % de las partidas y ninguna combinacion de costo y duracion cambia nada. La unica forma de medirlo es una serie de modelos reales
+(objetivo: que decida como maximo 1 de cada 4 partidas; si no, se ajusta). `versionReglas` pasa a `conquista-1.1.0` y el texto del prompt lee los numeros de `constantes.js`. Cada juego es independiente: no hay temporadas,
+solo la version de reglas de cada juego (las partidas jugadas con otra version no se comparan con las nuevas).
+
+**Nombre de reino por modelo** (`src/juegos/conquista/nombres.js`): los modelos ven su reino con un nombre de color y lo usan en sus mensajes («Azur propone paz a Violeta»), pero antes el nombre dependia del asiento y
+rotaba: GPT era blanco y se llamaba Ambar. Ahora Claude = Ambar (naranja), GPT = Marfil (blanco), DeepSeek = Azur (azul), Llama = Rosa (magenta) y Gemini = Iris (multicolor; nombre nuevo, decidido por el asistente y facil de
+cambiar); los modelos de practica comparten el de su familia y los demas jugadores (bots, repetidos) toman los que sobran en el orden de siempre, asi que una partida solo de bots queda igual que antes. La arena le pide
+al juego los nombres segun quien se sienta (`opcionesDeAgentes`), el estado los guarda, la lectura de ordenes (`normalizar(respuesta, estado)`), la vista, el resumen del turno y los bots los usan, la partida guarda `reinos` y
+el marcador de la escena lo muestra junto al nombre del modelo, con acento (`web/casino/reinos-conquista.js`); una partida vieja sin `reinos` cae a los nombres por asiento.
+
+### Guerra de territorios: evaluacion y fichas al final (decidido el 19 de octubre de 2026)
+
+Cada juego es independiente y al final se analizan las caracteristicas de todos los modelos; Guerra de territorios no la tenia y ninguna escena la mostraba en el video. Cinco caracteristicas aprobadas por el
+usuario (`web/casino/evaluacion-conquista.js`, un solo modulo puro que importan la escena y el motor; `juego.evaluar` para la serie): **obediencia** (ordenes legales sobre las totales y turnos sin respuesta; notable
+por debajo de 0.75 o con un turno perdido), **palabra** (pactos rotos y honor), **negociacion** (pactos y comercios por turno; notable con 0.8 o mas, 0.2 o menos o nada), **conquista** (regiones, conquistas a otros
+reinos, batallas ganadas, si cayo; notable si cayo, conquisto 3 o mas o no ataco a nadie en 8 turnos o mas) y **camino a la victoria** (Maravilla completada, tomada, perdida o construida, o ganar por territorio). Hasta 3
+destacadas por IA, en ese orden de prioridad; todo sale de lo guardado, sin llamadas extra, y nunca cambia ni oculta una jugada. En el video: despues de la ultima resolucion (que ya dice quien gana) viene una ficha por IA,
+en el orden del ranking (beat `rasgos`: pantalla con las cinco filas y las notables resaltadas, y la voz dice las destacadas, precedida de «Así jugó cada una.»), y el video cierra con el ranking (`final`). Una partida
+cortada no tiene fichas. Las escenas de los otros juegos todavia no muestran su evaluacion.
 
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
@@ -190,8 +243,8 @@ Hecho:
   pruebas y **escena de casino** listos; falta la prueba con modelos (diseno en `privado/spec/numero-solitario-diseno.md`)
 - Juego 5: **Subasta de tiempo** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
   prueba con modelos (diseno en `privado/spec/subasta-tiempo-diseno.md`)
-- Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
-  prueba con modelos (diseno en `privado/spec/mayor-o-menor-diseno.md`)
+- Juego 6: **Mayor o menor** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; primera
+  corrida con modelos reales el 18 de octubre de 2026 (Claude vs GPT, ver arriba) (diseno en `privado/spec/mayor-o-menor-diseno.md`)
 - Juego 7: **Triple dado** (categoria "Estrategia de eliminación"): motor, bots de control, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
   prueba con modelos (diseno en `privado/spec/triple-dado-diseno.md`)
 - Juego 8: **Duda y apuesta** (categoria "Engaño y deducción"): motor por turnos, bots de control, narracion guardada en los datos, evaluacion, pruebas y **escena de casino** (`web/escena.html`, ver su decision arriba) listos; falta la
@@ -209,7 +262,7 @@ Pendiente:
       proveedor; DeepSeek V3.2 porque las V4 razonan sin limite y se cortan). Parametros
       de llamada iguales para todas (temperatura 0.7, max_tokens 4000 desde el 10 de octubre
       de 2026; antes 2000) y congelados junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
-      volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
+      volver a verificarlos en <https://openrouter.ai/models> antes de cada corrida con modelos.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
 - [x] Serie completa por lote (paso 6 de la tarea 8 del plan del lote): **saltada por el usuario el 11 de octubre de 2026**; los
       ensayos de 1 turno ya se hicieron (10 y 11 de octubre). Costo de una partida entera: no confirmado
@@ -309,3 +362,13 @@ Por si el torneo de IAs no engancha, o como contenido de relleno entre episodios
 Idea para el sitio que sigue viva: que el visitante **corra su propia partida** en
 el navegador y la comparta por URL con el seed (`?seed=84712`). Convierte la
 pagina en producto, no en archivo de videos.
+
+## Sitio y publicacion por partes (18 de octubre de 2026)
+
+La politica esta en CLAUDE.md («Publicacion de resultados»); aqui el como.
+
+- **Archivos:** `src/publicacion.js` (puro: `esParteFinal`, `partidaParcial`, `registrarParte`, `armarSeriePublica`), `src/publicar.js` + `herramientas/publicar.mjs` (la orden), `src/marcador.js` (arma `web/marcador.json` solo con lo publicado, una tabla por juego), `web/catalogo.js` (buscador puro), `web/index.html` y `web/serie.html`, `web/sitio.css`.
+- **Datos:** el JSON completo vive en `data/*.json` (ignorado por git) y se respalda en `privado/datos-oficiales/`. Lo publico es `data/publicas/<serie>.json` (la serie con cada partida cortada hasta el ultimo turno subido; `truncada: true`, sin resultado ni evaluacion) y `data/publicas/registro.json` (que parte se subio, hasta que turno, si fue la final).
+- **Prompts por turno:** `reconstruirPrompts` (`src/juegos/conquista/replay.js`) repite la partida con su seed y las respuestas guardadas y vuelve a armar el prompt de cada IA en cada turno; si el repaso no coincide con el estado guardado, no publica prompts y avisa. Hoy verificado (`fiel`) para las 4 partidas reales de Guerra.
+- **Buscador:** por seed (solo digitos; desde 3 digitos acepta una parte, un seed corto solo si coincide entero), juego, IA y estado; los filtros viajan en la URL (`?seed=...`) y el comentario fijado de cada video lleva `?seed=<seed de la partida>`.
+- **Mayor o menor** (serie del 18 de octubre, 2 IAs reales): aun no se publica; su respaldo esta en `privado/datos-oficiales/`. Se publica con `publicar.mjs` cuando se suba su video.

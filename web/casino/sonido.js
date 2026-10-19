@@ -42,7 +42,7 @@ export function eventosDePaso(paso) {
     case 'actuar': return paso.sale === true ? ['gana'] : paso.resultado === 'tropezo' ? ['tic'] : paso.resultado === 'cayo' ? ['pierde'] : [];
     case 'tentacion': return paso.clase === 'oferta' ? ['duda'] : ['ficha'];
     case 'medidor': return ['tic'];
-    // Guerra de territorios (mapa, mensajes, privados, feed, razones, estado y final son mudos a proposito: el texto y el mapa hablan solos)
+    // Guerra de territorios (mapa, mensajes, privados, feed, razones, estado, rasgos y final son mudos a proposito: el texto y el mapa hablan solos)
     case 'flechas': return paso.lista?.length ? ['carta'] : [];
     case 'tarjeta': return ['anuncio'];
     case 'cartel': return ['duda'];

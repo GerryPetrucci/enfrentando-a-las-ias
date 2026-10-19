@@ -3,7 +3,10 @@
 // texto por pieza y por red (TikTok, Instagram, YouTube y X, mas el comentario fijado). Las piezas son las dos partes y hasta 3 clips destacados; los textos salen de web/casino/paquete-textos.js
 // (solo hechos de la partida, nunca privados ni razones). No llama a ningun modelo, no sube nada y no gasta saldo.
 //
-//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=RUTA/voz.json | --sinvoz] [--salida=grabaciones/paquetes] [--enlace=URL] [--formato=9x16] [--forzar]
+//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=RUTA/voz.json | --sinvoz] [--salida=grabaciones/paquetes] [--enlace=URL] [--formato=hoja|9x16|16x9] [--forzar]
+//
+// El formato por omision es `hoja`: la hoja maestra de 3840 x 2160 que graba el OBS del proyecto (el vertical y el horizontal juntos; despues se recorta con herramientas/recortar-formatos.mjs).
+// Todas las direcciones llevan grabar=1: la pagina arranca en negro, se aclara, cuenta la pieza, vuelve a negro y se queda en negro (margenes para empezar y detener la grabacion).
 //
 // La voz: si ya corriste herramientas/narrar.mjs para esa partida, se usa sola (la ruta que ese programa deja en data/voz/); --voz la indica a mano y --sinvoz no usa ninguna.
 // Escribe `<salida>/<NOMBRE>-p<N>/` (LEEME.md y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que vuelve a escribir los archivos del paquete; lo que sobre de una corrida anterior se queda). `grabaciones/` no se versiona.
@@ -13,6 +16,7 @@ import { resolve, join, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { armarLinea, destacadasDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { construirPaquete } from '../web/casino/paquete-textos.js';
+import { FUNDIDOS, segundos } from '../web/casino/escena-config.js';
 import { formatoDeTiempo } from './partes.mjs';
 import { carpetaDeVoz } from './narrar.mjs';
 
@@ -25,11 +29,13 @@ const LIMITE_X_MS = 140000; // lo que admite X con una cuenta gratis (por verifi
 export function leemeDe(paquete, contexto = {}) {
   const base = contexto.nombreBase ?? 'paquete';
   const nombreJuego = paquete.piezas[0]?.titulo.split(' · ')[0] ?? paquete.juego ?? 'juego';
+  const { margenMs, colaMs } = paquete.piezas[0]?.grabar.plan ?? FUNDIDOS; // los margenes que se le piden a quien graba: los del plan de las piezas (que salen de FUNDIDOS)
   const piezas = paquete.piezas.map((p) => [
     `### ${p.id} · ${p.titulo}`,
     `- Dirección para abrir y grabar: ${SERVIDOR}/${p.grabar.url}`,
-    `- Dura: ${formatoDeTiempo(p.grabar.ms)} (la escena termina sola; detén la grabación 2 segundos después de que acabe).`,
-    `- Guarda el video como: ${base}-${p.id}.mp4`,
+    `- Dura: ${formatoDeTiempo(p.grabar.ms)} de pieza; la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)} contando ${segundos(p.grabar.plan.margenMs)} s de negro al empezar, los dos fundidos y ${segundos(p.grabar.plan.colaMs)} s de negro al final. Detén la grabación con la pantalla en negro, al menos ${segundos(p.grabar.plan.colaMs)} s después del fundido final (la página se queda negra: no hay prisa).`,
+    `- Guarda la grabación (OBS graba la hoja en MKV) como: ${base}-${p.id}.mkv`,
+    `- Recórtala (quita el negro sobrante, deja los fundidos y saca el 9:16, el 4:5 y el 16:9): node herramientas/recortar-formatos.mjs "grabaciones/${base}-${p.id}.mkv" ${base}-${p.id} --carpeta=grabaciones/listos`,
     `- Nota: ${p.grabar.nota}`,
     ...(p.grabar.ms > LIMITE_X_MS ? [`- ⚠ Dura más de ${formatoDeTiempo(LIMITE_X_MS)}: no cabe en X con una cuenta gratis (en X sube un clip en su lugar).`] : []),
     `- Textos: textos/${p.id}-tiktok.txt, textos/${p.id}-instagram.txt, textos/${p.id}-youtube.txt, textos/${p.id}-x.txt${p.comentarioFijado ? `, textos/${p.id}-comentario.txt` : ''}`,
@@ -43,10 +49,10 @@ export function leemeDe(paquete, contexto = {}) {
     ...(paquete.advertencias.length ? ['## Avisos antes de empezar', ...paquete.advertencias.map((a) => `- ${a}`), ''] : []),
     '## Paso 0 · Antes de grabar',
     `1. En una terminal, en la carpeta del proyecto, corre \`node src/servidor.js\` y déjala abierta mientras grabas (es lo que sirve las direcciones ${SERVIDOR}/...).`,
-    '2. Si es la primera vez que grabas, configura OBS siguiendo la sección «Configurar OBS» de privado/contenido/guia-paso-a-paso.md (fuente Navegador de 1080 × 1920).',
+    '2. OBS ya debe estar en el perfil «Enfrentando-Hoja4K»: la hoja maestra de 3840 × 2160 a 30 fps, con una fuente de navegador de 3840 × 2160 (sin «Archivo local») que tenga marcado «Controlar audio mediante OBS». Si algo no coincide, mira el paso 0.1 de privado/contenido/guia-paso-a-paso.md.',
     '',
     `## Paso 1 · Grabar las ${paquete.piezas.length} piezas`,
-    'Para cada pieza: (a) pon su dirección en la fuente Navegador de OBS; (b) pulsa «Iniciar grabación»; (c) en las propiedades de la fuente pulsa «Actualizar caché de la página actual» (la escena arranca sola al cargar); (d) cuando termine, espera 2 segundos y pulsa «Detener grabación»; (e) renombra el archivo como se indica.',
+    'Para cada pieza: (a) pon su dirección en la *URL* de la fuente de navegador de OBS (la página arranca sola al cargar y termina en negro: no pasa nada si se reproduce una vez antes de grabar); (b) pulsa «Iniciar grabación»; (c) en las propiedades de la fuente pulsa «Actualizar caché de la página actual»: la pantalla se queda en negro ' + segundos(margenMs) + ' segundos, se aclara y empieza la pieza; (d) al terminar verás un fundido a negro: espera a ver la pantalla en negro al menos ' + segundos(colaMs) + ' segundos (la página se queda negra: no hay prisa; el recorte necesita ese negro para encontrar el final) y entonces detén la grabación; (e) renombra el `.mkv` de `grabaciones/` como se indica; (f) recórtalo con el comando de la pieza (necesita ffmpeg; si no encuentra el negro de los márgenes, no recorta ese lado y lo dice).',
     '',
     ...piezas,
     '## Paso 2 · Revisar cada video (no publiques ninguno sin marcar todo)',
@@ -54,11 +60,11 @@ export function leemeDe(paquete, contexto = {}) {
     '- [ ] Se lee bien en una pantalla pequeña (míralo en tu teléfono) y el texto no se corta.',
     '- [ ] Revisé a mano los mensajes y las razones de las IAs de esta partida. Si algo es ofensivo o raro, elegí otra partida y anoté por qué.',
     '- [ ] La etiqueta «Contenido generado por IA» se ve en el video.',
-    '- [ ] No lleva marca de agua de otra app ni música con derechos: es el archivo limpio que grabó OBS.',
+    '- [ ] No lleva marca de agua de otra app ni música con derechos: es el archivo limpio que grabó OBS. Revisa el `_9x16.mp4` de `grabaciones/listos` (el de TikTok, Reels y Shorts): arranca dentro del fundido y termina en negro, sin segundos de negro de sobra.',
     '',
     '## Paso 3 · Poner el gancho, publicar y fijar el comentario',
     '1. Abre cada archivo de `textos/` y sustituye la línea `[GANCHO: ...]` por una frase tuya (o deja la sugerida si te convence, quitando los corchetes y la palabra GANCHO). **Nunca publiques un texto que todavía contenga «[GANCHO».**',
-    '2. TikTok, Reels y Shorts reciben el mismo archivo de video; el texto de cada red está en su archivo. Marca la opción de «contenido generado con IA» de cada red.',
+    '2. TikTok, Reels y Shorts reciben el mismo archivo de video (el `_9x16.mp4` recortado); el texto de cada red está en su archivo. Marca la opción de «contenido generado con IA» de cada red.',
     `3. X: el post lleva el video y el texto de \`-x.txt\` (sin enlace). Publica luego, como respuesta a tu propio post, el enlace al marcador: ${contexto.enlace || ENLACE_DEL_SITIO}`,
     '4. Después de publicar una parte, publica y fija el comentario de su archivo `-comentario.txt` (los clips no llevan).',
     '5. Responde los comentarios de la primera hora.',
@@ -105,8 +111,8 @@ async function principal() {
   if (rutaVoz) { try { voz = JSON.parse(readFileSync(resolve(rutaVoz), 'utf8')); } catch (e) { salir(`No pude leer la voz ${rutaVoz}: ${e.message}`); } }
 
   const beats = await armarLinea(juegoId, partida), destacadas = await destacadasDe(juegoId, partida, 10);
-  const enlace = a.enlace ?? ENLACE_DEL_SITIO;
-  const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz, formato: a.formato ?? '9x16', enlace, totalPartidas: datos.partidas.length });
+  const enlace = a.enlace ?? `${ENLACE_DEL_SITIO}?seed=${partida.seed}`; // el sitio busca por seed: el enlace lleva a la serie de este video
+  const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz, formato: a.formato ?? 'hoja', enlace, totalPartidas: datos.partidas.length });
   if (!paquete.piezas.length) salir(`No se puede publicar esta partida: ${paquete.advertencias.join(' ')}`);
 
   const nombreBase = `${basename(a.archivo).replace(/[^\w.-]+/g, '_').replace(/\.json$/, '')}-p${numero}`;

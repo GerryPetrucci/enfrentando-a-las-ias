@@ -4,8 +4,8 @@
 // exactamente este prompt, sin una coma de diferencia. Lo unico que cambia entre
 // una y otra es el ID del modelo.
 //
-// Regla de la casa: si editas este archivo, se acaba la temporada y empieza una
-// nueva. No se comparan resultados de prompts distintos.
+// Regla de la casa: si editas este archivo, sube la version de reglas del juego:
+// las partidas anteriores no se comparan con las nuevas (resultados de prompts distintos).
 
 export const VERSION_PROMPT = 'v1.0.0';
 

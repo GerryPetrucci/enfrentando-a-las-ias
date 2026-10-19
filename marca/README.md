@@ -70,7 +70,7 @@ Directa, con humor seco, sin hablar como robot. Tuteo neutro, comprensible en to
 ## Reglas editoriales (confirmadas el 9 de octubre de 2026)
 
 1. **Las jugadas no se retocan.** Lo que se ve es lo que registró el motor; los errores de API se muestran, no se esconden.
-2. **El prompt es público** y está versionado. Si cambia, empieza una temporada nueva (v1.0.0 = Temporada 1).
+2. **El prompt es público** y está versionado. Si cambia, sube la versión de las reglas de ese juego y las partidas anteriores no se comparan con las nuevas.
 3. **Seed y número de partidas visibles** en cada resultado.
 4. **Los controles** (`tomaydaca`, `siempre-c`, `siempre-t`, `azar`) aparecen en el marcador como referencia.
 

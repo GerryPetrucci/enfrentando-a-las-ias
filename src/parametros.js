@@ -1,5 +1,5 @@
-// Parametros de llamada COMUNES a todas las IAs. Son parte del contrato: se congelan junto con el prompt y cambiarlos a mitad
-// de temporada tambien parte los resultados.
+// Parametros de llamada COMUNES a todas las IAs. Son parte del contrato: se congelan junto con el prompt y cambiarlos entre partidas
+// tambien las vuelve incomparables.
 //
 // Razonamiento (decidido el 9 de octubre de 2026): siempre "medium" en los modelos que lo admiten, nunca el maximo. El
 // razonamiento oculto se cobra como salida y en los modelos caros (Claude Sonnet 5.5 razona por defecto en "high") cuesta mucho

@@ -7,6 +7,7 @@
 
 import { htmlLogo, htmlPlaca, esc } from './kit.js';
 import { eventosDePaso } from './sonido.js';
+import { dichoDe } from './linea-comun.js';
 
 const ETIQUETA_IA = 'Contenido generado por IA · Proyecto independiente'; // el aviso fijo de toda escena (y el pie de la tarjeta de arranque)
 export const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
@@ -51,7 +52,7 @@ export class MesaBase {
   sonar(paso) { for (const e of eventosDePaso(paso)) this.sfx[e](); }
   nombre(s) { return this.partida.jugadores[s]?.nombre ?? `Jugador ${s + 1}`; }
   mostrarSubtitulos(beat) {
-    const dichas = beat.lineas.map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' ');
+    const dichas = dichoDe(beat).map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' '); // lo que se oye (`dicho` si el beat lo trae): los subtitulos lo siguen
     const razon = this.razon && beat.razon ? `<div class="razon"><small>${esc(this.nombre(beat.asiento))} piensa</small>${esc(beat.razon)}</div>` : '';
     this.subtitulos.innerHTML = `${dichas}${razon}`;
     this.ajustarSubtitulos();

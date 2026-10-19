@@ -7,11 +7,11 @@ import { maravillaYVictoria } from '../../juegos/conquista/turno/cierre.js';
 import { resultadoDe } from '../../juegos/conquista/resultado.js';
 import { resumenPublico } from '../../juegos/conquista/texto.js';
 
-test('la Maravilla gana al cumplirse 5 turnos seguidos, contados desde el turno siguiente al de su construccion', () => {
+test('la Maravilla gana al cumplirse 8 turnos seguidos, contados desde el turno siguiente al de su construccion', () => {
   const E = nuevoEstado(4), c = capital(E, 0);
   E.maravilla = { r: c, k: 0, n: 0, t0: 0 };
-  for (let i = 1; i <= 4; i++) { maravillaYVictoria(contexto(E)); assert.equal(E.ganador, null, `turno ${i}`); }
-  assert.equal(E.maravilla.n, 4);
+  for (let i = 1; i <= 7; i++) { maravillaYVictoria(contexto(E)); assert.equal(E.ganador, null, `turno ${i}`); }
+  assert.equal(E.maravilla.n, 7);
   const ctx = contexto(E);
   maravillaYVictoria(ctx);
   assert.equal(E.ganador, 0);
@@ -28,7 +28,7 @@ test('la Maravilla recien construida no cuenta ese mismo turno', () => {
 
 test('tomar la capital con Maravilla en el turno en que se cumplia la cuenta: no gana quien acaba de perderla', () => {
   const E = nuevoEstado(4), cap0 = capital(E, 0), n = E.mapa.regs[cap0].vecinos[0];
-  E.maravilla = { r: cap0, k: 0, n: 4, t0: 0 };
+  E.maravilla = { r: cap0, k: 0, n: 7, t0: 0 };
   E.dueno[n] = 1; E.tropas[n] = 30;
   E.tropas[cap0] = 1; E.fort[cap0] = 0; E.mapa.regs[cap0].terr = 'll';
   E.reinos[1].stock.Comida = 99; // el hambre va antes de las ordenes: sin Comida desertarian tropas y el movimiento de 29 ya no valdria

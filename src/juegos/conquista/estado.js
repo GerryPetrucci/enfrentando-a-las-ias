@@ -2,12 +2,15 @@
 
 import { crearMapa, biomaDeSeed } from '../../mapa.js';
 import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS } from './constantes.js';
+import { nombresValidos } from './nombres.js';
 
 export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
 
 // `bioma` fuerza la forma del mapa (continente, arido, mares o interior); sin el, sale del seed del mapa (biomaDeSeed). Si viene `mapa` ya creado, manda ese y se ignora el bioma.
-export function crearEstado(rng, { jugadores = 4, mapa = null, bioma } = {}) {
+// `nombres`: el nombre de reino de cada asiento (nombres.js); si no sirven (otra cantidad, repetidos, desconocidos) valen los de siempre, uno por asiento.
+export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } = {}) {
   const k = Math.max(2, Math.min(5, Math.round(jugadores)));
+  const nombreDe = (s) => (nombresValidos(nombres, k) ? nombres[s] : NOMBRES_REINOS[s]);
   if (mapa && mapa.k !== k) throw new Error(`el mapa es de ${mapa.k} reinos y se pidieron ${k}`);
   const seedMapa = Math.floor(rng() * 4294967296) >>> 0; // siempre se consume, venga o no el mapa dado
   const m = mapa ?? crearMapa(seedMapa, k, { bioma: bioma ?? biomaDeSeed(seedMapa) });
@@ -16,7 +19,7 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma } = {}) {
   dueno.forEach((d, r) => { if (d >= 0) tropas[r] = r === m.inicio.capitales[d] ? TROPAS_CAPITAL : TROPAS_VECINA; });
   m.inicio.capitales.forEach((c) => { fort[c] = 1; });
   const reinos = Array.from({ length: k }, (_, s) => ({
-    s, nombre: NOMBRES_REINOS[s], vivo: true, capital: m.inicio.capitales[s], stock: { ...ALMACEN_INICIAL }, armas: 0,
+    s, nombre: nombreDe(s), vivo: true, capital: m.inicio.capitales[s], stock: { ...ALMACEN_INICIAL }, armas: 0,
     honor: HONOR.inicial, deshonrado: false, pactos: Array(k).fill(0), pactoOk: Array(k).fill(false), propuestaPrevia: null,
     nota: '', privIn: [], ofertasIn: [], cayoEn: null, regsAlCaer: 0,
   }));

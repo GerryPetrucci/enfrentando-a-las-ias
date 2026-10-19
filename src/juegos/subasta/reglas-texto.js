@@ -1,4 +1,4 @@
-// EL PROMPT de Subasta de tiempo. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia se cierra la temporada.
+// EL PROMPT de Subasta de tiempo. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia sube la version de reglas del juego (las partidas anteriores no se comparan con las nuevas).
 // No hay regla oculta: todo lo que importa esta aqui; lo que SI esta oculto (el banco y las apuestas de los demas) el prompt lo dice.
 // Los numeros salen de las constantes para no desincronizarse.
 

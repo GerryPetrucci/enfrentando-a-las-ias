@@ -1,5 +1,5 @@
 // Los textos PUBLICOS de cada juego: lo que lee o escucha alguien que llega sin conocerlo. Los usan la tarjeta de arranque de la escena (intro.js) y los textos del paquete de
-// publicacion (paquete-textos.js). Son texto para el publico (con acentos), nunca el prompt de las IAs (`reglas`, que no se acentua y es el contrato de la temporada): si una regla
+// publicacion (paquete-textos.js). Son texto para el publico (con acentos), nunca el prompt de las IAs (`reglas`, que no se acentua y es el contrato del juego): si una regla
 // cambia en el motor, hay que revisar aqui su frase. Sin DOM ni red; la web no importa de src/, asi que el nombre y la categoria se copian y una prueba los compara con el motor.
 //
 //   nombre     el nombre publico del juego (con acentos)         regla   que se hace, en una frase           gana    como se gana

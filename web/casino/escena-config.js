@@ -35,8 +35,31 @@ export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
   return { sonar, detener };
 }
 
+// Los margenes de la grabacion con OBS (modo grabar=1): la pagina arranca sola al refrescar la fuente, asi que empieza en negro (margen), se aclara (fundido), cuenta la partida y
+// vuelve a negro (fundido) y se queda en negro (cola) hasta que se cierra. Un solo lugar: la pagina, el paquete, las capturas y el recortador (que deriva de aqui lo minimo que busca) leen estos tiempos.
+export const FUNDIDOS = { margenMs: 2000, fundidoMs: 500, colaMs: 2000 };
+
+// Lo que dura todo lo grabado: margen + fundido de entrada + contenido + fundido de salida + cola. `contenidoMs` ya viene a la velocidad de reproduccion (marcarTiempos con vel); los margenes
+// y fundidos NO dependen de ella: son del grabador (el recortador los busca por su duracion), no de la partida. Basura -> contenido cero.
+export function planDeGrabacion(contenidoMs) {
+  const contenido = Number.isFinite(contenidoMs) && contenidoMs > 0 ? contenidoMs : 0;
+  const { margenMs, fundidoMs, colaMs } = FUNDIDOS;
+  return { margenMs, fundidoMs, contenidoMs: contenido, colaMs, totalMs: margenMs + fundidoMs + contenido + fundidoMs + colaMs };
+}
+
+// ms -> segundos con un decimal como mucho (2000 -> 2, 500 -> 0.5): los textos de los margenes salen de FUNDIDOS.
+export const segundos = (ms) => Number((ms / 1000).toFixed(1));
+
+// La direccion de la escena para abrirla y grabar una pieza (rondas desde..hasta): sin barra (limpio=1), arranca sola (auto=1) y con margenes y fundidos de negro (grabar=1). La usan el paquete
+// (su LEEME) y herramientas/partes.mjs; `formato` por omision es la hoja maestra de 4K del OBS del proyecto.
+export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, formato = 'hoja', voz = null }) {
+  const q = new URLSearchParams({ archivo, partida: String(partida), ronda: String(desde), hasta: String(hasta), formato, auto: '1', limpio: '1', grabar: '1' });
+  if (voz) q.set('voz', voz);
+  return `escena.html?${q}`;
+}
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
-// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
+// &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &grabar=1 (con auto y sin detener: margenes y fundidos de negro para grabar) &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
   const q = new URLSearchParams(search ?? '');
   const mano = Math.max(1, entero(q.get('mano') ?? q.get('ronda') ?? q.get('turno')) ?? 1); // ronda= y turno= son sinonimos de mano= (los juegos que juegan por rondas o por turnos)
@@ -44,6 +67,7 @@ export function leerParametros(search) {
   const vel = Number(q.get('vel'));
   const camara = entero(q.get('camara'));
   const escala = Number(q.get('escala'));
+  const auto = bandera(q.get('auto'));
   return {
     archivo: q.get('archivo') || null,
     partida: Math.max(1, entero(q.get('partida')) ?? 1),
@@ -54,7 +78,11 @@ export function leerParametros(search) {
     sonido: q.get('sonido') !== '0' && q.get('sonido') !== 'false',
     vel: Number.isFinite(vel) && vel > 0 ? Math.min(8, Math.max(0.25, vel)) : 1,
     razon: bandera(q.get('razon')),
-    auto: bandera(q.get('auto')),
+    auto,
+    // grabar con margenes y fundidos: sin auto la pagina no arranca sola y una captura que se detiene en un beat (detener=) no espera ni se funde, asi que no hay nada que enmarcar.
+    // El script de escena.html (que deja la pagina en negro antes de que cargue nada) aplica esta misma regla: una prueba las ata.
+    grabar: auto && bandera(q.get('grabar')) && !q.has('detener'),
+    detener: entero(q.get('detener')), // para capturas: avanza al instante hasta ese beat y se queda ahi (null = reproduccion normal)
     limpio: bandera(q.get('limpio')),
     voz: esRutaRelativa(q.get('voz')) ? q.get('voz') : null,
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',
@@ -79,6 +107,13 @@ export function entradaDeVoz(voz, beat) {
   if (!e || typeof e !== 'object') return null;
   if (typeof e.fuente === 'string' && e.fuente !== fuenteDeVoz(beat.texto)) return null;
   return e;
+}
+
+// Cuantos momentos con algo que decir NO tienen su voz en `voz` (voz.json): la voz es de otra partida, o se narro antes de un cambio del texto (los ids de los beats cambian cuando cambia cuantos hay). Se
+// grabarian sin voz sin que nada lo diga (con limpio=1 el aviso de la pagina queda oculto): el paquete y partes.mjs lo avisan. Sin voz (nada o vacia) no hay de que avisar: 0.
+export function momentosSinVoz(beats, voz) {
+  if (!hayVoz(voz)) return 0;
+  return (Array.isArray(beats) ? beats : []).filter((b) => b?.texto && !entradaDeVoz(voz, b)).length;
 }
 
 // Cuantos beats tienen su audio y cuantos tienen uno de OTRO texto (la voz es de otra partida o el texto cambio despues de narrarla).

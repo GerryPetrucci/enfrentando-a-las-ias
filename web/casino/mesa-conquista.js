@@ -10,6 +10,8 @@ import { colocarConquista } from './layout-conquista.js';
 import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza } from './conquista-datos.js';
 import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, colorSolido } from './mapa-dibujo.js';
 import { f2, tropas } from './linea-de-tiempo-conquista.js';
+import { nombreDeReino } from './reinos-conquista.js';
+import { FEED, msVisibleDelFeed } from './feed-conquista.js';
 import { estiloJugador, esc } from './kit.js';
 import { colorDe, franjasDe } from '../paleta.js';
 import { MesaBase, el, poner } from './mesa-base.js';
@@ -30,7 +32,7 @@ const ICONOS = {
 
 // Los metodos se llaman con verbos distintos de los campos (this.feedEl, this.tarjetaEl... son piezas del DOM): un campo con el mismo nombre taparia al metodo.
 export class Mesa extends MesaBase {
-  static METODOS = { apertura: 'abrir', ordenes: 'mostrarOrdenes', traicion: 'mostrarTraicion', batalla: 'mostrarBatalla', resolucion: 'resolver', final: 'terminar' };
+  static METODOS = { apertura: 'abrir', ordenes: 'mostrarOrdenes', traicion: 'mostrarTraicion', batalla: 'mostrarBatalla', resolucion: 'resolver', rasgos: 'mostrarRasgos', final: 'terminar' };
 
   constructor(formato, partida, opciones) {
     const mapa = leerMapa(partida?.mapa);
@@ -84,11 +86,15 @@ export class Mesa extends MesaBase {
       g.beginPath(); g.roundRect(8, y - fila * 0.38, 8, fila * 0.76, 4); g.fill();
       g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 ${tam}px ${fam}`;
       g.fillStyle = colorDe(this.partida.jugadores[s]?.id, colorSolido(this.colores, s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
+      const x0 = compacto ? 240 : 230, paso = compacto ? 112 : 118; // donde empieza la columna de recursos y lo que mide cada una
+      // el reino del asiento junto al nombre del modelo (las IAs hablan de «Azur» o «Rosa» en sus mensajes): en gris y solo si cabe antes de los recursos
+      const reino = nombreDeReino(s, this.partida.reinos), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
+      g.font = `600 ${Math.round(tam * 0.6)}px ${fam}`;
+      if (reino && xReino + g.measureText(reino).width < x0 - 8) { g.fillStyle = '#9a9aa6'; g.fillText(reino, xReino, y - (compacto ? 0 : fila * 0.12)); }
       const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = (estado.dueno ?? []).reduce((a, d, r) => a + (d === s ? estado.tropas[r] : 0), 0);
       const pactos = (estado.pactos?.[s] ?? []).flatMap((v, j) => (j !== s && v >= this.turno ? [this.nombre(j)] : []));
       g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = vivo ? '#6fbf8a' : '#d8584e';
       if (!compacto) g.fillText(vivo ? (pactos.length ? `pacto con ${pactos.join(', ')}` : 'sin pactos') : 'cayó', 26, y + fila * 0.26, 200);
-      const x0 = compacto ? 190 : 230, paso = compacto ? 112 : 118;
       RECURSOS.forEach((r, j) => {
         const x = x0 + j * paso;
         pintarIcono(g, r, x, y, tam * 0.5);
@@ -120,6 +126,25 @@ export class Mesa extends MesaBase {
     }
     while (this.feedEl.children.length > MAX_FEED) this.feedEl.firstElementChild.remove();
     [...this.feedEl.children].forEach((n, i, todos) => { n.style.opacity = Math.max(0.55, 1 - (todos.length - 1 - i) * 0.07); });
+    if (lista?.length) this.mostrarFeed(lista.length);
+  }
+
+  // El feed no se queda tapando el mapa: aparece con lo nuevo, se apaga solo a los pocos segundos (feed-conquista.js) y con lo siguiente vuelve a entrar sin lo viejo. En las capturas (`rapido`) no se apaga.
+  mostrarFeed(nuevos) {
+    clearTimeout(this.feedTimer);
+    const f = this.feedEl;
+    if (f.dataset.feed !== 'visible') { f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 1; this.anim(f, [{ opacity: 0 }, { opacity: 1 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-out' }); }
+    f.dataset.feed = 'visible';
+    if (!this.rapido) this.feedTimer = setTimeout(() => this.apagarFeed(), msVisibleDelFeed(nuevos) / this.vel);
+  }
+  apagarFeed() {
+    const f = this.feedEl;
+    f.dataset.feed = 'oculto';
+    const a = this.anim(f, [{ opacity: 1 }, { opacity: 0 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-in', fill: 'forwards' });
+    // al terminar el fundido (y por si el navegador no avisa, un poco despues) queda apagado y vacio, salvo que mientras tanto hayan llegado avisos nuevos
+    const fin = () => { if (f.dataset.feed !== 'oculto') return; f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 0; f.innerHTML = ''; };
+    a.onfinish = fin;
+    if (!this.rapido) setTimeout(fin, (FEED.FUNDIDO_MS + 80) / this.vel);
   }
 
   // Quita lo transitorio de la batalla, la traicion o el final (no el feed ni el mapa).
@@ -133,7 +158,9 @@ export class Mesa extends MesaBase {
   mostrarEstadoInicial(beat) {
     this.limpiarTurno();
     this.turno = beat.mano;
-    this.feedEl.innerHTML = '';
+    clearTimeout(this.feedTimer);
+    this.feedEl.getAnimations().forEach((x) => x.cancel());
+    this.feedEl.style.opacity = 1; this.feedEl.dataset.feed = ''; this.feedEl.innerHTML = '';
     const e = beat.pasos.find((p) => p.tipo === 'estado');
     if (e) this.pintarMapa(e);
     this.cabecera.querySelector('.mano').textContent = `Turno ${beat.mano} / ${TURNOS_TOPE}`;
@@ -285,6 +312,17 @@ export class Mesa extends MesaBase {
     await this.esperar(ms * 0.6);
   }
 
+  // La ficha de una IA antes del ranking: su nombre, su puesto y sus cinco caracteristicas (las notables resaltadas), en la pantalla del final; cada ficha reemplaza a la anterior.
+  async mostrarRasgos(beat, ms) {
+    for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.vela]) this.ocultar(n); // el panel del final lo ocupa la ficha: nada de batalla, traicion ni flashback encima
+    const r = beat.pasos.find((p) => p.tipo === 'rasgos');
+    const reino = nombreDeReino(r.k, this.partida.reinos);
+    const filas = r.filas.map((f) => `<div class="rg-fila${f.notable ? ' nota' : ''}"><b>${esc(f.etiqueta)}</b><span>${esc(f.frase)}</span></div>`).join('');
+    this.finalEl.innerHTML = `<div class="pf-titulo">Cómo jugó</div><div class="rg-cab" style="${estiloJugador(this.partida.jugadores[r.k])}"><span class="rg-pos">${esc(r.posicion)}º</span><span class="rg-nom">${esc(this.nombre(r.k))}</span>${reino ? `<span class="rg-reino">${esc(reino)}</span>` : ''}</div>${filas}`;
+    this.mostrar(this.finalEl, 450);
+    await this.esperar(ms * 0.5);
+  }
+
   async terminar(beat, ms) {
     this.limpiarTurno();
     const f = beat.pasos.find((p) => p.tipo === 'final');
@@ -296,7 +334,7 @@ export class Mesa extends MesaBase {
     await this.esperar(ms * 0.5);
   }
 
-  // Los subtitulos son los hechos del beat; con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).
+  // Los subtitulos son lo que se dice del beat (`dicho`: hechos tal cual y frases de contexto en cursiva); con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).
   mostrarSubtitulos(beat) {
     super.mostrarSubtitulos(beat);
     const r = beat.pasos?.find((p) => p.tipo === 'razones');

@@ -89,3 +89,13 @@
 .panel-conq .pf-priv { font:italic 600 24px/1.25 var(--texto); color:var(--hueso); }
 .panel-conq .pf-priv small { font:700 20px var(--texto); font-style:normal; color:var(--suave); display:block; }
 .panel-conq .pf-marca { align-self:center; padding:6px 22px; border-radius:20px; border:3px solid var(--oro); font:800 28px var(--titulos); letter-spacing:.1em; color:var(--oro); text-transform:uppercase; }
+/* La ficha de cada IA antes del ranking (mostrarRasgos): su puesto y nombre, y sus cinco caracteristicas; las notables van resaltadas. */
+.panel-conq .rg-cab { display:flex; align-items:baseline; justify-content:center; gap:18px; padding:8px 0 4px; }
+.panel-conq .rg-pos { font:800 54px var(--titulos); color:var(--oro); }
+.panel-conq .rg-nom { font:800 64px/1 var(--titulos); text-transform:uppercase; color:var(--t, #f2f0ed); text-shadow:0 0 12px #000a; }
+.panel-conq .rg-reino { font:700 26px var(--texto); color:var(--suave); }
+.panel-conq .rg-fila { display:flex; flex-direction:column; gap:4px; padding:12px 18px; border-radius:16px; background:rgba(255,255,255,.04); border-left:6px solid #44444c; }
+.panel-conq .rg-fila b { font:800 22px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--suave); }
+.panel-conq .rg-fila span { font:600 30px/1.2 var(--texto); color:#c9c9d2; }
+.panel-conq .rg-fila.nota { background:rgba(224,178,92,.12); border-left-color:var(--oro); }
+.panel-conq .rg-fila.nota span { color:var(--hueso); font-weight:700; }

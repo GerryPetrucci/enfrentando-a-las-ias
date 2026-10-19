@@ -1,7 +1,8 @@
 // Diplomacia: rupturas de pacto, pactos nuevos, mensajes publicos y privados, notas de plan y ofertas de comercio.
 
 import { aliado } from '../estado.js';
-import { HONOR, TURNOS, PACTO_TURNOS, NOMBRES_REINOS } from '../constantes.js';
+import { HONOR, TURNOS, PACTO_TURNOS } from '../constantes.js';
+import { nombresDeLaPartida } from '../ordenes.js';
 
 // Fase 6: romper un pacto acaba el pacto de los dos y resta honor; el que rompe puede atacar ese mismo turno.
 export function rupturas(ctx) {
@@ -52,7 +53,7 @@ export function mensajesYNotas(ctx) {
     if (!ctx.vivosAlInicio[s] || !j || j.invalida) continue;
     if (j.mensaje) ctx.mensajes.push({ k: s, texto: j.mensaje });
     for (const p of j.privados) {
-      if (p.a === s || !ctx.activa(p.a)) { ctx.mal(s, `privado a ${NOMBRES_REINOS[p.a] ?? '?'}`, 'el destinatario no existe o ya cayo'); continue; }
+      if (p.a === s || !ctx.activa(p.a)) { ctx.mal(s, `privado a ${nombresDeLaPartida(ctx.E)[p.a] ?? '?'}`, 'el destinatario no existe o ya cayo'); continue; }
       nuevosPrivados[p.a].push({ de: s, texto: p.texto });
       ctx.privados.push({ k: s, a: p.a, texto: p.texto });
       ctx.bien(s);

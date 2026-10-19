@@ -29,6 +29,11 @@ function conTemporal(fn) {
   const carpeta = mkdtempSync(join(tmpdir(), 'paquete-'));
   try { return fn(carpeta); } finally { rmSync(carpeta, { recursive: true, force: true }); }
 }
+// lo mismo para pruebas async: espera a que `fn` termine antes de borrar la carpeta (con conTemporal se borraba al primer await y la prueba volvia a crearla, dejando basura en el temporal del sistema)
+async function conTemporalAsync(fn) {
+  const carpeta = mkdtempSync(join(tmpdir(), 'paquete-'));
+  try { return await fn(carpeta); } finally { rmSync(carpeta, { recursive: true, force: true }); }
+}
 const guardar = (carpeta, partida, nombre = 'guerra.json') => {
   const ruta = join(carpeta, nombre);
   writeFileSync(ruta, JSON.stringify({ juego: partida.juego, partidas: [partida] }));
@@ -53,7 +58,15 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   assert.match(leeme, /bots|control/i, 'la advertencia de que es una partida de bots sale en el LEEME');
 }));
 
-test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporal(async (tmp) => {
+test('sin --enlace, el comentario fijado manda al sitio con el seed de la partida para buscarlo (?seed=)', () => conTemporal((tmp) => {
+  const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida');
+  const r = lanzar([`--archivo=${archivo}`, `--salida=${salida}`]);
+  assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
+  const comentario = readFileSync(join(salida, 'guerra-p1', 'textos', 'parte-1-comentario.txt'), 'utf8');
+  assert.ok(comentario.includes(`${ENLACE}?seed=${PARTIDA.seed}`), comentario);
+}));
+
+test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporalAsync(async (tmp) => {
   const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const carpeta = join(tmp, 'p');
@@ -73,11 +86,36 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   const texto = leemeDe(paquete, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, nombreBase: 'guerra-p1' });
   for (const p of paquete.piezas) {
     assert.ok(texto.includes(`http://localhost:4321/${p.grabar.url}`), `${p.id}: falta su direccion`);
-    assert.ok(texto.includes(`guerra-p1-${p.id}.mp4`), `${p.id}: falta el nombre del archivo`);
+    assert.ok(texto.includes(`guerra-p1-${p.id}.mkv`), `${p.id}: falta el nombre de la grabacion (OBS graba la hoja en MKV)`);
     assert.ok(texto.includes(`Dura: ${formatoDeTiempo(p.grabar.ms)} `), `${p.id}: falta la duracion`);
+    assert.ok(texto.includes(`la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)}`), `${p.id}: falta lo que dura todo lo grabado, con los margenes`);
+    assert.ok(texto.includes(`node herramientas/recortar-formatos.mjs "grabaciones/guerra-p1-${p.id}.mkv" guerra-p1-${p.id} --carpeta=grabaciones/listos`), `${p.id}: falta el comando exacto de recorte`);
   }
+  assert.doesNotMatch(texto, /guerra-p1-[\w-]+\.mp4/, 'lo que se guarda de OBS es la hoja en MKV: el MP4 sale del recorte (y esos si se nombran _9x16.mp4, no asi)');
+  assert.doesNotMatch(texto, /1080 × 1920/, 'la fuente de OBS es la hoja de 3840 × 2160');
+  assert.match(texto, /3840 × 2160/, 'dice como esta la fuente de OBS');
+  assert.match(texto, /negro/i, 'explica el margen y el fundido de negro');
+  assert.match(texto, /Actualizar caché de la página actual/, 'dice como arrancar la grabacion');
   for (const frase of ['generado por IA', 'primeros 3 segundos', 'GANCHO']) assert.ok(texto.toLowerCase().includes(frase.toLowerCase()), `la lista de revision no dice: ${frase}`);
   assert.ok(texto.includes(PARTIDA.juego.nombre));
+});
+
+test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si cambian los tiempos, cambia lo que se le pide a quien graba', async () => {
+  const { FUNDIDOS } = await import('../../../web/casino/escena-config.js');
+  const guardado = { ...FUNDIDOS };
+  try {
+    Object.assign(FUNDIDOS, { margenMs: 3000, colaMs: 4000 });
+    const paquete = construirPaquete({ partida: PARTIDA, beats: await armarLinea('conquista', PARTIDA), destacadas: [], archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
+    const texto = leemeDe(paquete, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, nombreBase: 'guerra-p1' });
+    assert.match(texto, /3 s de negro al empezar/);
+    assert.match(texto, /4 s de negro al final/);
+    assert.match(texto, /al menos 4 segundos/, 'se pide esperar a ver el negro de salida el tiempo que el recortador necesita para encontrarlo');
+    assert.match(texto, /al menos 4 s después del fundido final/);
+    assert.match(texto, /negro 3 segundos/);
+    assert.doesNotMatch(texto, /al terminar el fundido final\)/, 'no invita a detener justo al acabar el fundido (sin negro de salida no hay recorte del final)');
+  } finally {
+    Object.assign(FUNDIDOS, guardado);
+  }
 });
 
 test('el LEEME avisa de las piezas que duran mas de 2:20 (lo que admite X con una cuenta gratis) y no avisa de las que caben', async () => {
@@ -137,4 +175,36 @@ test('paquete.mjs sale con 1 y dice por que ante: sin --archivo, archivo inexist
   }
   assert.ok(!existsSync(join(tmp, '..', `fuera-${basename(tmp)}`)), 'una salida con .. no escribe nada fuera');
   assert.ok(!existsSync(salida) || readdirSync(salida).length === 0, 'un error no deja carpetas a medias');
+}));
+
+test('partes.mjs avisa si la voz no cubre los momentos con texto de la partida (si no, se grabaria sin voz sin enterarse) y no avisa con una voz al dia ni sin voz', async () => conTemporalAsync(async (tmp) => {
+  const archivo = guardar(tmp, PARTIDA);
+  const beats = await armarLinea('conquista', PARTIDA);
+  const alDia = Object.fromEntries(beats.filter((b) => b.texto).map((b) => [b.id, { archivo: `data/voz/x-p1/${b.id}.ogg`, ms: 5000, fuente: b.texto }]));
+  const vieja = { ...alDia };
+  delete vieja[beats.find((b) => b.texto && b.tipo !== 'intro').id];
+  const partes = (voz) => {
+    const args = [`--archivo=${archivo}`];
+    if (voz) { const ruta = join(tmp, 'voz.json'); writeFileSync(ruta, JSON.stringify(voz)); args.push(`--voz=${ruta}`); }
+    return spawnSync(process.execPath, [join(RAIZ, 'herramientas', 'partes.mjs'), ...args], { encoding: 'utf8', timeout: 30000, cwd: RAIZ });
+  };
+  const conVieja = partes(vieja);
+  assert.equal(conVieja.status, 0, `${conVieja.stdout}${conVieja.stderr}`);
+  assert.match(conVieja.stdout, /AVISO: la voz no cubre 1 momento[^\n]*narrar\.mjs/i);
+  for (const voz of [alDia, null]) { const r = partes(voz); assert.equal(r.status, 0, `${r.stdout}${r.stderr}`); assert.doesNotMatch(r.stdout, /AVISO/, voz ? 'voz al dia' : 'sin voz'); }
+  // y las direcciones que imprime son las del paquete: para la hoja, sin barra y con margenes
+  assert.match(partes(alDia).stdout, /escena\.html\?[^\s]*formato=hoja[^\s]*grabar=1/);
+}));
+
+test('paquete.mjs arma por omision las direcciones para la hoja maestra de OBS (formato=hoja y grabar=1); --formato=9x16 las deja verticales', () => conTemporal((tmp) => {
+  const archivo = guardar(tmp, PARTIDA);
+  const hoja = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's1')}`]);
+  assert.equal(hoja.status, 0, `${hoja.stdout}${hoja.stderr}`);
+  const leemeHoja = readFileSync(join(tmp, 's1', 'guerra-p1', 'LEEME.md'), 'utf8');
+  const direcciones = leemeHoja.match(/http:\/\/localhost:4321\/escena\.html\?[^\s)]+/g) ?? [];
+  assert.ok(direcciones.length >= 3, 'las direcciones de las piezas salen en el LEEME');
+  for (const d of direcciones) { const q = new URL(d).searchParams; assert.equal(q.get('formato'), 'hoja', d); assert.equal(q.get('grabar'), '1', d); assert.equal(q.get('auto'), '1', d); }
+  const vertical = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's2')}`, '--formato=9x16']);
+  assert.equal(vertical.status, 0, `${vertical.stdout}${vertical.stderr}`);
+  assert.match(readFileSync(join(tmp, 's2', 'guerra-p1', 'LEEME.md'), 'utf8'), /formato=9x16/);
 }));

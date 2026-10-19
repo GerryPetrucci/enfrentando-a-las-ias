@@ -3,7 +3,7 @@
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
 
-import { dividirEnDos, duracionDeBeat, formatoDeTiempo } from './escena-config.js';
+import { dividirEnDos, duracionDeBeat, formatoDeTiempo, planDeGrabacion, direccionDeGrabacion, momentosSinVoz } from './escena-config.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
 import { textoDeJuego } from './textos-juego.js';
 
@@ -43,13 +43,6 @@ export function ventanaDeClip(beats, mano, { minMs = MIN_CLIP_MS, maxMs = MAX_CL
   return { mano: unidades[a], hasta: unidades[z], ms: Math.round(ms), ajustada: ms >= minMs && ms <= maxMs };
 }
 
-// La direccion de la escena para abrirla y grabarla (limpio=1 esconde los controles de la pagina).
-const urlDeGrabacion = ({ archivo, partidaNumero, formato, desde, hasta, rutaVoz }) => {
-  const q = new URLSearchParams({ archivo, partida: String(partidaNumero), ronda: String(desde), hasta: String(hasta), formato, auto: '1', limpio: '1' });
-  if (rutaVoz) q.set('voz', rutaVoz);
-  return `escena.html?${q}`;
-};
-
 // Acorta la sugerencia de gancho para que el texto completo quepa en `limite` (con `resto` caracteres de lo demas).
 const cabeGancho = (sug, resto, limite) => {
   const tope = Math.max(10, limite - resto - '[GANCHO: ]'.length);
@@ -57,9 +50,10 @@ const cabeGancho = (sug, resto, limite) => {
 };
 
 // partida: la partida guardada · beats: armarLinea(...) · destacadas: destacadasDe(...) · rutaVoz: la voz.json (con `voz` ya leida) · totalPartidas: cuantas trae el archivo (una serie)
-// -> { juego, piezas: [{ id, tipo, titulo, grabar: { url, desde, hasta, ms, nota }, textos: { tiktok, instagram, x, youtube: { titulo, descripcion } }, comentarioFijado }], advertencias }
-// Una partida que no se puede publicar da `piezas: []` y el motivo (nunca lanza).
-export function construirPaquete({ partida, beats, destacadas = [], archivo, partidaNumero = 1, voz = null, rutaVoz = null, formato = '9x16', enlace = '', totalPartidas = 1 } = {}) {
+// -> { juego, piezas: [{ id, tipo, titulo, grabar: { url, desde, hasta, ms, plan, nota }, textos: { tiktok, instagram, x, youtube: { titulo, descripcion } }, comentarioFijado }], advertencias }
+//    (grabar.plan = planDeGrabacion de la pieza: margen de negro + fundido + la pieza + fundido + cola)
+// Una partida que no se puede publicar da `piezas: []` y el motivo (nunca lanza). `formato` por omision es la hoja maestra de 4K del OBS del proyecto.
+export function construirPaquete({ partida, beats, destacadas = [], archivo, partidaNumero = 1, voz = null, rutaVoz = null, formato = 'hoja', enlace = '', totalPartidas = 1 } = {}) {
   const juego = partida?.juego?.id ?? null, t = textoDeJuego(juego), advertencias = [];
   const vacio = (motivo) => ({ juego, piezas: [], advertencias: [...advertencias, motivo] });
   if (!partida || typeof partida !== 'object') return vacio('no hay partida');
@@ -72,6 +66,9 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     if (p.ms > MAX_VIDEO_MS) advertencias.push(`La parte ${n} dura ${formatoDeTiempo(p.ms)}: pasa de 3 minutos (el límite de los Shorts y de los Reels recomendados). Considera partir este juego en más partes o recortar al editar.`);
   }
+  const sinVoz = momentosSinVoz(lista, voz);
+  if (sinVoz) advertencias.push(`La voz (voz.json) no cubre ${sinVoz} ${sinVoz === 1 ? 'momento' : 'momentos'} con texto de esta partida: se grabarian sin voz. ¿Se narró antes de un cambio del texto? Corre herramientas/narrar.mjs otra vez y regenera el paquete con --forzar.`);
+  if (formato !== 'hoja') advertencias.push(`El formato es ${formato}: la dirección abre la escena a ese tamaño, pero el LEEME y el recorte suponen la hoja maestra de 3840 × 2160 (--formato=hoja, el valor por omisión). Úsalo solo para probar la escena.`);
   const jugadores = Array.isArray(partida.jugadores) ? partida.jugadores : [];
   const nombres = jugadores.map((j, i) => j?.nombre ?? `Jugador ${i + 1}`);
   if (jugadores.some((j) => j?.tipo !== 'modelo')) advertencias.push('Esta partida tiene jugadores de control (bots), no solo modelos de IA: sirve para probar, no es la que se publica como episodio.');
@@ -124,12 +121,13 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
 
   const piezas = [];
   const intro = lista.find((b) => b.tipo === 'intro'), introMs = intro ? duracionDeBeat(intro, voz, 1) : 0;
-  const urlDe = (desde, hasta) => urlDeGrabacion({ archivo, partidaNumero, formato, desde, hasta, rutaVoz });
+  // lo que hay que saber para grabar una pieza: la direccion de la escena, sus rondas, lo que dura y el plan de la grabacion (con los margenes de negro)
+  const grabarDe = (desde, hasta, ms, nota) => ({ url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz }), desde, hasta, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)), nota });
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : `Ganó ${ganador}`) : 'Terminó en empate';
     piezas.push({
       id: `parte-${n}`, tipo: 'parte', titulo: `${t.nombre} · Parte ${n} de 2`,
-      grabar: { url: urlDe(p.mano, p.hasta), desde: p.mano, hasta: p.hasta, ms: Math.round(p.ms), nota: n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.' },
+      grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.'),
       textos: textosDe({ sug, encabezado: `${t.nombre} · Parte ${n} de 2`, parte: n, tipo: 'parte' }), comentarioFijado,
     });
   }
@@ -145,7 +143,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const motivos = (d.motivos ?? []).join(', ');
     piezas.push({
       id: `clip-${i + 1}`, tipo: 'clip', titulo: `${t.nombre} · ${etiqueta}`,
-      grabar: { url: urlDe(w.mano, w.hasta), desde: w.mano, hasta: w.hasta, ms: w.ms, nota: `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}` },
+      grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`),
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
   });

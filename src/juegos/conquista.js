@@ -6,6 +6,9 @@ import { normalizarRespuesta } from './conquista/ordenes.js';
 import { aplicarTurno } from './conquista/turno/index.js';
 import { vistaTexto } from './conquista/vista.js';
 import { resultadoDe } from './conquista/resultado.js';
+import { nombresDeReinos } from './conquista/nombres.js';
+import { evaluarSerie } from './conquista/evaluacion.js';
+import { reconstruirPrompts } from './conquista/replay.js';
 import { REGLAS, FORMATO } from './conquista/reglas-texto.js';
 import { TURNOS } from './conquista/constantes.js';
 import { BOTS, INFO_BOTS } from './conquista-bots.js';
@@ -25,14 +28,16 @@ export default {
   // Bots de control que la consola acepta por nombre: { id: { nombre, color, fn(estado, asiento, rng) } }
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   rondas: TURNOS,
-  versionReglas: 'conquista-1.0.0',
+  versionReglas: 'conquista-1.1.0', // 1.1.0: Maravilla x1.5 de costo y 8 turnos de cuenta (18 de octubre de 2026)
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 
   crear: (rng, opciones = {}) => crearEstado(rng, opciones),
+  // El nombre de reino de cada asiento sale del modelo que lo ocupa (nombres.js): la arena lo pide antes de crear la partida.
+  opcionesDeAgentes: (agentes) => ({ nombres: nombresDeReinos(agentes.map((a) => a.id)) }),
   terminado: (E) => E.ganador !== null,
   vista: (E, i) => vistaTexto(E, i),
-  normalizar: normalizarRespuesta,
+  normalizar: normalizarRespuesta, // (respuesta, estado): el estado le dice los nombres de reino de la partida
   // jugadas[s] = respuesta normalizada (con `error` y `crudo` si las puso la arena); null para los reinos caidos.
   // Ademas del registro del motor se guarda lo que el espectador ve: la razon de cada IA, sus ordenes, su propuesta de pacto,
   // la causa si la respuesta fue invalida y el error de la API (los fallos se registran, no se esconden).
@@ -47,6 +52,8 @@ export default {
     return registro;
   },
   resultado: resultadoDe,
+  reconstruirPrompts, // lo que vio cada IA en cada turno de una partida guardada (rejugada): lo usa la publicacion (src/publicar.js)
+  evaluar: evaluarSerie, // al final de la serie: caracteristicas de cada IA y comentario (correr.js lo guarda y lo imprime)
   // a quien hay que preguntarle en el turno siguiente: solo a los reinos vivos (un reino caido no cuesta llamadas)
   activos: (E) => E.reinos.map((r) => r.vivo),
 };

@@ -1,4 +1,4 @@
-// EL PROMPT de La Fuga. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia se cierra la temporada.
+// EL PROMPT de La Fuga. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia sube la version de reglas del juego (las partidas anteriores no se comparan con las nuevas).
 // No dice nada falso: cuenta que planean salir juntos y que hay detalles de la prision que no conocen, y CALLA sobre lo que pasa
 // si solo uno sale (esa regla es oculta y se publica en docs/metodologia.md). Los puntos salen de PUNTOS para no desincronizarse.
 

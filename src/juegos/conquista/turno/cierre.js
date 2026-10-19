@@ -23,7 +23,7 @@ export function maravillaYVictoria(ctx) {
 export function cerrarRegistro(ctx) {
   const { E, R, k } = ctx;
   for (let s = 0; s < k; s++) { E.stats[s].validas += ctx.obed[s].validas; E.stats[s].total += ctx.obed[s].total; }
-  E.resumenPrevio = resumenPublico(ctx.eventos);
+  E.resumenPrevio = resumenPublico(ctx.eventos, R.map((r) => r.nombre));
   E.mensajesPrevios = ctx.mensajes;
   E.regalosPrevios = R.map((_, s) => ctx.regalos.filter((g) => g.a === s));
   return {

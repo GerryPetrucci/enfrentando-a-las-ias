@@ -11,7 +11,13 @@ const RECURSOS_POR_NOMBRE = new Map(RECURSOS.map((r) => [limpiar(r), r]));
 const EDIFICIOS = ['granja', 'mercado', 'cuartel', 'maravilla'];
 
 const region = (t) => { const m = /^r0*(\d{1,3})$/.exec(t ?? ''); return m && Number(m[1]) >= 1 ? Number(m[1]) - 1 : null; };
-const reino = (t) => { const i = REINOS.indexOf(t); return i >= 0 ? i : null; };
+
+// Los nombres con los que se entiende a un reino en ESTA partida: primero los de sus reinos, en el orden de los asientos, y despues los de siempre que no estan en juego (el indice de esos es de un reino
+// que no existe y las fases del turno lo descartan, como siempre). Sin estado, los de siempre.
+export const nombresDeLaPartida = (E) => {
+  const propios = Array.isArray(E?.reinos) ? E.reinos.map((r) => String(r?.nombre ?? '')) : [];
+  return [...propios, ...NOMBRES_REINOS.filter((n) => !propios.includes(n))];
+};
 const recurso = (t) => RECURSOS_POR_NOMBRE.get(t) ?? null;
 const entero = (t) => (/^\d{1,4}$/.test(t ?? '') && Number(t) >= 1 ? Number(t) : null);
 
@@ -20,9 +26,10 @@ const mal = (motivo) => ({ ok: false, motivo });
 const uso = (u) => mal(`faltan o sobran datos (uso: ${u})`);
 const campo = (que, valor) => mal(`${que} invalido: "${String(valor).slice(0, 30)}"`);
 
-export function parsearOrden(texto) {
+export function parsearOrden(texto, reinos = REINOS) {
   const t = limpiar(texto).split(' ').filter(Boolean);
   const verbo = t[0];
+  const reino = (nombre) => { const i = reinos.indexOf(nombre); return i >= 0 ? i : null; };
   switch (verbo) {
     case 'armar':
       return t.length === 1 ? ok({ tipo: 'armar' }) : uso('armar');
@@ -85,7 +92,8 @@ export function parsearOrden(texto) {
 
 const texto = (x, largo) => (typeof x === 'string' ? x.trim().slice(0, largo) : '');
 
-function normalizar(r) {
+function normalizar(r, reinos, nombres) {
+  const reino = (nombre) => { const i = reinos.indexOf(nombre); return i >= 0 ? i : null; };
   const base = { ordenes: [], descartadas: [], pactoCon: null, mensaje: '', privados: [], nota: undefined, razon: '', invalida: false, motivo: null };
   if (!r || typeof r !== 'object' || Array.isArray(r)) return { ...base, invalida: true, motivo: 'la respuesta no es un objeto JSON' };
   const out = base;
@@ -95,7 +103,7 @@ function normalizar(r) {
     if (typeof x !== 'string') { out.descartadas.push({ texto: `(${typeof x})`, motivo: 'la orden no es texto' }); return; }
     const corto = x.slice(0, 80);
     if (i >= MAX_ORDENES) { out.descartadas.push({ texto: corto, motivo: `mas de ${MAX_ORDENES} ordenes: se ignoran las sobrantes` }); return; }
-    const p = parsearOrden(x);
+    const p = parsearOrden(x, reinos);
     if (p.ok) out.ordenes.push({ ...p.orden, texto: corto });
     else out.descartadas.push({ texto: corto, motivo: p.motivo });
   });
@@ -114,7 +122,7 @@ function normalizar(r) {
   (Array.isArray(r.privados) ? r.privados : []).slice(0, 20).forEach((p) => {
     const re = p && typeof p === 'object' && typeof p.a === 'string' ? reino(limpiar(p.a)) : null, t = p && typeof p === 'object' ? texto(p.texto, LARGO_MENSAJE) : '';
     if (re === null || !t) { out.descartadas.push({ texto: 'privado', motivo: 'destinatario o texto invalido' }); return; }
-    if (vistos.has(re) || out.privados.length >= MAX_PRIVADOS) { out.descartadas.push({ texto: `privado a ${NOMBRES_REINOS[re]}`, motivo: `maximo ${MAX_PRIVADOS} privados a reinos distintos` }); return; }
+    if (vistos.has(re) || out.privados.length >= MAX_PRIVADOS) { out.descartadas.push({ texto: `privado a ${nombres[re]}`, motivo: `maximo ${MAX_PRIVADOS} privados a reinos distintos` }); return; }
     vistos.add(re);
     out.privados.push({ a: re, texto: t });
   });
@@ -123,9 +131,11 @@ function normalizar(r) {
   return out;
 }
 
-export function normalizarRespuesta(respuesta) {
+// `E` (opcional) es el estado de la partida: de ahi salen los nombres de reino que entiende esta respuesta (nombres.js). Sin el, los de siempre.
+export function normalizarRespuesta(respuesta, E) {
   try {
-    return normalizar(respuesta);
+    const nombres = nombresDeLaPartida(E);
+    return normalizar(respuesta, nombres.map(limpiar), nombres);
   } catch {
     return { ordenes: [], descartadas: [], pactoCon: null, mensaje: '', privados: [], nota: undefined, razon: '', invalida: true, motivo: 'la respuesta no se pudo leer' };
   }

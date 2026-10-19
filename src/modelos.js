@@ -1,14 +1,14 @@
 // Cliente de OpenRouter + registro de contendientes.
 //
-// IMPORTANTE: los IDs de modelo cambian cada pocos meses. Antes de grabar una
-// temporada, verifica los vigentes en https://openrouter.ai/models y actualiza
+// IMPORTANTE: los IDs de modelo cambian cada pocos meses. Antes de correr con modelos
+// verifica los vigentes en https://openrouter.ai/models y actualiza
 // este archivo. La version exacta se guarda en cada resultado para que el
 // marcador siempre diga "con que version se midio".
 //
 // Verificados el 9 de octubre de 2026 contra el catalogo de OpenRouter: cada IA es la
 // version de gama media vigente de su proveedor, y las cinco respondieron una ronda real.
 // Los parametros de llamada (temperatura, max_tokens) son iguales para todas y se
-// congelan junto con el prompt: cambiarlos a mitad de temporada tambien parte los resultados.
+// congelan junto con el prompt: cambiarlos entre partidas tambien las vuelve incomparables.
 
 import { cargarEnv } from './env.js';
 import { PALETA } from '../web/paleta.js';

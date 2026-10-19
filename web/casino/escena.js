@@ -4,11 +4,13 @@
 // (herramientas/capturar-escena.mjs).
 //
 // Uso: escena.html?archivo=a.json,b.json&partida=1&mano=1&hasta=16&formato=9x16|16x9|hoja&camara=2&vel=1&razon=1&sonido=0&voz=data/voz/x-p1/voz.json&auto=1&limpio=1
+// Para grabar con OBS: agregar grabar=1 (con auto=1). La pagina nace en negro, espera su margen, se aclara, cuenta la partida, vuelve a negro y se queda en negro (escena-config.js: FUNDIDOS);
+// data-fundido dice en que punto va (margen, entrando, contenido, saliendo, negro) y data-cierre="1" marca que ya cerro.
 
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena, armarLinea } from './lineas.js';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz } from './escena-config.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
 
@@ -16,6 +18,8 @@ export async function iniciar() {
   const params = leerParametros(location.search);
   document.body.classList.toggle('limpio', params.limpio);
   const aviso = (t) => { document.getElementById('estado').textContent = t; };
+  const negro = document.getElementById('negro'); // la cortina del modo grabacion (la clase `grabar` de <html> la deja opaca desde el primer instante)
+  if (params.grabar) document.body.dataset.fundido = 'margen'; // se anota desde ya: una captura a mitad del margen lo lee
   const marco = document.getElementById('marco');
   const selector = document.getElementById('selPartida');
   const botones = ['btnPlay', 'btnReiniciar', 'btnTiempos'].map((id) => document.getElementById(id));
@@ -29,7 +33,6 @@ export async function iniciar() {
   const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
   const mudo = crearSonido({ activo: false });
   const reproductorDeVoz = crearReproductorDeVoz();
-  const detenerEn = new URLSearchParams(location.search).get('detener'); // para capturas: avanza al instante hasta ese beat y se queda ahi
   let voz = null;
   let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
   if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { avisoVoz = ' · No pude leer la voz: se usan los tiempos mínimos.'; } }
@@ -88,36 +91,64 @@ export async function iniciar() {
   }
   const montarSeguro = (entrada) => montar(entrada).catch((e) => { console.error('escena: no se pudo armar', e); document.body.dataset.error = String(e); aviso(`No pude armar la escena: ${e.message}`); });
 
+  // Reproduce la partida montada; devuelve true si llego al final (false si ya corria, se detuvo en un beat, se abrio otra partida o fallo).
   async function reproducir() {
-    if (corriendo || !actual) return;
+    if (corriendo || !actual) return false;
     const { beats, marcas, mesas } = actual;
     const miGeneracion = generacion;
     corriendo = true;
     window.escenaTerminada = false;
     const inicio = performance.now();
+    let completa = false;
     try {
       for (const [i, beat] of beats.entries()) {
-        const rapido = detenerEn !== null && i <= Number(detenerEn);
+        const rapido = params.detener !== null && i <= params.detener;
         mesas.forEach((m) => { m.rapido = rapido; });
         const audio = entradaDeVoz(voz, beat)?.archivo;
         if (audio && params.sonido && esRutaRelativa(audio)) reproductorDeVoz.sonar(audio, params.vel);
         await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel
-        if (miGeneracion !== generacion) return; // mientras tanto se abrio otra partida
-        if (detenerEn !== null && i === Number(detenerEn)) {
+        if (miGeneracion !== generacion) return false; // mientras tanto se abrio otra partida
+        if (params.detener !== null && i === params.detener) {
           // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)
           document.getAnimations().forEach((x) => { try { x.finish(); } catch { /* una animacion sin fin no cuenta */ } });
-          window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return;
+          window.escenaDetenida = true; document.body.dataset.detenida = '1'; document.body.dataset.estado = JSON.stringify(mesas[0].estadoVisible()); corriendo = false; return false;
         }
       }
       window.escenaTerminada = true;
       document.body.dataset.duracionMs = (performance.now() - inicio).toFixed(1); // medido contra lo que dice la linea de tiempo exportada
       document.body.dataset.esperadaMs = String(marcas.at(-1).finMs);
       document.body.dataset.terminada = '1'; // la herramienta de capturas lo busca para saber que la partida llego al final
+      completa = true;
     } catch (e) {
       console.error('escena: la reproduccion se detuvo', e);
       document.body.dataset.error = String(e);
     }
     if (miGeneracion === generacion) corriendo = false;
+    return completa;
+  }
+
+  // ---- el modo de grabacion con OBS: margen en negro, fundido de entrada, la partida, fundido de salida y negro hasta que se cierre la pagina ----
+  const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  async function fundirNegro(hasta, ms) {
+    negro.animate([{ opacity: 1 - hasta }, { opacity: hasta }], { duration: ms, easing: 'ease-in-out', fill: 'forwards' });
+    await pausa(ms); // como las mesas: se espera con un temporizador, no con la promesa de la animacion (sin pantalla real, como en las capturas, esa no avanza)
+    negro.getAnimations().forEach((a) => a.cancel());
+    negro.style.opacity = String(hasta);
+  }
+  async function reproducirGrabando() {
+    const miGeneracion = generacion;
+    const fase = (f) => { document.body.dataset.fundido = f; };
+    await pausa(FUNDIDOS.margenMs); // el margen de negro: la pagina ya esta montada y los sonidos cargados
+    if (miGeneracion !== generacion) return;
+    fase('entrando');
+    await fundirNegro(0, FUNDIDOS.fundidoMs);
+    fase('contenido');
+    const termino = await reproducir();
+    if (!termino || miGeneracion !== generacion) return; // si la partida fallo a medias se deja a la vista: cerrar en negro taparia el fallo
+    fase('saliendo');
+    await fundirNegro(1, FUNDIDOS.fundidoMs);
+    fase('negro');
+    document.body.dataset.cierre = '1';
   }
 
   // La lista de partidas de todos los archivos abiertos; las de un juego sin escena salen apagadas y dicen por que.
@@ -161,10 +192,15 @@ export async function iniciar() {
     a.click();
   };
 
+  // en modo grabar la barra de estado esta oculta (limpio=1) y la cortina lo tapa todo: un error sale SOBRE el negro (con data-fundido="error"); si no, se grabaria negro sin saber por que
+  const errorEnNegro = (texto) => { negro.textContent = texto || 'No se pudo armar la escena'; document.body.dataset.fundido = 'error'; };
+
   const nombres = listaDeArchivos(params.archivo);
   if (!nombres.length) {
     const juegos = juegosConEscena().map((id) => escenaDe(id).nombre).join(', ');
-    return aviso(`Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio.`);
+    const ayuda = `Elige uno o varios JSON con «Abrir JSON» (partidas guardadas de ${juegos} en data/ o data/pruebas/), o abre la página con ?archivo=a.json,b.json. Parámetros: partida, mano, ronda o turno, hasta, formato (9x16, 16x9 o hoja), camara (0 a 9), vel, razon, sonido (0 apaga efectos y voz), voz, auto, limpio, grabar.`;
+    if (params.grabar) errorEnNegro(ayuda);
+    return aviso(ayuda);
   }
   const cargados = await Promise.all(nombres.map(async (nombre) => {
     try {
@@ -174,5 +210,14 @@ export async function iniciar() {
     } catch { return { nombre, datos: null, error: `no pude leer data/${nombre}` }; }
   }));
   await abrir(cargados, { archivo: nombres[0], numero: params.partida });
-  if (params.auto && actual) { await sfx.preparar(); reproducir(); }
+  if (params.auto && actual && params.grabar) {
+    // sin un clic el navegador puede negarse a abrir el audio (el de OBS no): si en 3 s no esta, se sigue sin sonido en vez de quedarse en negro para siempre
+    await Promise.race([sfx.preparar(), pausa(3000)]);
+    await reproducirGrabando();
+  } else if (params.auto && actual) {
+    await sfx.preparar();
+    reproducir();
+  } else if (params.grabar) {
+    errorEnNegro(document.getElementById('estado').textContent); // algo fallo antes de poder grabar
+  }
 }

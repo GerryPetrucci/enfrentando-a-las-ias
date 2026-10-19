@@ -1,0 +1,121 @@
+/* El sitio de Enfrentando a las IAs (index.html y serie.html): marca de marca/README.md (paleta Noche/Oro, Barlow Condensed + Inter locales). Primero movil: 16 px de margen y nada de scroll horizontal. */
+@font-face { font-family:'Barlow Condensed'; font-weight:700; font-style:normal; font-display:swap; src:url('fonts/barlow-condensed-700.woff2') format('woff2'); }
+@font-face { font-family:'Barlow Condensed'; font-weight:800; font-style:normal; font-display:swap; src:url('fonts/barlow-condensed-800.woff2') format('woff2'); }
+@font-face { font-family:'Inter'; font-weight:100 900; font-style:normal; font-display:swap; src:url('fonts/inter-variable.woff2') format('woff2'); }
+
+:root {
+  color-scheme: dark;
+  --noche:#101014; --panel:#17171c; --borde:#2a2a33; --hueso:#f2f0ed; --suave:#9a9aa6; --aviso:#8a8a96;
+  --oro:#e0b25c; --rojo:#d8584e; --verde:#5fa877;
+  --titulos:'Barlow Condensed','Arial Narrow',sans-serif; --texto:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+* { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body { margin:0; background:var(--noche); color:var(--hueso); font:400 16px/1.55 var(--texto); overflow-wrap:anywhere; }
+a { color:var(--oro); text-underline-offset:3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline:3px solid var(--oro); outline-offset:2px; border-radius:6px; }
+img { max-width:100%; height:auto; }
+.envoltura { max-width:960px; margin:0 auto; padding:0 16px 64px; }
+
+/* cabecera y portada */
+.cabecera { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:18px 0; border-bottom:1px solid var(--borde); }
+.marca { display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--hueso); }
+.marca img { width:54px; height:auto; }
+.marca .nombre { font:800 26px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; }
+.cabecera nav { display:flex; gap:18px; flex-wrap:wrap; font:700 15px var(--titulos); letter-spacing:.12em; text-transform:uppercase; }
+.cabecera nav a { color:var(--suave); text-decoration:none; padding:6px 0; }
+.cabecera nav a:hover { color:var(--oro); }
+.portada { padding:40px 0 28px; }
+.portada h1 { margin:0 0 12px; font:800 clamp(38px,9vw,64px)/1 var(--titulos); letter-spacing:.03em; text-transform:uppercase; }
+.portada h1 span { color:var(--oro); }
+.portada p { margin:0 0 10px; max-width:640px; color:var(--suave); font-size:18px; }
+.portada .eslogan { color:var(--hueso); font:700 20px var(--titulos); letter-spacing:.1em; text-transform:uppercase; }
+.redes { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+.redes a { padding:7px 14px; border:1px solid var(--borde); border-radius:999px; background:var(--panel); color:var(--hueso); text-decoration:none; font-size:14px; font-weight:600; }
+.redes a:hover { border-color:var(--oro); color:var(--oro); }
+
+/* secciones */
+section { margin-top:44px; }
+h2 { margin:0 0 6px; font:800 30px/1.1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; }
+h2 + .nota { margin-top:0; }
+.nota { color:var(--suave); font-size:14px; margin:6px 0 16px; }
+
+/* buscador */
+.buscador { display:grid; grid-template-columns:1fr; gap:12px; padding:16px; background:var(--panel); border:1px solid var(--borde); border-radius:16px; }
+@media (min-width:700px) { .buscador { grid-template-columns:1.2fr 1.2fr 1fr 1fr auto; align-items:end; } }
+.campo { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.campo label { font:700 13px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--suave); }
+.campo input, .campo select { width:100%; min-height:44px; padding:9px 12px; border-radius:10px; border:1px solid var(--borde); background:var(--noche); color:var(--hueso); font:inherit; }
+.boton { min-height:44px; padding:9px 18px; border-radius:10px; border:0; background:var(--oro); color:var(--noche); font:800 15px var(--titulos); letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+.boton.suave { background:transparent; border:1px solid var(--borde); color:var(--suave); }
+.contador { margin:14px 0 10px; color:var(--suave); font-size:14px; }
+
+/* tarjetas de serie */
+.tarjetas { display:grid; gap:14px; }
+.serie { padding:16px; background:var(--panel); border:1px solid var(--borde); border-radius:16px; }
+.serie header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.serie h3 { margin:0; font:800 26px/1.1 var(--titulos); letter-spacing:.05em; text-transform:uppercase; }
+.fecha { color:var(--aviso); font-size:13px; }
+.estado { display:inline-block; padding:3px 12px; border-radius:999px; font:800 13px var(--titulos); letter-spacing:.12em; text-transform:uppercase; border:2px solid var(--oro); color:var(--oro); white-space:nowrap; }
+.estado.publicada { border-color:var(--verde); color:var(--verde); }
+.jugadores { display:flex; flex-wrap:wrap; gap:8px 14px; margin:12px 0 4px; }
+.ia { display:inline-flex; align-items:center; gap:7px; font-weight:600; white-space:nowrap; }
+.disco { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--c,#888); color:#0b0b0e; font:800 14px/1 var(--titulos); flex:none; }
+.meta { margin:6px 0; color:var(--suave); font-size:14px; }
+.meta b { color:var(--hueso); font-weight:600; }
+.seed { font-family:ui-monospace,'Cascadia Mono',Consolas,monospace; color:var(--hueso); background:var(--noche); border:1px solid var(--borde); border-radius:6px; padding:1px 7px; }
+.resultado { margin:10px 0 0; }
+.enlaces { display:flex; gap:10px 16px; flex-wrap:wrap; margin-top:14px; font-weight:600; font-size:15px; }
+
+/* marcador por juego */
+.juego { margin:18px 0 28px; }
+.juego h3 { margin:0 0 4px; font:800 24px var(--titulos); letter-spacing:.05em; text-transform:uppercase; }
+.tabla-envoltura { overflow-x:auto; border:1px solid var(--borde); border-radius:12px; }
+table { width:100%; border-collapse:collapse; font-size:15px; min-width:420px; }
+th { text-align:right; padding:10px 12px; font:700 13px var(--titulos); letter-spacing:.12em; text-transform:uppercase; color:var(--suave); border-bottom:1px solid var(--borde); background:var(--panel); }
+td { padding:11px 12px; text-align:right; border-bottom:1px solid var(--borde); }
+th:first-child, td:first-child { text-align:left; }
+tr:last-child td { border-bottom:0; }
+.vacio { padding:18px; border:1px dashed var(--borde); border-radius:12px; color:var(--suave); }
+
+/* como se mide */
+.reglas { margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+.reglas li { padding:12px 16px; background:var(--panel); border:1px solid var(--borde); border-left:4px solid var(--oro); border-radius:10px; }
+.reglas li b { font-weight:700; }
+
+/* pie */
+footer.pie { margin-top:56px; padding-top:22px; border-top:1px solid var(--borde); color:var(--aviso); font-size:13px; }
+footer.pie p { margin:0 0 6px; }
+
+/* pagina de una serie */
+.migas { margin:20px 0 4px; font-size:14px; }
+.titulo-serie { margin:6px 0 4px; font:800 clamp(30px,7vw,46px)/1.05 var(--titulos); letter-spacing:.04em; text-transform:uppercase; }
+.aviso-publicacion { margin:16px 0; padding:14px 16px; border:2px solid var(--oro); border-radius:12px; background:rgba(224,178,92,.08); }
+.pestanas { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 8px; }
+.pestanas a { padding:8px 16px; border-radius:999px; border:1px solid var(--borde); background:var(--panel); color:var(--hueso); text-decoration:none; font:700 15px var(--titulos); letter-spacing:.1em; text-transform:uppercase; }
+.pestanas a[aria-current="page"] { border-color:var(--oro); color:var(--oro); }
+details { margin:10px 0; background:var(--panel); border:1px solid var(--borde); border-radius:12px; }
+summary { cursor:pointer; padding:12px 16px; font-weight:700; }
+details > :not(summary) { padding:0 16px 14px; }
+pre.prompt { margin:0 16px 16px; padding:14px; background:var(--noche); border:1px solid var(--borde); border-radius:8px; font:12.5px/1.5 ui-monospace,'Cascadia Mono',Consolas,monospace; white-space:pre-wrap; overflow-wrap:anywhere; max-height:420px; overflow:auto; }
+.turno { margin:26px 0; padding-top:6px; border-top:1px solid var(--borde); }
+.turno h3 { margin:12px 0; font:800 28px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--oro); }
+.mensaje { margin:8px 0; padding:10px 14px; background:var(--panel); border:1px solid var(--borde); border-radius:12px; }
+.mensaje .quien { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-weight:700; font-size:14px; margin-bottom:3px; }
+.mensaje.privado { border-style:dashed; }
+.mensaje.privado .quien::after { content:'en privado'; margin-left:auto; color:var(--aviso); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+.mensaje q { quotes:'«' '»'; }
+.ordenes { margin:6px 0 0; padding:0; list-style:none; color:var(--suave); font-size:14px; font-family:ui-monospace,'Cascadia Mono',Consolas,monospace; }
+.razon { margin:6px 0 0; color:var(--suave); font-style:italic; font-size:14px; }
+.jugada-ia { margin:12px 0; padding:12px 14px; border-left:4px solid var(--c,#888); background:rgba(255,255,255,.03); border-radius:0 12px 12px 0; }
+.jugada-ia h4 { margin:0 0 4px; display:flex; align-items:center; gap:8px; font-size:15px; }
+.invalida { color:var(--rojo); font-weight:600; }
+.puntos { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+.puntos div { padding:10px 14px; background:var(--panel); border:1px solid var(--borde); border-radius:12px; min-width:140px; }
+.puntos .pts { font:800 28px var(--titulos); color:var(--oro); }
+.ficha { margin:10px 0; padding:12px 14px; background:var(--panel); border:1px solid var(--borde); border-radius:12px; }
+.ficha h4 { margin:0 0 6px; font:800 20px var(--titulos); letter-spacing:.06em; text-transform:uppercase; }
+.ficha dl { margin:0; display:grid; gap:4px; font-size:14px; }
+.ficha dt { color:var(--suave); font:700 12px var(--titulos); letter-spacing:.14em; text-transform:uppercase; }
+.ficha dd { margin:0 0 4px; }
+.ficha dd.nota { color:var(--oro); font-weight:600; }

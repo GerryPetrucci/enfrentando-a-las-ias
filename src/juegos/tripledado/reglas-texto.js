@@ -1,4 +1,4 @@
-// EL PROMPT de Triple dado. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia se cierra la temporada.
+// EL PROMPT de Triple dado. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia sube la version de reglas del juego (las partidas anteriores no se comparan con las nuevas).
 // No hay regla oculta: todo lo que importa esta aqui; lo que SI esta oculto (el valor de los dados ocultos ajenos, las elecciones simultaneas y las
 // tarjetas en curso) el prompt lo dice. Los numeros salen de las constantes para no desincronizarse.
 

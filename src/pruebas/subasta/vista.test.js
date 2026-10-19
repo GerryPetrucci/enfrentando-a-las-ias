@@ -1,4 +1,4 @@
-// vista(estado, i) decide lo que sabe cada jugador. Un error aqui invalida la temporada entera (CLAUDE.md, invariante 2): el secreto de este
+// vista(estado, i) decide lo que sabe cada jugador. Un error aqui invalida todas las partidas de ese juego (CLAUDE.md, invariante 2): el secreto de este
 // juego es el banco de los demas y cuanto apostaron.
 //
 //   npm test

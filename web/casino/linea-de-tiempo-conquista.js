@@ -1,10 +1,13 @@
 // Linea de tiempo de la escena de la Guerra de territorios: convierte los registros guardados de una partida (uno por turno) en BEATS, lo que se ve y se dice en orden. La mesa
 // (mesa-conquista.js) los ejecuta; aqui no se decide ni se recalcula nada que el motor no haya registrado: las fuerzas de cada tarjeta son las de `registro.combates[].bandos`.
 //
-// Un beat: { id, mano, tipo, registro, asiento, camara, texto, lineas, minMs, reemplazo, pasos }   (mano es el numero de turno: asi se llama la unidad de un clip en todas las escenas)
-//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (0 a 3, la de mayor importancia primero) | resolucion | final (solo si la partida termino)
+// Un beat: { id, mano, tipo, registro, asiento, camara, texto, lineas, dicho?, mudas?, minMs, reemplazo, pasos }   (mano es el numero de turno: asi se llama la unidad de un clip en todas las escenas)
+//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (0 a 3, la de mayor importancia primero) | resolucion | rasgos (una ficha por IA, en el orden del
+//             ranking: sus cinco caracteristicas, evaluacion-conquista.js) | final (el ranking; los dos solo si la partida termino)
 //   camara    siempre vacia: no hay camara oculta (el publico lo ve todo); lo secreto (los mensajes privados) se RETRASA: se revela con la traicion, el pacto cumplido o el final
 //   lineas    [{ tipo: 'hecho', texto, clave }]: los hechos los escribe el codigo y son siempre verdaderos; `clave` identifica el hecho (las pruebas cuentan que ninguno se pierda ni se repita)
+//   dicho     (solo ordenes y resolucion) lo que de verdad se dice y se subtitula, elegido por narracion-conquista.js: [{ tipo: 'hecho' | 'comentario', texto, clave?, cubre?, datos? }]; un hecho de
+//             `lineas` se dice, lo cubre una frase de contexto (`cubre`) o queda en `mudas` (claves de lo que no se dice: sigue en el feed). `texto` es `dicho` unido (lo que lee la voz); sin `dicho`, `lineas`.
 //   reemplazo alguna respuesta de ese beat no se pudo leer (el reino pasa el turno: no es una decision de la IA)
 //   pasos     (vocabulario fijado en el plan, tarea 4; lo que no esta aqui no suena ni se anima):
 //     estado {dueno,tropas,fort,edif,dan,stock,armas,honor,vivo,pactos,maravilla,notas} (la foto del mapa: ordenes la lleva del INICIO del turno y resolucion del CIERRE)
@@ -13,18 +16,20 @@
 //     cartel {k,contra,perdida,honorAntes,honorDespues} · flashback {de,a,turnoDelMensaje,texto} (el ultimo privado de quien rompe hacia su victima)
 //     tarjeta {variante:'A'|'C',d,nombre,terr,fort,resultado,quedan,decisiva,motivos,diferencia,ganador,bandos,cubre}
 //     conquistas {lista:[{k,contra,r,sinLucha}]} · pacto {k,con} · cumplido {k,con,textos:[{turno,k,a,texto}]} · feed {lista:[{icono,partes,alerta}]}
-//     razones {lista:[{k,texto}]} (solo en la resolucion: salen junto a la consecuencia, nunca antes) · final {ranking,momentos,sinRevelar,ganoPorMaravilla,bioma}
+//     razones {lista:[{k,texto}]} (solo en la resolucion: salen junto a la consecuencia, nunca antes) · rasgos {k,posicion,filas:[{clave,etiqueta,frase,notable}]} · final {ranking,momentos,sinRevelar,ganoPorMaravilla,bioma}
 //
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
-import { duracion } from './linea-comun.js';
+import { duracion, objetos } from './linea-comun.js';
 import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, estadoInicial, leerMapa } from './conquista-datos.js';
+import { crearNarrador } from './narracion-conquista.js';
+import { evaluarPartida, ETIQUETAS } from './evaluacion-conquista.js';
 
 export { TURNOS_TOPE };
 export const JUGADORES_TOPE = 5;
 export const CAMARA_POR_DEFECTO = 0;
 // Tiempos minimos a velocidad 1 (sin voz): el turno tranquilo dura 2.5 s, el normal 5 s y el que tiene una batalla decisiva 7.5 s; la voz o la lectura lo alargan si hace falta.
-export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 2000, vs: 4500, resolucion: 1500, final: 8000 };
+export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 2000, vs: 4500, resolucion: 1500, rasgos: 3500, final: 8000 };
 export const MOTIVOS = { diferencia: 'diferencia menor al 10 %', tres: 'tres bandos', capital: 'cae una capital', ruptura: 'ataque tras romper un pacto' };
 const MAX_TARJETAS = 3, MAX_FLECHAS = 10, MAX_FLECHAS_QUE_NO_ATACAN = 5, MAX_SIN_REVELAR = 3, MOMENTOS_MAX = 6;
 
@@ -68,8 +73,7 @@ export function textoDeBatalla(combate, nombre, nombreDeRegion = (d) => `R${d + 
 
 const claveDeEvento = (e) => `ev:${e.tipo}:${e.t}:${e.k}:${e.con ?? e.contra ?? e.por ?? e.de ?? ''}:${e.r ?? ''}`;
 
-// Lo que se lee de un registro guardado puede venir roto (JSON editado a mano o de un motor anterior): de una lista solo valen sus objetos; de un estado, el que trae duenos y tropas.
-const objetos = (x) => (Array.isArray(x) ? x.filter((e) => e && typeof e === 'object') : []);
+// Lo que se lee de un registro guardado puede venir roto (JSON editado a mano o de un motor anterior): de una lista solo valen sus objetos (`objetos`); de un estado, el que trae duenos y tropas.
 const estadoLegible = (e) => e && typeof e === 'object' && Array.isArray(e.dueno) && Array.isArray(e.tropas);
 
 export function construirLineaDeTiempo(partida, { camara } = {}) {
@@ -84,11 +88,14 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
   const privadosVistos = [], reveladas = new Set(), pactos = [];
   const idDe = (m) => `${m.turno}:${m.k}:${m.a}:${m.i}`;
 
-  const crear = (turno, tipo, registro, { lineas = [], pasos = [], reemplazo = false, asiento = null, minMs = MIN_MS[tipo] } = {}) => {
-    const dichas = lineas.map((l) => ({ tipo: 'hecho', texto: l.texto, clave: l.clave }));
-    const texto = dichas.map((l) => l.texto).join(' ');
-    beats.push({ id: `t${turno}-${beats.length}-${tipo}`, mano: turno, tipo, registro, asiento, camara: [], texto, lineas: dichas, minMs: duracion(minMs, texto), reemplazo, pasos });
+  // `dicho` (opcional): lo que se dice si no son los hechos tal cual (el narrador lo elige); `mudas`: claves de hechos que no se dicen. `texto` es siempre lo que se dice.
+  const crear = (turno, tipo, registro, { lineas = [], dicho = null, mudas = [], pasos = [], reemplazo = false, asiento = null, minMs = MIN_MS[tipo] } = {}) => {
+    const hechos = lineas.map((l) => ({ tipo: 'hecho', texto: l.texto, clave: l.clave }));
+    const texto = (dicho ?? hechos).map((l) => l.texto).join(' ');
+    beats.push({ id: `t${turno}-${beats.length}-${tipo}`, mano: turno, tipo, registro, asiento, camara: [], texto, lineas: hechos, ...(dicho ? { dicho, mudas } : {}), minMs: duracion(minMs, texto), reemplazo, pasos });
   };
+  const narrador = crearNarrador({ nombre, reinos: mapa.k });
+  const terminada = partida.truncada !== true && Array.isArray(partida.orden) && Array.isArray(partida.puntos); // solo una partida terminada trae el beat final (y por eso su ultimo turno no lleva panorama)
 
   if (previo) {
     const ks = Array.from({ length: mapa.k }, (_, k) => nombre(k));
@@ -114,10 +121,16 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const flechas = [...ataques, ...otras];
     const ilegibles = respuestas.flatMap((x, s) => (x && x.invalida === true ? [s] : []));
     const lineasOrdenes = [
-      ...ataques.slice(0, 2).map((f) => ({ texto: `${nombre(f.k)} manda ${tropas(f.n)} de ${region(f.de)} a ${region(f.a)}.`, clave: `ord:${turno}:${f.k}:${f.de}:${f.a}` })),
-      ...privados.slice(0, 2).map((m, n) => ({ texto: `${nombre(m.k)} le escribe en privado a ${nombre(m.a)}.`, clave: `priv:${turno}:${m.k}:${m.a}:${n}` })),
-      ...ilegibles.map((s) => ({ texto: `${nombre(s)} no respondió bien: pasa el turno.`, clave: `ilegible:${turno}:${s}` })),
+      ...ataques.slice(0, 2).map((f) => ({ tipo: 'ataque', texto: `${nombre(f.k)} manda ${tropas(f.n)} de ${region(f.de)} a ${region(f.a)}.`, clave: `ord:${turno}:${f.k}:${f.de}:${f.a}`, contra: antes?.dueno?.[f.a] })), // contra: de quien era la region atacada (-1: de nadie)
+      ...privados.slice(0, 2).map((m, n) => ({ tipo: 'privado', texto: `${nombre(m.k)} le escribe en privado a ${nombre(m.a)}.`, clave: `priv:${turno}:${m.k}:${m.a}:${n}` })),
+      ...ilegibles.map((s) => ({ tipo: 'ilegible', texto: `${nombre(s)} no respondió bien: pasa el turno.`, clave: `ilegible:${turno}:${s}` })),
     ];
+    // lo que se dice de las ordenes: el narrador resume los ataques (TODOS, no solo los 10 que se dibujan), cita un mensaje publico y deja literales los privados y los avisos
+    const vivosAntes = Array.isArray(antes?.vivo) ? antes.vivo.filter((v) => v !== false).length : null; // sin la lista de reinos en pie no se sabe: el narrador no dira «todos»
+    const narrado = narrador.ordenes({
+      turno, literales: lineasOrdenes, mensajes, vivos: vivosAntes,
+      ataques: flechasTodas.filter((f) => f.ataque).map((f) => ({ k: f.k, a: f.a, contra: antes?.dueno?.[f.a] })), // a: la region atacada; contra: su dueno (-1 si no tiene)
+    });
     const feedOrdenes = [
       ...mensajes.map((m) => ({ icono: 'msg', partes: [{ k: m.k }, `: «${m.texto}»`], alerta: false })),
       ...privados.map((m) => ({ icono: 'candado', partes: [{ k: m.k }, ' le escribió en privado a ', { k: m.a }], alerta: false })),
@@ -125,7 +138,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const actividad = eventos.length > 0 || ataques.length > 0 || mensajes.length > 0 || privados.length > 0 || ilegibles.length > 0;
     const ritmo = ritmoDeTurno({ batallas: combates.length, actividad });
     crear(turno, 'ordenes', i, {
-      lineas: lineasOrdenes, reemplazo: ilegibles.length > 0, minMs: ritmo.ordenes,
+      lineas: [...lineasOrdenes, ...narrado.extras], dicho: narrado.dicho, mudas: narrado.mudas, reemplazo: ilegibles.length > 0, minMs: ritmo.ordenes,
       pasos: [
         { tipo: 'estado', ...(antes ?? {}) }, { tipo: 'flechas', lista: flechas }, { tipo: 'mensajes', lista: mensajes.map((m) => ({ k: m.k, texto: m.texto })) },
         { tipo: 'privados', pares: privados.map((m) => ({ k: m.k, a: m.a })) }, { tipo: 'feed', lista: feedOrdenes },
@@ -173,26 +186,27 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const hechos = [];
     const regionesConCombate = new Set(combates.map((c) => c.d));
     const regionesConTarjeta = new Set(mostradas.map((a) => a.c.d));
+    const empujar = (e, h) => hechos.push({ ...h, tipo: e.tipo, k: e.k, n: e.n }); // el narrador necesita saber de que tipo es cada hecho (y de quien, y cuanto)
     for (const e of eventos) {
       const clave = claveDeEvento(e);
       if (e.tipo === 'ruptura' || cubiertasDe(e)) continue;
-      if (e.tipo === 'conquista') hechos.push({ clave, texto: `${nombre(e.k)} conquista ${region(e.r)} de ${nombre(e.contra)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` conquistó ${region(e.r)}`] }, conquista: { k: e.k, contra: e.contra, r: e.r, sinLucha: !regionesConCombate.has(e.r) } });
-      else if (e.tipo === 'repelido') hechos.push({ clave, texto: `${nombre(e.k)} ataca ${region(e.r)} de ${nombre(e.contra)} y es repelido.`, feed: { icono: 'espada', partes: [{ k: e.k }, ' atacó ', { k: e.contra }, ` en ${region(e.r)} y fue repelido`] } });
+      if (e.tipo === 'conquista') empujar(e, { clave, texto: `${nombre(e.k)} conquista ${region(e.r)} de ${nombre(e.contra)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` conquistó ${region(e.r)}`] }, conquista: { k: e.k, contra: e.contra, r: e.r, sinLucha: !regionesConCombate.has(e.r) } });
+      else if (e.tipo === 'repelido') empujar(e, { clave, texto: `${nombre(e.k)} ataca ${region(e.r)} de ${nombre(e.contra)} y es repelido.`, feed: { icono: 'espada', partes: [{ k: e.k }, ' atacó ', { k: e.contra }, ` en ${region(e.r)} y fue repelido`] } });
       else if (e.tipo === 'pacto') {
         pactos.push({ a: e.k, b: e.con, turno });
-        hechos.push({ clave, texto: `${nombre(e.k)} y ${nombre(e.con)} firman un pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' firmaron un pacto'] }, pacto: { k: e.k, con: e.con } });
+        empujar(e, { clave, texto: `${nombre(e.k)} y ${nombre(e.con)} firman un pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' firmaron un pacto'] }, pacto: { k: e.k, con: e.con } });
       } else if (e.tipo === 'pacto_cumplido') {
         const ultimo = pactos.filter((p) => (p.a === e.k && p.b === e.con) || (p.a === e.con && p.b === e.k)).at(-1);
         const entre = privadosVistos.filter((m) => ((m.k === e.k && m.a === e.con) || (m.k === e.con && m.a === e.k)) && m.turno >= (ultimo?.turno ?? turno) && m.turno < turno && !reveladas.has(idDe(m))).slice(-2);
         entre.forEach((m) => reveladas.add(idDe(m)));
-        hechos.push({ clave, texto: `${nombre(e.k)} y ${nombre(e.con)} cumplieron su pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' cumplieron su pacto'] }, cumplido: { k: e.k, con: e.con, textos: entre.map((m) => ({ turno: m.turno, k: m.k, a: m.a, texto: m.texto })) } });
-      } else if (e.tipo === 'hambre') hechos.push({ clave, texto: `${nombre(e.k)} pasa hambre: -${tropas(e.n)}.`, feed: { icono: 'hambre', partes: [{ k: e.k }, ` pasa hambre: -${tropas(e.n)}`] } });
-      else if (e.tipo === 'comercio') hechos.push({ clave, texto: `${nombre(e.k)} y ${nombre(e.con)} comercian.`, feed: { icono: 'regalo', partes: [{ k: e.k }, ' y ', { k: e.con }, ' comerciaron'] } });
-      else if (e.tipo === 'caida') hechos.push({ clave, texto: `${nombre(e.k)} cae: su capital fue tomada por ${nombre(e.por)}.`, feed: { icono: 'caida', partes: [{ k: e.k }, ' cayó: su capital fue tomada por ', { k: e.por }], alerta: true } });
-      else if (e.tipo === 'maravilla') hechos.push({ clave, texto: `${nombre(e.k)} construye la Maravilla en ${region(e.r)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` construyó la Maravilla en ${region(e.r)}`] } });
-      else if (e.tipo === 'maravilla_cae') hechos.push({ clave, texto: `${nombre(e.k)} conquista la Maravilla de ${nombre(e.de)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' conquistó la Maravilla de ', { k: e.de }], alerta: true } });
-      else if (e.tipo === 'maravilla_gana') hechos.push({ clave, texto: `${nombre(e.k)} completa la Maravilla y gana la partida.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' completó la Maravilla y ganó'], alerta: true } });
-      else if (e.tipo === 'deshonra') hechos.push({ clave, texto: `${nombre(e.k)} queda deshonrado.`, feed: { icono: 'ruptura', partes: [{ k: e.k }, ' quedó deshonrado'] } });
+        empujar(e, { clave, texto: `${nombre(e.k)} y ${nombre(e.con)} cumplieron su pacto.`, feed: { icono: 'pacto', partes: [{ k: e.k }, ' y ', { k: e.con }, ' cumplieron su pacto'] }, cumplido: { k: e.k, con: e.con, textos: entre.map((m) => ({ turno: m.turno, k: m.k, a: m.a, texto: m.texto })) } });
+      } else if (e.tipo === 'hambre') empujar(e, { clave, texto: `${nombre(e.k)} pasa hambre: -${tropas(e.n)}.`, feed: { icono: 'hambre', partes: [{ k: e.k }, ` pasa hambre: -${tropas(e.n)}`] } });
+      else if (e.tipo === 'comercio') empujar(e, { clave, texto: `${nombre(e.k)} y ${nombre(e.con)} comercian.`, feed: { icono: 'regalo', partes: [{ k: e.k }, ' y ', { k: e.con }, ' comerciaron'] } });
+      else if (e.tipo === 'caida') empujar(e, { clave, texto: `${nombre(e.k)} cae: su capital fue tomada por ${nombre(e.por)}.`, feed: { icono: 'caida', partes: [{ k: e.k }, ' cayó: su capital fue tomada por ', { k: e.por }], alerta: true } });
+      else if (e.tipo === 'maravilla') empujar(e, { clave, texto: `${nombre(e.k)} construye la Maravilla en ${region(e.r)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` construyó la Maravilla en ${region(e.r)}`] } });
+      else if (e.tipo === 'maravilla_cae') empujar(e, { clave, texto: `${nombre(e.k)} conquista la Maravilla de ${nombre(e.de)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' conquistó la Maravilla de ', { k: e.de }], alerta: true } });
+      else if (e.tipo === 'maravilla_gana') empujar(e, { clave, texto: `${nombre(e.k)} completa la Maravilla y gana la partida.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' completó la Maravilla y ganó'], alerta: true } });
+      else if (e.tipo === 'deshonra') empujar(e, { clave, texto: `${nombre(e.k)} queda deshonrado.`, feed: { icono: 'ruptura', partes: [{ k: e.k }, ' quedó deshonrado'] } });
     }
     // tomas de una region libre (el motor no emite evento): las que no tienen tarjeta salen aqui, con los movimientos y el cambio de dueno
     const tomadas = new Set();
@@ -201,11 +215,14 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       if (tomadas.has(d) || regionesConTarjeta.has(d) || antes?.dueno?.[d] !== -1 || !(despues?.dueno?.[d] >= 0)) continue;
       tomadas.add(d);
       const k = despues.dueno[d];
-      hechos.push({ clave: `toma:${turno}:${d}`, texto: `${nombre(k)} toma ${region(d)}.`, feed: { icono: 'bandera', partes: [{ k }, ` tomó ${region(d)}`] }, conquista: { k, contra: -1, r: d, sinLucha: !regionesConCombate.has(d) } });
+      hechos.push({ tipo: 'toma', k, clave: `toma:${turno}:${d}`, texto: `${nombre(k)} toma ${region(d)}.`, feed: { icono: 'bandera', partes: [{ k }, ` tomó ${region(d)}`] }, conquista: { k, contra: -1, r: d, sinLucha: !regionesConCombate.has(d) } });
     }
     const razones = respuestas.flatMap((x, s) => (x && typeof x.razon === 'string' && x.razon.trim() ? [{ k: s, texto: x.razon.trim() }] : []));
+    // lo que se dice de la resolucion: las tomas sin lucha, el hambre repetida y los comercios se cuentan; lo demas (pactos, caidas, conquistas, Maravilla...) tal cual; y cada 5 turnos un panorama
+    // `despues` solo si el registro trae un estado legible (si no, `despues` es el del turno anterior: el narrador no puede dar por cierto que el mapa no cambio); `ultimo`: el turno que cierra una partida terminada (viene el final)
+    const narradoResolucion = narrador.resolucion({ turno, hechos, combates: combates.length, despues: estadoLegible(r.estado) ? r.estado : null, ultimo: terminada && i === rondas.length - 1 });
     crear(turno, 'resolucion', i, {
-      lineas: hechos.map((h) => ({ texto: h.texto, clave: h.clave })), minMs: ritmo.resolucion,
+      lineas: hechos.map((h) => ({ texto: h.texto, clave: h.clave })), dicho: narradoResolucion.dicho, mudas: narradoResolucion.mudas, minMs: ritmo.resolucion,
       pasos: [
         { tipo: 'conquistas', lista: hechos.filter((h) => h.conquista).map((h) => h.conquista) },
         ...hechos.filter((h) => h.pacto).map((h) => ({ tipo: 'pacto', ...h.pacto })),
@@ -220,7 +237,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
 
   // ---- final: solo si la partida termino (una partida cortada se reproduce hasta donde llego) ----
   const ultimo = rondas.at(-1);
-  if (partida.truncada !== true && Array.isArray(partida.orden) && Array.isArray(partida.puntos)) {
+  if (terminada) {
     const metricas = partida.metricas ?? [];
     const ranking = partida.orden.map((k, pos) => ({
       k, posicion: pos + 1, puntos: partida.puntos[k] ?? 0, regiones: metricas[k]?.regiones ?? 0, honor: metricas[k]?.honor ?? null, cayoEn: metricas[k]?.cayoEn ?? null,
@@ -239,6 +256,18 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     }
     const momentos = candidatos.sort((a, b) => b.peso - a.peso || a.turno - b.turno).slice(0, MOMENTOS_MAX).sort((a, b) => a.turno - b.turno || b.peso - a.peso).map(({ turno, texto }) => ({ turno, texto }));
     const sinRevelar = privadosVistos.filter((m) => !reveladas.has(idDe(m))).slice(-MAX_SIN_REVELAR).map((m) => ({ turno: m.turno, k: m.k, a: m.a, texto: m.texto }));
+    // Antes del ranking, una ficha por IA (en el orden del ranking) con sus cinco caracteristicas: la voz dice lo mas notable y la pantalla las muestra todas. La ultima resolucion ya dijo quien gano.
+    const evaluacion = evaluarPartida(partida).jugadores;
+    partida.orden.forEach((k, pos) => {
+      const e = evaluacion[k];
+      if (!e) return;
+      const texto = `${nombre(k)}: ${e.destacadas.join('; ')}.`, clave = `rasgos:${k}`;
+      crear(ultimo.turno ?? rondas.length, 'rasgos', rondas.length - 1, {
+        asiento: k, lineas: [{ texto, clave }],
+        dicho: [...(pos === 0 ? [{ tipo: 'comentario', texto: 'Así jugó cada una.' }] : []), { tipo: 'comentario', texto, cubre: [clave] }], mudas: [],
+        pasos: [{ tipo: 'rasgos', k, posicion: pos + 1, filas: Object.keys(ETIQUETAS).map((c) => ({ clave: c, etiqueta: ETIQUETAS[c], frase: e.caracteristicas[c].frase, notable: e.caracteristicas[c].notable })) }],
+      });
+    });
     const ganador = partida.ganador ?? partida.orden[0];
     const lineas = [{ texto: `${nombre(ganador)} gana la partida${partida.ganoPorMaravilla === true ? ' por la Maravilla' : ''}.`, clave: 'final:ganador' }];
     crear(ultimo.turno ?? rondas.length, 'final', rondas.length - 1, {
