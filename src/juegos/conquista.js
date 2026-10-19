@@ -7,6 +7,7 @@ import { aplicarTurno } from './conquista/turno/index.js';
 import { vistaTexto } from './conquista/vista.js';
 import { resultadoDe } from './conquista/resultado.js';
 import { nombresDeReinos } from './conquista/nombres.js';
+import { evaluarSerie } from './conquista/evaluacion.js';
 import { REGLAS, FORMATO } from './conquista/reglas-texto.js';
 import { TURNOS } from './conquista/constantes.js';
 import { BOTS, INFO_BOTS } from './conquista-bots.js';
@@ -50,6 +51,7 @@ export default {
     return registro;
   },
   resultado: resultadoDe,
+  evaluar: evaluarSerie, // al final de la serie: caracteristicas de cada IA y comentario (correr.js lo guarda y lo imprime)
   // a quien hay que preguntarle en el turno siguiente: solo a los reinos vivos (un reino caido no cuesta llamadas)
   activos: (E) => E.reinos.map((r) => r.vivo),
 };
