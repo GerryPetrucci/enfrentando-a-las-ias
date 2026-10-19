@@ -54,7 +54,7 @@ test('lo publico lo ve todo el mundo: mensajes, resumen y estado de la Maravilla
     const v = vistaTexto(E, i);
     assert.ok(v.includes('Ambar: "Paz a todos"'));
     assert.ok(v.includes('Sucedio el turno anterior: Azur conquisto R05 de Ambar.'));
-    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (faltan 3 turnos)`));
+    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (faltan 6 turnos)`)); // cuenta de 8 turnos, lleva 2
   }
   assert.ok(vistaTexto(E, 0).includes('Ambar te regalo 3 Madera'));
   assert.ok(!vistaTexto(E, 2).includes('te regalo'));
@@ -82,9 +82,11 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 
 // Huellas calculadas el 17 de octubre de 2026 con el motor de ANTES de los datos de la escena (bandos de cada combate, evento pacto_cumplido): lo que ven las IAs es EL CONTRATO y esos
 // cambios de datos no pueden mover ni un caracter. Cada huella cubre la vista de cada reino vivo en cada turno de una partida completa de bots.
+// 18 de octubre de 2026: la huella 2 cambio a proposito con la Maravilla nueva (costo x1.5, 8 turnos): en esa partida un bot la construye y la vista dice «faltan N turnos» con otra cuenta; con los valores
+// viejos puestos a mano las tres huellas seguian igual, asi que no cambio nada mas de lo que ven las IAs.
 const HUELLAS_DE_LAS_VISTAS = {
   1: '53a109e7cc9331e97936615ae0125ecc66ded444',
-  2: '61067a9fe199e12e264efcc4c3c506cde0b6d421',
+  2: '191f5f38bce7721ac8c287d0ec8defd9d98ccec6',
   3: '59cba0a43a22a2b3a200b453ae063968feb626fa',
 };
 

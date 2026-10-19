@@ -1,5 +1,9 @@
-// EL CONTRATO de este juego: el mismo texto para todos los modelos. Sin acentos. Cambiarlo cierra el torneo
-// de la Guerra de territorios (sube `versionReglas` en conquista.js).
+// EL CONTRATO de este juego: el mismo texto para todos los modelos. Sin acentos. Si cambia, sube `versionReglas` en conquista.js:
+// las partidas jugadas con otro texto no se comparan con las nuevas. La Maravilla lee sus numeros de constantes.js para no desincronizarse.
+
+import { MARAVILLA } from './constantes.js';
+
+const COSTO_MARAVILLA = Object.entries(MARAVILLA.costo).map(([recurso, n]) => `${n} ${recurso}`).join(' + ');
 
 export const REGLAS = `Objetivo: ser el unico reino triunfante.
 Mapa de regiones (R01, R02, ...) con terreno (ll = llanura, bo = bosque, mo = montana) y a veces un recurso. De 2 a 5 reinos, cada uno con una capital. 30 turnos; todos actuan a la vez.
@@ -15,7 +19,7 @@ ORDENES (maximo 12 por turno):
 - regalar RECURSO CANTIDAD REINO: das recursos a otro reino.
 - ofrecer REINO RECURSO CANT RECURSO CANT: das lo primero por lo segundo (maximo 10 por lado, 2 por turno); el otro la ve el turno siguiente y la acepta con: aceptar REINO. Todo o nada.
 - construir REGION EDIFICIO: granja (4 Madera: +2 Comida), mercado (3 Madera + 3 Roca: +2 Oro), cuartel (4 Madera + 3 Roca: reclutar ahi cuesta la mitad). Uno por region, maximo 3 por tipo; si conquistan la region, pasa al conquistador a mitad de efecto.
-- construir REGION maravilla (solo en tu capital; solo existe una): 10 Roca + 8 Madera + 6 Hierro + 6 Oro. Quien la conserve 5 turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.
+- construir REGION maravilla (solo en tu capital; solo existe una): ${COSTO_MARAVILLA}. Quien la conserve ${MARAVILLA.turnos} turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.
 - romper REINO: rompes tu pacto y puedes atacarlo este turno.
 
 COMBATE: gana el lado con mas fuerza y conserva tropas x (1 - fuerza del segundo / la suya); los demas se eliminan. Ataque = tropas x armas. Defensa = tropas x (1 + 0.5 por nivel de fortaleza), +25% en bosque o +50% en montana. Si pierdes tu capital, caes.

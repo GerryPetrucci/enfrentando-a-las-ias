@@ -37,7 +37,7 @@ function capturar(ctx, d, nuevo, n, viejo, huboCombate) {
   heredarEdificio(ctx, d, nuevo);
   if (viejo < 0) return;
   ctx.evt({ tipo: 'conquista', k: nuevo, contra: viejo, r: d });
-  if (E.maravilla && E.maravilla.r === d) { // la Maravilla pasa intacta y su cuenta de 5 turnos empieza de cero
+  if (E.maravilla && E.maravilla.r === d) { // la Maravilla pasa intacta y su cuenta de turnos empieza de cero
     E.maravilla.k = nuevo; E.maravilla.n = 0; E.maravilla.t0 = ctx.t;
     ctx.evt({ tipo: 'maravilla_cae', k: nuevo, de: viejo });
   }

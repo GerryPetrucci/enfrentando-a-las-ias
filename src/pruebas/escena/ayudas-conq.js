@@ -17,7 +17,7 @@ const MEZCLA_B = ['agresivo', 'agresivo', 'agresivo', 'azar', 'azar'];
 export const ESCENARIOS = [
   { id: 'guerra-18', seed: 18, bots: MEZCLA_A, cubre: ['empate', 'dos bandos con defensor', 'repelido', 'decisiva por diferencia', 'caida de capital', 'pacto formado', 'pacto cumplido'] },
   { id: 'guerra-61', seed: 61, bots: MEZCLA_B, cubre: ['dos bandos con defensor', 'repelido', 'maximo 4 combates en un turno', 'tres bandos', 'caida de capital'] },
-  { id: 'guerra-94', seed: 94, bots: MEZCLA_A, cubre: ['dos bandos con defensor', 'maravilla', 'pacto formado', 'ruptura con privado previo'] },
+  { id: 'guerra-131', seed: 131, bots: MEZCLA_A, cubre: ['dos bandos con defensor', 'maravilla', 'pacto formado', 'ruptura con privado previo'] },
 ];
 
 const agentes = (claves) => claves.map((c) => resolverAgente(c, conquista));

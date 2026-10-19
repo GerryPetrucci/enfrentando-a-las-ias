@@ -152,14 +152,21 @@ test('construir edificios: uno por region, maximo 3 de cada tipo, con su costo',
   assert.equal(E.stats[0].edificios, 3);
 });
 
-test('maravilla: solo en la propia capital, una sola, 10 Roca + 8 Madera + 6 Hierro + 6 Oro', () => {
+test('maravilla: solo en la propia capital, una sola, 15 Roca + 12 Madera + 9 Hierro + 9 Oro', () => {
   const E = nuevoEstado(4), c = capital(E, 0), otra = regionesDe(E, 0).find((r) => r !== c);
   vaciar(E, 0, { Roca: 30, Madera: 30, Hierro: 30, Oro: 30 });
   const ctx = correr(E, { 0: { ordenes: [`construir ${R(otra)} maravilla`, `construir ${R(c)} maravilla`, `construir ${R(c)} maravilla`] } });
   assert.deepEqual(E.maravilla, { r: c, k: 0, n: 0, t0: 1 });
   assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['la maravilla solo se construye en tu capital', 'ya existe una maravilla']);
-  assert.deepEqual(E.reinos[0].stock, { Comida: 0, Madera: 22, Roca: 20, Hierro: 24, Oro: 24, Caballos: 0 });
+  assert.deepEqual(E.reinos[0].stock, { Comida: 0, Madera: 18, Roca: 15, Hierro: 21, Oro: 21, Caballos: 0 });
   assert.ok(ctx.eventos.some((e) => e.tipo === 'maravilla' && e.k === 0));
+});
+
+test('maravilla: los valores de la regla (costo x1.5 y cuenta de 8 turnos, decididos el 18 de octubre de 2026) y el prompt los dicen igual', async () => {
+  const { MARAVILLA } = await import('../../juegos/conquista/constantes.js');
+  const { REGLAS } = await import('../../juegos/conquista/reglas-texto.js');
+  assert.deepEqual(MARAVILLA, { costo: { Roca: 15, Madera: 12, Hierro: 9, Oro: 9 }, turnos: 8 });
+  assert.ok(REGLAS.includes('15 Roca + 12 Madera + 9 Hierro + 9 Oro. Quien la conserve 8 turnos seguidos gana.'), 'el prompt dice el costo y la cuenta');
 });
 
 test('regalar descuenta ya y entrega al final de la fase; a un reino que no existe se descarta', () => {
