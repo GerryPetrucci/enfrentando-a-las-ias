@@ -82,7 +82,7 @@ Los resultados con modelos gratis van a data/pruebas/ (no se versionan ni entran
 
 Todos los modelos se llaman con razonamiento **medio** (`reasoning.effort = "medium"`) o, si no tiene niveles, con su valor por defecto; **nunca `high` ni `xhigh`** (cuesta mucho mas y no cambia lo que se mide). Igual para todas
 las IAs y congelado junto con el prompt y los demas parametros (`src/parametros.js`; cada contendiente declara `razonamiento` en `src/modelos.js`). `max_tokens` 4000 (decidido el 10 de octubre de 2026: con 2000 GPT Luna
-se cortaba); si aun asi se cortan, se mide y se decide con el usuario, sin subir el razonamiento. Correr `node herramientas/verificar-modelos.mjs` antes de cada temporada y antes de gastar. Detalle y mediciones: `docs/decisiones-detalle.md`.
+se cortaba); si aun asi se cortan, se mide y se decide con el usuario, sin subir el razonamiento. Correr `node herramientas/verificar-modelos.mjs` antes de cada corrida con modelos y antes de gastar. Detalle y mediciones: `docs/decisiones-detalle.md`.
 
 ### Juegos y escenas (resumen; el detalle esta en `docs/decisiones-detalle.md`: leerlo solo al tocar ese juego)
 
@@ -101,7 +101,7 @@ Todos respetan el presupuesto de llamadas (abajo). **Con modelos reales solo se 
 | 8 Duda y apuesta | 4 | unico por turnos; anunciar, aceptar o dudar, una sola eliminacion | Engaño y deducción | hasta 96 |
 
 Reglas que valen para varios juegos:
-- **Puntos del marcador** de los juegos de eliminacion: pieza 4, sobrevive 2 (a salvo 3 y en medio 2 en El numero solitario), eliminado 0. **Sin torneo general**: cada juego se evalua por si mismo.
+- **Puntos del marcador** de los juegos de eliminacion: pieza 4, sobrevive 2 (a salvo 3 y en medio 2 en El numero solitario), eliminado 0. **Sin torneo general ni temporadas**: cada juego es independiente y se evalua por si mismo (al final de cada juego, caracteristicas de todos los modelos).
 - **Solo en vivo:** los juegos 4 a 8 (por lote seria impractico; Duda y apuesta niega `--lote`). **La Fuga** admite lote (9 turnos).
 - **La Fuga:** una partida suelta nunca se publica, siempre una **serie con asientos rotados** (mismas situaciones y dados). Vocabulario suave en el prompt, la vista y la narracion (nunca delatar, abandonar ni traicion; los identificadores internos no cambian).
 - **Prioridad de desarrollo:** juegos de concurso de eliminacion con nombres y personajes propios y las mismas reglas, nunca el nombre, el arte ni la estetica de ningun programa (catalogo en `privado/planes/plan-juegos-de-concurso.md`). La oleada 1 esta completa; la oleada 2 se elige de ese catalogo.
@@ -151,12 +151,12 @@ pago sube a ~$0.44 por partida con la mezcla media (dentro del tope mensual de ~
 ## Invariantes de diseno (romper esto rompe el proyecto)
 
 1. **`src/prompt.js` es EL CONTRATO.** Todas las IAs reciben texto identico. Lo
-   unico que cambia es el ID del modelo. Esta versionado: **si cambia el prompt,
-   se cierra la temporada y empieza una nueva.** No se comparan resultados de
-   prompts distintos.
+   unico que cambia es el ID del modelo (y el nombre de reino de cada asiento en Guerra de territorios, que sale del modelo: `nombres.js`). Esta versionado:
+   **si cambia el prompt de un juego, sube la version de sus reglas y las partidas anteriores no se comparan con las nuevas.**
+   Cada juego es independiente: no hay temporadas ni torneo general.
 2. **`vista(estado, i)` nunca filtra informacion secreta del rival.** Es el unico
-   lugar donde se decide que sabe cada jugador. Un bug ahi invalida la temporada
-   entera.
+   lugar donde se decide que sabe cada jugador. Un bug ahi invalida todas las
+   partidas jugadas con ese juego.
 3. **`normalizar()` nunca lanza error.** Recibe `null` o basura y siempre
    devuelve una jugada legal marcada `invalida: true`. Un modelo caido no tumba
    una grabacion.
@@ -209,7 +209,7 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 - **Regla editorial publica:** las jugadas no se retocan; lo que se ve es lo que
   registro el motor (esta prometido en la descripcion del canal de YouTube).
 - **Idioma:** espanol primero (el prompt, el nombre y los mensajes de las IAs ya lo
-  estan; cambiar el prompt cierra la temporada). El sitio sera multilenguaje despues;
+  estan; cambiar el prompt sube la version de reglas del juego). El sitio sera multilenguaje despues;
   los datos de las partidas ya son neutros (C/T).
 - **Redes:** TikTok + YouTube Shorts + Instagram Reels desde el dia 1 (mismo video
   1080x1920), el sitio como base. Facebook Reels y X despues.
@@ -238,7 +238,8 @@ herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentan
 - [ ] Piloto con modelos reales (en curso desde el 18 de octubre de 2026, con orden expresa y tope): grabar el episodio 1 y, si queda bien, subirlo; los IDs de modelo se verifican con `node herramientas/verificar-modelos.mjs` antes de cada corrida (cambian cada pocos meses; ultima vez 18 de octubre, todo cuadra).
 - [ ] Kit de marca hecho (`marca/`), cuentas de las 4 redes creadas (usuarios en `marca/perfiles.md`) y estrategia de publicacion escrita (`privado/contenido/`); falta dominio propio, sitio multilenguaje, imagen para links (`marca/exportados/og-1200x630.png`) y la tarjeta de marcador (resumen de una serie). Antes de la semana 1: correr series reales (AL FINAL, con orden expresa) y verificar una vez las pantallas de cada red (lista en la guia).
 - [ ] Juego 2 Guerra de territorios: mapa en la partida con 4 biomas y escena **hechos el 17 de octubre de 2026** (detalle en `docs/decisiones-detalle.md`); la humo con modelos gratis ya se corrió (15-40 % de respuestas con JSON: no sirven); falta solo la prueba con modelos reales (AL FINAL).
-- [ ] Analizar la Maravilla de Guerra de territorios (pedido del usuario el 18 de octubre de 2026, despues de grabar el piloto): las dos partidas con modelos reales terminaron por Maravilla (turnos 10 y 16 de 30) y no quiere que acaben asi muy seguido. Ojo: cambiar las reglas cambia el prompt (cierra la temporada) y las partidas del piloto quedarian en la anterior; decidirlo antes de publicar.
+- [ ] Guerra de territorios, serie nueva con las reglas 1.1.0 (hechas el 18 de octubre de 2026: Maravilla con costo x1.5 y cuenta de 8 turnos, porque con modelos reales decidio 2 de 2 partidas; y el nombre de reino de cada modelo del color de su IA): correr 2 partidas con modelos reales (con orden expresa y tope), medir si la Maravilla decide como maximo 1 de cada 4 y ajustar, grabar y publicar esa. Las dos partidas anteriores (reglas 1.0.0, `data/2026-10-18-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json`) quedan como ensayo y no se publican.
+- [ ] Evaluacion al final de Guerra de territorios (pedida el 18 de octubre de 2026): caracteristicas por IA al final de cada partida, como los demas juegos (`evaluacion.js`), y que la escena las muestre y la voz las diga al final del video; propuesta de caracteristicas pendiente de aprobar. Las escenas de los otros juegos tampoco muestran hoy su evaluacion.
 - [ ] Quinto bioma «cordillera» (apuntado el 17 de octubre de 2026): quedó fuera porque con el tinte de los reinos no se distingue del continente; rediseñar con montañas más anchas o un tinte más ligero.
 - [ ] Modo "bot escrito" para correr miles de partidas.
 - El detalle del estado de cada juego y las ideas de formato en la banca estan en `docs/decisiones-detalle.md`.
@@ -250,7 +251,7 @@ herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentan
   sitio, nombres de categoria, marca/) **llevan acentos**, tambien en mayusculas
   (NEGOCIACIÓN, ROMPIÓ): lo exige la ortografia y se ve bien en pantalla.
 - **No acentuar el prompt** (`reglas` y `formatoRespuesta` de cada juego, `src/prompt.js`):
-  es EL CONTRATO. Tocarlo cierra la temporada.
+  es EL CONTRATO. Tocarlo sube la version de reglas del juego.
 - El nombre de la categoria se guarda dentro de cada partida y el marcador agrupa por
   el: cambiarlo despues de tener episodios reales parte el historial en dos.
 - ES modules, Node 20+, **cero dependencias**. Si algo necesita un paquete,

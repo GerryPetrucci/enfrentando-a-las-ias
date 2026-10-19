@@ -1,5 +1,5 @@
-// EL PROMPT de El numero solitario. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia se cierra la
-// temporada. No hay regla oculta: todo lo que importa esta aqui. Los numeros salen de las constantes para no desincronizarse.
+// EL PROMPT de El numero solitario. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia sube la version de reglas del juego
+// (las partidas anteriores no se comparan con las nuevas). No hay regla oculta: todo lo que importa esta aqui. Los numeros salen de las constantes para no desincronizarse.
 
 import { JUGADORES, RONDAS, RONDAS_POR_CICLO, CARTAS, CORTES, FINALISTAS, PUESTO_PUNTOS } from './constantes.js';
 

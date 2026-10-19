@@ -11,7 +11,7 @@ modelo no lo permite, con su valor por defecto. **Nunca el maximo** (`high`, `xh
 caros (el razonamiento oculto se cobra como salida) y no cambia lo que se mide. Es igual para todas las IAs y se congela
 junto con el prompt y los demas parametros de llamada. **Estado: implementado** en `src/parametros.js` (`PARAMETROS` y `cuerpoDeLlamada`). Cada contendiente declara en `src/modelos.js`
 su campo `razonamiento` (`"medium"` si el modelo admite ese nivel, `null` si no tiene niveles) y
-`node herramientas/verificar-modelos.mjs` lo compara con el catalogo de OpenRouter: correrlo antes de cada temporada y antes
+`node herramientas/verificar-modelos.mjs` lo compara con el catalogo de OpenRouter: correrlo antes de cada corrida con modelos y antes
 de gastar. Claude Sonnet 5.5 razona en `high` por defecto, por eso se le manda `medium` explicito. Segun el catalogo del 9 de
 octubre de 2026, Claude (Sonnet y Haiku 5.5) y GPT-6 ignoran `temperature`: el 0.7 se manda igual a todos, pero con ellos no
 tiene efecto. Lo que se le mando a cada modelo queda en `parametros` de cada resultado. Medido el 10 de octubre de 2026: con
@@ -162,6 +162,20 @@ Con voz: partida 1 = 5:25 (partes de 2:44 y 2:41, caben en Shorts, Reels y TikTo
 Ambar, Violeta, Rosa, Marfil: asiento 0 a 4): el marcador de la escena los muestra junto al nombre del modelo (`web/casino/reinos-conquista.js`; en 16:9 la columna de recursos empieza en 240 px). Revision de contenido:
 325 textos de las IAs escaneados con una lista de palabras ofensivas sin resultados y leidos a mano (el mas duro: «No te muevas o serás el siguiente», de DeepSeek en la partida 2).
 
+### Guerra de territorios: reglas 1.1.0 (decidido el 18 de octubre de 2026, tras la primera corrida real)
+
+**Maravilla: costo x1.5 y cuenta de 8 turnos** (antes 10 Roca + 8 Madera + 6 Hierro + 6 Oro y 5 turnos; ahora 15 + 12 + 9 + 9). Con modelos reales decidio 2 de 2 partidas: GPT la pago hacia el turno 4 (son 30 recursos y
+la produccion normal mas algun trueque alcanzan) y 5 turnos no dan tiempo a una coalicion (en la partida 1 DeepSeek y Claude reaccionaron con 3 turnos por delante y no llegaron; en la 2 Gemini capturo la capital en el
+turno 11). Con bots no se puede calibrar: con el motor actual solo la construyen 5-8 % de las partidas y ninguna combinacion de costo y duracion cambia nada. La unica forma de medirlo es una serie de modelos reales
+(objetivo: que decida como maximo 1 de cada 4 partidas; si no, se ajusta). `versionReglas` pasa a `conquista-1.1.0` y el texto del prompt lee los numeros de `constantes.js`. Cada juego es independiente: no hay temporadas,
+solo la version de reglas de cada juego (las partidas jugadas con otra version no se comparan con las nuevas).
+
+**Nombre de reino por modelo** (`src/juegos/conquista/nombres.js`): los modelos ven su reino con un nombre de color y lo usan en sus mensajes («Azur propone paz a Violeta»), pero antes el nombre dependia del asiento y
+rotaba: GPT era blanco y se llamaba Ambar. Ahora Claude = Ambar (naranja), GPT = Marfil (blanco), DeepSeek = Azur (azul), Llama = Rosa (magenta) y Gemini = Iris (multicolor; nombre nuevo, decidido por el asistente y facil de
+cambiar); los modelos de practica comparten el de su familia y los demas jugadores (bots, repetidos) toman los que sobran en el orden de siempre, asi que una partida solo de bots queda igual que antes. La arena le pide
+al juego los nombres segun quien se sienta (`opcionesDeAgentes`), el estado los guarda, la lectura de ordenes (`normalizar(respuesta, estado)`), la vista, el resumen del turno y los bots los usan, la partida guarda `reinos` y
+el marcador de la escena lo muestra junto al nombre del modelo, con acento (`web/casino/reinos-conquista.js`); una partida vieja sin `reinos` cae a los nombres por asiento.
+
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
 Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rondas con la estructura de los concursos de eliminacion
@@ -238,7 +252,7 @@ Pendiente:
       proveedor; DeepSeek V3.2 porque las V4 razonan sin limite y se cortan). Parametros
       de llamada iguales para todas (temperatura 0.7, max_tokens 4000 desde el 10 de octubre
       de 2026; antes 2000) y congelados junto con el prompt desde el 22 de octubre. Los IDs cambian cada pocos meses:
-      volver a verificarlos en <https://openrouter.ai/models> antes de cada temporada.
+      volver a verificarlos en <https://openrouter.ai/models> antes de cada corrida con modelos.
 - [ ] Primer duelo real con modelos y grabar el episodio 1
 - [x] Serie completa por lote (paso 6 de la tarea 8 del plan del lote): **saltada por el usuario el 11 de octubre de 2026**; los
       ensayos de 1 turno ya se hicieron (10 y 11 de octubre). Costo de una partida entera: no confirmado

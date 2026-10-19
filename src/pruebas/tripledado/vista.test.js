@@ -1,4 +1,4 @@
-// vista(estado, i) decide lo que sabe cada jugador. Un error aqui invalida la temporada entera (CLAUDE.md, invariante 2). Lo secreto de este juego:
+// vista(estado, i) decide lo que sabe cada jugador. Un error aqui invalida todas las partidas de ese juego (CLAUDE.md, invariante 2). Lo secreto de este juego:
 // los dados de la ronda ANTES de lanzarlos, el valor de los ocultos ajenos que no se han usado, las tarjetas de la ronda en curso y lo que los demas
 // eligen a la vez en el enfrentamiento en curso.
 //

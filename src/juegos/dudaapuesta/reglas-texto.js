@@ -1,4 +1,4 @@
-// EL PROMPT de Duda y apuesta. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia se cierra la temporada.
+// EL PROMPT de Duda y apuesta. Es parte del contrato: sin acentos ni enies, igual para todas las IAs, y si cambia sube la version de reglas del juego (las partidas anteriores no se comparan con las nuevas).
 // No hay regla oculta: todo lo que importa esta aqui; lo que SI esta oculto (las cartas de los demas hasta que se revelan) el prompt lo dice. No da estrategia.
 // Vocabulario suave (decision del 11 de octubre): se habla de "anuncios" y de "dudar", no de mentir. Los numeros salen de las constantes para no desincronizarse.
 

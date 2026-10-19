@@ -11,9 +11,9 @@ Todas las IAs reciben exactamente el mismo texto, generado por
 [`src/prompt.js`](../src/prompt.js). Lo unico que cambia entre una y otra es el
 ID del modelo que se manda a OpenRouter.
 
-El prompt esta versionado (`VERSION_PROMPT`). **Si el prompt cambia, se cierra la
-temporada y empieza una nueva.** No se comparan resultados obtenidos con prompts
-distintos, aunque el cambio parezca menor.
+El prompt esta versionado (`VERSION_PROMPT`). **Si el prompt de un juego cambia, sube la
+version de sus reglas.** No se comparan resultados obtenidos con prompts
+distintos, aunque el cambio parezca menor. Cada juego es independiente: no hay temporadas.
 
 ## 2. Posiciones alternadas
 
@@ -53,7 +53,7 @@ dice no hacer.
 Cada partida guarda el ID exacto del modelo (`anthropic/claude-sonnet-5.5`, etc.)
 y la fecha. Los modelos se actualizan cada pocos meses, asi que **el marcador es
 una foto del momento, no un veredicto permanente.** Eso no es una debilidad del
-formato: es el motivo por el que puedes hacer temporadas.
+formato: es el motivo por el que puedes volver a medir cuando salgan modelos nuevos.
 
 Los parametros de llamada (temperatura 0.7, 4000 tokens maximos y razonamiento en nivel medio, o el valor por defecto del
 modelo si no tiene niveles) son iguales para todas las IAs y se congelan junto con el prompt. Lo que se le mando a cada

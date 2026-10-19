@@ -1,4 +1,4 @@
-// vista(estado, i) decide lo que sabe cada prisionero. Un error aqui invalida la temporada entera (CLAUDE.md, invariante 2).
+// vista(estado, i) decide lo que sabe cada prisionero. Un error aqui invalida todas las partidas de ese juego (CLAUDE.md, invariante 2).
 //
 //   npm test
 

@@ -57,7 +57,7 @@ node herramientas/verificar-modelos.mjs                  # compara src/modelos.j
 
 Una sola llave de OpenRouter da acceso a todos los modelos. Los IDs viven en
 [`src/modelos.js`](src/modelos.js) y **hay que verificarlos en
-<https://openrouter.ai/models> antes de grabar una temporada**: cambian cada
+<https://openrouter.ai/models> antes de correr con modelos**: cambian cada
 pocos meses.
 
 Contendientes incluidos: `claude`, `gpt`, `gemini`, `llama`, `deepseek`. De practica, baratos y por lote: `haiku`, `luna`, `flash-lite`.
