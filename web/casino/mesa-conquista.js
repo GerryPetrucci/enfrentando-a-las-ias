@@ -11,6 +11,7 @@ import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, mult
 import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, colorSolido } from './mapa-dibujo.js';
 import { f2, tropas } from './linea-de-tiempo-conquista.js';
 import { nombreDeReino } from './reinos-conquista.js';
+import { FEED, msVisibleDelFeed } from './feed-conquista.js';
 import { estiloJugador, esc } from './kit.js';
 import { colorDe, franjasDe } from '../paleta.js';
 import { MesaBase, el, poner } from './mesa-base.js';
@@ -125,6 +126,25 @@ export class Mesa extends MesaBase {
     }
     while (this.feedEl.children.length > MAX_FEED) this.feedEl.firstElementChild.remove();
     [...this.feedEl.children].forEach((n, i, todos) => { n.style.opacity = Math.max(0.55, 1 - (todos.length - 1 - i) * 0.07); });
+    if (lista?.length) this.mostrarFeed(lista.length);
+  }
+
+  // El feed no se queda tapando el mapa: aparece con lo nuevo, se apaga solo a los pocos segundos (feed-conquista.js) y con lo siguiente vuelve a entrar sin lo viejo. En las capturas (`rapido`) no se apaga.
+  mostrarFeed(nuevos) {
+    clearTimeout(this.feedTimer);
+    const f = this.feedEl;
+    if (f.dataset.feed !== 'visible') { f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 1; this.anim(f, [{ opacity: 0 }, { opacity: 1 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-out' }); }
+    f.dataset.feed = 'visible';
+    if (!this.rapido) this.feedTimer = setTimeout(() => this.apagarFeed(), msVisibleDelFeed(nuevos) / this.vel);
+  }
+  apagarFeed() {
+    const f = this.feedEl;
+    f.dataset.feed = 'oculto';
+    const a = this.anim(f, [{ opacity: 1 }, { opacity: 0 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-in', fill: 'forwards' });
+    // al terminar el fundido (y por si el navegador no avisa, un poco despues) queda apagado y vacio, salvo que mientras tanto hayan llegado avisos nuevos
+    const fin = () => { if (f.dataset.feed !== 'oculto') return; f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 0; f.innerHTML = ''; };
+    a.onfinish = fin;
+    if (!this.rapido) setTimeout(fin, (FEED.FUNDIDO_MS + 80) / this.vel);
   }
 
   // Quita lo transitorio de la batalla, la traicion o el final (no el feed ni el mapa).
@@ -138,7 +158,9 @@ export class Mesa extends MesaBase {
   mostrarEstadoInicial(beat) {
     this.limpiarTurno();
     this.turno = beat.mano;
-    this.feedEl.innerHTML = '';
+    clearTimeout(this.feedTimer);
+    this.feedEl.getAnimations().forEach((x) => x.cancel());
+    this.feedEl.style.opacity = 1; this.feedEl.dataset.feed = ''; this.feedEl.innerHTML = '';
     const e = beat.pasos.find((p) => p.tipo === 'estado');
     if (e) this.pintarMapa(e);
     this.cabecera.querySelector('.mano').textContent = `Turno ${beat.mano} / ${TURNOS_TOPE}`;
