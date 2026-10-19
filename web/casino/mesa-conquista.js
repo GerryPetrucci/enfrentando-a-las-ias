@@ -88,7 +88,7 @@ export class Mesa extends MesaBase {
       g.fillStyle = colorDe(this.partida.jugadores[s]?.id, colorSolido(this.colores, s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
       const x0 = compacto ? 240 : 230, paso = compacto ? 112 : 118; // donde empieza la columna de recursos y lo que mide cada una
       // el reino del asiento junto al nombre del modelo (las IAs hablan de «Azur» o «Rosa» en sus mensajes): en gris y solo si cabe antes de los recursos
-      const reino = nombreDeReino(s), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
+      const reino = nombreDeReino(s, this.partida.reinos), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
       g.font = `600 ${Math.round(tam * 0.6)}px ${fam}`;
       if (reino && xReino + g.measureText(reino).width < x0 - 8) { g.fillStyle = '#9a9aa6'; g.fillText(reino, xReino, y - (compacto ? 0 : fila * 0.12)); }
       const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = (estado.dueno ?? []).reduce((a, d, r) => a + (d === s ? estado.tropas[r] : 0), 0);

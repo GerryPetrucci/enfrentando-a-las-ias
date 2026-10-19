@@ -2,7 +2,7 @@
 // aqui se decide que sabe cada reino. Solo entran los datos propios del reino i y los publicos. Nunca almacenes,
 // armas, notas, privados ni ofertas de otros reinos.
 
-import { RECURSOS, MARAVILLA, TURNOS, NOMBRES_REINOS, EDIFICIOS } from './constantes.js';
+import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS } from './constantes.js';
 import { nombreRegion } from './estado.js';
 
 const SEP = ' | ';
@@ -37,7 +37,7 @@ export function vistaTexto(E, i) {
   L.push(`Tu nota del turno anterior: ${yo.nota ? `"${yo.nota}"` : '(ninguna)'}`);
   if (yo.ofertasIn.length) L.push('Ofertas recibidas: ' + yo.ofertasIn.map((o) => `${R[o.de].nombre} te da ${o.dc} ${o.doy} por ${o.pc} ${o.pido}`).join(SEP));
   if (yo.privIn.length) L.push('Privados recibidos: ' + yo.privIn.map((p) => `${R[p.de].nombre}: "${p.texto}"`).join(SEP));
-  if (E.mensajesPrevios.length) L.push('Mensajes publicos: ' + E.mensajesPrevios.map((m) => `${NOMBRES_REINOS[m.k]}: "${m.texto}"`).join(SEP));
+  if (E.mensajesPrevios.length) L.push('Mensajes publicos: ' + E.mensajesPrevios.map((m) => `${R[m.k].nombre}: "${m.texto}"`).join(SEP));
   if (E.regalosPrevios[i].length) L.push('Regalos recibidos: ' + E.regalosPrevios[i].map((g) => `${R[g.de].nombre} te regalo ${g.n} ${g.recurso}`).join(SEP));
   L.push('', 'MAPA (terreno, recurso y vecinas):', mapaFijo(E), '', 'OCUPACION (region(tropas, fN, edificio; - = danado)):', ...ocupacion(E).map((l, s) => (s === i ? l.replace(':', ' (tu):') : l)), 'Sin dueno: el resto.', '');
   L.push('Sucedio el turno anterior: ' + (E.resumenPrevio.length ? E.resumenPrevio.join('. ') + '.' : 'nada notable.'));

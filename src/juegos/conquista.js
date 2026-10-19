@@ -6,6 +6,7 @@ import { normalizarRespuesta } from './conquista/ordenes.js';
 import { aplicarTurno } from './conquista/turno/index.js';
 import { vistaTexto } from './conquista/vista.js';
 import { resultadoDe } from './conquista/resultado.js';
+import { nombresDeReinos } from './conquista/nombres.js';
 import { REGLAS, FORMATO } from './conquista/reglas-texto.js';
 import { TURNOS } from './conquista/constantes.js';
 import { BOTS, INFO_BOTS } from './conquista-bots.js';
@@ -30,9 +31,11 @@ export default {
   formatoRespuesta: FORMATO,
 
   crear: (rng, opciones = {}) => crearEstado(rng, opciones),
+  // El nombre de reino de cada asiento sale del modelo que lo ocupa (nombres.js): la arena lo pide antes de crear la partida.
+  opcionesDeAgentes: (agentes) => ({ nombres: nombresDeReinos(agentes.map((a) => a.id)) }),
   terminado: (E) => E.ganador !== null,
   vista: (E, i) => vistaTexto(E, i),
-  normalizar: normalizarRespuesta,
+  normalizar: normalizarRespuesta, // (respuesta, estado): el estado le dice los nombres de reino de la partida
   // jugadas[s] = respuesta normalizada (con `error` y `crudo` si las puso la arena); null para los reinos caidos.
   // Ademas del registro del motor se guarda lo que el espectador ve: la razon de cada IA, sus ordenes, su propuesta de pacto,
   // la causa si la respuesta fue invalida y el error de la API (los fallos se registran, no se esconden).

@@ -3,6 +3,8 @@
 //
 // Lo que un juego puede ofrecer de mas (todo opcional, el Dilema no usa nada de esto):
 //   crear(rng, { jugadores, ...opciones })  recibe cuantos asientos hay
+//   opcionesDeAgentes(agentes) -> opciones  lo que el juego quiere saber de quienes se sientan (Guerra: el nombre de reino de cada modelo); `opciones` de la llamada manda sobre esto
+//   normalizar(respuesta, estado)           ademas de la respuesta recibe el estado (Guerra: los nombres de reino de la partida); los demas juegos lo ignoran
 //   activos(estado) -> boolean[]            solo se pregunta a los asientos activos (un reino caido no cuesta llamadas)
 //   rondas                                  se usa como guardia: una partida que no termina se corta con un error
 
@@ -19,7 +21,7 @@ export async function correrPartida({
   limitador = null, alRegistrar = () => {}, alAvisar = () => {},
 }) {
   const rng = crearRng(seed);
-  const estado = juego.crear(rng, { jugadores: agentes.length, ...opciones });
+  const estado = juego.crear(rng, { jugadores: agentes.length, ...(juego.opcionesDeAgentes?.(agentes) ?? {}), ...opciones });
   const rngs = agentes.map((_, i) => rngDeAsiento(seed, i));
   const registros = [];
   const avisos = [];
@@ -54,10 +56,10 @@ export async function correrPartida({
             uso[i].tokensEntrada += r.uso.prompt_tokens ?? 0;
             uso[i].tokensSalida += r.uso.completion_tokens ?? 0;
           }
-          return { ...juego.normalizar(r.respuesta), crudo: r.crudo, error: null };
+          return { ...juego.normalizar(r.respuesta, estado), crudo: r.crudo, error: null };
         } catch (err) {
           // Un modelo caido no tumba la partida: juega el default y queda anotado.
-          return { ...juego.normalizar(null), crudo: null, error: String(err?.message ?? err) };
+          return { ...juego.normalizar(null, estado), crudo: null, error: String(err?.message ?? err) };
         }
       })
     );

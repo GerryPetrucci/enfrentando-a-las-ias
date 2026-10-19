@@ -2,7 +2,8 @@
 // y para calibrar. Leen el estado completo y NUNCA lo modifican; devuelven una respuesta como la de una IA.
 
 import { nombreRegion as nr, regionesDe, totalTropas } from './conquista/estado.js';
-import { NOMBRES_REINOS, RECURSOS } from './conquista/constantes.js';
+import { RECURSOS, MARAVILLA } from './conquista/constantes.js';
+import { nombresDeLaPartida } from './conquista/ordenes.js';
 
 const vecinas = (E, r) => E.mapa.regs[r].vecinos;
 const base = (extra) => ({ pacto_con: null, mensaje: '', privados: [], nota: '', razon: 'bot de control', ...extra });
@@ -54,9 +55,9 @@ export function economico(E, s) {
   const libre = regionesDe(E, s).find((x) => !E.edif[x] && x !== r.capital);
   if (libre !== undefined && st.Madera >= 4) o.push(`construir ${nr(libre)} granja`);
   else if (libre !== undefined && st.Madera >= 3 && st.Roca >= 3) o.push(`construir ${nr(libre)} mercado`);
-  if (!E.maravilla && st.Roca >= 10 && st.Madera >= 8 && st.Hierro >= 6 && st.Oro >= 6) o.push(`construir ${nr(r.capital)} maravilla`);
+  if (!E.maravilla && Object.entries(MARAVILLA.costo).every(([rec, n]) => st[rec] >= n)) o.push(`construir ${nr(r.capital)} maravilla`);
   const oferta = r.ofertasIn[0];
-  if (oferta) o.push(`aceptar ${NOMBRES_REINOS[oferta.de]}`);
+  if (oferta) o.push(`aceptar ${E.reinos[oferta.de].nombre}`);
   else {
     const sobra = Object.entries(st).find(([rec, v]) => rec !== 'Caballos' && v >= 12), falta = Object.entries(st).find(([rec, v]) => rec !== 'Caballos' && v <= 2);
     const otro = E.reinos.find((x) => x.vivo && x.s !== s);
@@ -69,7 +70,7 @@ export function economico(E, s) {
 // Manda ordenes al azar, muchas invalidas a proposito, para probar que el motor las descarta sin romperse.
 export function azar(E, s, rng) {
   const NR = E.mapa.regs.length, entero = (n) => Math.floor(rng() * n), reg = () => nr(entero(NR + 2)), n = () => 1 + entero(6);
-  const nombre = () => NOMBRES_REINOS[entero(5)], rec = () => RECURSOS[entero(6)];
+  const nombres = nombresDeLaPartida(E), nombre = () => nombres[entero(5)], rec = () => RECURSOS[entero(6)]; // los de la partida primero: con los de siempre sale lo mismo que antes
   const plantillas = [
     () => `reclutar ${reg()} ${n()}`, () => `mover ${reg()} ${reg()} ${n()}`, () => `fortificar ${reg()}`, () => 'armar', () => `mercenarios ${reg()} ${n()}`,
     () => `regalar ${rec()} ${n()} ${nombre()}`, () => `ofrecer ${nombre()} ${rec()} ${n()} ${rec()} ${n()}`, () => `aceptar ${nombre()}`,

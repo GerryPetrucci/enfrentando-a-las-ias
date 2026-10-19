@@ -4,9 +4,9 @@
 import { NOMBRES_REINOS } from './constantes.js';
 import { nombreRegion } from './estado.js';
 
-const N = (s) => NOMBRES_REINOS[s];
-
-export function resumenPublico(eventos) {
+// `nombres`: el nombre de reino de cada asiento en esta partida (nombres.js); sin ellos, los de siempre.
+export function resumenPublico(eventos, nombres = NOMBRES_REINOS) {
+  const N = (s) => nombres[s];
   const l = [];
   for (const e of eventos) {
     if (e.tipo === 'conquista') l.push(`${N(e.k)} conquisto ${nombreRegion(e.r)} de ${N(e.contra)}`);
