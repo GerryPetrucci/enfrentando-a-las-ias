@@ -58,6 +58,14 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   assert.match(leeme, /bots|control/i, 'la advertencia de que es una partida de bots sale en el LEEME');
 }));
 
+test('sin --enlace, el comentario fijado manda al sitio con el seed de la partida para buscarlo (?seed=)', () => conTemporal((tmp) => {
+  const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida');
+  const r = lanzar([`--archivo=${archivo}`, `--salida=${salida}`]);
+  assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
+  const comentario = readFileSync(join(salida, 'guerra-p1', 'textos', 'parte-1-comentario.txt'), 'utf8');
+  assert.ok(comentario.includes(`${ENLACE}?seed=${PARTIDA.seed}`), comentario);
+}));
+
 test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporalAsync(async (tmp) => {
   const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });

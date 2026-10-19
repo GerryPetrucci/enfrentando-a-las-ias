@@ -17,10 +17,13 @@ Thumbs.db
 .vscode/
 .idea/
 
-# El marcador se regenera con `node src/marcador.js`, pero lo dejamos versionado
-# para que el sitio funcione en hosting estatico sin paso de build.
-# (si prefieres generarlo en CI, descomenta la linea de abajo)
-# web/marcador.json
+# web/marcador.json lo genera `node src/marcador.js` a partir de data/publicas/ (herramientas/publicar.mjs lo regenera); se versiona para que el sitio funcione sin paso de build.
+
+# Los datos COMPLETOS de cada serie (con resultado y todas las partidas) no se versionan: el repo es publico.
+# Al sitio solo sale data/publicas/, que arma herramientas/publicar.mjs segun el estado de cada partida
+# (por publicarse: solo hasta lo subido; publicada: completa). Politica en CLAUDE.md, «Publicacion de resultados».
+# El respaldo de los completos vive en privado/datos-oficiales/.
+/data/*.json
 
 # partidas de practica (modelos gratis y calibracion): el sitio copia toda la carpeta data/, asi que no se versionan.
 # Para subir una a proposito: git add -f data/pruebas/ARCHIVO.json

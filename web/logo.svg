@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="80 140 352 232" width="352" height="232" role="img" aria-label="Enfrentando a las IAs">
+  <title>Enfrentando a las IAs</title>
+  <defs>
+    <clipPath id="verde"><circle cx="196" cy="256" r="116"/></clipPath>
+  </defs>
+  <circle cx="196" cy="256" r="116" fill="#5fa877"/>
+  <circle cx="316" cy="256" r="116" fill="#d8584e"/>
+  <circle cx="316" cy="256" r="116" fill="#e0b25c" clip-path="url(#verde)"/>
+</svg>

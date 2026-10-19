@@ -220,9 +220,20 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 - **Hashtags:** Instagram permite 5 por publicacion desde dic 2025 y sirven para
   clasificar, no para ganar alcance. Usar 3 a 5 especificos.
 
+## Publicacion de resultados (decidido el 18 de octubre de 2026)
+
+El sitio (`web/index.html` busca por juego, seed, IA y estado; `web/serie.html` muestra una serie) solo muestra lo que ya salio en video. **Cada partida tiene un estado:**
+
+- **Por publicarse:** se sube el video de su parte 1 o de una parte intermedia que NO llega al ultimo turno. El sitio muestra el seed, la conversacion (mensajes, jugadas y razones) y los prompts que recibio cada IA **solo hasta el ultimo turno subido**; nada de resultado, ganador, puntos, fichas ni turnos posteriores. Una partida sin ninguna parte subida muestra solo su seed.
+- **Publicada:** se sube la parte que llega al ultimo turno de la partida (la parte final). Se publica la partida completa con su resultado y su evaluacion. La serie pasa a «publicada» cuando lo estan todas sus partidas; solo entonces cuenta su evaluacion de serie. El marcador de cada juego cuenta unicamente partidas publicadas.
+
+**Cada vez que el usuario avise que subio un video** (parte 1, parte N, clip no cuenta): 1) averiguar hasta que turno llega esa parte (`node herramientas/partes.mjs` o preguntar) y si es la parte final: detectarlo (`hasta` = ultimo turno de la partida) y, si hay duda, **preguntar**; 2) correr `node herramientas/publicar.mjs --archivo=SERIE.json --partida=N --parte=P --hasta=TURNO [--final] --fecha=AAAA-MM-DD` (se niega si lo declarado no cuadra con la partida); 3) revisar el resumen que imprime (estado de la partida y de la serie, avisos); 4) `npm test`, y **hacer commit y push SOLO de `data/publicas/` y `web/marcador.json`** (el sitio se despliega solo): para esto la orden de publicar tras avisar que subio un video vale como autorizacion; cualquier otro cambio sigue necesitando orden expresa. El primer despliegue de esta politica, si aun no esta en `main`, requiere antes la orden expresa de fusionar la rama.
+
+**Reglas fijas:** el JSON COMPLETO de cada serie (con resultado y todas las partidas) **nunca va al repo publico**: `/data/*.json` esta ignorado y el respaldo vive en `privado/datos-oficiales/` (lo copia `publicar.mjs`); al sitio solo sale `data/publicas/`. Los prompts por turno se reconstruyen repitiendo la partida con su seed (`reconstruirPrompts`, solo Guerra de territorios por ahora; si el repaso no coincide con lo guardado, se omiten con un aviso) y el prompt de sistema debe coincidir con el hash guardado (si las reglas cambiaron, `publicar.mjs` se niega salvo `--forzar`). Nunca hay un ranking general: una tabla por juego. Los textos de comentario/descripcion de cada video llevan el enlace `?seed=` del sitio para que se pueda buscar.
+
 ## Flujo de trabajo y revisiones
 
-- **Aprobacion por etapas:** spec y plan se aprueban antes de construir; no se cambia lo aprobado sin preguntar. **No hacer push, PR ni fusion sin orden explicita** (una orden vale solo para lo que nombra). No gastar saldo de API sin orden; `privado/` y `.env` nunca se publican.
+- **Aprobacion por etapas:** spec y plan se aprueban antes de construir; no se cambia lo aprobado sin preguntar. **No hacer push, PR ni fusion sin orden explicita** (una orden vale solo para lo que nombra; unica excepcion fija: el commit y push de `data/publicas/` y `web/marcador.json` tras avisar el usuario que subio un video, ver «Publicacion de resultados»). No gastar saldo de API sin orden; `privado/` y `.env` nunca se publican.
 - **Pruebas con modelos reales: AL FINAL.** Primero todo lo demas al 100 %; las partidas de esa prueba seran las primeras oficiales y se graban.
 - **Cada cambio con prueba que falla antes** (rojo, verde), y una mutacion para comprobar que la prueba detecta el error. Un ledger por plan en `.superpowers/sdd/`, archivado en `privado/planes/` al terminar.
 - **Antes del agente de revision independiente, una pasada rapida con `/code-review` y/o `/simplify`** sobre el diff de la rama: se corrige lo que encuentren (con prueba que falle antes) y solo despues se lanza el agente (opus, solo lectura), que es mas caro. Asi el agente gasta su revision en lo que de verdad hace falta.
@@ -231,7 +242,7 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 ## Estado actual
 
 **Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; los 8 juegos con motor, bots, evaluacion, pruebas y escena (la del juego 2, Guerra de territorios, terminada el 17 de octubre de 2026; 1326 pruebas con la narracion interpretada y los fundidos de grabacion del 18 de octubre, rama `narracion-y-fundidos` aun sin fusionar);
-CLI de duelos, series de rotacion, agregador de marcador, sitio publicado con marcador por categoria (<https://gerrypetrucci.github.io/enfrentando-a-las-ias/>, se despliega solo en cada push a `main` que toque `web/` o `data/`), reproductor vertical, voz local y
+CLI de duelos, series de rotacion, agregador de marcador, sitio publicado con buscador por juego/seed/IA/estado y marcador por juego (<https://gerrypetrucci.github.io/enfrentando-a-las-ias/>, politica «Publicacion de resultados»; se despliega solo en cada push a `main` que toque `web/` o `data/`), reproductor vertical, voz local y
 herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentando-a-las-ias>.
 
 **Pendiente:**

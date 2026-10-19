@@ -1,0 +1,106 @@
+{
+  "generado": "2026-10-19T03:39:19.320Z",
+  "juegos": [
+    {
+      "id": "conquista",
+      "nombre": "Guerra de territorios",
+      "categoria": "Estrategia y conquista",
+      "versionReglas": "conquista-1.1.0",
+      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Guerra de territorios ===\nObjetivo: ser el unico reino triunfante.\nMapa de regiones (R01, R02, ...) con terreno (ll = llanura, bo = bosque, mo = montana) y a veces un recurso. De 2 a 5 reinos, cada uno con una capital. 30 turnos; todos actuan a la vez.\n\nRECURSOS: Comida, Madera, Roca, Hierro, Oro y Caballos. Cada region tuya con recurso da +2 de ese recurso por turno; ademas 1 Comida por cada 2 regiones.\n\nORDENES (maximo 12 por turno):\n- reclutar REGION N: N tropas en region tuya (1 Comida c/u).\n- mover DESDE HASTA N: N tropas a region vecina (si es enemiga, atacas). Con Caballos (1 por 3 tropas) llegas a 2 regiones.\n- fortificar REGION: nivel 1: 3 Madera + 2 Roca; 2: 4 Roca + 3 Madera; 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa.\n- armar: +25% de ataque (4 Hierro + 2 Madera; maximo 2 veces).\n- mercenarios REGION N: N tropas a 2 Oro c/u (maximo 3 por turno).\n- regalar RECURSO CANTIDAD REINO: das recursos a otro reino.\n- ofrecer REINO RECURSO CANT RECURSO CANT: das lo primero por lo segundo (maximo 10 por lado, 2 por turno); el otro la ve el turno siguiente y la acepta con: aceptar REINO. Todo o nada.\n- construir REGION EDIFICIO: granja (4 Madera: +2 Comida), mercado (3 Madera + 3 Roca: +2 Oro), cuartel (4 Madera + 3 Roca: reclutar ahi cuesta la mitad). Uno por region, maximo 3 por tipo; si conquistan la region, pasa al conquistador a mitad de efecto.\n- construir REGION maravilla (solo en tu capital; solo existe una): 15 Roca + 12 Madera + 9 Hierro + 9 Oro. Quien la conserve 8 turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.\n- romper REINO: rompes tu pacto y puedes atacarlo este turno.\n\nCOMBATE: gana el lado con mas fuerza y conserva tropas x (1 - fuerza del segundo / la suya); los demas se eliminan. Ataque = tropas x armas. Defensa = tropas x (1 + 0.5 por nivel de fortaleza), +25% en bosque o +50% en montana. Si pierdes tu capital, caes.\nHAMBRE: cada 4 tropas comen 1 Comida por turno; si falta, desertan el 10%.\nDIPLOMACIA: un mensaje publico y hasta 2 privados por turno (maximo 140 caracteres; los privados llegan el turno siguiente, solo al destinatario). Pacto de no agresion: dura 2 turnos y se forma si dos reinos se lo proponen (tu propuesta queda abierta un turno mas). Atacar a un aliado exige romper el pacto ese turno. En los ultimos 2 turnos no hay alianzas.\nHONOR (publico, 0 a 10): empiezas en 5. Romper un pacto resta 3; cumplirlo hasta el final suma 1; cada 3 turnos suma 1. Con 2 o menos, mercenarios a 3 Oro y no firmas pactos nuevos.\nMEMORIA: cada turno puedes dejar una nota de plan (maximo 250 caracteres); solo tu la ves, el turno siguiente.\nVICTORIA: gana el unico reino vivo, quien complete la maravilla o, al turno 30, quien controle mas regiones (desempate: tropas).\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\n{\"ordenes\": [\"reclutar R03 4\", \"mover R07 R12 5\", \"construir R03 granja\"], \"pacto_con\": \"reino o null\", \"mensaje\": \"texto breve\", \"privados\": [{\"a\": \"reino\", \"texto\": \"texto breve\"}], \"nota\": \"tu plan\", \"razon\": \"una frase\"}\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
+      "tabla": []
+    }
+  ],
+  "categorias": [],
+  "episodios": [
+    {
+      "etiqueta": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
+      "archivo": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json",
+      "fecha": "2026-10-19T02:17:21.386Z",
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "seedBase": 552912962,
+      "serie": {
+        "partidas": 2,
+        "rotar": true,
+        "mismoSeed": true
+      },
+      "enfrentamiento": "Claude vs GPT vs Gemini vs DeepSeek",
+      "partidas": 2,
+      "estado": "por-publicarse",
+      "modo": "pago",
+      "versionReglas": "conquista-1.1.0",
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-sonnet-5.5"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6.1-sol"
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M",
+          "tipo": "modelo",
+          "modelo": "google/gemini-3.8-flash"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2"
+        }
+      ],
+      "detalle": [
+        {
+          "n": 1,
+          "seed": 552912962,
+          "estado": "por-publicarse",
+          "hastaTurno": 8,
+          "turnos": null,
+          "asientos": [
+            "claude",
+            "gpt",
+            "gemini",
+            "deepseek"
+          ],
+          "ganador": null,
+          "puntos": null,
+          "ganoPorMaravilla": null
+        },
+        {
+          "n": 2,
+          "seed": 552912962,
+          "estado": "por-publicarse",
+          "hastaTurno": 0,
+          "turnos": null,
+          "asientos": [
+            "gpt",
+            "gemini",
+            "deepseek",
+            "claude"
+          ],
+          "ganador": null,
+          "puntos": null,
+          "ganoPorMaravilla": null
+        }
+      ],
+      "evaluacion": null
+    }
+  ]
+}

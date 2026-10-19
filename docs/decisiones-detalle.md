@@ -362,3 +362,13 @@ Por si el torneo de IAs no engancha, o como contenido de relleno entre episodios
 Idea para el sitio que sigue viva: que el visitante **corra su propia partida** en
 el navegador y la comparta por URL con el seed (`?seed=84712`). Convierte la
 pagina en producto, no en archivo de videos.
+
+## Sitio y publicacion por partes (18 de octubre de 2026)
+
+La politica esta en CLAUDE.md («Publicacion de resultados»); aqui el como.
+
+- **Archivos:** `src/publicacion.js` (puro: `esParteFinal`, `partidaParcial`, `registrarParte`, `armarSeriePublica`), `src/publicar.js` + `herramientas/publicar.mjs` (la orden), `src/marcador.js` (arma `web/marcador.json` solo con lo publicado, una tabla por juego), `web/catalogo.js` (buscador puro), `web/index.html` y `web/serie.html`, `web/sitio.css`.
+- **Datos:** el JSON completo vive en `data/*.json` (ignorado por git) y se respalda en `privado/datos-oficiales/`. Lo publico es `data/publicas/<serie>.json` (la serie con cada partida cortada hasta el ultimo turno subido; `truncada: true`, sin resultado ni evaluacion) y `data/publicas/registro.json` (que parte se subio, hasta que turno, si fue la final).
+- **Prompts por turno:** `reconstruirPrompts` (`src/juegos/conquista/replay.js`) repite la partida con su seed y las respuestas guardadas y vuelve a armar el prompt de cada IA en cada turno; si el repaso no coincide con el estado guardado, no publica prompts y avisa. Hoy verificado (`fiel`) para las 4 partidas reales de Guerra.
+- **Buscador:** por seed (solo digitos; desde 3 digitos acepta una parte, un seed corto solo si coincide entero), juego, IA y estado; los filtros viajan en la URL (`?seed=...`) y el comentario fijado de cada video lleva `?seed=<seed de la partida>`.
+- **Mayor o menor** (serie del 18 de octubre, 2 IAs reales): aun no se publica; su respaldo esta en `privado/datos-oficiales/`. Se publica con `publicar.mjs` cuando se suba su video.

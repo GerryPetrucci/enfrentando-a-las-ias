@@ -111,7 +111,7 @@ async function principal() {
   if (rutaVoz) { try { voz = JSON.parse(readFileSync(resolve(rutaVoz), 'utf8')); } catch (e) { salir(`No pude leer la voz ${rutaVoz}: ${e.message}`); } }
 
   const beats = await armarLinea(juegoId, partida), destacadas = await destacadasDe(juegoId, partida, 10);
-  const enlace = a.enlace ?? ENLACE_DEL_SITIO;
+  const enlace = a.enlace ?? `${ENLACE_DEL_SITIO}?seed=${partida.seed}`; // el sitio busca por seed: el enlace lleva a la serie de este video
   const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz, formato: a.formato ?? 'hoja', enlace, totalPartidas: datos.partidas.length });
   if (!paquete.piezas.length) salir(`No se puede publicar esta partida: ${paquete.advertencias.join(' ')}`);
 
