@@ -102,6 +102,21 @@ export function htmlTira(numeros, usadas = [], ahora = null) {
   return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
 
+// La tira de una mano REPARTIDA (Mayor o menor, reglas 2.0.0): una casilla por carta de la mano, en orden, con repetidas. `disponibles` son las cartas que siguen en la mano: de cada numero, las
+// primeras copias quedan claras y el resto de la tira va tachado; `ahora` marca la ultima copia usada de ese numero (la carta que se juega ahora). Lo que no es un numero no entra.
+export function htmlTiraMano(inicial, disponibles = [], ahora = null) {
+  const cartas = (Array.isArray(inicial) ? inicial : []).filter(numeroValido).sort((a, b) => a - b);
+  const quedan = new Map();
+  for (const n of (Array.isArray(disponibles) ? disponibles : []).filter(numeroValido)) quedan.set(n, (quedan.get(n) ?? 0) + 1);
+  const casillas = cartas.map((n) => {
+    const q = quedan.get(n) ?? 0;
+    quedan.set(n, q - 1);
+    return { n, usada: q <= 0 };
+  });
+  const marcada = ahora === null ? -1 : casillas.map((c) => c.n === ahora && c.usada).lastIndexOf(true);
+  return `<div class="tira-num">${casillas.map((c, i) => `<div class="t${c.usada ? ' usada' : ''}${i === marcada ? ' ahora' : ''}">${c.n}</div>`).join('')}</div>`;
+}
+
 // El avatar de una fila de Subasta de tiempo: la inicial sobre el color de la IA (de paleta.js; un bot usa el color guardado). Todo lo que viene de los datos pasa por esc().
 export function htmlAvatarJugador(jugador) {
   const j = jugador ?? {};

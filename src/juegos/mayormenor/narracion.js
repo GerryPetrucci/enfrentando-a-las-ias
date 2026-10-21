@@ -15,8 +15,8 @@ const lider = (f) => (f[0] === f[1] ? null : f[0] > f[1] ? 0 : 1);
 
 // reemplazadas[s] = true si la jugada de ese jugador la puso el motor porque su respuesta fue ilegible o fallo la API: no se narra como decision suya.
 export function narrarRonda({
-  E, ronda, activo, predictor, crupier, carta, lado, apuesta, todo, veredicto, acierto, ganaActivo, ganaPredictor,
-  reemplazadas = [false, false], fichas, fichasAntes, manoAntes = [],
+  E, ronda, activo, predictor, crupier, carta, lado, apuesta, todo, veredicto, igual = false, doble = 1, acierto, ganaActivo, ganaPredictor,
+  reemplazadas = [false, false], fichas, fichasAntes, manoAntes = [], maxima = null,
 }) {
   const rng = rngDe(E, ronda);
   const lineas = [];
@@ -24,6 +24,7 @@ export function narrarRonda({
   const a = quien(activo), p = quien(predictor);
 
   agregar('apertura', `Ronda ${ronda} de ${RONDAS}. ${elegir(rng, [`${a} es el jugador activo.`, `Le toca jugar a ${a}.`, `${a} lleva la mano en esta ronda.`])}`);
+  if (doble === 2) agregar('comentario', `¡Ronda doble! Las ganancias se pagan al doble.`); // reglas 2.0.0
   agregar('crupier', `El crupier de ${a} revela un ${crupier}.`);
   agregar('jugada', reemplazadas[activo]
     ? `${a} no responde bien: se juega una carta legal en su lugar.`
@@ -35,16 +36,17 @@ export function narrarRonda({
   if (veredicto === 'igual') {
     agregar('revelacion', `Se revela el ${carta}: igual que el crupier. Nadie gana nada y la apuesta se devuelve.`);
   } else {
-    agregar('revelacion', `Se revela el ${carta}: ${veredicto} que el ${crupier}.`);
+    agregar('revelacion', igual ? `Se revela el ${carta}: igual que el crupier, y cuenta como menor.` : `Se revela el ${carta}: ${veredicto} que el ${crupier}.`);
     agregar('resultado', ganaActivo > 0 ? `${a} gana ${plural(ganaActivo, 'ficha', 'fichas')}.` : `${a} no gana fichas.`);
     agregar('resultado', acierto
-      ? `${p} acierta y gana ${plural(apuesta, 'ficha', 'fichas')}.`
+      ? `${p} acierta y gana ${plural(ganaPredictor, 'ficha', 'fichas')}.`
       : `${p} falla y pierde ${plural(apuesta, 'ficha', 'fichas')}.`);
   }
 
   // comentarios para la voz
-  if (!reemplazadas[predictor] && todo) agregar('comentario', `${p} lo apuesta todo.`);
+  if (!reemplazadas[predictor] && todo) agregar('comentario', maxima !== null && maxima < fichasAntes[predictor] ? `${p} apuesta el máximo permitido.` : `${p} lo apuesta todo.`);
   if (veredicto === 'igual') agregar('comentario', 'Carta igual: la apuesta se devuelve y la ronda no mueve las fichas.');
+  else if (igual) agregar('comentario', 'Carta igual: cuenta como menor y la apuesta se resuelve.'); // reglas 2.0.0
   // "todo apuntaba a mayor" = a la mano del activo le quedaban mas cartas por encima del crupier que por debajo (la mano es publica)
   const arriba = manoAntes.filter((c) => c > crupier).length, abajo = manoAntes.filter((c) => c < crupier).length;
   if (!reemplazadas[activo] && veredicto === 'menor' && arriba > abajo) {

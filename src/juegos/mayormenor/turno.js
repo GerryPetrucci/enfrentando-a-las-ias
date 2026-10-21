@@ -7,7 +7,7 @@
 
 import { JUGADORES, RONDAS, CARTAS_CRUPIER, activoDe } from './constantes.js';
 import { normalizarRespuesta } from './ordenes.js';
-import { crupierDeRonda } from './estado.js';
+import { crupierDeRonda, apuestaMaxima } from './estado.js';
 import { narrarRonda } from './narracion.js';
 
 const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida
@@ -62,8 +62,10 @@ export function aplicarTurno(E, respuestas) {
   const lado = motivoP ? (sorteo.lado < 0.5 ? 'mayor' : 'menor') : respP.lado;
   const pedida = motivoP ? 1 : respP.fichas;
   const fichasAntes = [...E.fichas];
-  const apuesta = Math.min(pedida, E.fichas[p]);
-  const todo = apuesta === E.fichas[p];
+  const maxima = apuestaMaxima(E, p); // sus fichas y, con topeRival, no mas de las de su rival
+  const apuesta = Math.min(pedida, maxima);
+  const todo = apuesta === maxima; // apostar todo = apostar lo maximo permitido
+  const doble = E.dobles.includes(r) ? 2 : 1; // en una ronda doble las ganancias se pagan al doble (lo que se pierde, no)
 
   const motivos = asientos.map(() => null);
   motivos[a] = motivoA;
@@ -76,12 +78,13 @@ export function aplicarTurno(E, respuestas) {
   }
 
   // resolucion
-  const veredicto = carta > crupier ? 'mayor' : carta < crupier ? 'menor' : 'igual';
-  const ganaActivo = veredicto === 'mayor' ? carta - crupier : 0;
+  const igual = carta === crupier;
+  const veredicto = igual ? (E.reglas.igualEsMenor ? 'menor' : 'igual') : carta > crupier ? 'mayor' : 'menor'; // igualEsMenor: la carta igual cuenta como «menor» y la apuesta se resuelve
+  const ganaActivo = carta > crupier ? (carta - crupier) * doble : 0;
   let acierto = null, ganaPredictor = 0;
   if (veredicto !== 'igual') {
     acierto = lado === veredicto;
-    ganaPredictor = acierto ? apuesta : -apuesta;
+    ganaPredictor = acierto ? apuesta * doble : -apuesta;
   }
   E.fichas[a] += ganaActivo;
   E.fichas[p] += ganaPredictor;
@@ -99,15 +102,16 @@ export function aplicarTurno(E, respuestas) {
   }
 
   // cartas: la jugada y la del crupier se retiran para siempre
-  E.mano[a] = manoAntes.filter((c) => c !== carta);
+  const copia = manoAntes.indexOf(carta);
+  E.mano[a] = manoAntes.filter((_, k) => k !== copia); // solo esa copia: con la mano oculta puede haber cartas repetidas
   E.jugadas[a].push(carta);
   E.crupierSalidas[a].push(crupier);
   const reemplazadas = motivos.map((m) => m !== null); // jugadas que puso el juego por una respuesta ilegal (publico: el historial las marca)
-  E.historial.push({ ronda: r, activo: a, crupier, carta, lado, apuesta, veredicto, acierto, ganaActivo, ganaPredictor, reemplazadas });
+  E.historial.push({ ronda: r, activo: a, crupier, carta, lado, apuesta, veredicto, igual, doble, acierto, ganaActivo, ganaPredictor, reemplazadas });
 
   const narracion = narrarRonda({
-    E, ronda: r, activo: a, predictor: p, crupier, carta, lado, apuesta, todo, veredicto, acierto, ganaActivo, ganaPredictor,
-    reemplazadas, fichas: [...E.fichas], fichasAntes, manoAntes,
+    E, ronda: r, activo: a, predictor: p, crupier, carta, lado, apuesta, todo, veredicto, igual, doble, acierto, ganaActivo, ganaPredictor,
+    reemplazadas, fichas: [...E.fichas], fichasAntes, manoAntes, maxima,
   });
 
   const sinFichas = E.fichas.some((f) => f === 0);
@@ -116,7 +120,8 @@ export function aplicarTurno(E, respuestas) {
 
   return {
     ronda: r, activo: a, predictor: p, crupier, carta, lado, apuesta, apostoTodo: todo,
-    veredicto, acierto, ganaActivo, ganaPredictor,
+    veredicto, igual, doble, acierto, ganaActivo, ganaPredictor,
+    apuestaMaxima: maxima, // lo que podia apostar como mucho el predictor en esta ronda (publico)
     fichasAntes, fichas: [...E.fichas],
     mano: E.mano.map((m) => [...m]),
     crupierQuedan: E.crupierSalidas.map((salidas) => CARTAS_CRUPIER.filter((c) => !salidas.includes(c))), // conjuntos: no dicen el orden

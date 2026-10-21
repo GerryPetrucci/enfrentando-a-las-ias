@@ -11,6 +11,8 @@ import { planDeSerie, errorDeCantidad } from '../../serie.js';
 import { resolverAgente } from '../../agentes.js';
 import { armarMarcador } from '../../marcador.js';
 import mayormenor from '../../juegos/mayormenor.js';
+import { crearEstado } from '../../juegos/mayormenor/estado.js';
+import { REGLAS_1_0 } from '../../juegos/mayormenor/constantes.js';
 import { JUEGOS, obtenerJuego } from '../../juegos/index.js';
 
 const CLAVES = ['contador', 'azar'];
@@ -27,7 +29,7 @@ test('el juego esta registrado, cumple el contrato y la consola acepta sus bots 
   assert.equal(mayormenor.rondas, 18);
   assert.equal(mayormenor.mismoSeedEnSerie, true);
   for (const f of ['crear', 'terminado', 'vista', 'normalizar', 'aplicar', 'resultado', 'activos']) assert.equal(typeof mayormenor[f], 'function', f);
-  assert.deepEqual(Object.keys(mayormenor.bots).sort(), ['azar', 'contador', 'contrario', 'prudente', 'temerario']);
+  assert.deepEqual(Object.keys(mayormenor.bots).sort(), ['astuto', 'azar', 'contador', 'contrario', 'prudente', 'temerario']);
   for (const id of Object.keys(mayormenor.bots)) assert.equal(resolverAgente(id, mayormenor).tipo, 'bot');
   assert.throws(() => resolverAgente('siempre-c', mayormenor), /estrategia del Dilema/);
   assert.ok(errorDeCantidad(mayormenor, 1));
@@ -57,9 +59,10 @@ test('una partida completa entre bots: 18 rondas como maximo, exactamente 2 llam
   }
 });
 
-test('con dos temerarios la partida casi siempre termina antes de la ronda 18 por fichas en 0, y no se pregunta de mas', async () => {
+test('con dos temerarios y las reglas 1.0.0 (sin tope) la partida casi siempre termina antes de la ronda 18 por fichas en 0, y no se pregunta de mas', async () => {
   const partidas = [];
-  for (let seed = 1; seed <= 15; seed++) partidas.push(await jugar(seed, {}, ['temerario', 'temerario']));
+  const juegoV1 = { ...mayormenor, versionReglas: REGLAS_1_0.version, crear: (rng) => crearEstado(rng, REGLAS_1_0) };
+  for (let seed = 1; seed <= 15; seed++) partidas.push(await correrPartida({ juego: juegoV1, agentes: agentes(['temerario', 'temerario']), seed }));
   const tempranas = partidas.filter((p) => p.rondas.length < 18);
   assert.ok(tempranas.length >= 10, `solo ${tempranas.length} de 15 terminaron antes`);
   for (const p of tempranas) {

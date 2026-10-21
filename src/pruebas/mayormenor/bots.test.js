@@ -8,9 +8,9 @@ import { BOTS, INFO_BOTS } from '../../juegos/mayormenor-bots.js';
 import { crearRng } from '../../rng.js';
 import { nuevoEstado, fijarCrupier, jugarConBots, ronda } from './ayudas.js';
 
-const IDS = ['azar', 'contador', 'contrario', 'prudente', 'temerario'];
+const IDS = ['astuto', 'azar', 'contador', 'contrario', 'prudente', 'temerario'];
 
-test('hay cinco bots, cada uno con nombre publico y color', () => {
+test('hay seis bots, cada uno con nombre publico y color', () => {
   assert.deepEqual(Object.keys(BOTS).sort(), IDS);
   for (const id of IDS) assert.ok(INFO_BOTS[id].nombre && /^#[0-9A-Fa-f]{6}$/.test(INFO_BOTS[id].color), id);
 });

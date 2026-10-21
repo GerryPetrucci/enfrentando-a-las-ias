@@ -10,7 +10,7 @@ import { plural, redondeo, fraseObediencia, comentarioDeSerie, buenasDe } from '
 
 export const UMBRALES = {
   lecturaAlta: 0.6, lecturaBaja: 0.4, // apuestas acertadas / apuestas con resultado
-  audaciaAlta: 0.5, audaciaBaja: 0.15, // parte de sus fichas que apuesta por ronda
+  audaciaAlta: 0.5, audaciaBaja: 0.2, // parte de lo maximo que puede apostar (sus fichas, o el tope de 6 de las reglas 2.0.0) que apuesta por ronda
   provechoAlto: 2.5, provechoBajo: 0.8, // fichas ganadas por ronda como activo (azar 1.67; prudente 1.00; contrario 0.55; temerario > 4)
   puntosArriba: 3, puntosAbajo: 1, // puntos de marcador por partida (el promedio de la mesa es 2.0)
 };
@@ -35,9 +35,9 @@ export function fraseAudacia(media, todo, elegidas) {
   if (!elegidas) return { valor: null, frase: 'no hubo apuestas propias que medir', notable: false };
   const pct = Math.round(media * 100);
   const extra = todo ? `, y lo apostó todo ${plural(todo, 'vez', 'veces')}` : '';
-  if (media >= UMBRALES.audaciaAlta) return { valor: redondeo(media), frase: `apuesta fuerte: ${pct} % de sus fichas por ronda${extra}`, notable: true };
-  if (media <= UMBRALES.audaciaBaja) return { valor: redondeo(media), frase: `juega seguro: ${pct} % de sus fichas por ronda${extra}`, notable: true };
-  return { valor: redondeo(media), frase: `apuesta con medida: ${pct} % de sus fichas por ronda${extra}`, notable: false };
+  if (media >= UMBRALES.audaciaAlta) return { valor: redondeo(media), frase: `apuesta fuerte: ${pct} % de lo máximo que puede apostar por ronda${extra}`, notable: true };
+  if (media <= UMBRALES.audaciaBaja) return { valor: redondeo(media), frase: `juega seguro: ${pct} % de lo máximo que puede apostar por ronda${extra}`, notable: true };
+  return { valor: redondeo(media), frase: `apuesta con medida: ${pct} % de lo máximo que puede apostar por ronda${extra}`, notable: false };
 }
 
 export function fraseProvecho(fichas, rondas, sinSuperar) {
@@ -103,7 +103,8 @@ export function evaluarSerie(partidas) {
           const antes = r.fichasAntes?.[s];
           if (!Number.isFinite(r.apuesta) || !Number.isFinite(antes) || antes <= 0) return; // un registro sin apuesta ni fichas no mide nada
           a.elegidasApuesta++;
-          a.fraccion += r.apuesta / antes;
+          // audacia: que tan cerca del maximo permitido apuesta (con el tope de las reglas 2.0.0 el maximo son 6 fichas, no todas las que tiene; un registro viejo no lo trae y vale lo que tenia)
+          a.fraccion += r.apuesta / (Number.isFinite(r.apuestaMaxima) && r.apuestaMaxima > 0 ? r.apuestaMaxima : antes);
           if (r.apostoTodo) a.todo++;
           if (r.acierto === true || r.acierto === false) {
             a.conResultado++;

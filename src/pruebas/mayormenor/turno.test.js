@@ -26,7 +26,7 @@ test('el ejemplo de la regla: crupier 5, el activo juega 8, el predictor apuesta
   assert.equal(E.ronda, 2);
   assert.equal(E.stats[0].rondasActivo, 1);
   assert.equal(E.stats[0].fichasActivo, 3);
-  assert.deepEqual(E.historial[0], { ronda: 1, activo: 0, crupier: 5, carta: 8, lado: 'mayor', apuesta: 3, veredicto: 'mayor', acierto: true, ganaActivo: 3, ganaPredictor: 3, reemplazadas: [false, false] });
+  assert.deepEqual(E.historial[0], { ronda: 1, activo: 0, crupier: 5, carta: 8, lado: 'mayor', apuesta: 3, veredicto: 'mayor', igual: false, doble: 1, acierto: true, ganaActivo: 3, ganaPredictor: 3, reemplazadas: [false, false] });
 });
 
 test('con un 3 contra el 5 gana quien aposto "menor" y pierde quien aposto "mayor"; el activo no gana nada', () => {

@@ -45,7 +45,7 @@ test('una serie de 2 partidas con un bot que apuesta una moneda casi nunca recib
 
 test('fraseAudacia: apuesta fuerte, juega seguro o con medida; cuenta las veces que lo apuesta todo', () => {
   assert.equal(fraseAudacia(0, 0, 0).valor, null);
-  assert.match(fraseAudacia(0.8, 3, 9).frase, /apuesta fuerte: 80 % de sus fichas por ronda, y lo apostó todo 3 veces/);
+  assert.match(fraseAudacia(0.8, 3, 9).frase, /apuesta fuerte: 80 % de lo máximo que puede apostar por ronda, y lo apostó todo 3 veces/);
   assert.match(fraseAudacia(0.05, 0, 9).frase, /juega seguro: 5 %/);
   assert.equal(fraseAudacia(0.3, 0, 9).notable, false);
   assert.match(fraseAudacia(0.8, 1, 9).frase, /1 vez/);

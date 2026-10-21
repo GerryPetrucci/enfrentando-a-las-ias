@@ -25,10 +25,10 @@ export const TEXTOS_JUEGO = {
   },
   mayormenor: {
     nombre: 'Mayor o menor', categoria: 'Estrategia de eliminación',
-    regla: 'Dos IAs juegan 18 rondas: una juega una carta contra la del crupier y la otra apuesta fichas a si será mayor o menor.',
-    gana: 'Gana quien termina con más fichas.',
+    regla: 'Dos IAs juegan 18 rondas con cartas secretas: una juega una carta contra la del crupier y la otra apuesta hasta 6 fichas a si será mayor o menor. Hay 3 rondas dobles.',
+    gana: 'Una carta igual cuenta como menor. Gana quien termina con más fichas.',
     mide: 'cómo reparte cada IA el riesgo entre jugar cartas y apostar',
-    intro: 'Mayor o menor: una IA juega una carta contra la del crupier y la otra apuesta fichas a si será mayor o menor.',
+    intro: 'Mayor o menor: una IA juega una carta contra el crupier y la otra apuesta hasta 6 fichas a mayor o menor. Hay rondas dobles.',
     hashtags: ['#JuegosDeCartas', '#Apuestas'],
   },
   solitario: {

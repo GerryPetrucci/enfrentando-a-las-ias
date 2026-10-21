@@ -1,7 +1,7 @@
 // Estado inicial de una partida de Mayor o menor. TODO lo aleatorio sale de aqui y del seed: el orden de los dos mazos del crupier, la jugada
 // de reemplazo de una respuesta ilegal y la semilla de la narracion. Despues de crear el estado no se vuelve a tocar el rng.
 
-import { JUGADORES, RONDAS, FICHAS, CARTAS, CARTAS_CRUPIER, activoDe } from './constantes.js';
+import { JUGADORES, RONDAS, FICHAS, CARTAS, CARTAS_CRUPIER, COPIAS_MAZO, BANDAS_DOBLES, REGLAS_ACTIVAS, activoDe } from './constantes.js';
 
 const por = (v) => Array.from({ length: JUGADORES }, () => (typeof v === 'function' ? v() : v));
 const statsVacias = () => ({
@@ -20,16 +20,28 @@ function barajar(rng, cartas) {
   return m;
 }
 
-export function crearEstado(rng) {
+// El mazo que se reparte con la mano oculta: COPIAS_MAZO copias de cada carta del 0 al 10. Sin mano oculta no hay reparto: cada jugador tiene las 11 cartas.
+export const mazoCompleto = (reglas = REGLAS_ACTIVAS) => (reglas.manoOculta ? CARTAS.flatMap((c) => Array(COPIAS_MAZO).fill(c)) : [...CARTAS]);
+
+export function crearEstado(rng, reglas = REGLAS_ACTIVAS) {
   const crupier = por(() => barajar(rng, CARTAS_CRUPIER)); // mazo del crupier de cada asiento, en orden de salida (el futuro es secreto)
   const azar = Array.from({ length: RONDAS }, () => ({ carta: rng(), lado: rng() })); // sorteos de reemplazo por ronda
   const semillaNarracion = Math.floor(rng() * 4294967296);
+  // lo de las reglas 2.0.0 se sortea DESPUES de todo lo anterior: el mundo de un seed (mazos del crupier, reemplazos, narracion) no cambia con las perillas
+  let mano = por(() => [...CARTAS]);
+  if (reglas.manoOculta) {
+    const barajado = barajar(rng, mazoCompleto(reglas));
+    mano = [0, 1].map((s) => barajado.slice(s * CARTAS.length, (s + 1) * CARTAS.length).sort((x, y) => x - y)); // 11 cada uno, ordenadas para leerse
+  }
+  const dobles = BANDAS_DOBLES.slice(0, reglas.dobles).map(([desde, hasta]) => desde + Math.floor(rng() * (hasta - desde + 1)));
   return {
+    reglas,
+    dobles, // rondas en que las ganancias se pagan al doble (publico: se dicen al empezar)
     ronda: 1,
     fin: false,
     final: null,
     fichas: por(FICHAS),
-    mano: por(() => [...CARTAS]), // cartas que le quedan a cada jugador (publico: las jugadas se ven)
+    mano, // cartas que le quedan a cada jugador (con la mano oculta, secretas para el rival)
     jugadas: por(() => []), // cartas que ya jugo cada uno, en orden
     crupier,
     crupierSalidas: por(() => []), // cartas del crupier ya reveladas, por mazo y en orden de salida
@@ -51,4 +63,19 @@ export function crupierFaltan(E, s) {
   const conocidas = new Set(E.crupierSalidas[s]);
   if (!E.fin && activoDe(E.ronda) === s) conocidas.add(crupierDeRonda(E));
   return CARTAS_CRUPIER.filter((c) => !conocidas.has(c));
+}
+
+// Lo maximo que puede apostar el predictor p: sus fichas, sin pasar del tope fijo (reglas 2.0.0: 6) y, solo al medir variantes, sin pasar de las fichas de su rival.
+export const apuestaMaxima = (E, p) => {
+  const base = E.reglas.topeRival ? Math.min(E.fichas[p], E.fichas[1 - p]) : E.fichas[p];
+  return E.reglas.topeFijo ? Math.min(base, E.reglas.topeFijo) : base;
+};
+
+// Las cartas que el jugador i NO conoce: el mazo menos su mano y menos lo que su rival ya jugo. De ahi sale el resto de la mano del rival (11 menos las que ya jugo),
+// junto con las que no se reparten. Con la mano publica no se desconoce nada. Publico: solo usa la mano de i y las jugadas.
+export function cartasDesconocidas(E, i) {
+  if (!E.reglas.manoOculta) return [];
+  const resto = mazoCompleto(E.reglas);
+  for (const c of [...E.mano[i], ...E.jugadas[i], ...E.jugadas[1 - i]]) resto.splice(resto.indexOf(c), 1);
+  return resto.sort((x, y) => x - y);
 }

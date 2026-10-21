@@ -9,7 +9,7 @@ import { aplicarTurno } from './mayormenor/turno.js';
 import { vistaTexto } from './mayormenor/vista.js';
 import { resultadoDe } from './mayormenor/resultado.js';
 import { REGLAS, FORMATO } from './mayormenor/reglas-texto.js';
-import { JUGADORES, RONDAS } from './mayormenor/constantes.js';
+import { JUGADORES, RONDAS, REGLAS_ACTIVAS } from './mayormenor/constantes.js';
 import { evaluarSerie } from './mayormenor/evaluacion.js';
 import { BOTS, INFO_BOTS } from './mayormenor-bots.js';
 
@@ -25,11 +25,11 @@ export default {
   // Bots de control que la consola acepta por nombre: { id: { nombre, color, fn(estado, asiento, rng) } }
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   rondas: RONDAS, // turnos de la arena (1 por ronda): la arena corta una partida que no termina despues de RONDAS + 2
-  versionReglas: 'mayormenor-1.0.0',
+  versionReglas: REGLAS_ACTIVAS.version, // reglas 2.0.0 (21 de octubre de 2026): tope por el rival, igual cuenta como menor, mano oculta y rondas dobles
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 
-  crear: (rng) => crearEstado(rng),
+  crear: (rng) => crearEstado(rng, REGLAS_ACTIVAS),
   terminado: (E) => E.fin,
   vista: (E, i) => vistaTexto(E, i),
   normalizar: normalizarRespuesta,

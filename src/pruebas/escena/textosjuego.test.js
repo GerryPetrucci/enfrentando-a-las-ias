@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TEXTOS_JUEGO, textoDeJuego, introDe } from '../../../web/casino/textos-juego.js';
 import { juegosConEscena } from '../../../web/casino/lineas.js';
+import { RONDAS, TOPE_APUESTA } from '../../juegos/mayormenor/constantes.js';
 import dilema from '../../juegos/dilema.js';
 import dudaapuesta from '../../juegos/dudaapuesta.js';
 import mayormenor from '../../juegos/mayormenor.js';
@@ -51,6 +52,18 @@ test('la frase de la tarjeta (introDe) cabe en la voz y en pantalla: una linea d
   assert.equal(introDe(undefined), null);
   assert.equal(introDe('toString'), null);
   assert.equal(textoDeJuego('__proto__'), null);
+});
+
+test('Mayor o menor cuenta sus reglas 2.0.0 en la descripcion inicial del video: tope de apuesta, carta igual como menor, mano secreta y rondas dobles (los numeros salen del motor)', () => {
+  const t = textoDeJuego('mayormenor');
+  assert.ok(t.regla.includes(`${RONDAS} rondas`), t.regla);
+  assert.ok(t.regla.includes(`hasta ${TOPE_APUESTA} fichas`), 'el tope de apuesta');
+  assert.match(t.regla, /secret/i, 'la carta del activo y las manos son secretas');
+  assert.match(t.regla, /rondas dobles/i);
+  assert.match(t.gana, /carta igual cuenta como menor/i);
+  assert.match(t.gana, /m[aá]s fichas/i);
+  assert.ok(t.intro.includes(`hasta ${TOPE_APUESTA} fichas`) && /dobles/.test(t.intro), `la frase de la tarjeta: ${t.intro}`);
+  assert.doesNotMatch([t.regla, t.gana, t.intro].join(' '), /todas sus fichas|apuesta fichas a si/i, 'nada de las reglas 1.0.0');
 });
 
 test('ningun texto nombra a un proveedor o a un modelo, ni dice "la mejor IA", ni usa palabras del prompt de otro juego', () => {

@@ -2,12 +2,18 @@
 import { correrPartida } from '../../arena.js';
 import { resolverAgente } from '../../agentes.js';
 import mayormenor from '../../juegos/mayormenor.js';
+import { crearEstado } from '../../juegos/mayormenor/estado.js';
+import { REGLAS_1_0, REGLAS_2_0 } from '../../juegos/mayormenor/constantes.js';
 
+export { REGLAS_1_0, REGLAS_2_0 };
 export const MEZCLA_MM = ['contador', 'azar'];
 export const agentesMM = (claves = MEZCLA_MM) => claves.map((c) => resolverAgente(c, mayormenor));
 
-// Una partida de verdad (la misma estructura que se guarda en data/), jugada por bots. Sin red y sin API.
-export const jugarMM = (seed, claves = MEZCLA_MM, extra = {}) => correrPartida({ juego: mayormenor, agentes: agentesMM(claves), seed, ...extra });
+// El juego con las reglas que se pidan: la escena tiene que reproducir las partidas guardadas con las reglas 1.0.0 (las dos reales del 18 de octubre) y las del juego de hoy (2.0.0).
+const juegoConReglas = (reglas) => (reglas === REGLAS_2_0 ? mayormenor : { ...mayormenor, versionReglas: reglas.version, crear: (rng) => crearEstado(rng, reglas) });
+
+// Una partida de verdad (la misma estructura que se guarda en data/), jugada por bots. Sin red y sin API. Por omision con las reglas 1.0.0 (lo que ya probaban estas pruebas); `reglas: REGLAS_2_0` para las de hoy.
+export const jugarMM = (seed, claves = MEZCLA_MM, { reglas = REGLAS_1_0, ...extra } = {}) => correrPartida({ juego: juegoConReglas(reglas), agentes: agentesMM(claves), seed, ...extra });
 
 // Una partida con un modelo caido en `asiento` (el juego juega por el: cartas y apuestas de reemplazo).
 export async function jugarMMConCaido(seed, asiento = 0) {
@@ -17,10 +23,10 @@ export async function jugarMMConCaido(seed, asiento = 0) {
 }
 
 // Varias partidas para recorrer muchos registros: cartas iguales, apuestas totales, finales anticipados, remontadas.
-export async function muchasMM() {
+export async function muchasMM(reglas = REGLAS_1_0) {
   const out = [];
-  for (const claves of [['contador', 'azar'], ['prudente', 'temerario'], ['contrario', 'contador'], ['azar', 'azar'], ['temerario', 'temerario'], ['prudente', 'prudente']]) {
-    for (let seed = 1; seed <= 8; seed++) out.push(await jugarMM(seed, claves));
+  for (const claves of [['contador', 'azar'], ['prudente', 'temerario'], ['contrario', 'contador'], ['azar', 'azar'], ['temerario', 'temerario'], ['prudente', 'prudente'], ['astuto', 'contador']]) {
+    for (let seed = 1; seed <= 8; seed++) out.push(await jugarMM(seed, claves, { reglas }));
   }
   return out;
 }

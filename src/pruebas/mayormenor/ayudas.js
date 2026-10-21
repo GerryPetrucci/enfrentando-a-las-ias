@@ -3,9 +3,10 @@ import { crearRng } from '../../rng.js';
 import { crearEstado } from '../../juegos/mayormenor/estado.js';
 import { normalizarRespuesta } from '../../juegos/mayormenor/ordenes.js';
 import { aplicarTurno } from '../../juegos/mayormenor/turno.js';
-import { activoDe } from '../../juegos/mayormenor/constantes.js';
+import { activoDe, REGLAS_1_0 } from '../../juegos/mayormenor/constantes.js';
 
-export const nuevoEstado = (seed = 7) => crearEstado(crearRng(seed));
+// Por omision las pruebas del motor general usan las reglas 1.0.0 (mano publica, sin tope, sin rondas dobles): lo propio de las reglas 2.0.0 se prueba en reglas2.test.js.
+export const nuevoEstado = (seed = 7, reglas = REGLAS_1_0) => crearEstado(crearRng(seed), reglas);
 
 // Fija la carta que revela el crupier en la ronda en curso (para ejemplos exactos). Rompe la permutacion del mazo: solo para pruebas de una ronda.
 export function fijarCrupier(E, carta) {
@@ -30,8 +31,8 @@ export const politicaMinima = (E, s) => (activoDe(E.ronda) === s
   : { lado: 'mayor', fichas: 1, razon: 'prueba' });
 
 // Una partida entera sin la arena: fns[s](E, s, rng) -> respuesta cruda. Devuelve el estado y los registros.
-export function jugarConBots(seed, fns, { hasta = Infinity } = {}) {
-  const E = nuevoEstado(seed);
+export function jugarConBots(seed, fns, { hasta = Infinity, reglas = REGLAS_1_0 } = {}) {
+  const E = nuevoEstado(seed, reglas);
   const rngs = fns.map((_, s) => crearRng((seed * 31 + s) >>> 0));
   const registros = [];
   while (!E.fin && registros.length < hasta) {

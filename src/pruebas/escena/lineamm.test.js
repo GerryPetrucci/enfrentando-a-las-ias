@@ -10,7 +10,7 @@ import { resolverNombres } from '../../juegos/mayormenor/narracion.js';
 import { elegirCamara } from '../../../web/casino/camara.js';
 import { eventosDePaso } from '../../../web/casino/sonido.js';
 import { construirLineaDeTiempo, puntuarRondas, mejoresRondas, beatsDeEstado, erroresDeEstado, conRazones, MIN_MS, RONDAS_TOPE } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
-import { jugarMM, jugarMMConCaido, muchasMM } from './ayudas-mm.js';
+import { jugarMM, jugarMMConCaido, muchasMM, REGLAS_2_0 } from './ayudas-mm.js';
 
 const nombres = (p) => (t) => resolverNombres(t, p.jugadores);
 const TIPOS = ['apertura', 'crupier', 'jugada', 'apuesta', 'revelado', 'resultado'];
@@ -91,14 +91,14 @@ test('la apuesta, el reveal y las fichas salen del registro: carta igual no muev
     for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
       const r = p.rondas[bs[0].registro];
       const paso = (tipo, t) => bs.find((b) => b.tipo === tipo).pasos.filter((x) => x.tipo === t);
-      assert.deepEqual(paso('apertura', 'roles'), [{ tipo: 'roles', activo: r.activo, predictor: r.predictor }]);
+      assert.deepEqual(paso('apertura', 'roles'), [{ tipo: 'roles', activo: r.activo, predictor: r.predictor, doble: false }], 'las reglas 1.0.0 no tienen rondas dobles');
       const ap = paso('apuesta', 'apuesta')[0];
       assert.deepEqual([ap.asiento, ap.fichas, ap.lado, ap.todo], [r.predictor, r.apuesta, r.lado, r.apostoTodo], `ronda ${ronda}`);
       assert.deepEqual(paso('crupier', 'crupier'), [{ tipo: 'crupier', asiento: r.activo, carta: r.crupier, quedan: r.crupierQuedan[r.activo].length }]);
       const sello = paso('revelado', 'sello')[0].sello;
       assert.equal(sello, r.acierto === true ? 'acierta' : r.acierto === false ? 'falla' : 'igual', `ronda ${ronda}: sello`);
       assert.deepEqual(paso('revelado', 'revelar'), [{ tipo: 'revelar', carta: r.carta }]);
-      assert.deepEqual(paso('revelado', 'comparar'), [{ tipo: 'comparar', veredicto: r.veredicto, crupier: r.crupier, carta: r.carta }]);
+      assert.deepEqual(paso('revelado', 'comparar'), [{ tipo: 'comparar', veredicto: r.veredicto, crupier: r.crupier, carta: r.carta, igual: r.veredicto === 'igual' }]);
       const res = bs.find((b) => b.tipo === 'resultado').pasos;
       const cobra = res.filter((x) => x.tipo === 'cobra'), paga = res.filter((x) => x.tipo === 'paga'), devuelve = res.filter((x) => x.tipo === 'devuelve');
       assert.deepEqual(res.find((x) => x.tipo === 'estado').fichas, r.fichas, `ronda ${ronda}: las fichas de la ronda son las del registro`);
@@ -252,4 +252,69 @@ test('razon=1 en Mayor o menor: la razon del predictor sale con su apuesta y la 
   for (const b of conRazones(construirLineaDeTiempo(caido), caido)) if (b.reemplazo) assert.equal(b.razon, undefined, `${b.id}: nadie penso esa jugada`);
   for (const basura of [null, undefined, 7]) assert.deepEqual(conRazones(basura, p), []);
   assert.doesNotThrow(() => conRazones(beats, null));
+});
+
+// ---- las reglas 2.0.0 en la escena: rondas dobles, carta igual que cuenta como menor y manos repartidas (con cartas repetidas) ----
+const resta = (mano, jugadas) => { const m = [...mano]; for (const c of jugadas) m.splice(m.indexOf(c), 1); return m; };
+const ordenadas = (xs) => [...xs].sort((a, b) => a - b);
+
+test('reglas 2.0.0: la apertura dice si la ronda es doble y todos los estados traen las manos repartidas, de las que salen las cartas que quedan', async () => {
+  let dobles = 0;
+  for (const p of await muchasMM(REGLAS_2_0)) {
+    const beats = construirLineaDeTiempo(p);
+    const r0 = p.rondas[0];
+    const inicial = [0, 1].map((s) => ordenadas(s === r0.activo ? [...r0.mano[s], r0.carta] : r0.mano[s]));
+    const jugadas = [[], []];
+    for (const [ronda, bs] of porRonda(beats.filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const apertura = bs.find((b) => b.tipo === 'apertura');
+      assert.equal(apertura.pasos.find((x) => x.tipo === 'roles').doble, r.doble === 2, `ronda ${ronda}`);
+      if (r.doble === 2) dobles++;
+      const antes = apertura.pasos.find((x) => x.tipo === 'estado');
+      assert.deepEqual(antes.manoInicial, inicial, `seed ${p.seed} ronda ${ronda}: las manos repartidas`);
+      assert.deepEqual(antes.disponibles.map(ordenadas), inicial.map((m, s) => ordenadas(resta(m, jugadas[s]))), `ronda ${ronda}: lo que queda antes de jugar`);
+      jugadas[r.activo].push(r.carta);
+      const despues = bs.find((b) => b.tipo === 'resultado').pasos.find((x) => x.tipo === 'estado');
+      assert.deepEqual(despues.manoInicial, inicial);
+      assert.deepEqual(despues.disponibles.map(ordenadas), inicial.map((m, s) => ordenadas(resta(m, jugadas[s]))), `ronda ${ronda}: lo que queda despues`);
+    }
+  }
+  assert.ok(dobles > 0, 'la prueba no vio ninguna ronda doble');
+});
+
+test('reglas 2.0.0: la carta igual cuenta como menor: la comparacion lo dice y el sello es el de la apuesta, no «igual»; la doble paga al doble', async () => {
+  let iguales = 0, dobles = 0;
+  for (const p of await muchasMM(REGLAS_2_0)) {
+    for (const [ronda, bs] of porRonda(construirLineaDeTiempo(p).filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const cmp = bs.find((b) => b.tipo === 'revelado').pasos.find((x) => x.tipo === 'comparar');
+      assert.equal(cmp.igual, r.igual === true, `ronda ${ronda}`);
+      assert.notEqual(cmp.veredicto, 'igual', 'con las reglas 2.0.0 nunca queda «igual»');
+      const sello = bs.find((b) => b.tipo === 'revelado').pasos.find((x) => x.tipo === 'sello').sello;
+      assert.equal(sello, r.acierto ? 'acierta' : 'falla', `ronda ${ronda}`);
+      const ap = bs.find((b) => b.tipo === 'apuesta').pasos.find((x) => x.tipo === 'apuesta');
+      assert.equal(ap.maximo, ap.todo && r.apuestaMaxima < r.fichasAntes[r.predictor], `ronda ${ronda}: «Máximo» solo si el tope impide apostar todo lo suyo`);
+      const res = bs.find((b) => b.tipo === 'resultado').pasos;
+      assert.deepEqual(res.filter((x) => x.tipo === 'cobra' && x.asiento === r.predictor).map((x) => x.fichas), r.acierto ? [r.ganaPredictor] : [], 'el predictor cobra lo del registro (doble en rondas dobles)');
+      if (r.igual) iguales++;
+      if (r.doble === 2 && r.acierto) { dobles++; assert.equal(r.ganaPredictor, 2 * r.apuesta); }
+    }
+  }
+  assert.ok(iguales > 0 && dobles > 0, `la prueba no vio cartas iguales (${iguales}) o rondas dobles que acierten (${dobles})`);
+});
+
+test('reglas 2.0.0: puntuarRondas cuenta la carta igual y la ronda doble igual que las dicen los comentarios del motor', async () => {
+  const frases = { 'carta igual': /^Carta igual/, 'ronda doble': /Ronda doble/ };
+  const vistos = {};
+  for (const p of await muchasMM(REGLAS_2_0)) {
+    for (const m of puntuarRondas(p)) {
+      const r = p.rondas[m.ronda - 1];
+      for (const [motivo, re] of Object.entries(frases)) {
+        const dice = r.narracion.some((l) => l.tipo === 'comentario' && re.test(l.texto));
+        assert.equal(m.motivos.includes(motivo), dice, `seed ${p.seed} ronda ${m.ronda}: ${motivo}`);
+        if (dice) vistos[motivo] = (vistos[motivo] ?? 0) + 1;
+      }
+    }
+  }
+  for (const motivo of Object.keys(frases)) assert.ok(vistos[motivo] > 0, `la prueba no vio "${motivo}"`);
 });

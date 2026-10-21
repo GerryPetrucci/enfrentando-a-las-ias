@@ -28,6 +28,9 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
   const semilla = seed ?? partida.seed;
   const n = Number.isInteger(camara) ? camara : CAMARA_POR_DEFECTO;
   const beats = [];
+  // Las cartas con que empezo cada jugador: lo que tiene despues de la primera ronda mas la carta que juega el activo (las partidas con las reglas 1.0.0 empiezan con 0 a 10).
+  const primera = rondas[0];
+  const inicial = [0, 1].map((s) => (Array.isArray(primera?.mano?.[s]) ? [...primera.mano[s], ...(s === primera.activo ? [primera.carta] : [])].sort((a, b) => a - b) : Array.from({ length: 11 }, (_, k) => k)));
 
   rondas.forEach((r, i) => {
     const vistas = elegirCamara(semilla, r.ronda, n, 2);
@@ -43,15 +46,16 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     const disponibles = (despues) => [0, 1].map((s) => (despues || s !== r.activo ? [...r.mano[s]] : [...r.mano[s], r.carta].sort((a, b) => a - b)));
     const quedan = (despues) => [0, 1].map((s) => r.crupierQuedan[s].length + (!despues && s === r.activo ? 1 : 0));
 
-    crear('apertura', { lineas: lineasDe('apertura'), pasos: [{ tipo: 'roles', activo: r.activo, predictor: r.predictor }, { tipo: 'estado', fichas: r.fichasAntes, disponibles: disponibles(false), crupierQuedan: quedan(false) }] });
+    // `manoInicial` son las cartas con que empezo cada jugador (reglas 2.0.0: repartidas al azar, con repetidas): la tira de la mesa tacha lo ya jugado
+    crear('apertura', { lineas: lineasDe('apertura'), pasos: [{ tipo: 'roles', activo: r.activo, predictor: r.predictor, doble: r.doble === 2 }, { tipo: 'estado', fichas: r.fichasAntes, disponibles: disponibles(false), crupierQuedan: quedan(false), manoInicial: inicial }] });
     crear('crupier', { lineas: lineasDe('crupier'), pasos: [{ tipo: 'crupier', asiento: r.activo, carta: r.crupier, quedan: r.crupierQuedan[r.activo].length }] });
     crear('jugada', { lineas: lineasDe('jugada'), reemplazo: r.invalidas?.[r.activo] === true, pasos: [{ tipo: 'jugar', asiento: r.activo, carta: visible ? r.carta : null }, { tipo: 'pregunta' }] });
-    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: r.invalidas?.[r.predictor] === true, pasos: [{ tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true }] });
+    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: r.invalidas?.[r.predictor] === true, pasos: [{ tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true, maximo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true && r.apuestaMaxima < r.fichasAntes?.[r.predictor] }] }); // maximo: apuesta lo maximo que permite el tope (reglas 2.0.0), no todas sus fichas
     crear('revelado', {
       lineas: lineasDe('revelacion'),
       pasos: [
         { tipo: 'revelar', carta: r.carta },
-        { tipo: 'comparar', veredicto: r.veredicto, crupier: r.crupier, carta: r.carta },
+        { tipo: 'comparar', veredicto: r.veredicto, crupier: r.crupier, carta: r.carta, igual: r.igual === true || r.veredicto === 'igual' }, // igual: la carta es la del crupier (en las reglas 2.0.0 cuenta como menor)
         { tipo: 'sello', sello: r.acierto === true ? 'acierta' : r.acierto === false ? 'falla' : 'igual' },
       ],
     });
@@ -61,7 +65,7 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     if (r.veredicto === 'igual') pasosResultado.push({ tipo: 'devuelve', asiento: r.predictor, fichas: r.apuesta });
     else if (r.acierto) pasosResultado.push({ tipo: 'devuelve', asiento: r.predictor, fichas: r.apuesta }, { tipo: 'cobra', asiento: r.predictor, fichas: r.ganaPredictor });
     else pasosResultado.push({ tipo: 'paga', asiento: r.predictor, fichas: r.apuesta });
-    pasosResultado.push({ tipo: 'estado', fichas: r.fichas, disponibles: disponibles(true), crupierQuedan: quedan(true) });
+    pasosResultado.push({ tipo: 'estado', fichas: r.fichas, disponibles: disponibles(true), crupierQuedan: quedan(true), manoInicial: inicial });
     crear('resultado', { lineas: [...lineasDe('resultado'), ...lineasDe('comentario')], pasos: pasosResultado });
   });
 
@@ -91,7 +95,7 @@ export function conRazones(beats, partida) {
 
 // ---- Que rondas valen la pena para un clip de redes -----------------------------------------------------------------------------------------
 // Cada ronda suma puntos por lo que paso en ella (todo sale del registro y refleja las mismas reglas que los comentarios del motor). Los pesos son editoriales.
-const PESOS = { final: 5, 'lo apuesta todo': 4, 'cae de golpe': 3, 'pasa al frente': 3, 'apuesta grande': 2, 'carta igual': 2, 'regala la ronda': 2 };
+const PESOS = { final: 5, 'lo apuesta todo': 4, 'cae de golpe': 3, 'pasa al frente': 3, 'apuesta grande': 2, 'carta igual': 2, 'regala la ronda': 2, 'ronda doble': 1 };
 
 export function puntuarRondas(partida) {
   const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
@@ -101,7 +105,8 @@ export function puntuarRondas(partida) {
     if (r.apostoTodo && r.invalidas?.[predictor] !== true) motivos.push('lo apuesta todo');
     const propia = r.invalidas?.[predictor] !== true; // una apuesta que puso el juego no es audacia de la IA
     if (propia && r.apuesta * 2 >= r.fichasAntes?.[predictor]) motivos.push('apuesta grande');
-    if (r.veredicto === 'igual') motivos.push('carta igual');
+    if (r.veredicto === 'igual' || r.igual === true) motivos.push('carta igual');
+    if (r.doble === 2) motivos.push('ronda doble');
     const manoAntes = [...(r.mano?.[activo] ?? []), r.carta];
     const arriba = manoAntes.filter((c) => c > r.crupier).length, abajo = manoAntes.filter((c) => c < r.crupier).length;
     if (r.invalidas?.[activo] !== true && r.veredicto === 'menor' && arriba > abajo) motivos.push('regala la ronda');

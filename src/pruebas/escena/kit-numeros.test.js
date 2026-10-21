@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos, htmlAvatarJugador } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlTiraMano, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos, htmlAvatarJugador } from '../../../web/casino/kit.js';
 import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
@@ -35,6 +35,16 @@ test('una carta numerica oculta no lleva su numero ni en el DOM; una visible si;
   assert.match(visible, /class="dorso"/);
   assert.match(visible, /<use href="#logo"/);
   assert.doesNotMatch(htmlCartaNumero(), /data-numero/, 'sin argumento es una carta oculta');
+});
+
+test('la tira de una mano repartida muestra cada carta (con repetidas), tacha las usadas y marca la copia que se juega ahora', () => {
+  // mano 2 5 5 5 7 9; quedan 2, un 5 y 9: estan usadas dos copias del 5 y el 7; se juega un 5 ahora
+  const t = htmlTiraMano([2, 5, 5, 5, 7, 9], [2, 5, 9], 5);
+  assert.equal(t, '<div class="tira-num"><div class="t">2</div><div class="t">5</div><div class="t usada">5</div><div class="t usada ahora">5</div><div class="t usada">7</div><div class="t">9</div></div>');
+  assert.equal(htmlTiraMano([3, 1, 2], [1, 2, 3], null), '<div class="tira-num"><div class="t">1</div><div class="t">2</div><div class="t">3</div></div>', 'se muestran en orden');
+  assert.equal((htmlTiraMano([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [], 4).match(/class="t usada/g) ?? []).length, 11, 'sin ninguna disponible, todas usadas');
+  for (const basura of [null, undefined, 'x', 7]) assert.equal(htmlTiraMano(basura, basura, basura), '<div class="tira-num"></div>');
+  assert.doesNotMatch(htmlTiraMano([1, 'x', NaN, null, 3], [1], null), />x<|>NaN<|>null</, 'solo entran numeros');
 });
 
 test('la tira de numeros marca cuales siguen disponibles, cuales ya se usaron (tachados) y cual se juega ahora', () => {

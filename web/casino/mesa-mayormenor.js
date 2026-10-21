@@ -5,7 +5,7 @@
 // se voltea, se compara (▲ mayor, ▼ menor, = igual) y se pagan las fichas con la banca. En la tira de numeros de cada jugador solo se marca la carta jugada al revelarla.
 
 import { colocarMayorMenor } from './layout-mayormenor.js';
-import { htmlCartaNumero, htmlFrenteNumero, htmlPlaca, htmlPila, htmlTira, esc } from './kit.js';
+import { htmlCartaNumero, htmlFrenteNumero, htmlPlaca, htmlPila, htmlTiraMano, esc } from './kit.js';
 import { RONDAS_TOPE } from './linea-de-tiempo-mayormenor.js';
 import { etiquetaDeApuesta } from './escena-config.js';
 import { MesaBase, el, poner, centro } from './mesa-base.js';
@@ -33,7 +33,7 @@ export class Mesa extends MesaBase {
       const placa = el('fijo placa-grande'); poner(placa, a.placa);
       const tira = el('fijo tira-caja'); poner(tira, a.tira);
       tira.style.setProperty('--tw', `${a.tiraForma.ancho}px`); tira.style.setProperty('--th', `${a.tiraForma.alto}px`);
-      return { placa, tira, fichas: 0, disponibles: [...NUMEROS], ahora: null, rol: `Jugador ${s + 1}`, reemplazo: false, turno: false };
+      return { placa, tira, fichas: 0, inicial: [...NUMEROS], disponibles: [...NUMEROS], ahora: null, rol: `Jugador ${s + 1}`, reemplazo: false, turno: false };
     });
     const C = L.centro;
     this.rotuloCrupier = el('fijo rotulo', 'Crupier'); poner(this.rotuloCrupier, C.rotuloCrupier);
@@ -60,27 +60,30 @@ export class Mesa extends MesaBase {
     a.placa.innerHTML = htmlPlaca(this.partida.jugadores[s], a.rol, a.fichas, null, a.reemplazo);
     a.placa.classList.toggle('turno', a.turno);
   }
-  // La tira de numeros: los que ya no tiene (usados) tachados; el que se juega ahora, en dorado, solo desde que se revela.
+  // La tira de la mano: una casilla por carta repartida (con las reglas 2.0.0 puede haber repetidas); las ya jugadas, tachadas; la que se juega ahora, en dorado, solo desde que se revela.
   pintarTira(s) {
     const a = this.asientos[s];
-    a.tira.innerHTML = htmlTira(NUMEROS, NUMEROS.filter((n) => !a.disponibles.includes(n)), a.ahora);
+    a.tira.innerHTML = htmlTiraMano(a.inicial, a.disponibles, a.ahora);
   }
   mostrarMazo(n) { this.mazo.querySelector('.quedan').innerHTML = `Mazo<br>quedan ${n}`; }
   ocultarIndicador() { this.indicador.innerHTML = '<div class="flecha" style="opacity:.35">?</div><div class="txt" style="color:#9a9aa6;font-size:.7em">¿mayor<br>o menor?</div>'; this.indicador.style.opacity = 0; }
   centroPlaca(s) { const p = this.L.asientos[s].placa; return { x: p.x + p.ancho - 110, y: p.y + p.alto / 2 }; }
   // Pone fichas, cartas disponibles y mazo con el estado que trae el beat (antes o despues de la ronda).
   aplicarEstado(e) {
-    this.asientos.forEach((a, s) => { a.fichas = e.fichas[s]; a.disponibles = e.disponibles[s]; this.pintarPlaca(s); this.pintarTira(s); });
+    this.asientos.forEach((a, s) => { a.fichas = e.fichas[s]; a.disponibles = e.disponibles[s]; a.inicial = e.manoInicial?.[s] ?? NUMEROS; this.pintarPlaca(s); this.pintarTira(s); });
     this.mostrarMazo(e.crupierQuedan[this.activo]);
   }
-  aplicarRoles({ activo, predictor }) {
+  aplicarRoles({ activo, predictor, doble = false }) {
     this.activo = activo;
+    this.rondaDoble = doble;
     this.asientos.forEach((a, s) => { a.turno = s === activo; a.reemplazo = false; a.ahora = null; a.rol = s === activo ? 'Activo · juega una carta' : s === predictor ? 'Predictor · apuesta' : ''; });
   }
   mostrarEstadoInicial(beat) {
     this.aplicarRoles(beat.pasos.find((p) => p.tipo === 'roles'));
     this.aplicarEstado(beat.pasos.find((p) => p.tipo === 'estado'));
-    this.cabecera.querySelector('.mano').textContent = `Ronda ${beat.mano} / ${RONDAS_TOPE}`;
+    const mano = this.cabecera.querySelector('.mano');
+    mano.textContent = `Ronda ${beat.mano} / ${RONDAS_TOPE}${this.rondaDoble ? ' · DOBLE ×2' : ''}`; // una ronda doble paga al doble las ganancias (reglas 2.0.0)
+    mano.classList.toggle('doble', this.rondaDoble === true);
   }
   fijarEstado(e) { this.aplicarEstado(e); }
 
@@ -151,7 +154,7 @@ export class Mesa extends MesaBase {
     a.reemplazo = beat.reemplazo;
     a.rol = beat.reemplazo ? 'Jugada del juego' : 'Predictor · apuesta';
     this.pintarPlaca(p.asiento);
-    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(etiquetaDeApuesta(beat, this.nombre(p.asiento)).titulo)}${p.todo ? ' <span class="todo">¡Todo!</span>' : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
+    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(etiquetaDeApuesta(beat, this.nombre(p.asiento)).titulo)}${p.todo ? ` <span class="todo">${p.maximo ? '¡Máximo!' : '¡Todo!'}</span>` : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
     this.anim(this.apuesta, [{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 380, fill: 'forwards', easing: 'cubic-bezier(.2,1.3,.4,1)' });
     this.sonar(p);
     this.volarFichas(this.centroPlaca(p.asiento), centro(this.L.centro.apuesta, 0.12), p.fichas, 'juego');
@@ -167,7 +170,8 @@ export class Mesa extends MesaBase {
     a.ahora = rev.carta;
     this.pintarTira(this.activo);
     await this.esperar(ms * 0.45);
-    const [flecha, texto] = FLECHAS[cmp.veredicto] ?? ['?', ''];
+    // con las reglas 2.0.0 la carta igual cuenta como menor: se ve la flecha de menor y se dice por que
+    const [flecha, texto] = cmp.igual && cmp.veredicto !== 'igual' ? ['＝', 'igual = menor'] : FLECHAS[cmp.veredicto] ?? ['?', ''];
     this.indicador.innerHTML = `<div class="flecha">${flecha}</div><div class="txt" style="color:var(--oro)">${esc(texto)}</div>`;
     this.anim(this.indicador, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 360, fill: 'forwards', easing: 'cubic-bezier(.2,1.3,.4,1)' });
     await this.esperar(ms * 0.2);
@@ -198,6 +202,7 @@ export class Mesa extends MesaBase {
   terminar(beat) {
     const f = beat.pasos[0]?.final;
     this.cabecera.querySelector('.mano').textContent = 'Final';
+    this.cabecera.querySelector('.mano').classList.remove('doble');
     this.asientos.forEach((a) => { a.turno = false; a.placa.classList.remove('turno'); a.placa.querySelector('.medalla')?.remove(); });
     const ganadores = f ? (f.empate ? [0, 1] : [f.ganador]) : [];
     for (const s of ganadores) {
