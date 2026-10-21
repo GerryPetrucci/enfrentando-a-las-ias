@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proponer · Enfrentando a las IAs</title>
+<meta name="description" content="Propón un juego nuevo o un enfrentamiento entre IAs para Enfrentando a las IAs, y apoya las propuestas de otras personas.">
+<meta name="theme-color" content="#101014">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra" id="barra">
+  <div class="barra-dentro"><a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a><nav class="menu" aria-label="Principal"><a href="./">Inicio</a><a href="metodo.html">Cómo se mide</a></nav></div>
+</header>
+
+<main class="ancha" id="contenido">
+  <div class="portada">
+    <h1>Tú <span>propones</span></h1>
+    <p>¿Qué juego te gustaría ver? ¿Qué IAs quieres ver frente a frente? Cuéntanoslo. Las propuestas son públicas y las que más apoyo reúnen se miran primero.</p>
+  </div>
+
+  <div class="dos-columnas">
+    <section aria-labelledby="t-form">
+      <h2 id="t-form">Tu propuesta</h2>
+      <form class="formulario" id="form" novalidate>
+        <fieldset class="campo tipos"><legend>¿Qué propones?</legend>
+          <label><input type="radio" name="tipo" value="juego" checked> Un juego nuevo</label>
+          <label><input type="radio" name="tipo" value="enfrentamiento"> Un enfrentamiento</label>
+        </fieldset>
+        <div class="campo" id="campo-juego" hidden><label for="p-juego">¿En qué juego?</label><select id="p-juego" name="juego"><option value="">Uno nuevo / no sé</option></select></div>
+        <div class="campo"><label for="p-titulo">Título</label><input id="p-titulo" name="titulo" maxlength="100" required placeholder="Por ejemplo: Póker sin límite"></div>
+        <div class="campo"><label for="p-ias">IAs que quieres ver (opcional)</label><input id="p-ias" name="ias" maxlength="200" placeholder="Por ejemplo: Claude, GPT y Gemini"></div>
+        <div class="campo"><label for="p-descripcion">Cuéntanos la idea</label><textarea id="p-descripcion" name="descripcion" rows="6" maxlength="3000" required placeholder="¿Cómo se juega? ¿Qué lo haría emocionante de ver?"></textarea></div>
+        <div class="campo"><label for="p-nombre">Tu nombre o usuario (opcional)</label><input id="p-nombre" name="nombre" maxlength="200" placeholder="Para darte crédito si la hacemos"></div>
+        <p class="errores" id="errores" role="alert" hidden></p>
+        <button class="boton" type="submit">Enviar propuesta</button>
+        <p class="nota">Se abrirá GitHub con tu propuesta ya escrita; solo revisas y pulsas «Submit new issue». Necesitas una cuenta gratuita de GitHub y tu propuesta quedará <b>pública</b>. ¿Sin cuenta? Cuéntanosla en los comentarios de nuestras redes.</p>
+      </form>
+    </section>
+
+    <section aria-labelledby="t-lista">
+      <h2 id="t-lista">Propuestas de la gente</h2>
+      <p class="nota">Pon un 👍 en la que quieras ver para apoyarla.</p>
+      <div id="lista" role="status" aria-live="polite"><p class="vacio">Cargando propuestas…</p></div>
+    </section>
+  </div>
+</main>
+
+<footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
+
+<script type="module">
+import { cargarMarcador, montarMenu, esc } from './menu.js';
+import { fechaCorta } from './catalogo.js';
+import { REPO, TIPOS, validarPropuesta, urlDePropuesta, urlDeLista, propuestasDeIssues } from './propuestas.js';
+
+const $ = (id) => document.getElementById(id);
+const datos = await cargarMarcador();
+montarMenu(datos, { pagina: 'proponer' });
+
+$('p-juego').insertAdjacentHTML('beforeend', (datos.juegos ?? []).map((j) => `<option value="${esc(j.nombre)}">${esc(j.nombre)}</option>`).join(''));
+const tipoActual = () => document.querySelector('input[name="tipo"]:checked')?.value ?? 'juego';
+const mostrarJuego = () => { $('campo-juego').hidden = tipoActual() !== 'enfrentamiento'; };
+
+// Enlaces como proponer.html?tipo=enfrentamiento&juego=Mayor%20o%20menor (desde la pagina de cada juego).
+const q = new URLSearchParams(location.search);
+if (Object.hasOwn(TIPOS, q.get('tipo'))) document.querySelector(`input[name="tipo"][value="${q.get('tipo')}"]`).checked = true;
+if (q.get('juego')) { if (![...$('p-juego').options].some((o) => o.value === q.get('juego'))) $('p-juego').insertAdjacentHTML('beforeend', `<option value="${esc(q.get('juego'))}">${esc(q.get('juego'))}</option>`); $('p-juego').value = q.get('juego'); }
+mostrarJuego();
+for (const r of document.querySelectorAll('input[name="tipo"]')) r.addEventListener('change', mostrarJuego);
+
+$('form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const f = $('form');
+  const propuesta = { tipo: tipoActual(), juego: tipoActual() === 'enfrentamiento' ? f.juego.value : '', titulo: f.titulo.value, ias: f.ias.value, descripcion: f.descripcion.value, nombre: f.nombre.value };
+  const errores = validarPropuesta(propuesta);
+  $('errores').hidden = errores.length === 0;
+  $('errores').innerHTML = errores.map((e) => esc(e)).join('<br>');
+  if (errores.length) return;
+  window.open(urlDePropuesta(propuesta), '_blank', 'noopener');
+});
+
+function tarjeta(p) {
+  return `<a class="tarjeta" href="${esc(p.url)}" target="_blank" rel="noopener"><div class="fila"><span class="categoria">${esc(TIPOS[p.tipo])}</span><span class="estado">👍 ${esc(p.apoyos)}</span></div><h3>${esc(p.titulo)}</h3><p class="meta">${p.fecha ? esc(fechaCorta(p.fecha)) : ''}${p.comentarios ? ` · ${esc(p.comentarios)} ${p.comentarios === 1 ? 'comentario' : 'comentarios'}` : ''}</p></a>`;
+}
+
+try {
+  const r = await fetch(urlDeLista());
+  if (!r.ok) throw new Error(String(r.status));
+  const lista = propuestasDeIssues(await r.json());
+  $('lista').innerHTML = lista.length ? `<div class="rejilla una">${lista.map(tarjeta).join('')}</div>` : '<p class="vacio">Todavía no hay propuestas. ¡Sé la primera persona!</p>';
+} catch {
+  $('lista').innerHTML = `<p class="vacio">No pude cargar las propuestas ahora mismo. Puedes verlas en <a href="https://github.com/${REPO}/issues" target="_blank" rel="noopener">GitHub</a>.</p>`;
+}
+</script>
+</body>
+</html>

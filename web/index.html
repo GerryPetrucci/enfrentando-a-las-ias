@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Enfrentando a las IAs · El marcador honesto</title>
-<meta name="description" content="Ponemos a las IAs a jugar entre sí, con el mismo prompt para todas, y llevamos la cuenta. Busca cualquier partida por juego o por seed.">
+<meta name="description" content="Ponemos a las IAs a jugar entre sí, con el mismo prompt para todas, y llevamos la cuenta. Elige un juego o busca cualquier partida por IA o por seed.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Enfrentando a las IAs · El marcador honesto">
-<meta property="og:description" content="Mismo juego. Mismo prompt. A ver quién gana. Busca cualquier partida por juego o por seed.">
+<meta property="og:description" content="Mismo juego. Mismo prompt. A ver quién gana. Elige un juego o busca cualquier partida por IA o por seed.">
 <meta property="og:image" content="https://gerrypetrucci.github.io/enfrentando-a-las-ias/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#101014">
@@ -15,16 +15,20 @@
 <link rel="stylesheet" href="sitio.css">
 </head>
 <body>
-<div class="envoltura">
-  <header class="cabecera">
-    <a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a>
-    <nav aria-label="Principal"><a href="#buscar">Buscar</a><a href="#marcador">Marcador</a><a href="#metodo">Cómo se mide</a></nav>
-  </header>
+<header class="barra" id="barra">
+  <div class="barra-dentro"><a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a><nav class="menu" aria-label="Principal"><a href="metodo.html">Cómo se mide</a><a class="menu-cta" href="proponer.html">Proponer</a></nav></div>
+</header>
 
+<main class="ancha">
   <div class="portada">
     <h1>El marcador <span>honesto</span> de las IAs</h1>
     <p>Las ponemos a jugar entre sí, con el mismo prompt para todas, y llevamos la cuenta. Lo que ves es lo que decidió cada IA: nada de «esta es la mejor».</p>
     <p class="eslogan">Mismo juego. Mismo prompt. A ver quién gana.</p>
+    <form class="buscador-grande" id="buscar" role="search" autocomplete="off">
+      <label for="q" class="solo-lectores">Buscar un juego, una IA o un seed</label>
+      <input id="q" name="q" type="search" placeholder="Busca un juego, una IA o un seed…" enterkeyhint="search">
+    </form>
+    <p class="contador" id="contador" role="status" aria-live="polite"></p>
     <div class="redes" aria-label="Redes">
       <a href="https://www.tiktok.com/@enfrentandoalasias">TikTok</a>
       <a href="https://www.instagram.com/enfrentandoalasias">Instagram</a>
@@ -33,106 +37,70 @@
     </div>
   </div>
 
-  <section id="buscar" aria-labelledby="t-buscar">
-    <h2 id="t-buscar">Busca una partida</h2>
-    <p class="nota">Por juego, por seed (el número que identifica cada partida, sale en los videos y en los comentarios) o por IA. Si el video está subido pero su resultado todavía no, la serie aparece <b>por publicarse</b>: puedes leer la conversación y los prompts hasta donde llega lo subido.</p>
-    <form class="buscador" id="filtros" role="search" autocomplete="off">
-      <div class="campo"><label for="f-juego">Juego</label><select id="f-juego" name="juego"><option value="">Todos</option></select></div>
-      <div class="campo"><label for="f-seed">Seed</label><input id="f-seed" name="seed" type="search" inputmode="numeric" placeholder="por ejemplo 552912962"></div>
-      <div class="campo"><label for="f-ia">IA</label><select id="f-ia" name="ia"><option value="">Todas</option></select></div>
-      <div class="campo"><label for="f-estado">Estado</label><select id="f-estado" name="estado"><option value="">Todos</option><option value="por-publicarse">Por publicarse</option><option value="publicada">Publicada</option></select></div>
-      <button class="boton suave" type="button" id="limpiar">Limpiar</button>
-    </form>
-    <p class="contador" id="contador" role="status" aria-live="polite"></p>
-    <div class="tarjetas" id="series"></div>
+  <section aria-labelledby="t-juegos">
+    <h2 id="t-juegos">Juegos</h2>
+    <p class="nota">Cada juego es independiente: tiene su propia tabla y no hay un ranking general de las IAs.</p>
+    <div class="rejilla tres" id="juegos"></div>
   </section>
 
-  <section id="marcador" aria-labelledby="t-marcador">
-    <h2 id="t-marcador">Marcador por juego</h2>
-    <p class="nota">Cada juego es independiente: no hay un ranking general de las IAs. Aquí solo cuentan las partidas ya publicadas (con su parte final subida). Una tabla resume lo que pasó en esas partidas, con esas reglas; no dice quién es «la mejor IA».</p>
-    <div id="juegos"></div>
+  <section aria-labelledby="t-partidas">
+    <h2 id="t-partidas">Últimas partidas</h2>
+    <p class="nota" id="nota-partidas">Si el video está subido pero su resultado todavía no, la partida aparece <b>por publicarse</b>: puedes leer la conversación y los prompts hasta donde llega lo subido.</p>
+    <div class="rejilla" id="partidas"></div>
   </section>
 
-  <section id="metodo" aria-labelledby="t-metodo">
-    <h2 id="t-metodo">Cómo se mide</h2>
-    <ul class="reglas">
-      <li><b>Mismo prompt para todas.</b> Cada IA recibe exactamente el mismo texto; solo cambia el modelo. El prompt de cada juego es público y está versionado: si cambia, las partidas anteriores no se comparan con las nuevas.</li>
-      <li><b>Las jugadas no se retocan.</b> Lo que ves es lo que registró el motor. Los errores (una respuesta cortada, una orden ilegal) se muestran, no se esconden.</li>
-      <li><b>Seed y partidas siempre visibles.</b> Con el seed puedes volver a ver cualquier partida y comprobar el mapa y las reglas.</li>
-      <li><b>Cada partida se publica al terminar su video.</b> Con la parte 1 aparece aquí la serie «por publicarse» y los fragmentos de la conversación hasta ahí; el resultado sale con la parte final.</li>
-      <li><b>Nunca un resultado suelto como veredicto.</b> Una partida es lo que pasó con estas reglas y este seed. Con pocas partidas es una muestra, no un ranking.</li>
-      <li><b>Generado por IA.</b> Las jugadas, mensajes y razones de las IAs, y la voz narradora de los videos, son contenido generado por IA.</li>
-    </ul>
-  </section>
+  <div class="banda">
+    <div><h2>¿Qué juego o enfrentamiento quieres ver?</h2><p>Propón un juego nuevo o qué IAs quieres ver frente a frente. Las propuestas son públicas y se ordenan por apoyos.</p></div>
+    <a class="boton" href="proponer.html">Hacer una propuesta</a>
+  </div>
+</main>
 
-  <footer class="pie">
-    <p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos. Los nombres de los modelos se usan de forma descriptiva; no se usan sus logos.</p>
-    <p id="generado"></p>
-  </footer>
-</div>
+<footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
 
 <script type="module">
-import { ESTADOS, fechaLarga, filtrarSeries, leerFiltros, textoDeFiltros, juegosDe, iasDe, resumenDeSerie } from './catalogo.js';
+import { cargarMarcador, montarMenu, esc } from './menu.js';
+import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida } from './catalogo.js';
+import { textoDeJuego } from './casino/textos-juego.js';
 
-const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const $ = (id) => document.getElementById(id);
-const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j.inicial ?? String(j.nombre ?? '?')[0])}</span>`;
+const PARTIDAS_RECIENTES = 6, PARTIDAS_BUSCADAS = 30;
+const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j?.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j?.inicial ?? String(j?.nombre ?? '?')[0])}</span>`;
+const ias = (lista) => (lista ?? []).map((j) => `<span class="ia">${disco(j)}${esc(j.nombre)}</span>`).join('');
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
-let datos = { episodios: [], juegos: [] };
-
-function tarjeta(e) {
-  const jugadores = (e.jugadores ?? []).map((j) => `<span class="ia">${disco(j)}${esc(j.nombre)}</span>`).join('');
-  const partidas = (e.detalle ?? []).filter((d) => d.estado === 'publicada' || d.hastaTurno > 0).map((d) => `<a href="escena.html?archivo=${encodeURIComponent(`publicas/${e.etiqueta}.json`)}&amp;partida=${d.n}">Ver la partida ${d.n}${d.estado === 'publicada' ? '' : ' hasta donde se ha subido'}</a>`).join('');
-  const pendiente = e.estado === 'por-publicarse';
-  return `<article class="serie">
-    <header><div><h3>${esc(e.juego?.nombre)}</h3><div class="fecha">${esc(fechaLarga(e.fecha))}</div></div><span class="estado ${esc(e.estado)}">${esc(ESTADOS[e.estado] ?? e.estado)}</span></header>
-    <div class="jugadores">${jugadores}</div>
-    <p class="meta"><b>Seed</b> <span class="seed">${esc(e.seedBase)}</span> · ${esc(e.partidas)} ${e.partidas === 1 ? 'partida' : 'partidas'} · reglas <b>${esc(e.versionReglas ?? '—')}</b>${e.modo ? ` · modo ${esc(e.modo)}` : ''}</p>
-    <p class="meta resultado">${esc(resumenDeSerie(e))}</p>
-    ${pendiente ? '<p class="meta">El resultado se publica con la parte final de cada partida.</p>' : ''}
-    <div class="enlaces"><a href="serie.html?id=${encodeURIComponent(e.etiqueta)}">Conversación y prompts</a>${partidas}</div>
-  </article>`;
+function tarjetaJuego(j) {
+  const descripcion = textoDeJuego(j.id)?.regla ?? '';
+  const cifras = `<b>${plural(j.publicadas, 'partida publicada', 'partidas publicadas')}</b>${j.porPublicarse ? ` · ${j.porPublicarse} por publicarse` : ''}${j.ultima ? ` · ${esc(fechaCorta(j.ultima))}` : ''}`;
+  return `<a class="tarjeta" href="juego.html?id=${encodeURIComponent(j.id)}"><span class="categoria">${esc(j.categoria)}</span><h3>${esc(j.nombre)}</h3>${descripcion ? `<p class="descripcion">${esc(descripcion)}</p>` : ''}<div class="jugadores">${ias(j.ias)}</div><div class="cifras"><span>${j.publicadas || j.porPublicarse ? cifras : 'Próximamente'}</span></div></a>`;
 }
 
-function pintarSeries() {
-  const f = { juego: $('f-juego').value, seed: $('f-seed').value, ia: $('f-ia').value, estado: $('f-estado').value };
-  history.replaceState(null, '', `${location.pathname}${textoDeFiltros(f)}${location.hash}`);
-  const lista = filtrarSeries(datos.episodios, f);
-  $('contador').textContent = datos.episodios.length ? `${lista.length} ${lista.length === 1 ? 'serie' : 'series'}${lista.length === datos.episodios.length ? '' : ` de ${datos.episodios.length}`}` : 'Todavía no hay series.';
-  $('series').innerHTML = lista.length ? lista.map(tarjeta).join('') : `<p class="vacio">${datos.episodios.length ? 'Ninguna serie coincide con esa búsqueda. Si buscas un seed de un video que acabas de ver, puede que su serie aún no se haya subido aquí.' : 'Todavía no hay series publicadas.'}</p>`;
+function tarjetaPartida(p) {
+  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(p.juego.nombre)}</span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${ias(p.jugadores)}</div><p class="meta resultado">${esc(resumenDePartida(p))}</p><p class="meta">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></p></a>`;
 }
 
-function pintarMarcador() {
-  const juegos = datos.juegos ?? [];
-  $('juegos').innerHTML = juegos.length ? juegos.map((j) => {
-    const filas = (j.tabla ?? []).map((f) => `<tr><td><span class="ia">${disco(f)}${esc(f.nombre)}</span></td><td>${esc(f.puntosPorPartida)}</td><td>${esc(f.victorias)}-${esc(f.empates)}-${esc(f.derrotas)}</td><td>${esc(f.partidas)}</td></tr>`).join('');
-    const cuerpo = filas
-      ? `<div class="tabla-envoltura"><table><thead><tr><th>IA</th><th>Puntos por partida</th><th>V-E-D</th><th>Partidas</th></tr></thead><tbody>${filas}</tbody></table></div>`
-      : '<p class="vacio">Todavía no hay partidas publicadas de este juego: se publican con la parte final de cada video.</p>';
-    return `<div class="juego"><h3>${esc(j.nombre)}</h3><p class="nota">${esc(j.categoria)}${j.versionReglas ? ` · reglas ${esc(j.versionReglas)}` : ''}. Esto no es un ranking general de las IAs.</p>${cuerpo}</div>`;
-  }).join('') : '<p class="vacio">Todavía no hay juegos publicados.</p>';
+const datos = await cargarMarcador();
+montarMenu(datos, { pagina: 'inicio', generado: datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '' });
+
+function pintar() {
+  const texto = $('q').value.trim();
+  history.replaceState(null, '', `${location.pathname}${textoDeBusqueda(texto)}${location.hash}`);
+  const { juegos, partidas } = buscar(datos, texto);
+  const hay = (datos.juegos ?? []).length > 0;
+  $('juegos').innerHTML = juegos.length ? juegos.map(tarjetaJuego).join('') : `<p class="vacio">${hay ? 'Ningún juego coincide con esa búsqueda.' : 'Todavía no hay juegos publicados.'}</p>`;
+  const mostradas = partidas.slice(0, texto ? PARTIDAS_BUSCADAS : PARTIDAS_RECIENTES);
+  $('t-partidas').textContent = texto ? 'Partidas que coinciden' : 'Últimas partidas';
+  $('partidas').innerHTML = mostradas.length ? mostradas.map(tarjetaPartida).join('') : `<p class="vacio">${texto ? `Ninguna partida coincide con «${esc(texto)}». Si buscas el seed de un video que acabas de ver, puede que su partida aún no se haya subido aquí.` : 'Todavía no hay partidas.'}</p>`;
+  $('contador').textContent = datos.error ? 'No pude cargar el marcador. Prueba a recargar la página.'
+    : texto ? `${plural(juegos.length, 'juego', 'juegos')} y ${plural(partidas.length, 'partida', 'partidas')}${partidas.length > mostradas.length ? ` (se muestran ${mostradas.length})` : ''}` : '';
 }
 
-function llenarSelectores() {
-  $('f-juego').insertAdjacentHTML('beforeend', juegosDe(datos.episodios).map((j) => `<option value="${esc(j.id)}">${esc(j.nombre)}</option>`).join(''));
-  $('f-ia').insertAdjacentHTML('beforeend', iasDe(datos.episodios).map((j) => `<option value="${esc(j.id)}">${esc(j.nombre)}</option>`).join(''));
-  const f = leerFiltros(location.search);
-  $('f-juego').value = f.juego; $('f-seed').value = f.seed; $('f-ia').value = f.ia; $('f-estado').value = f.estado;
-}
-
-try {
-  datos = await (await fetch('marcador.json?t=' + Date.now())).json();
-} catch {
-  $('contador').textContent = 'No pude cargar el marcador. Prueba a recargar la página.';
-}
-llenarSelectores();
-pintarSeries();
-pintarMarcador();
-$('generado').textContent = datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '';
-for (const id of ['f-juego', 'f-ia', 'f-estado']) $(id).addEventListener('change', pintarSeries);
-$('f-seed').addEventListener('input', pintarSeries);
-$('filtros').addEventListener('submit', (ev) => { ev.preventDefault(); pintarSeries(); });
-$('limpiar').addEventListener('click', () => { for (const id of ['f-juego', 'f-seed', 'f-ia', 'f-estado']) $(id).value = ''; pintarSeries(); });
+$('q').value = leerBusqueda(location.search);
+pintar();
+$('q').addEventListener('input', pintar);
+$('buscar').addEventListener('submit', (ev) => { ev.preventDefault(); pintar(); });
+const enfocar = () => { if (location.hash === '#buscar') $('q').focus(); };
+enfocar();
+addEventListener('hashchange', enfocar);
 </script>
 </body>
 </html>

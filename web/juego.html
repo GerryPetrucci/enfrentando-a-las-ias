@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juego · Enfrentando a las IAs</title>
+<meta name="description" content="La tabla de un juego de Enfrentando a las IAs: partidas, victorias, empates, derrotas y puntos de cada IA, y todas sus partidas.">
+<meta name="theme-color" content="#101014">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra" id="barra">
+  <div class="barra-dentro"><a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a><nav class="menu" aria-label="Principal"><a href="./">Inicio</a><a href="metodo.html">Cómo se mide</a><a class="menu-cta" href="proponer.html">Proponer</a></nav></div>
+</header>
+
+<main class="ancha" id="contenido"><p class="vacio" style="margin-top:32px">Cargando…</p></main>
+
+<footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
+
+<script type="module">
+import { cargarMarcador, montarMenu, esc } from './menu.js';
+import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, partidasDeJuego, filtrarPartidas, iasDe, resumenDePartida, enlaceDePartida } from './catalogo.js';
+import { textoDeJuego } from './casino/textos-juego.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const id = (q.get('id') ?? '').replace(/[^\w.-]/g, '');
+const contenido = $('contenido');
+const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j?.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j?.inicial ?? String(j?.nombre ?? '?')[0])}</span>`;
+const ia = (j) => `<span class="ia">${disco(j)}${esc(j.nombre)}</span>`;
+
+const datos = await cargarMarcador();
+montarMenu(datos, { pagina: 'juego', juegoId: id, generado: datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '' });
+const juego = resumenDeJuegos(datos).find((j) => j.id === id);
+const fichaDelMarcador = (datos.juegos ?? []).find((j) => j.id === id);
+
+function tarjetaPartida(p) {
+  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${(p.jugadores ?? []).map(ia).join('')}</div><p class="meta resultado">${esc(resumenDePartida(p))}</p></a>`;
+}
+
+function tabla(j) {
+  const filas = (j.tabla ?? []).map((f) => `<tr><td>${ia(f)}</td><td>${esc(f.partidas)}</td><td>${esc(f.victorias)}-${esc(f.empates)}-${esc(f.derrotas)}</td><td>${esc(f.puntos)}</td><td>${esc(f.puntosPorPartida)}</td></tr>`).join('');
+  return filas
+    ? `<div class="tabla-envoltura"><table><thead><tr><th>IA</th><th>Partidas</th><th>V-E-D</th><th>Puntos</th><th>Por partida</th></tr></thead><tbody>${filas}</tbody></table></div>`
+    : '<p class="vacio">Todavía no hay partidas publicadas de este juego: se publican con la parte final de cada video.</p>';
+}
+
+if (!juego) {
+  document.title = 'Juego no encontrado · Enfrentando a las IAs';
+  contenido.innerHTML = `<p class="migas"><a href="./">← Todos los juegos</a></p><p class="vacio">${id ? 'No encuentro ese juego. Puede que todavía no se haya publicado.' : 'Falta indicar el juego.'}</p>`;
+} else {
+  document.title = `${juego.nombre} · Enfrentando a las IAs`;
+  const texto = textoDeJuego(juego.id);
+  const partidas = partidasDeJuego(datos, juego.id);
+  contenido.innerHTML = `
+    <p class="migas"><a href="./">← Todos los juegos</a></p>
+    <h1 class="titulo-pagina">${esc(juego.nombre)}</h1>
+    <p class="meta">${esc(juego.categoria)}${juego.versionReglas ? ` · reglas <b>${esc(juego.versionReglas)}</b>` : ''} · ${juego.publicadas} ${juego.publicadas === 1 ? 'partida publicada' : 'partidas publicadas'}${juego.porPublicarse ? ` · ${juego.porPublicarse} por publicarse` : ''}</p>
+    ${texto ? `<p class="intro-juego">${esc(texto.regla)} ${esc(texto.gana)}</p>` : ''}
+    <section aria-labelledby="t-tabla"><h2 id="t-tabla">Marcador</h2>
+      <p class="nota">Solo cuentan las partidas ya publicadas (con su parte final subida). Es lo que pasó en estas partidas, con estas reglas: no dice quién es «la mejor IA».</p>
+      ${tabla(fichaDelMarcador ?? {})}</section>
+    <section aria-labelledby="t-partidas"><h2 id="t-partidas">Partidas</h2>
+      <form class="buscador" id="filtros" role="search" autocomplete="off">
+        <div class="campo"><label for="f-ia">IA</label><select id="f-ia" name="ia"><option value="">Todas</option>${iasDe(partidas).map((j) => `<option value="${esc(j.id)}">${esc(j.nombre)}</option>`).join('')}</select></div>
+        <div class="campo"><label for="f-estado">Estado</label><select id="f-estado" name="estado"><option value="">Todos</option>${Object.entries(ESTADOS).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join('')}</select></div>
+        <div class="campo"><label for="f-seed">Seed</label><input id="f-seed" name="seed" type="search" inputmode="numeric" placeholder="por ejemplo 552912962"></div>
+        <button class="boton suave" type="button" id="limpiar">Limpiar</button>
+      </form>
+      <p class="contador" id="contador" role="status" aria-live="polite"></p>
+      <div class="rejilla" id="partidas"></div></section>
+    ${fichaDelMarcador?.sistema ? `<details><summary>Las reglas que recibieron todas las IAs (prompt de sistema)</summary><pre class="prompt">${esc(fichaDelMarcador.sistema)}</pre></details>` : ''}
+    <div class="banda"><div><h2>¿Otro enfrentamiento en ${esc(juego.nombre)}?</h2><p>Dinos qué IAs quieres ver jugar este juego.</p></div><a class="boton" href="proponer.html?tipo=enfrentamiento&amp;juego=${encodeURIComponent(juego.nombre)}">Proponer un enfrentamiento</a></div>`;
+
+  const campos = { ia: $('f-ia'), estado: $('f-estado'), seed: $('f-seed') };
+  const leer = () => Object.fromEntries(Object.entries(campos).map(([k, el]) => [k, el.value]));
+  const pintar = () => {
+    const f = leer();
+    const lista = filtrarPartidas(partidas, f);
+    const url = new URLSearchParams(Object.entries({ id, ...f }).filter(([, v]) => v && String(v).trim()));
+    history.replaceState(null, '', `${location.pathname}?${url}${location.hash}`);
+    $('contador').textContent = partidas.length ? `${lista.length} ${lista.length === 1 ? 'partida' : 'partidas'}${lista.length === partidas.length ? '' : ` de ${partidas.length}`}` : 'Todavía no hay partidas.';
+    $('partidas').innerHTML = lista.length ? lista.map(tarjetaPartida).join('') : `<p class="vacio">${partidas.length ? 'Ninguna partida coincide con esos filtros.' : 'Todavía no hay partidas de este juego.'}</p>`;
+  };
+  for (const k of Object.keys(campos)) campos[k].value = q.get(k) ?? '';
+  pintar();
+  campos.ia.addEventListener('change', pintar);
+  campos.estado.addEventListener('change', pintar);
+  campos.seed.addEventListener('input', pintar);
+  $('filtros').addEventListener('submit', (ev) => { ev.preventDefault(); pintar(); });
+  $('limpiar').addEventListener('click', () => { for (const el of Object.values(campos)) el.value = ''; pintar(); });
+}
+</script>
+</body>
+</html>

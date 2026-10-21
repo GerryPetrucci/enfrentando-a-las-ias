@@ -3,102 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Serie · Enfrentando a las IAs</title>
-<meta name="description" content="La conversación entre las IAs y los prompts de una serie de Enfrentando a las IAs.">
-<meta name="theme-color" content="#101014">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Redirigiendo… · Enfrentando a las IAs</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="refresh" content="0; url=partida.html">
 <link rel="stylesheet" href="sitio.css">
 </head>
 <body>
-<div class="envoltura">
-  <header class="cabecera">
-    <a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a>
-    <nav aria-label="Principal"><a href="./#buscar">Buscar</a><a href="./#marcador">Marcador</a><a href="./#metodo">Cómo se mide</a></nav>
-  </header>
-  <main id="contenido"><p class="vacio" style="margin-top:32px">Cargando…</p></main>
-  <footer class="pie">
-    <p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p>
-  </footer>
-</div>
-
-<script type="module">
-import { ESTADOS, fechaLarga } from './catalogo.js';
-import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js';
-
-const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const $ = (id) => document.getElementById(id);
-const q = new URLSearchParams(location.search);
-const id = (q.get('id') ?? '').replace(/[^\w.-]/g, '');
-const contenido = $('contenido');
-const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j?.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j?.inicial ?? String(j?.nombre ?? '?')[0])}</span>`;
-const ia = (p, k) => { const j = p.jugadores?.[k]; return `<span class="ia">${disco(j)}${esc(j?.nombre ?? `Jugador ${k + 1}`)}</span>`; };
-const reino = (p, k) => (p.reinos?.[k] ? ` <small>(${esc(p.reinos[k] === 'Ambar' ? 'Ámbar' : p.reinos[k])})</small>` : '');
-
-function error(texto) {
-  document.title = 'Serie no encontrada · Enfrentando a las IAs';
-  contenido.innerHTML = `<p class="migas"><a href="./#buscar">← Volver a buscar</a></p><p class="vacio">${esc(texto)}</p>`;
-}
-
-function turno(p, r, prompts) {
-  const t = r.turno ?? r.ronda;
-  const msgs = (r.mensajes ?? []).map((m) => `<div class="mensaje"><div class="quien">${ia(p, m.k)} dice en público</div><q>${esc(m.texto)}</q></div>`).join('');
-  const privados = (r.privados ?? []).map((m) => `<div class="mensaje privado"><div class="quien">${ia(p, m.k)} le escribe a ${ia(p, m.a)}</div><q>${esc(m.texto)}</q></div>`).join('');
-  const jugadas = (r.respuestas ?? []).map((x, k) => {
-    if (!x) return '';
-    const ordenes = x.invalida ? `<p class="invalida">No respondió bien: ${esc(x.motivo ?? 'respuesta inválida')}${r.errores?.[k] ? ` (${esc(String(r.errores[k]).slice(0, 140))})` : ''}</p>` : `<ul class="ordenes">${(x.ordenes ?? []).map((o) => `<li>${esc(o)}</li>`).join('')}</ul>`;
-    const prompt = prompts?.[k] ? `<details><summary>El prompt que recibió</summary><pre class="prompt">${esc(prompts[k])}</pre></details>` : '';
-    return `<div class="jugada-ia" style="--c:${esc(p.jugadores?.[k]?.color ?? '#888')}"><h4>${ia(p, k)}${reino(p, k)}</h4>${ordenes}${x.razon ? `<p class="razon">«${esc(x.razon)}»</p>` : ''}${prompt}</div>`;
-  }).join('');
-  return `<article class="turno"><h3>Turno ${esc(t)}</h3>${msgs}${privados}${jugadas}</article>`;
-}
-
-function fichas(p) {
-  return evaluarPartida(p).jugadores.map((e) => `<div class="ficha"><h4>${ia(p, e.asiento)} · ${esc(e.puntos)} pts</h4><dl>${Object.entries(ETIQUETAS).map(([k, nombre]) => `<dt>${esc(nombre)}</dt><dd class="${e.caracteristicas[k].notable ? 'nota' : ''}">${esc(e.caracteristicas[k].frase)}</dd>`).join('')}</dl></div>`).join('');
-}
-
-function resultado(p) {
-  const nombres = p.jugadores.map((j) => j.nombre);
-  const ganador = p.empate ? 'Empate' : Number.isInteger(p.ganador) ? `Ganó ${esc(nombres[p.ganador])}${p.ganoPorMaravilla ? ' por la Maravilla' : ''}` : '';
-  const orden = Array.isArray(p.orden) ? p.orden : p.jugadores.map((_, i) => i);
-  return `<section><h2>Resultado</h2><p class="meta"><b>${ganador}</b>${p.turnos ? ` · ${esc(p.turnos)} turnos` : ''}</p>
-    <div class="puntos">${orden.map((k, i) => `<div>${ia(p, k)}<div class="pts">${esc(p.puntos?.[k] ?? 0)} pts</div><div class="meta">puesto ${i + 1}</div></div>`).join('')}</div>
-    ${p.jugadores.length && p.metricas ? `<h2 style="margin-top:28px">Cómo jugó cada IA</h2>${fichas(p)}` : ''}</section>`;
-}
-
-let serie;
-try {
-  if (!id) throw new Error('falta');
-  const r = await fetch(`data/publicas/${id}.json?t=${Date.now()}`);
-  if (!r.ok) throw new Error(String(r.status));
-  serie = await r.json();
-} catch {
-  error(id ? 'No encuentro esa serie. Puede que todavía no se haya publicado.' : 'Falta indicar la serie.');
-}
-
-if (serie) {
-  const n = Math.min(Math.max(Number(q.get('partida')) || 1, 1), serie.partidas.length);
-  const p = serie.partidas[n - 1];
-  const pendiente = p.estadoPublicacion !== 'publicada';
-  const nombre = serie.juego?.nombre ?? 'Serie';
-  document.title = `${nombre} · seed ${serie.seedBase} · Enfrentando a las IAs`;
-  const prompts = new Map((p.prompts?.turnos ?? []).map((t) => [t.turno, t.prompts]));
-  const rondas = Array.isArray(p.rondas) ? p.rondas : [];
-  const enlaceEscena = `escena.html?archivo=${encodeURIComponent(`publicas/${id}.json`)}&partida=${n}`;
-  const pestanas = serie.partidas.length > 1 ? `<nav class="pestanas" aria-label="Partidas">${serie.partidas.map((x, i) => `<a href="serie.html?id=${encodeURIComponent(id)}&amp;partida=${i + 1}"${i + 1 === n ? ' aria-current="page"' : ''}>Partida ${i + 1}${x.estadoPublicacion === 'publicada' ? '' : ' · por publicarse'}</a>`).join('')}</nav>` : '';
-  const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y lo que recibió cada IA hasta el turno ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
-  contenido.innerHTML = `
-    <p class="migas"><a href="./#buscar">← Volver a buscar</a></p>
-    <h1 class="titulo-serie">${esc(nombre)}</h1>
-    <p class="meta"><span class="estado ${esc(serie.publicacion?.estado)}">${esc(ESTADOS[serie.publicacion?.estado] ?? '')}</span> &nbsp; ${esc(fechaLarga(serie.fecha))}</p>
-    <p class="meta"><b>Seed</b> <span class="seed">${esc(serie.seedBase)}</span> · reglas <b>${esc(serie.prompt?.reglas ?? '—')}</b>${serie.modo ? ` · modo ${esc(serie.modo)}` : ''} · ${esc(serie.partidas.length)} ${serie.partidas.length === 1 ? 'partida' : 'partidas'}</p>
-    ${pestanas}${aviso}
-    <div class="enlaces">${!pendiente || rondas.length ? `<a href="${enlaceEscena}">Ver la partida ${n}${pendiente ? ' hasta donde se ha subido' : ''}</a>` : ''}<a href="data/publicas/${encodeURIComponent(id)}.json">Descargar el JSON</a></div>
-    ${serie.prompt?.sistema ? `<details><summary>Las reglas que recibieron todas las IAs (prompt de sistema)</summary><pre class="prompt">${esc(serie.prompt.sistema)}</pre></details>` : ''}
-    ${pendiente ? '' : resultado(p)}
-    <section><h2>La conversación${rondas.length ? '' : ''}</h2>
-    <p class="nota">Lo que escribió y decidió cada IA en cada turno, tal como lo registró el motor. Lo que se dicen en privado solo lo ve su destinatario durante la partida; aquí se publica hasta donde llega el video.</p>
-    ${rondas.length ? rondas.map((r) => turno(p, r, prompts.get(r.turno ?? r.ronda))).join('') : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
-}
-</script>
+<!-- Direccion vieja: antes se hablaba de «series». Ya solo hay juegos y partidas, y los enlaces ya publicados siguen sirviendo. -->
+<main class="ancha"><p class="vacio" style="margin-top:32px">Esta página se movió. Si no te lleva sola, ve a <a href="partida.html">la partida</a> o al <a href="./">inicio</a>.</p></main>
+<script>location.replace('partida.html' + location.search + location.hash);</script>
 </body>
 </html>

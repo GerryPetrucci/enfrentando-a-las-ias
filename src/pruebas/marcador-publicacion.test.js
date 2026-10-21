@@ -63,3 +63,24 @@ test('un archivo viejo, sin estado de publicacion, cuenta como publicado; una pa
   assert.doesNotThrow(() => armarMarcador([leido(serie('r', 'dilema', [{ jugadores: [jug('a')], puntos: 'x' }, null, {}]))]));
   assert.deepEqual(armarMarcador([leido({ etiqueta: 'sin partidas' })]).episodios, []);
 });
+
+test('el marcador trae una lista plana de partidas (sin series): cada una con su juego, fecha, seed, IAs y estado; el resultado solo si esta publicada', () => {
+  const a = serie('s1', 'conquista', [completa(11, [5, 0], 0), parcial(22, 8)], { fecha: '2026-10-19' });
+  const b = serie('s2', 'mayormenor', [completa(33, [2, 4], 1)], { fecha: '2026-10-21' });
+  const m = armarMarcador([leido(a), leido(b)]);
+  assert.deepEqual(m.partidas.map((p) => [p.juego.id, p.serie, p.n, p.seed, p.fecha, p.estado]), [
+    ['mayormenor', 's2', 1, 33, '2026-10-21', 'publicada'],
+    ['conquista', 's1', 1, 11, '2026-10-19', 'publicada'],
+    ['conquista', 's1', 2, 22, '2026-10-19', 'por-publicarse'],
+  ], 'la mas reciente primero; dentro de un mismo dia, en orden de partida');
+  const [pub, , pend] = m.partidas;
+  assert.deepEqual(pub.jugadores.map((j) => [j.id, j.nombre, j.color, j.inicial]), [['a', 'A', '#111', 'A'], ['b', 'B', '#111', 'B']]);
+  assert.equal(pub.ganador, 'B');
+  assert.deepEqual(pub.puntos, [2, 4]);
+  assert.equal(pub.turnos, 12);
+  assert.equal(pub.versionReglas, 'mayormenor-1.0.0');
+  assert.equal(pend.ganador, null, 'nada de resultado antes de la parte final');
+  assert.equal(pend.puntos, null);
+  assert.equal(pend.hastaTurno, 8);
+  assert.deepEqual(Object.keys(pend).sort(), Object.keys(pub).sort(), 'mismas claves, publicada o no');
+});

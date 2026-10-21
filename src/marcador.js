@@ -98,6 +98,7 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
   const categorias = {};
   const juegos = {};
   const episodios = [];
+  const grupos = []; // las partidas de cada archivo, para la lista plana del sitio
 
   for (const { archivo, ep } of episodiosLeidos) {
     if (!ep.partidas) continue;
@@ -116,6 +117,13 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
     }
 
     const detalle = ep.partidas.map((p, i) => detalleDe(p, i + 1));
+    const infoJugadores = (p) => (Array.isArray(p?.jugadores) ? p.jugadores : []).map((j) => ({ id: j?.id, nombre: j?.nombre, color: j?.color, inicial: j?.inicial }));
+    grupos.push({ fecha: ep.fecha, items: detalle.map((d, i) => ({
+      juego: { id: ep.juego.id, nombre: ep.juego.nombre, categoria: cat },
+      serie: ep.etiqueta, n: d.n, fecha: ep.fecha, seed: d.seed, estado: d.estado, hastaTurno: d.hastaTurno, turnos: d.turnos,
+      jugadores: infoJugadores(ep.partidas[i]), ganador: d.ganador, puntos: d.puntos, ganoPorMaravilla: d.ganoPorMaravilla,
+      versionReglas: ep.prompt?.reglas ?? null, modo: ep.modo ?? null,
+    })) });
     const todas = detalle.length > 0 && detalle.every((d) => d.estado === PUBLICADA);
     const primera = ep.partidas[0];
     episodios.push({
@@ -146,6 +154,8 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
       tabla: ordenada(c.tabla),
     })),
     episodios: episodios.sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    // Lo que muestra el sitio: partidas sueltas, de la mas reciente a la mas vieja (sin series; cada juego se mira por si mismo).
+    partidas: grupos.sort((a, b) => b.fecha.localeCompare(a.fecha)).flatMap((g) => g.items),
   };
 }
 

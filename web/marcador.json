@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-21T16:48:55.317Z",
+  "generado": "2026-10-21T18:57:45.967Z",
   "juegos": [
     {
       "id": "conquista",
@@ -284,6 +284,103 @@
         }
       ],
       "evaluacion": null
+    }
+  ],
+  "partidas": [
+    {
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "serie": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
+      "n": 1,
+      "fecha": "2026-10-19T02:17:21.386Z",
+      "seed": 552912962,
+      "estado": "publicada",
+      "hastaTurno": null,
+      "turnos": 18,
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G"
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D"
+        }
+      ],
+      "ganador": "GPT",
+      "puntos": [
+        3,
+        5,
+        1,
+        0
+      ],
+      "ganoPorMaravilla": true,
+      "versionReglas": "conquista-1.1.0",
+      "modo": "pago"
+    },
+    {
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "serie": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
+      "n": 2,
+      "fecha": "2026-10-19T02:17:21.386Z",
+      "seed": 552912962,
+      "estado": "por-publicarse",
+      "hastaTurno": 0,
+      "turnos": null,
+      "jugadores": [
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G"
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D"
+        },
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C"
+        }
+      ],
+      "ganador": null,
+      "puntos": null,
+      "ganoPorMaravilla": null,
+      "versionReglas": "conquista-1.1.0",
+      "modo": "pago"
     }
   ]
 }

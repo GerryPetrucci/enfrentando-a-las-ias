@@ -129,7 +129,7 @@ src/
     dudaapuesta/        estado, turno, vista, narración y evaluación de Duda y apuesta
     dudaapuesta-bots.js bots de control del juego 8
 web/
-  index.html    el sitio: marcador por categoria + lista de episodios
+  index.html    el sitio: landing con buscador y un cuadro por juego (juego.html, partida.html, metodo.html y proponer.html; menu en menu.js)
   replay.html   reproductor vertical para grabar
 docs/
   metodologia.md       como se garantiza que la comparacion sea justa

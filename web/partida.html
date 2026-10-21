@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partida · Enfrentando a las IAs</title>
+<meta name="description" content="La conversación entre las IAs y los prompts de una partida de Enfrentando a las IAs.">
+<meta name="theme-color" content="#101014">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra" id="barra">
+  <div class="barra-dentro"><a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a><nav class="menu" aria-label="Principal"><a href="./">Inicio</a><a href="metodo.html">Cómo se mide</a><a class="menu-cta" href="proponer.html">Proponer</a></nav></div>
+</header>
+<main class="envoltura" id="contenido"><p class="vacio" style="margin-top:32px">Cargando…</p></main>
+<footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
+
+<script type="module">
+import { cargarMarcador, montarMenu, esc } from './menu.js';
+import { ESTADOS, fechaLarga } from './catalogo.js';
+import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const id = (q.get('id') ?? '').replace(/[^\w.-]/g, '');
+const contenido = $('contenido');
+const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j?.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j?.inicial ?? String(j?.nombre ?? '?')[0])}</span>`;
+const ia = (p, k) => { const j = p.jugadores?.[k]; return `<span class="ia">${disco(j)}${esc(j?.nombre ?? `Jugador ${k + 1}`)}</span>`; };
+const reino = (p, k) => (p.reinos?.[k] ? ` <small>(${esc(p.reinos[k] === 'Ambar' ? 'Ámbar' : p.reinos[k])})</small>` : '');
+
+function error(texto) {
+  document.title = 'Partida no encontrada · Enfrentando a las IAs';
+  contenido.innerHTML = `<p class="migas"><a href="./">← Todos los juegos</a></p><p class="vacio">${esc(texto)}</p>`;
+}
+
+function turno(p, r, prompts) {
+  const t = r.turno ?? r.ronda;
+  const msgs = (r.mensajes ?? []).map((m) => `<div class="mensaje"><div class="quien">${ia(p, m.k)} dice en público</div><q>${esc(m.texto)}</q></div>`).join('');
+  const privados = (r.privados ?? []).map((m) => `<div class="mensaje privado"><div class="quien">${ia(p, m.k)} le escribe a ${ia(p, m.a)}</div><q>${esc(m.texto)}</q></div>`).join('');
+  const jugadas = (r.respuestas ?? []).map((x, k) => {
+    if (!x) return '';
+    const ordenes = x.invalida ? `<p class="invalida">No respondió bien: ${esc(x.motivo ?? 'respuesta inválida')}${r.errores?.[k] ? ` (${esc(String(r.errores[k]).slice(0, 140))})` : ''}</p>` : `<ul class="ordenes">${(x.ordenes ?? []).map((o) => `<li>${esc(o)}</li>`).join('')}</ul>`;
+    const prompt = prompts?.[k] ? `<details><summary>El prompt que recibió</summary><pre class="prompt">${esc(prompts[k])}</pre></details>` : '';
+    return `<div class="jugada-ia" style="--c:${esc(p.jugadores?.[k]?.color ?? '#888')}"><h4>${ia(p, k)}${reino(p, k)}</h4>${ordenes}${x.razon ? `<p class="razon">«${esc(x.razon)}»</p>` : ''}${prompt}</div>`;
+  }).join('');
+  return `<article class="turno"><h3>Turno ${esc(t)}</h3>${msgs}${privados}${jugadas}</article>`;
+}
+
+function fichas(p) {
+  try {
+    return evaluarPartida(p).jugadores.map((e) => `<div class="ficha"><h4>${ia(p, e.asiento)} · ${esc(e.puntos)} pts</h4><dl>${Object.entries(ETIQUETAS).map(([k, nombre]) => `<dt>${esc(nombre)}</dt><dd class="${e.caracteristicas[k].notable ? 'nota' : ''}">${esc(e.caracteristicas[k].frase)}</dd>`).join('')}</dl></div>`).join('');
+  } catch {
+    return ''; // la evaluacion de caracteristicas aun es solo de Guerra de territorios
+  }
+}
+
+function resultado(p) {
+  const nombres = p.jugadores.map((j) => j.nombre);
+  const ganador = p.empate ? 'Empate' : Number.isInteger(p.ganador) ? `Ganó ${esc(nombres[p.ganador])}${p.ganoPorMaravilla ? ' por la Maravilla' : ''}` : '';
+  const orden = Array.isArray(p.orden) ? p.orden : p.jugadores.map((_, i) => i);
+  const evaluacion = p.metricas ? fichas(p) : '';
+  return `<section><h2>Resultado</h2><p class="meta"><b>${ganador}</b>${p.turnos ? ` · ${esc(p.turnos)} turnos` : ''}</p>
+    <div class="puntos">${orden.map((k, i) => `<div>${ia(p, k)}<div class="pts">${esc(p.puntos?.[k] ?? 0)} pts</div><div class="meta">puesto ${i + 1}</div></div>`).join('')}</div>
+    ${evaluacion ? `<h2 style="margin-top:28px">Cómo jugó cada IA</h2>${evaluacion}` : ''}</section>`;
+}
+
+const datos = await cargarMarcador();
+let serie;
+try {
+  if (!id) throw new Error('falta');
+  const r = await fetch(`data/publicas/${id}.json?t=${Date.now()}`);
+  if (!r.ok) throw new Error(String(r.status));
+  serie = await r.json();
+} catch {
+  error(id ? 'No encuentro esa partida. Puede que todavía no se haya publicado.' : 'Falta indicar la partida.');
+}
+
+if (serie) {
+  const n = Math.min(Math.max(Number(q.get('partida')) || 1, 1), serie.partidas.length);
+  const p = serie.partidas[n - 1];
+  const pendiente = p.estadoPublicacion !== 'publicada';
+  const nombre = serie.juego?.nombre ?? 'Partida';
+  montarMenu(datos, { pagina: 'partida', juegoId: serie.juego?.id, generado: datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '' });
+  document.title = `${nombre} · seed ${p.seed ?? serie.seedBase} · Enfrentando a las IAs`;
+  const prompts = new Map((p.prompts?.turnos ?? []).map((t) => [t.turno, t.prompts]));
+  const rondas = Array.isArray(p.rondas) ? p.rondas : [];
+  const enlaceEscena = `escena.html?archivo=${encodeURIComponent(`publicas/${id}.json`)}&partida=${n}`;
+  const estado = pendiente ? 'por-publicarse' : 'publicada';
+  const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y lo que recibió cada IA hasta el turno ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
+  contenido.innerHTML = `
+    <p class="migas"><a href="juego.html?id=${encodeURIComponent(serie.juego?.id ?? '')}">← ${esc(nombre)}</a></p>
+    <h1 class="titulo-pagina">${esc(nombre)}</h1>
+    <p class="meta"><span class="estado ${esc(estado)}">${esc(ESTADOS[estado])}</span> &nbsp; ${esc(fechaLarga(serie.fecha))}</p>
+    <p class="meta"><b>Seed</b> <span class="seed">${esc(p.seed ?? serie.seedBase)}</span> · reglas <b>${esc(serie.prompt?.reglas ?? '—')}</b>${serie.modo ? ` · modo ${esc(serie.modo)}` : ''}</p>
+    ${aviso}
+    <div class="enlaces">${!pendiente || rondas.length ? `<a href="${enlaceEscena}">Ver la partida${pendiente ? ' hasta donde se ha subido' : ''}</a>` : ''}<a href="data/publicas/${encodeURIComponent(id)}.json">Descargar el JSON</a></div>
+    ${serie.prompt?.sistema ? `<details><summary>Las reglas que recibieron todas las IAs (prompt de sistema)</summary><pre class="prompt">${esc(serie.prompt.sistema)}</pre></details>` : ''}
+    ${pendiente ? '' : resultado(p)}
+    <section><h2>La conversación</h2>
+    <p class="nota">Lo que escribió y decidió cada IA en cada turno, tal como lo registró el motor. Lo que se dicen en privado solo lo ve su destinatario durante la partida; aquí se publica hasta donde llega el video.</p>
+    ${rondas.length ? rondas.map((r) => turno(p, r, prompts.get(r.turno ?? r.ronda))).join('') : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
+} else {
+  montarMenu(datos, { pagina: 'partida' });
+}
+</script>
+</body>
+</html>

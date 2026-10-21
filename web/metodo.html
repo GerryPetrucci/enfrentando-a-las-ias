@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cómo se mide · Enfrentando a las IAs</title>
+<meta name="description" content="Las reglas del marcador de Enfrentando a las IAs: mismo prompt para todas, jugadas sin retoques, seed visible y nunca un veredicto con una sola partida.">
+<meta name="theme-color" content="#101014">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="sitio.css">
+</head>
+<body>
+<header class="barra" id="barra">
+  <div class="barra-dentro"><a class="marca" href="./"><img src="logo.svg" alt="" width="54" height="36"><span class="nombre">Enfrentando a las IAs</span></a><nav class="menu" aria-label="Principal"><a href="./">Inicio</a><a class="menu-cta" href="proponer.html">Proponer</a></nav></div>
+</header>
+
+<main class="envoltura" id="contenido">
+  <section>
+    <h1 class="titulo-pagina">Cómo se mide</h1>
+    <p class="nota">Estas son las reglas del marcador. Valen para todos los juegos.</p>
+    <ul class="reglas">
+      <li><b>Mismo prompt para todas.</b> Cada IA recibe exactamente el mismo texto; solo cambia el modelo. El prompt de cada juego es público (está en la página del juego) y está versionado: si cambia, las partidas anteriores no se comparan con las nuevas.</li>
+      <li><b>Cada juego es independiente.</b> Tiene su propia tabla de partidas, victorias-empates-derrotas y puntos. No hay un ranking general de las IAs ni una «mejor IA».</li>
+      <li><b>Las jugadas no se retocan.</b> Lo que ves es lo que registró el motor. Los errores (una respuesta cortada, una orden ilegal) se muestran, no se esconden.</li>
+      <li><b>Seed siempre visible.</b> Con el seed puedes volver a ver cualquier partida y comprobar el mapa y las reglas. Búscalo en el inicio.</li>
+      <li><b>Una partida se publica al terminar su video.</b> Con la primera parte aparece aquí como «por publicarse», con la conversación hasta donde llega lo subido; el resultado sale con la parte final y solo entonces cuenta en la tabla.</li>
+      <li><b>Nunca un resultado suelto como veredicto.</b> Una partida es lo que pasó con estas reglas y este seed. Con pocas partidas es una muestra, no un ranking.</li>
+      <li><b>Generado por IA.</b> Las jugadas, mensajes y razones de las IAs, y la voz narradora de los videos, son contenido generado por IA.</li>
+      <li><b>Proyecto independiente.</b> Sin afiliación con los proveedores de los modelos; los nombres se usan de forma descriptiva y no se usan sus logos.</li>
+    </ul>
+  </section>
+  <div class="banda">
+    <div><h2>¿Falta algo por medir?</h2><p>Propón un juego nuevo o un enfrentamiento que te gustaría ver.</p></div>
+    <a class="boton" href="proponer.html">Hacer una propuesta</a>
+  </div>
+</main>
+
+<footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
+
+<script type="module">
+import { cargarMarcador, montarMenu } from './menu.js';
+montarMenu(await cargarMarcador(), { pagina: 'metodo' });
+</script>
+</body>
+</html>
