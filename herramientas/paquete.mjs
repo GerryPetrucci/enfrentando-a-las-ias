@@ -91,7 +91,7 @@ export function leemeDe(paquete, contexto = {}) {
     ...piezas,
     '## Paso 2 · Revisar cada video (no publiques ninguno sin marcar todo)',
     '- [ ] Los primeros 3 segundos: la parte 1 abre con la tarjeta de arranque (se lee entera); un clip arranca directo en la jugada; un gancho abre con la tarjeta «Próximamente».',
-    '- [ ] Un gancho no adelanta el resultado ni lleva el último turno, y va sin voz: le pones tu música (que no tenga derechos) al subirlo.',
+    '- [ ] Un gancho no adelanta el resultado ni lleva el último turno, y su voz solo dice el cierre (los cortes no se narran): le pones tu música (que no tenga derechos) al subirlo.',
     '- [ ] Se lee bien en una pantalla pequeña (míralo en tu teléfono) y el texto no se corta.',
     '- [ ] Revisé a mano los mensajes y las razones de las IAs de esta partida. Si algo es ofensivo o raro, elegí otra partida y anoté por qué.',
     '- [ ] La etiqueta «Contenido generado por IA» se ve en el video.',

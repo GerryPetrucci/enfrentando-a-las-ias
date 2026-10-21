@@ -391,3 +391,25 @@
 .f-16x9 .tarjeta-gancho .tg-cta { font-size:40px; }
 .f-16x9 .tarjeta-gancho .tg-etiqueta { font-size:170px; }
 .con-panel .cam-fuga, .con-panel .escena-fuga, .con-panel .senal-fuga, .con-panel .rotulo-cam, .con-panel .puntos-cam, .con-panel .rec-cam, .con-panel .sello-fuga.on, .con-panel .hora-cam, .con-panel .mensaje-cam.on, .con-panel .riesgo-cam.on, .con-panel .aviso-cam.on { opacity:.15; }
+
+/* ---------- cierre de cada video (cierre.js; MesaBase.ejecutarCierre): logo, frase de la voz, una fila por red con su @ y la pagina de resultados ---------- */
+.cierre-juego { position:absolute; z-index:85; opacity:0; pointer-events:none; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:34px; text-align:center;
+  padding:36px 44px; border-radius:30px; border:4px solid var(--oro); background:radial-gradient(ellipse 90% 40% at 50% 0%, rgba(224,178,92,.16), rgba(224,178,92,0) 70%), #0b0b0e; box-shadow:0 24px 80px #000d; }
+.cierre-juego .cr-logo { width:210px; height:auto; }
+.cierre-juego .cr-marca { font:800 60px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--hueso); }
+.cierre-juego .cr-frase { font:700 46px/1.25 var(--texto); color:#e6e6ec; max-width:100%; }
+.cierre-juego .cr-redes { display:grid; grid-template-columns:1fr; gap:10px; width:100%; }
+.cierre-juego .cr-red { display:grid; grid-template-columns:44px 200px 1fr; align-items:center; gap:14px; text-align:left; padding:14px 22px; background:rgba(255,255,255,.05); border:2px solid #2a2a33; border-radius:16px; }
+.cierre-juego .cr-icono svg { width:40px; height:40px; color:var(--oro); display:block; }
+.cierre-juego .cr-nombre { font:800 30px var(--titulos); letter-spacing:.1em; text-transform:uppercase; color:var(--hueso); }
+.cierre-juego .cr-usuario { font:700 32px var(--texto); color:var(--oro); overflow-wrap:anywhere; }
+.cierre-juego .cr-sitio { display:flex; flex-direction:column; gap:6px; }
+.cierre-juego .cr-sitio-t { font:700 24px var(--titulos); letter-spacing:.2em; text-transform:uppercase; color:var(--suave); }
+.cierre-juego .cr-sitio b { font:800 34px var(--texto); color:var(--oro); overflow-wrap:anywhere; }
+.f-16x9 .cierre-juego { gap:18px; padding:28px 70px; }
+.f-16x9 .cierre-juego .cr-logo { width:130px; }
+.f-16x9 .cierre-juego .cr-marca { font-size:60px; }
+.f-16x9 .cierre-juego .cr-frase { font-size:44px; max-width:1500px; }
+.f-16x9 .cierre-juego .cr-redes { display:flex; flex-wrap:wrap; justify-content:center; gap:12px 16px; }
+.f-16x9 .cierre-juego .cr-red { grid-template-columns:44px auto auto; padding:10px 24px; }
+.f-16x9 .cierre-juego .cr-sitio b { font-size:40px; }

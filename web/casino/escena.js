@@ -12,6 +12,7 @@ import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena, armarLinea, destacadasDe } from './lineas.js';
 import { cortesPedidos, armarGancho } from './gancho.js';
+import { claveDeCierre, conCierre, vozSoloCierre } from './cierre.js';
 import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
@@ -36,6 +37,7 @@ export async function iniciar() {
   const mudo = crearSonido({ activo: false });
   const reproductorDeVoz = crearReproductorDeVoz();
   let voz = null;
+  let vozDePieza = null; // la voz que usa la pieza montada: toda, o solo la del cierre en un gancho
   let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
   if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { avisoVoz = ' · No pude leer la voz: se usan los tiempos mínimos.'; } }
 
@@ -76,6 +78,12 @@ export async function iniciar() {
       beats = recortarClip(await armarLinea(entrada.juego, partida, { camara }), params.mano, params.hasta);
       if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
     }
+    if (params.cierre && beats.length) {
+      // el cierre de cada video (cierre.js): la frase se elige con el seed de la pieza, asi el mismo video es siempre igual y cada pieza dice la suya
+      const clave = params.gancho ? claveDeCierre({ seed: partida.seed, partida: entrada.numero, gancho: params.gancho.parte }) : claveDeCierre({ seed: partida.seed, partida: entrada.numero, desde: params.mano, hasta: Number.isFinite(params.hasta) ? params.hasta : beats.at(-1).mano });
+      beats = conCierre(beats, clave);
+    }
+    vozDePieza = params.gancho ? vozSoloCierre(voz) : voz; // el gancho no se narra: solo suena el cierre
     marco.innerHTML = '';
     if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene ${escena.unidad === 'turno' ? 'ese turno' : `esa ${escena.unidad}`}.`); }
     azarSonido = crearAzar(seedDeTexto(`sonido:${partida.seed}`));
@@ -91,8 +99,8 @@ export async function iniciar() {
     const primero = beats.find((b) => b.tipo !== 'intro' && b.tipo !== 'tarjeta-gancho') ?? beats[0]; // las tarjetas (de arranque, del gancho) no son de ningun juego: el estado inicial es el del primer beat de la partida
     if (params.gancho) mesas.forEach((m) => m.modoGancho());
     mesas.forEach((m) => m.mostrarEstadoInicial(primero)); // antes de reproducir, la mesa ya muestra el estado con el que empieza el clip
-    const marcas = marcarTiempos(beats, voz, params.vel);
-    const { desacordes } = resumenDeVoz(beats, voz);
+    const marcas = marcarTiempos(beats, vozDePieza, params.vel);
+    const { desacordes } = resumenDeVoz(beats, vozDePieza);
     const avisoDesacorde = desacordes ? ` · La voz no coincide con ${desacordes} momentos de esta partida (¿es de otra?): esos duran su mínimo y no suenan.` : '';
     actual = { entrada, partida, beats, marcas, mesas, ancho, alto };
     window.escena = { beats, marcas, mesas, partida };
@@ -116,9 +124,9 @@ export async function iniciar() {
       for (const [i, beat] of beats.entries()) {
         const rapido = params.detener !== null && i <= params.detener;
         mesas.forEach((m) => { m.rapido = rapido; m.vel = params.vel * (beat.vel ?? 1); }); // los cortes del gancho llevan su propia velocidad
-        const audio = entradaDeVoz(voz, beat)?.archivo;
+        const audio = entradaDeVoz(vozDePieza, beat)?.archivo;
         if (audio && params.sonido && esRutaRelativa(audio)) reproductorDeVoz.sonar(audio, params.vel);
-        await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel
+        await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, vozDePieza, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel
         if (miGeneracion !== generacion) return false; // mientras tanto se abrio otra partida
         if (params.detener !== null && i === params.detener) {
           // en modo rapido las animaciones de 1 ms aun no corrieron: se terminan a la fuerza antes de informar el estado (si no, el estado sale "limpio" aunque no lo este)

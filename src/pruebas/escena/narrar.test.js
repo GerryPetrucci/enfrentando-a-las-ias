@@ -90,6 +90,23 @@ test('el audio generado no se versiona (data/voz/ esta en .gitignore) y la herra
   assert.equal(new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: '9x16' })).searchParams.has('voz'), false);
 });
 
+test('la voz de una partida incluye TODAS las frases del cierre (cada video usa una distinta), con la pronunciacion aplicada', async () => {
+  const { planDeCierres, combinarVoz } = await import('../../../herramientas/narrar.mjs');
+  const { FRASES_CIERRE } = await import('../../../web/casino/cierre.js');
+  const plan = planDeCierres([['IAs', 'i a s']]);
+  assert.equal(plan.length, FRASES_CIERRE.length);
+  plan.forEach((p, i) => { assert.equal(p.id, `cierre-${i}`); assert.equal(p.archivo, `cierre-${i}.ogg`); assert.equal(p.fuente, FRASES_CIERRE[i], 'la fuente es el texto del beat, sin pronunciacion: asi la escena la reconoce'); });
+  assert.ok(plan.some((p) => p.texto !== p.fuente) || FRASES_CIERRE.every((f) => !f.includes('IAs')), 'el texto leido lleva la pronunciacion');
+  // --solo-cierres: se agregan a la voz que ya existe sin tocar lo demas
+  assert.deepEqual(combinarVoz({ intro: { ms: 1, archivo: 'a' } }, { 'cierre-0': { ms: 2, archivo: 'b' } }), { intro: { ms: 1, archivo: 'a' }, 'cierre-0': { ms: 2, archivo: 'b' } });
+  const { planDeVoz } = await import('../../../herramientas/narrar.mjs');
+  const beatsEj = [{ id: 'intro', texto: 'Hola.' }, { id: 'mano-1', texto: 'Algo pasa.' }, { id: 'mudo', texto: '' }];
+  assert.deepEqual(planDeVoz(beatsEj).map((p) => p.id), ['intro', 'mano-1', ...FRASES_CIERRE.map((_, i) => `cierre-${i}`)], 'la partida y TODAS las frases del cierre (los momentos mudos no llevan voz)');
+  assert.deepEqual(planDeVoz(beatsEj, [], { soloCierres: true }).map((p) => p.id), FRASES_CIERRE.map((_, i) => `cierre-${i}`), '--solo-cierres: solo las frases');
+  assert.deepEqual(combinarVoz(null, { x: 1 }), { x: 1 });
+  assert.deepEqual(combinarVoz({ 'cierre-0': { ms: 1 } }, { 'cierre-0': { ms: 9 } }), { 'cierre-0': { ms: 9 } }, 'lo nuevo reemplaza');
+});
+
 test('el servidor local sirve el audio y las fuentes con su tipo (la voz y la escena los piden)', () => {
   const servidor = readFileSync(new URL('../../servidor.js', import.meta.url), 'utf8');
   for (const [ext, tipo] of [['.ogg', 'audio/ogg'], ['.mp3', 'audio/mpeg'], ['.woff2', 'font/woff2']]) assert.ok(servidor.includes(`'${ext}': '${tipo}'`), `${ext} deberia servirse como ${tipo}`);

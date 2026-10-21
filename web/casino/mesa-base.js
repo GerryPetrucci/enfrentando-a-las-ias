@@ -10,6 +10,7 @@ import { eventosDePaso } from './sonido.js';
 import { dichoDe } from './linea-comun.js';
 import { SUBTITULO, msVisibleDeSubtitulo } from './subtitulos-vertical.js';
 import { htmlDeTarjeta } from './gancho.js';
+import { htmlDeCierre } from './cierre.js';
 
 const ETIQUETA_IA = 'Contenido generado por IA · Proyecto independiente'; // el aviso fijo de toda escena (y el pie de la tarjeta de arranque)
 export const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
@@ -119,6 +120,7 @@ export class MesaBase {
     if (beat?.tipo === 'intro') return this.ejecutarIntro(beat, ms); // la tarjeta de arranque es la misma para todos los juegos: no pasa por METODOS ni por los subtitulos
     if (beat?.tipo === 'tarjeta-gancho') return this.ejecutarTarjetaGancho(beat, ms); // lo mismo las tarjetas del gancho «Proximamente» (gancho.js)
     if (this.ganchoEl) { this.ganchoEl.getAnimations().forEach((a) => a.cancel()); this.ganchoEl.style.opacity = 0; } // una tarjeta del gancho que quedo a la vista (modo rapido) se quita
+    if (beat?.tipo === 'cierre') return this.ejecutarCierre(beat, ms); // el cierre de cada video (cierre.js): logo, redes y pagina de resultados; no pasa por METODOS
     const t0 = performance.now();
     this.mostrarSubtitulos(beat, ms);
     const metodo = this.constructor.METODOS?.[beat.tipo]; // cada mesa declara METODOS: tipo de beat -> nombre del metodo que lo anima
@@ -148,6 +150,29 @@ export class MesaBase {
     await this.esperar(Math.min(FUNDIDO, ms));
     nodo.getAnimations().forEach((a) => a.cancel());
     nodo.style.opacity = 0;
+  }
+
+  // ---- el cierre (cierre.js): la tarjeta final de TODA pieza, a pantalla completa dentro de la zona segura. Entra con un fundido y se queda hasta el final (despues, al grabar, viene el fundido a negro).
+  // La frase que dice la voz sale tambien en la tarjeta; el cuadro de subtitulos se apaga para no tapar nada. ----
+  async ejecutarCierre(beat, ms) {
+    const paso = Array.isArray(beat.pasos) ? beat.pasos.find((p) => p.tipo === 'cierre') : null;
+    this.subtitulos.getAnimations().forEach((a) => a.cancel());
+    this.salidaSubtitulos = (this.salidaSubtitulos ?? 0) + 1;
+    this.subtitulos.innerHTML = '';
+    this.subtitulos.style.opacity = 0;
+    if (!this.cierreEl) {
+      this.cierreEl = el('cierre-juego');
+      const z = this.L?.zona ?? { x: 0, y: 0, ancho: this.L?.ancho ?? 0, alto: this.L?.alto ?? 0 };
+      poner(this.cierreEl, z);
+      this.raiz.append(this.cierreEl);
+    }
+    const nodo = this.cierreEl, FUNDIDO = Math.min(450, ms * 0.3);
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.innerHTML = htmlDeCierre(paso);
+    nodo.style.opacity = 1;
+    if (this.rapido) return; // en las capturas la tarjeta se queda a la vista
+    this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
+    await this.esperar(ms);
   }
 
   // ---- el gancho «Proximamente» (gancho.js): cortes rapidos de la partida entre tarjetas de apertura, etiqueta y cierre, a pantalla completa dentro de la zona segura ----

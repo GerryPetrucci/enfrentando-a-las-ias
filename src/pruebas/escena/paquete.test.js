@@ -9,6 +9,7 @@ import { construirPaquete, ventanaDeClip, hashtagsDe, LIMITES } from '../../../w
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
 import { dividirEnDos, duracionDeBeat, planDeGrabacion, momentosSinVoz } from '../../../web/casino/escena-config.js';
 import { textoDeJuego } from '../../../web/casino/textos-juego.js';
+import { claveDeCierre, duracionDeCierre } from '../../../web/casino/cierre.js';
 import { jugar as jugarDuda } from './ayudas.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
@@ -80,18 +81,20 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
     const d = dividirEnDos(beats);
     const [p1, p2] = paquete.piezas;
     assert.deepEqual([p1.grabar.desde, p1.grabar.hasta, p2.grabar.desde, p2.grabar.hasta], [d.parte1.mano, d.parte1.hasta, d.parte2.mano, d.parte2.hasta]);
-    assert.equal(p1.grabar.ms, d.parte1.ms);
+    const cierreDe = (g) => duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: 1, desde: g.desde, hasta: g.hasta }), null);
+    assert.equal(p1.grabar.ms, d.parte1.ms + cierreDe(p1.grabar), `${id}: lo que dura la pieza incluye el cierre`);
     const ocupadas = [];
     for (const c of clips) {
       assert.ok(c.grabar.desde > beats[0].mano, `${id}: un clip no lleva el intro`);
-      assert.ok(c.grabar.ms >= 20000 && c.grabar.ms <= 40000 || /fuera de/.test(c.grabar.nota), `${id}: ${c.id} dura ${c.grabar.ms}`);
+      const contenido = c.grabar.ms - cierreDe(c.grabar); // el cierre se suma aparte: la ventana de 20 a 40 s es del contenido
+      assert.ok(contenido >= 20000 && contenido <= 40000 || /fuera de/.test(c.grabar.nota), `${id}: ${c.id} dura ${contenido}`);
       for (const [a, z] of ocupadas) assert.ok(c.grabar.hasta < a || c.grabar.desde > z, `${id}: ${c.id} se encima con otro clip`);
       ocupadas.push([c.grabar.desde, c.grabar.hasta]);
     }
     for (const pieza of paquete.piezas.filter((p) => p.tipo !== 'gancho')) { // el gancho tiene su propia direccion (gancho=1&cortes=...): su prueba esta mas abajo
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
-      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1'], `${id}: ${pieza.id}`);
+      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar, q.cierre], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1', '1'], `${id}: ${pieza.id} termina con el cierre`);
     }
   }
 });
@@ -288,12 +291,15 @@ test('un gancho por parte (gancho-1, gancho-2) cuando esa parte tiene momentos p
   const partes = dividirEnDos(beats);
   for (const g of ganchos) {
     const n = Number(g.id.slice(-1)), q = params(g.grabar.url), rango = n === 1 ? partes.parte1 : partes.parte2;
-    assert.deepEqual([q.gancho, q.parte, q.de, q.formato, q.grabar, q.auto, q.limpio], ['1', String(n), '2', 'hoja', '1', '1', '1']);
-    assert.equal(q.voz, undefined, 'el gancho no se narra: la musica la pone quien lo sube');
+    assert.deepEqual([q.gancho, q.parte, q.de, q.formato, q.grabar, q.auto, q.limpio, q.cierre], ['1', String(n), '2', 'hoja', '1', '1', '1', '1']);
+    assert.equal(q.voz, undefined, 'sin voz generada no se pasa ninguna');
+    const conVoz = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40), rutaVoz: 'data/voz/x-p1/voz.json' });
+    assert.equal(params(conVoz.paquete.piezas.find((p) => p.id === g.id).grabar.url).voz, 'data/voz/x-p1/voz.json', 'con voz se pasa: la pagina solo usa la del cierre (los cortes no se narran)');
     const cortes = q.cortes.split(',').map(Number);
     assert.ok(cortes.length >= 2 && cortes.length <= 5, `${g.id}: ${cortes.length} cortes`);
     for (const u of cortes) assert.ok(u >= rango.mano && u <= rango.hasta && u !== unidades[0] && u !== unidades.at(-1), `${g.id}: la unidad ${u} no vale (parte ${rango.mano}..${rango.hasta}; sin la primera ni la ultima de la partida)`);
-    assert.ok(g.grabar.ms >= 12000 && g.grabar.ms <= 26000, `${g.id}: dura ${g.grabar.ms}`);
+    const contenido = g.grabar.ms - duracionDeCierre(claveDeCierre({ seed: PARTIDAS.conquista.seed, partida: 1, gancho: n }), null); // el cierre se suma aparte
+    assert.ok(contenido >= 12000 && contenido <= 26000, `${g.id}: dura ${contenido} sin el cierre`);
     assert.deepEqual(g.grabar.plan, planDeGrabacion(g.grabar.ms));
     assert.equal(g.comentarioFijado, null, 'un gancho no lleva comentario fijado');
   }

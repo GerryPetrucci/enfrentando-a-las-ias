@@ -4,6 +4,7 @@
 // en local: ningun texto sale del equipo. El texto es la narracion que el codigo guardo en la partida; aqui no se inventa nada.
 //
 //   node herramientas/narrar.mjs --archivo=pruebas/NOMBRE.json [--partida=1]
+//   --solo-cierres   agrega a una voz ya generada solo las frases del cierre de los videos (cierre.js), sin volver a narrar la partida
 //   opciones: --pronunciaciones=ARCHIVO.json  ([["GPT", "ge pe te"], ...])   --velocidad=1.1 (mas lento)   --piper=RUTA   --modelo=RUTA.onnx   --ffmpeg=RUTA
 //
 // Deja los audios y voz.json en data/voz/NOMBRE-pN/ (no se versiona: son binarios) y dice como abrir la escena con esa voz.
@@ -17,6 +18,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { marcarTiempos, fuenteDeVoz } from '../web/casino/escena-config.js';
+import { planDeFrases } from '../web/casino/cierre.js';
 
 export const VOZ = {
   motor: 'Piper (MIT)',
@@ -47,6 +49,17 @@ export function planDeNarracion(beats, pronunciaciones = []) {
     .filter((p) => p.texto)
     .map((p) => ({ ...p, archivo: `${p.id}.ogg` }));
 }
+
+// Las frases del cierre de cada video (web/casino/cierre.js): un audio por frase, porque cada pieza (parte, clip o gancho) dice una distinta. `fuente` es el texto del beat, sin pronunciacion.
+export function planDeCierres(pronunciaciones = []) {
+  return planDeFrases().map((f) => ({ id: f.id, texto: textoParaVoz(f.texto, pronunciaciones), fuente: fuenteDeVoz(f.texto), archivo: `${f.id}.ogg` }));
+}
+
+// Todo lo que se sintetiza: los beats de la partida y las frases del cierre (o solo estas, con --solo-cierres).
+export const planDeVoz = (beats, pronunciaciones = [], { soloCierres = false } = {}) => (soloCierres ? planDeCierres(pronunciaciones) : [...planDeNarracion(beats, pronunciaciones), ...planDeCierres(pronunciaciones)]);
+
+// Suma lo nuevo a una voz que ya existe (--solo-cierres): lo nuevo reemplaza lo que tenga el mismo id; sin voz anterior, lo nuevo solo.
+export const combinarVoz = (existente, nueva) => ({ ...(existente && typeof existente === 'object' ? existente : {}), ...nueva });
 
 // data/voz/NOMBRE-pN: ruta de este sitio (la escena la pide con ?voz=data/voz/NOMBRE-pN/voz.json).
 export function carpetaDeVoz(archivo, partida = 1) {
@@ -92,7 +105,9 @@ function principal() {
 
   return lineaDe(juegoId).then((construir) => {
     const beats = construir(partida);
-    const plan = planDeNarracion(beats, pronunciaciones);
+    // con --solo-cierres solo se generan las frases del cierre y se suman a la voz que ya existe (para partidas narradas antes de que hubiera cierre)
+    const soloCierres = a['solo-cierres'] === 'true';
+    const plan = planDeVoz(beats, pronunciaciones, { soloCierres });
     const carpeta = carpetaDeVoz(a.archivo, numero);
     mkdirSync(resolve(carpeta), { recursive: true });
     const temporal = mkdtempSync(join(tmpdir(), 'narrar-'));
@@ -107,8 +122,10 @@ function principal() {
       resultados.push({ id: p.id, duracionS: duracionDe(salida), fuente: p.fuente });
       process.stdout.write(`\r  ${i + 1} de ${plan.length} audios`);
     }
-    const voz = armarVoz(resultados, { carpeta });
-    writeFileSync(resolve(carpeta, 'voz.json'), JSON.stringify(voz, null, 2));
+    const rutaVoz = resolve(carpeta, 'voz.json');
+    if (soloCierres && !existsSync(rutaVoz)) salir(`--solo-cierres necesita la voz ya generada (${carpeta}/voz.json): corre primero la herramienta sin esa opcion.`);
+    const voz = soloCierres ? combinarVoz(JSON.parse(readFileSync(rutaVoz, 'utf8')), armarVoz(resultados, { carpeta })) : armarVoz(resultados, { carpeta });
+    writeFileSync(rutaVoz, JSON.stringify(voz, null, 2));
     const sinVoz = marcarTiempos(beats, null, 1).at(-1).finMs / 1000, conVoz = marcarTiempos(beats, voz, 1).at(-1).finMs / 1000;
     console.log(`\n  Listo: ${resultados.length} audios en ${carpeta}/ (${resultados.reduce((s, r) => s + r.duracionS, 0).toFixed(0)} s de voz).`);
     console.log(`  La partida dura ${sinVoz.toFixed(0)} s sin voz y ${conVoz.toFixed(0)} s con ella.`);

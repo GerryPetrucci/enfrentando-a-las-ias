@@ -3,6 +3,7 @@
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
 
+import { claveDeCierre, duracionDeCierre } from './cierre.js';
 import { dividirEnDos, duracionDeBeat, formatoDeTiempo, planDeGrabacion, direccionDeGrabacion, direccionDeGancho, marcarTiempos, momentosSinVoz } from './escena-config.js';
 import { elegirCortes, armarGancho } from './gancho.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
@@ -125,7 +126,11 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   const piezas = [];
   const intro = lista.find((b) => b.tipo === 'intro'), introMs = intro ? duracionDeBeat(intro, voz, 1) : 0;
   // lo que hay que saber para grabar una pieza: la direccion de la escena, sus rondas, lo que dura y el plan de la grabacion (con los margenes de negro)
-  const grabarDe = (desde, hasta, ms, nota) => ({ url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz }), desde, hasta, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)), nota });
+  // la pieza termina con el cierre (cierre.js: logo, redes y pagina de resultados): lo que dura se suma a lo que dura la pieza
+  const grabarDe = (desde, hasta, ms, nota) => {
+    const total = Math.round(ms + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz));
+    return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
+  };
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : `Ganó ${ganador}`) : 'Terminó en empate';
     piezas.push({
@@ -154,7 +159,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const cortes = elegirCortes({ beats: lista, destacadas, rango: p });
     if (cortes.length < 2) { advertencias.push(`No hay momentos buenos para armar el gancho de la parte ${n} (menos de 2 cortes que quepan): esa parte sale sin gancho.`); continue; }
-    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, partidaNumero, parte: n, de: 2 }), null, 1).at(-1).finMs;
+    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, partidaNumero, parte: n, de: 2 }), null, 1).at(-1).finMs + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, gancho: n }), voz);
     const encabezado = `${t.nombre} · Partida ${partidaNumero} · Parte ${n} de 2`;
     const sug = n === 1 ? `Próximamente: ${nombres.length} IAs se enfrentan en ${t.nombre}` : `Próximamente: la parte 2 de ${t.nombre}`;
     const cuerpo = `Próximamente: ${encabezado}. Síguenos para no perdértela.`;
@@ -163,8 +168,8 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     piezas.push({
       id: `gancho-${n}`, tipo: 'gancho', titulo: `${t.nombre} · Gancho de la parte ${n}`,
       grabar: {
-        url: direccionDeGancho({ archivo, partida: partidaNumero, cortes: cortes.map((c) => c.unidad), parte: n, de: 2, formato }), desde: null, hasta: null, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)),
-        nota: `Sin voz: ponle tu música al subirlo (nada con derechos). Cortes: ${cortes.map((c) => `${c.etiqueta} (${unidad.toLowerCase()} ${c.unidad})`).join(', ')}. Se sube antes de la parte ${n}.`,
+        url: direccionDeGancho({ archivo, partida: partidaNumero, cortes: cortes.map((c) => c.unidad), parte: n, de: 2, formato, voz: rutaVoz }), desde: null, hasta: null, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)),
+        nota: `La voz solo dice el cierre (los cortes no se narran): ponle tu música al subirlo (nada con derechos). Cortes: ${cortes.map((c) => `${c.etiqueta} (${unidad.toLowerCase()} ${c.unidad})`).join(', ')}. Se sube antes de la parte ${n}.`,
       },
       textos: {
         tiktok: [`[GANCHO: ${sug}]`, cuerpo, AVISO_CORTO, tags(5)].join('\n'),
