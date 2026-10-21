@@ -3,14 +3,20 @@
     "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek": {
       "partidas": {
         "1": {
-          "estado": "por-publicarse",
-          "hastaTurno": 8,
+          "estado": "publicada",
+          "hastaTurno": 18,
           "partes": [
             {
               "parte": 1,
               "hastaTurno": 8,
               "final": false,
               "fecha": "2026-10-19"
+            },
+            {
+              "parte": 2,
+              "hastaTurno": 18,
+              "final": true,
+              "fecha": "2026-10-21"
             }
           ]
         }
