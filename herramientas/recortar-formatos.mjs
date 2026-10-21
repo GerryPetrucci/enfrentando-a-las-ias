@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Recorta la grabacion maestra de OBS (hoja de 3840x2160) en un archivo por formato, en UNA sola pasada de ffmpeg:
-// NOMBRE_9x16_fb-ig-tk-yt.mp4, NOMBRE_4x5_ig.mp4 y NOMBRE_16x9_fb-x-yt.mp4: el nombre dice el formato y las redes a las que sirve (herramientas/nombres.mjs; las redes salen de formatos.mjs).
+// NOMBRE_9x16_fb-ig-tk-yt.mp4 y NOMBRE_16x9_fb-x-yt.mp4: el nombre dice el formato y las redes a las que sirve (herramientas/nombres.mjs; las redes salen de formatos.mjs).
 // Las medidas salen de herramientas/formatos.mjs. Necesita ffmpeg y ffprobe en el PATH.
 //
 //   node herramientas/recortar-formatos.mjs GRABACION.mkv 26-10-19_p1_pt1

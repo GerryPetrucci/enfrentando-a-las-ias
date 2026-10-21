@@ -23,10 +23,9 @@ const saltar = !hayFfmpeg && 'ffmpeg no esta instalado';
 
 test('el filtro parte la hoja en un recorte por formato, con las medidas de formatos.mjs', () => {
   const f = filtro();
-  assert.match(f, /^\[0:v\]split=3\[s0\]\[s1\]\[s2\];/);
+  assert.match(f, /^\[0:v\]split=2\[s0\]\[s1\];/);
   assert.ok(f.includes('crop=1080:1920:0:0[f0]'));
-  assert.ok(f.includes('crop=1080:1350:0:284[f1]'));
-  assert.ok(f.includes('crop=1920:1080:1080:0[f2]'));
+  assert.ok(f.includes('crop=1920:1080:1080:0[f1]'));
 });
 
 test('los argumentos de ffmpeg dan un archivo por formato, con el audio opcional y sin pedir confirmacion', () => {
@@ -35,8 +34,8 @@ test('los argumentos de ffmpeg dan un archivo por formato, con el audio opcional
   assert.ok(a.join(' ').includes('-ss 3.5 -i g.mkv'));
   for (const k of Object.keys(FORMATOS)) assert.ok(a.includes(mp4('sal', 'ep01', k)), k);
   // el nombre dice el formato y las redes a las que sirve
-  for (const literal of ['ep01_9x16_fb-ig-tk-yt.mp4', 'ep01_4x5_ig.mp4', 'ep01_16x9_fb-x-yt.mp4']) assert.ok(a.includes(join('sal', literal)), literal);
-  assert.equal(a.filter((x) => x === '0:a?').length, 3);
+  for (const literal of ['ep01_9x16_fb-ig-tk-yt.mp4', 'ep01_16x9_fb-x-yt.mp4']) assert.ok(a.includes(join('sal', literal)), literal);
+  assert.equal(a.filter((x) => x === '0:a?').length, 2);
   assert.ok(a.includes('18'));
 });
 
@@ -52,7 +51,7 @@ const medidas = (archivo) => {
   return r.stdout.trim();
 };
 
-test('recortar-formatos saca de la hoja el 9x16, el 4x5 y el 16x9 desde el lugar correcto', { skip: saltar }, () => {
+test('recortar-formatos saca de la hoja el 9x16 y el 16x9 desde el lugar correcto', { skip: saltar }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'recorte-'));
   try {
     const maestro = join(dir, 'maestro.mkv');
@@ -64,15 +63,15 @@ test('recortar-formatos saca de la hoja el 9x16, el 4x5 y el 16x9 desde el lugar
     const r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', maestro, 'ep', `--carpeta=${dir}`], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 0, r.stderr || r.stdout);
 
-    const v = mp4(dir, 'ep', '9x16'), ig = mp4(dir, 'ep', '4x5'), h = mp4(dir, 'ep', '16x9');
-    for (const f of [v, ig, h]) assert.ok(existsSync(f), `no dejo ${f}`);
-    assert.deepEqual([medidas(v), medidas(ig), medidas(h)], ['1080x1920', '1080x1350', '1920x1080']);
+    const v = mp4(dir, 'ep', '9x16'), h = mp4(dir, 'ep', '16x9');
+    for (const f of [v, h]) assert.ok(existsSync(f), `no dejo ${f}`);
+    assert.equal(existsSync(mp4(dir, 'ep', '4x5')), false, 'el 4x5 ya no se saca');
+    assert.deepEqual([medidas(v), medidas(h)], ['1080x1920', '1920x1080']);
     assert.ok(es(pixel(v, 540, 100), [0, 255, 0]), 'el 9x16 empieza en la banda verde de arriba');
     assert.ok(es(pixel(v, 540, 1000), [255, 0, 0]), 'el 9x16 es rojo en el medio');
-    assert.ok(es(pixel(ig, 540, 10), [255, 0, 0]), 'el 4x5 ya no incluye la banda verde (empieza en y=284)');
     assert.ok(es(pixel(h, 960, 540), [0, 0, 255]), 'el 16x9 sale de la region azul');
-    // el audio se conserva en los tres
-    for (const f of [v, ig, h]) {
+    // el audio se conserva en los dos
+    for (const f of [v, h]) {
       const a = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', f], { encoding: 'utf8' });
       assert.equal(a.stdout.trim(), 'aac', f);
     }

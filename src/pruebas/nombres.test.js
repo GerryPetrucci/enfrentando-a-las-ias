@@ -35,8 +35,8 @@ test('nombreDePieza: fecha corta, partida y pieza, separados por guion bajo', ()
 test('nombreDeVideo agrega el formato y las redes a las que sirve, en orden alfabetico y con guiones', () => {
   assert.equal(nombreDeVideo('26-10-19_p1_pt1', '9x16'), '26-10-19_p1_pt1_9x16_fb-ig-tk-yt');
   assert.equal(nombreDeVideo('26-10-19_p1_pt1', '16x9'), '26-10-19_p1_pt1_16x9_fb-x-yt');
-  assert.equal(nombreDeVideo('26-10-19_p1_clp2', '4x5'), '26-10-19_p1_clp2_4x5_ig');
   assert.equal(nombreDeVideo('ep', 'raro'), 'ep_raro', 'un formato desconocido no inventa redes');
+  assert.equal(nombreDeVideo('ep', '4x5'), 'ep_4x5', 'el 4x5 ya no existe: no hereda redes');
 });
 
 test('cada formato declara sus redes con las siglas de REDES, sin repetir y en orden alfabetico (el nombre del archivo las copia tal cual)', () => {
