@@ -75,6 +75,6 @@ export const MARCADOR = {
   partidas: [
     partida('s2', 1, MAYOR, 2991144164, '2026-10-21', 'publicada', { ganador: 'GPT', puntos: [0, 4, 0] }),
     partida('s1', 1, CONQ, 552912962, '2026-10-19', 'publicada', { ganador: 'Claude', puntos: [4, 2, 0] }),
-    partida('s1', 2, CONQ, 552912962, '2026-10-19', 'por-publicarse', { ganador: 'NO DEBE SALIR', puntos: [9, 9, 9] }),
+    partida('s1', 2, CONQ, 552912962, '2026-10-19', 'por-publicarse', { jugadores: [IAS[1], IAS[2], IAS[0]], ganador: 'NO DEBE SALIR', puntos: [9, 9, 9] }),
   ],
 };

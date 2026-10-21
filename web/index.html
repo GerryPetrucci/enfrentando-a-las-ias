@@ -59,7 +59,7 @@
 
 <script type="module">
 import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida } from './catalogo.js';
+import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida, etiquetaDePartida } from './catalogo.js';
 import { textoDeJuego } from './casino/textos-juego.js';
 
 const $ = (id) => document.getElementById(id);
@@ -74,8 +74,10 @@ function tarjetaJuego(j) {
   return `<a class="tarjeta" href="juego.html?id=${encodeURIComponent(j.id)}"><span class="categoria">${esc(j.categoria)}</span><h3>${esc(j.nombre)}</h3>${descripcion ? `<p class="descripcion">${esc(descripcion)}</p>` : ''}<div class="jugadores">${ias(j.ias)}</div><div class="cifras"><span>${j.publicadas || j.porPublicarse ? cifras : 'Próximamente'}</span></div></a>`;
 }
 
+const etiqueta = (p) => { const t = etiquetaDePartida(p, datos.partidas); return t ? `<p class="meta"><b>${esc(t)}</b></p>` : ''; };
+
 function tarjetaPartida(p) {
-  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(p.juego.nombre)}</span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${ias(p.jugadores)}</div><p class="meta resultado">${esc(resumenDePartida(p))}</p><p class="meta">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></p></a>`;
+  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(p.juego.nombre)}</span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${ias(p.jugadores)}</div>${etiqueta(p)}<p class="meta resultado">${esc(resumenDePartida(p))}</p><p class="meta">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></p></a>`;
 }
 
 const datos = await cargarMarcador();

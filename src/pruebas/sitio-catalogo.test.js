@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ESTADOS, fechaLarga, fechaCorta, normalizarSeed, normalizarTexto, resumenDeJuegos, partidasDeJuego, iasDe, filtrarPartidas, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida } from '../../web/catalogo.js';
+import { ESTADOS, fechaLarga, fechaCorta, normalizarSeed, normalizarTexto, resumenDeJuegos, partidasDeJuego, iasDe, filtrarPartidas, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida, etiquetaDePartida } from '../../web/catalogo.js';
 
 const ia = (id, nombre = id.toUpperCase()) => ({ id, nombre, color: '#111', inicial: nombre[0] });
 const juego = (id, nombre, categoria = 'Cat') => ({ id, nombre, categoria });
@@ -121,4 +121,15 @@ test('la linea de resultado de una partida: ganador o hasta donde se ha subido, 
 test('el enlace de una partida lleva a su pagina con la serie y el numero', () => {
   assert.equal(enlaceDePartida(P2), 'partida.html?id=s1&partida=1');
   assert.equal(enlaceDePartida({ serie: 'a b&c', n: 2 }), 'partida.html?id=a%20b%26c&partida=2');
+});
+
+test('dos partidas de la misma tanda con el mismo seed se distinguen: numero de partida y, si cambia el orden de las IAs, asientos rotados', () => {
+  const rotada = { ...P3, jugadores: [P3.jugadores[2], P3.jugadores[0], P3.jugadores[1]] };
+  assert.equal(etiquetaDePartida(P2, [P2, rotada]), 'Partida 1 · mismo seed que la 2, con los asientos rotados');
+  assert.equal(etiquetaDePartida(rotada, [P2, rotada]), 'Partida 2 · mismo seed que la 1, con los asientos rotados');
+  assert.equal(etiquetaDePartida(P2, [P2, P3]), 'Partida 1 · mismo seed que la 2', 'mismo orden: no se dice rotados');
+  assert.equal(etiquetaDePartida(P2, [P2, { ...P3, seed: 7 }]), 'Partida 1', 'otro seed: solo el numero');
+  assert.equal(etiquetaDePartida(P1, [P1, P2, P3]), '', 'una partida sola en su tanda no lleva etiqueta');
+  assert.equal(etiquetaDePartida(null, [P1]), '');
+  assert.equal(etiquetaDePartida(P2, null), '');
 });

@@ -20,7 +20,7 @@
 
 <script type="module">
 import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, partidasDeJuego, filtrarPartidas, iasDe, resumenDePartida, enlaceDePartida } from './catalogo.js';
+import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, partidasDeJuego, filtrarPartidas, iasDe, resumenDePartida, enlaceDePartida, etiquetaDePartida } from './catalogo.js';
 import { textoDeJuego } from './casino/textos-juego.js';
 
 const $ = (id) => document.getElementById(id);
@@ -35,8 +35,10 @@ montarMenu(datos, { pagina: 'juego', juegoId: id, generado: datos.generado ? `Ma
 const juego = resumenDeJuegos(datos).find((j) => j.id === id);
 const fichaDelMarcador = (datos.juegos ?? []).find((j) => j.id === id);
 
+const etiqueta = (p) => { const t = etiquetaDePartida(p, datos.partidas); return t ? `<p class="meta"><b>${esc(t)}</b></p>` : ''; };
+
 function tarjetaPartida(p) {
-  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${(p.jugadores ?? []).map(ia).join('')}</div><p class="meta resultado">${esc(resumenDePartida(p))}</p></a>`;
+  return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${(p.jugadores ?? []).map(ia).join('')}</div>${etiqueta(p)}<p class="meta resultado">${esc(resumenDePartida(p))}</p></a>`;
 }
 
 function tabla(j) {

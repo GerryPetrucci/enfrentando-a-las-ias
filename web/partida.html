@@ -18,7 +18,7 @@
 
 <script type="module">
 import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { ESTADOS, fechaLarga } from './catalogo.js';
+import { ESTADOS, fechaLarga, etiquetaDePartida } from './catalogo.js';
 import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js';
 
 const $ = (id) => document.getElementById(id);
@@ -86,11 +86,14 @@ if (serie) {
   const prompts = new Map((p.prompts?.turnos ?? []).map((t) => [t.turno, t.prompts]));
   const rondas = Array.isArray(p.rondas) ? p.rondas : [];
   const enlaceEscena = `escena.html?archivo=${encodeURIComponent(`publicas/${id}.json`)}&partida=${n}`;
+  const tanda = serie.partidas.map((x, i) => ({ juego: serie.juego, serie: id, n: i + 1, seed: x.seed ?? serie.seedBase, jugadores: x.jugadores }));
+  const etiqueta = etiquetaDePartida(tanda[n - 1], tanda);
   const estado = pendiente ? 'por-publicarse' : 'publicada';
   const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y lo que recibió cada IA hasta el turno ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
   contenido.innerHTML = `
     <p class="migas"><a href="juego.html?id=${encodeURIComponent(serie.juego?.id ?? '')}">← ${esc(nombre)}</a></p>
     <h1 class="titulo-pagina">${esc(nombre)}</h1>
+    ${etiqueta ? `<p class="meta"><b>${esc(etiqueta)}</b></p>` : ''}
     <p class="meta"><span class="estado ${esc(estado)}">${esc(ESTADOS[estado])}</span> &nbsp; ${esc(fechaLarga(serie.fecha))}</p>
     <p class="meta"><b>Seed</b> <span class="seed">${esc(p.seed ?? serie.seedBase)}</span> · reglas <b>${esc(serie.prompt?.reglas ?? '—')}</b>${serie.modo ? ` · modo ${esc(serie.modo)}` : ''}</p>
     ${aviso}

@@ -100,3 +100,15 @@ export function resumenDePartida(p) {
 }
 
 export const enlaceDePartida = (p) => `partida.html?id=${encodeURIComponent(p?.serie ?? '')}&partida=${encodeURIComponent(p?.n ?? 1)}`;
+
+// Lo que distingue a dos partidas de la misma tanda (mismo archivo de datos), que pueden compartir seed: el numero de partida y, si cambia el orden de las IAs, que los asientos van rotados.
+// Una partida sola en su tanda no lleva etiqueta. `todas` es la lista de partidas con `serie`, `n`, `seed` y `jugadores`.
+export function etiquetaDePartida(p, todas) {
+  if (!esPartida(p)) return '';
+  const hermanas = lista(todas).filter((q) => esPartida(q) && q !== p && q.serie === p.serie && q.n !== p.n);
+  if (!hermanas.length) return '';
+  const igual = hermanas.find((q) => normalizarSeed(q.seed) === normalizarSeed(p.seed));
+  if (!igual) return `Partida ${p.n}`;
+  const orden = (q) => lista(q.jugadores).map((j) => j?.id).join();
+  return `Partida ${p.n} · mismo seed que la ${igual.n}${orden(igual) === orden(p) ? '' : ', con los asientos rotados'}`;
+}

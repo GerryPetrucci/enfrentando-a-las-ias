@@ -23,6 +23,9 @@ test('la landing muestra un cuadro por juego con sus numeros, las ultimas partid
   const partidas = r.nodo('partidas').innerHTML;
   assert.match(partidas, /partida\.html\?id=s1&partida=2/);
   assert.equal(r.nodo('t-partidas').textContent, 'Últimas partidas');
+  assert.match(partidas, /Partida 1 · mismo seed que la 2, con los asientos rotados/, 'dos partidas con el mismo seed se distinguen');
+  assert.match(partidas, /Partida 2 · mismo seed que la 1, con los asientos rotados/);
+  assert.equal((partidas.match(/Partida \d ·/g) ?? []).length, 2, 'la partida que va sola en su tanda no lleva etiqueta');
   assert.deepEqual(r.llamadasMenu.map((o) => o.pagina), ['inicio']);
   assert.doesNotMatch(web('index.html'), /serie/i, 'en la landing ya no se habla de series');
 });
@@ -82,6 +85,7 @@ test('la pagina de un juego trae su tabla propia, sus partidas y el aviso de que
   const lista = r.nodo('partidas').innerHTML;
   assert.match(lista, /partida\.html\?id=s1&partida=1/);
   assert.match(lista, /partida\.html\?id=s1&partida=2/);
+  assert.match(lista, /Partida 2 · mismo seed que la 1, con los asientos rotados/);
   assert.doesNotMatch(lista, /Mayor o menor|s2/, 'solo las partidas de este juego');
   assert.doesNotMatch(lista + html, /NO DEBE SALIR/);
   assert.equal(r.nodo('contador').textContent, '2 partidas');
