@@ -13,7 +13,7 @@
 // --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
 // --grabar    modo grabar=1: comprueba que la pagina empieza en negro (margen), pasa al contenido y termina cerrada en negro (data-fundido, data-cierre)
-// --salida    carpeta de las capturas (por defecto grabaciones/capturas-escena; grabaciones/ no se versiona)
+// --salida    carpeta de las capturas (por defecto grabaciones/capturas; grabaciones/ no se versiona)
 // --base      direccion del servidor (por defecto http://localhost:4321)   --chrome    ruta de Chrome (o la variable CHROME_PATH)
 // Salida 0 si no hubo errores de consola; 1 si los hubo o algo no se pudo capturar.
 
@@ -173,7 +173,7 @@ async function principal() {
   try { linea = await escenaDe(juego).linea(); } catch (e) { console.error(e.message); process.exit(1); }
   const beats = await armarLinea(juego, guardada); // la misma lista (con la tarjeta de arranque) que arma la pagina: si no, el indice de un beat no coincide
   if (!beats.length) { console.error(`El archivo no tiene la partida ${partida}.`); process.exit(1); }
-  const carpeta = resolve(a.salida ?? 'grabaciones/capturas-escena');
+  const carpeta = resolve(a.salida ?? 'grabaciones/capturas');
   mkdirSync(carpeta, { recursive: true });
   const nombre = a.archivo.replace(/[^\w.-]+/g, '_').replace(/\.json$/, '');
   let fallos = 0;

@@ -76,3 +76,4 @@ Proyecto independiente, sin afiliación con los proveedores de los modelos. Sus 
 | YouTube | @enfrentandoalasias · <https://youtube.com/@enfrentandoalasias> | 9 oct 2026 |
 | Instagram | @enfrentandoalasias · <https://www.instagram.com/enfrentandoalasias> | 9 oct 2026 |
 | X | @enfrentandoias · <https://x.com/enfrentandoias> | 10 oct 2026 (la fecha de X es aproximada) |
+| Facebook | página «Enfrentando a las IAs» (anotar aquí su enlace) | 20 oct 2026 |

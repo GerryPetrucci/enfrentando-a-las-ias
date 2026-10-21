@@ -1,5 +1,5 @@
 // El paquete de publicacion de una partida guardada: las piezas que se graban (las dos partes y hasta 3 clips destacados), la direccion exacta de cada una para abrirla y grabarla, y el
-// texto de cada red (TikTok, Instagram, YouTube y X). Funcion PURA sobre lo que ya esta guardado: solo hechos (quien jugo, el resultado, el seed, las reglas publicas del juego); la linea de
+// texto de cada red (TikTok, Instagram, Facebook, YouTube y X). Funcion PURA sobre lo que ya esta guardado: solo hechos (quien jugo, el resultado, el seed, las reglas publicas del juego); la linea de
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
 
@@ -50,7 +50,7 @@ const cabeGancho = (sug, resto, limite) => {
 };
 
 // partida: la partida guardada · beats: armarLinea(...) · destacadas: destacadasDe(...) · rutaVoz: la voz.json (con `voz` ya leida) · totalPartidas: cuantas trae el archivo (una serie)
-// -> { juego, piezas: [{ id, tipo, titulo, grabar: { url, desde, hasta, ms, plan, nota }, textos: { tiktok, instagram, x, youtube: { titulo, descripcion } }, comentarioFijado }], advertencias }
+// -> { juego, piezas: [{ id, tipo, titulo, grabar: { url, desde, hasta, ms, plan, nota }, textos: { tiktok, instagram, facebook, x, youtube: { titulo, descripcion } }, comentarioFijado }], advertencias }
 //    (grabar.plan = planDeGrabacion de la pieza: margen de negro + fundido + la pieza + fundido + cola)
 // Una partida que no se puede publicar da `piezas: []` y el motivo (nunca lanza). `formato` por omision es la hoja maestra de 4K del OBS del proyecto.
 export function construirPaquete({ partida, beats, destacadas = [], archivo, partidaNumero = 1, voz = null, rutaVoz = null, formato = 'hoja', enlace = '', totalPartidas = 1 } = {}) {
@@ -104,6 +104,8 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const detalle = tipo === 'clip' ? [`${t.nombre}: un momento de la partida.`, `${t.regla} ${t.gana}`, 'La partida completa está en el perfil.']
       : [`${encabezado}. ${serie}`.trim(), `${t.regla} ${t.gana}`, ...final, `Lo que se mira: ${t.mide}.`];
     const instagram = [`[GANCHO: ${sug}]`, '', ...detalle.filter(Boolean), '', AVISO, '', tags(5)].join('\n');
+    // Facebook (la pagina): lo mismo que Instagram, pero con el enlace al marcador (una publicacion de pagina si puede llevarlo) y menos hashtags
+    const facebook = [`[GANCHO: ${sug}]`, '', ...detalle.filter(Boolean), '', metodologia, '', AVISO, '', tags(3)].filter((l, i, a) => !(l === '' && (i === 0 || a[i - 1] === ''))).join('\n');
     const armarResto = (conResultado) => `\n${encabezado}. ${conResultado ? dicho : ''}${AVISO_CORTO}\n${tags(2)}`; // en un clip el encabezado es el nombre del juego y `dicho` es vacio
     const conResultado = armarResto(true);
     const restoX = conResultado.length <= LIMITES.x - 80 ? conResultado : armarResto(false); // con un nombre larguisimo el resultado no cabe: X lo omite (las otras redes lo llevan)
@@ -115,7 +117,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       `Cómo se juega: ${t.regla}`, `Cómo se gana: ${t.gana}`, `Lo que se mira: ${t.mide}.`, '',
       ...final, nota, mismoPrompt, metodologia, '', AVISO, tags(5),
     ].filter((l, i, a) => !(l === '' && (i === 0 || a[i - 1] === ''))).join('\n');
-    return { tiktok, instagram, x, youtube: { titulo, descripcion } };
+    return { tiktok, instagram, facebook, x, youtube: { titulo, descripcion } };
   };
   const comentarioFijado = `Cómo se mide: todas las IAs reciben el mismo prompt (seed ${partida.seed}) y las jugadas no se retocan: lo que ves es lo que registró el motor, sin retoques. ${nota} ${metodologia}\n¿A quién ponemos contra quién la próxima vez?`.trim();
 

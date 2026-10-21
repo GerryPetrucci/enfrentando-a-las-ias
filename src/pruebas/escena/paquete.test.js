@@ -27,7 +27,7 @@ async function paqueteDe(id, partida, extra = {}) {
   const beats = await armarLinea(id, partida), destacadas = await destacadasDe(id, partida, 10);
   return { beats, paquete: construirPaquete({ partida, beats, destacadas, archivo: `pruebas/${id}.json`, partidaNumero: 1, enlace: ENLACE, ...extra }) };
 }
-const textosPlanos = (pieza) => [pieza.textos.tiktok, pieza.textos.instagram, pieza.textos.x, pieza.textos.youtube.titulo, pieza.textos.youtube.descripcion, pieza.comentarioFijado ?? ''];
+const textosPlanos = (pieza) => [pieza.textos.tiktok, pieza.textos.instagram, pieza.textos.facebook, pieza.textos.x, pieza.textos.youtube.titulo, pieza.textos.youtube.descripcion, pieza.comentarioFijado ?? ''];
 const params = (url) => Object.fromEntries(new URL(url, 'http://x/').searchParams);
 
 test('destacadasDe da, para cada uno de los 7 juegos, las unidades de sus mejores momentos (las mismas que usan sus beats)', async () => {
@@ -151,7 +151,8 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
     assert.ok(paquete.piezas.length >= 2, id); // las dos partes (una partida muy corta puede no tener clips: el final no se puede adelantar)
     for (const p of paquete.piezas) {
       const t = p.textos;
-      for (const red of ['tiktok', 'instagram', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
+      for (const red of ['tiktok', 'instagram', 'facebook', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
+      assert.ok(t.facebook.includes(ENLACE), `${id} ${p.id}: el texto de Facebook lleva el enlace al marcador (una pagina si puede ponerlo)`);
       assert.ok(t.x.length <= LIMITES.x, `${id} ${p.id}: X con ${t.x.length}`);
       assert.ok(t.tiktok.length <= LIMITES.tiktok, `${id} ${p.id}: TikTok con ${t.tiktok.length}`);
       assert.ok(t.instagram.length <= LIMITES.instagram, `${id} ${p.id}: Instagram con ${t.instagram.length}`);
@@ -159,11 +160,11 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
       assert.ok(t.youtube.descripcion.length <= LIMITES.youtubeDescripcion, `${id} ${p.id}: descripcion de YouTube`);
       const ig = t.instagram.match(/#[\p{L}\p{N}_]+/gu) ?? [];
       assert.ok(ig.length >= 3 && ig.length <= 5, `${id} ${p.id}: ${ig.length} hashtags en Instagram`);
-      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['x', t.x], ['youtube', t.youtube.descripcion]]) {
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['youtube', t.youtube.descripcion]]) {
         assert.match(texto, /generad[oa] por IA/i, `${id} ${p.id} ${red}: falta el aviso de IA`);
         assert.match(texto, /independiente/i, `${id} ${p.id} ${red}: falta el aviso de independencia`);
       }
-      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['x', t.x], ['titulo de YouTube', t.youtube.titulo]]) assert.match(texto, /\[GANCHO: .+\]/, `${id} ${p.id} ${red}: el gancho va marcado`);
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['titulo de YouTube', t.youtube.titulo]]) assert.match(texto, /\[GANCHO: .+\]/, `${id} ${p.id} ${red}: el gancho va marcado`);
     }
   }
 });
@@ -176,6 +177,7 @@ test('el resultado solo sale en la parte 2 y dice "en esta partida"; las partes 
     assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(p1)), `${id}: la parte 1 adelanta el resultado`);
     for (const c of clips) assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(c)), `${id}: un clip adelanta el resultado`);
     if (gan && partida.empate !== true) assert.match(p2.textos.instagram, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 dice quien gano`);
+    if (gan && partida.empate !== true) assert.match(p2.textos.facebook, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 de Facebook dice quien gano`);
     // solo se escriben cifras que el video muestra: los puntos del juego en La Fuga y en Guerra de territorios; en los demas, el orden final (los puntos del marcador no salen en pantalla)
     assert.match(p2.textos.instagram, id === 'fuga' || id === 'conquista' ? /Puntos: / : /Orden final: /, id);
     if (id !== 'fuga' && id !== 'conquista') assert.doesNotMatch(p2.textos.instagram, /Puntos: /, `${id}: puntos del marcador que no se ven en el video`);
