@@ -216,11 +216,21 @@ test('la comprobacion de estado: al empezar cada ronda no queda nada de la anter
   const idx = beatsDeEstado(beats, 4);
   assert.equal(idx.length, 4);
   assert.ok(idx.every((i) => beats[i].tipo === 'apertura' && beats[i].mano >= 2));
-  assert.deepEqual(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 0, pastillas: 0 }, beats[idx[0]]), []);
-  assert.match(erroresDeEstado({ sello: 1, apuesta: 0, cartas: 0, pastillas: 0 }, beats[idx[0]]).join(), /sello/);
-  assert.match(erroresDeEstado({ sello: 0, apuesta: 1, cartas: 0, pastillas: 0 }, beats[idx[0]]).join(), /apuesta/);
-  assert.match(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 3, pastillas: 0 }, beats[idx[0]]).join(), /cartas/);
-  assert.match(erroresDeEstado({ sello: 0, apuesta: 0, cartas: 0, pastillas: 1 }, beats[idx[0]]).join(), /camara/);
+  const limpio = { sello: 0, apuesta: 0, cartas: 0, pastillas: 0, papeles: 2, brillos: 0, tituloCortado: false, nombreCortado: false, barraDesbordada: false };
+  assert.deepEqual(erroresDeEstado(limpio, beats[idx[0]]), []);
+  assert.match(erroresDeEstado({ ...limpio, sello: 1 }, beats[idx[0]]).join(), /sello/);
+  assert.match(erroresDeEstado({ ...limpio, apuesta: 1 }, beats[idx[0]]).join(), /apuesta/);
+  assert.match(erroresDeEstado({ ...limpio, cartas: 3 }, beats[idx[0]]).join(), /cartas/);
+  assert.match(erroresDeEstado({ ...limpio, pastillas: 1 }, beats[idx[0]]).join(), /camara/);
+  // el titulo de la cabecera no puede quedar cortado («MAYOR O MEN…» en una ronda doble de dos cifras, en vertical)
+  assert.match(erroresDeEstado({ ...limpio, tituloCortado: true }, beats[idx[0]]).join(), /titulo/);
+  // al empezar la ronda cada jugador muestra su papel (activo y predictor), y su barra no se corta ni se desborda
+  assert.match(erroresDeEstado({ ...limpio, papeles: 1 }, beats[idx[0]]).join(), /papel/);
+  assert.match(erroresDeEstado({ ...limpio, papeles: 0 }, beats[idx[0]]).join(), /papel/);
+  // y todavia nadie actua: ninguna pastilla brilla con lo de la ronda anterior
+  assert.match(erroresDeEstado({ ...limpio, brillos: 1 }, beats[idx[0]]).join(), /brill/);
+  assert.match(erroresDeEstado({ ...limpio, nombreCortado: true }, beats[idx[0]]).join(), /nombre/);
+  assert.match(erroresDeEstado({ ...limpio, barraDesbordada: true }, beats[idx[0]]).join(), /barra/);
   assert.match(erroresDeEstado(null, beats[idx[0]]).join(), /estado/);
   assert.deepEqual(beatsDeEstado(null, 3), []);
 });
@@ -301,6 +311,47 @@ test('reglas 2.0.0: la carta igual cuenta como menor: la comparacion lo dice y e
     }
   }
   assert.ok(iguales > 0 && dobles > 0, `la prueba no vio cartas iguales (${iguales}) o rondas dobles que acierten (${dobles})`);
+});
+
+test('reglas 2.0.0: «¡Ronda doble!» se dice al ABRIR la ronda (es una regla de esa ronda y el encabezado ya la muestra), no al final con los comentarios del resultado', async () => {
+  let dobles = 0;
+  for (const p of await muchasMM(REGLAS_2_0)) {
+    for (const [ronda, bs] of porRonda(construirLineaDeTiempo(p).filter((b) => b.tipo !== 'final'))) {
+      const r = p.rondas[bs[0].registro];
+      const apertura = bs.find((b) => b.tipo === 'apertura'), resultado = bs.find((b) => b.tipo === 'resultado');
+      const aviso = (b) => b.lineas.filter((l) => /^¡Ronda doble!/.test(l.texto));
+      assert.equal(aviso(apertura).length, r.doble === 2 ? 1 : 0, `seed ${p.seed} ronda ${ronda}: el aviso va en la apertura`);
+      assert.equal(aviso(resultado).length, 0, `seed ${p.seed} ronda ${ronda}: ni rastro del aviso al final`);
+      if (r.doble === 2) {
+        dobles++;
+        assert.match(apertura.texto, /^Ronda \d+ de 18\. .+¡Ronda doble! Las ganancias se pagan al doble\.$/, 'despues de decir de quien es la mano, con la apertura por delante');
+        assert.ok(apertura.lineas.every((l) => l.tipo === 'apertura'), 'es parte de la apertura: los comentarios siguen esperando al resultado');
+      }
+    }
+  }
+  assert.ok(dobles > 0, 'la prueba no vio ninguna ronda doble');
+});
+
+test('el comentario «apuesta el máximo permitido» que traen las partidas guardadas el 21 de octubre ya no se dice (con el tope de 6 casi todas las apuestas lo son): la linea de tiempo lo omite y los demas comentarios siguen', async () => {
+  const p = await jugarMM(3, ['temerario', 'contador'], { reglas: REGLAS_2_0 });
+  p.rondas[0].narracion.push({ tipo: 'comentario', texto: '{1} apuesta el máximo permitido.' }, { tipo: 'comentario', texto: '{0} pasa al frente.' });
+  const resultado = construirLineaDeTiempo(p).find((b) => b.tipo === 'resultado' && b.mano === 1);
+  assert.doesNotMatch(resultado.texto, /máximo permitido/);
+  assert.ok(!resultado.lineas.some((l) => /máximo permitido/.test(l.texto)), 'ni en las lineas que se dicen ni en las que se leen');
+  assert.match(resultado.texto, /pasa al frente/, 'los demas comentarios no se tocan');
+});
+
+test('reglas 2.0.0: «lo apuesta todo» solo puntua cuando se apuestan TODAS las fichas (apostar el tope no es un momento: casi toda apuesta lo es)', async () => {
+  let todas = 0, alTope = 0;
+  for (const p of await muchasMM(REGLAS_2_0)) {
+    for (const m of puntuarRondas(p)) {
+      const r = p.rondas[m.ronda - 1];
+      const todo = r.apostoTodo === true && r.invalidas[r.predictor] !== true && !(r.apuestaMaxima < r.fichasAntes[r.predictor]);
+      assert.equal(m.motivos.includes('lo apuesta todo'), todo, `seed ${p.seed} ronda ${m.ronda}`);
+      if (todo) todas++; else if (r.apostoTodo) alTope++;
+    }
+  }
+  assert.ok(todas > 0 && alTope > 0, `la prueba no vio apuestas de todas las fichas (${todas}) o al tope (${alTope})`);
 });
 
 test('reglas 2.0.0: puntuarRondas cuenta la carta igual y la ronda doble igual que las dicen los comentarios del motor', async () => {

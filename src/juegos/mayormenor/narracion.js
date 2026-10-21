@@ -44,7 +44,8 @@ export function narrarRonda({
   }
 
   // comentarios para la voz
-  if (!reemplazadas[predictor] && todo) agregar('comentario', maxima !== null && maxima < fichasAntes[predictor] ? `${p} apuesta el máximo permitido.` : `${p} lo apuesta todo.`);
+  // «lo apuesta todo» solo si de verdad se juega todas sus fichas: con el tope de las reglas 2.0.0 casi toda apuesta es «el maximo permitido» y decirlo cada ronda cansa (la mesa lo muestra con «¡Máximo!»)
+  if (!reemplazadas[predictor] && todo && !(maxima !== null && maxima < fichasAntes[predictor])) agregar('comentario', `${p} lo apuesta todo.`);
   if (veredicto === 'igual') agregar('comentario', 'Carta igual: la apuesta se devuelve y la ronda no mueve las fichas.');
   else if (igual) agregar('comentario', 'Carta igual: cuenta como menor y la apuesta se resuelve.'); // reglas 2.0.0
   // "todo apuntaba a mayor" = a la mano del activo le quedaban mas cartas por encima del crupier que por debajo (la mano es publica)

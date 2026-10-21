@@ -39,6 +39,8 @@
 .cabecera .tit { flex:1; min-width:0; font:800 50px/1 var(--titulos); letter-spacing:.03em; text-transform:uppercase; text-shadow:0 4px 20px #000a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .cabecera .mano { font:800 42px/1 var(--titulos); letter-spacing:.12em; color:var(--oro); text-transform:uppercase; white-space:nowrap; }
 .cabecera .mano.doble { color:#fff3c4; text-shadow:0 0 18px var(--oro), 0 0 4px var(--oro); } /* ronda doble (Mayor o menor, reglas 2.0.0) */
+/* en vertical la cabecera mide 890: «RONDA 18 / 18 · DOBLE ×2» a 42 px y 0.12em le quitaba lugar al titulo («MAYOR O MEN…»); a 38 px y 0.08em sobran unos 70 px */
+.f-9x16 .cabecera .mano.doble { font-size:38px; letter-spacing:.08em; }
 .etiqueta-ia { z-index:30; display:flex; align-items:center; justify-content:center; font:600 24px var(--texto); color:#c9c9d2; letter-spacing:.04em; background:#000a; border-radius:18px; border:1px solid #ffffff22; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .subtitulos { z-index:30; padding:18px 28px; border-radius:22px; background:linear-gradient(#0a0a0ee6,#050507f2); border:1.5px solid #e0b25c55; box-shadow:0 14px 44px #000b;
   font:600 38px/1.25 var(--texto); text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
@@ -136,6 +138,20 @@
 .placa-grande .placa { height:100%; }
 .placa-grande .placa .nom { font-size:40px; }
 .placa-grande.turno .placa { box-shadow:0 0 0 3px var(--oro), 0 0 30px #e0b25c88, 0 8px 26px #000a; }
+/* El estado de cada jugador en la ronda: una pastilla verde en el centro de su barra, entre el nombre y las fichas (el publico ve quien hace que). En vertical cabe en una linea; en horizontal la barra es mas angosta y va en dos. */
+.placa.con-estado .quien { flex:0 1 auto; }
+.placa.con-estado .fichas { margin-left:0; }
+.estado-pill { flex:none; margin:0 auto; display:flex; align-items:baseline; gap:.4em; padding:5px 24px 6px; border-radius:999px; background:linear-gradient(#86cf9d, var(--verde)); color:var(--noche); font:800 32px/1 var(--titulos); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; box-shadow:0 0 0 2px #ffffff55, 0 0 20px #5fa877cc; }
+.estado-pill b { font-weight:800; }
+.estado-pill span { font-weight:700; }
+.estado-pill span::before { content:"\00b7"; margin-right:.4em; }
+.estado-pill.juego { background:linear-gradient(#efce8a, var(--oro)); box-shadow:0 0 0 2px #ffffff55, 0 0 20px #e0b25ccc; }
+/* quien actua ahora (juega su carta o apuesta): su pastilla brilla mientras dura su jugada */
+.estado-pill.ahora { background:linear-gradient(#c8f7d7, #72d797); box-shadow:0 0 0 3px #fff, 0 0 26px 5px #7be0a0dd; }
+.estado-pill.juego.ahora { background:linear-gradient(#fff1c4, #f2c86f); box-shadow:0 0 0 3px #fff, 0 0 26px 5px #e0b25cdd; }
+.f-16x9 .estado-pill { flex-direction:column; align-items:center; gap:3px; padding:5px 16px 6px; font-size:24px; }
+.f-16x9 .estado-pill span { font-size:17px; letter-spacing:.1em; }
+.f-16x9 .estado-pill span::before { content:none; }
 .tira-caja { z-index:10; }
 .rotulo { z-index:12; display:flex; align-items:center; justify-content:center; white-space:nowrap; font:700 24px var(--titulos); letter-spacing:.18em; text-transform:uppercase; color:#ffffffb0; }
 .ranura { z-index:12; }

@@ -307,15 +307,25 @@ test('la narracion de una carta igual dice que cuenta como menor (reglas 2.0.0) 
   assert.match(t, /acierta y gana 3 fichas/);
 });
 
-test('la narracion cuenta cuando la apuesta llega al maximo permitido por el tope', () => {
+test('una apuesta al tope NO lleva comentario de la voz (con el tope de 6 casi todas lo son: repetirlo cada ronda cansa), y no dice que lo apuesta todo si el tope se lo impide', () => {
   const E = estado(2);
   E.fichas = [30, 20];
   darCarta(E, 0, 1);
   const reg = ronda(E, { crupier: 5, carta: 1, lado: 'menor', fichas: 15 });
   const t = textos(reg);
   assert.match(t, /apuesta 6 fichas/);
-  assert.ok(reg.narracion.some((l) => l.tipo === 'comentario' && /máximo permitido/.test(l.texto)));
+  assert.equal(reg.apostoTodo, true, 'el registro si lo anota (la mesa muestra «¡Máximo!»)');
+  assert.doesNotMatch(t, /máximo permitido/, 'ya no se dice en voz alta');
   assert.doesNotMatch(t, /lo apuesta todo/, 'no apuesta todo lo suyo: el tope se lo impide');
+});
+
+test('apostar TODAS sus fichas (cuando tiene menos que el tope) si es un momento: la voz dice «lo apuesta todo»', () => {
+  const E = estado(2);
+  E.fichas = [30, 4];
+  darCarta(E, 0, 1);
+  const reg = ronda(E, { crupier: 5, carta: 1, lado: 'menor', fichas: 9 });
+  assert.equal(reg.apuesta, 4);
+  assert.ok(reg.narracion.some((l) => l.tipo === 'comentario' && /lo apuesta todo/.test(l.texto)));
 });
 
 test('el prompt completo de las reglas 2.0.0 en el peor caso (ronda 18, con mano oculta y 17 rondas de historial) cabe en el tope de tokens', async () => {

@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlTiraMano, htmlPlaca, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos, htmlAvatarJugador } from '../../../web/casino/kit.js';
+import { htmlFrenteNumero, htmlCartaNumero, htmlTira, htmlTiraMano, htmlPlaca, htmlEstado, htmlInfoFila, estiloJugador, htmlDado, htmlBandeja, htmlInfoPuntos, htmlAvatarJugador } from '../../../web/casino/kit.js';
 import { PALETA } from '../../../web/paleta.js';
 
 const css = () => readFileSync(new URL('../../../web/casino/mesa.css', import.meta.url), 'utf8');
@@ -72,6 +72,58 @@ test('la placa con espacios null muestra un solo grupo de fichas; con numeros mu
   const dos = htmlPlaca(j, 'x', 5, 2);
   assert.equal(cuenta(dos, 'class="grupo"'), 2);
   assert.equal(cuenta(dos, 'class="ficha espacio"'), 2);
+});
+
+test('la barra de un jugador con estado (Mayor o menor) lleva su pastilla de papel entre el nombre y las fichas, todo escapado; sin estado no cambia nada', () => {
+  const j = { id: 'claude', nombre: 'Claude', inicial: 'C' };
+  const p = htmlPlaca(j, '', 23, null, false, { papel: 'Predictor', accion: 'apuesta' });
+  assert.match(p, /class="placa con-estado"/);
+  assert.match(p, /<div class="estado-pill"><b>Predictor<\/b><span>apuesta<\/span><\/div>/);
+  assert.ok(p.indexOf('class="quien"') < p.indexOf('class="estado-pill"') && p.indexOf('class="estado-pill"') < p.indexOf('class="fichas"'), 'entre el nombre y las fichas');
+  assert.equal(htmlEstado({ papel: 'Activo', accion: 'juega una carta' }), '<div class="estado-pill"><b>Activo</b><span>juega una carta</span></div>');
+  assert.equal(htmlEstado(null), '');
+  // una jugada que puso el juego: la pastilla se distingue y no tiene accion (nunca se le atribuye a la IA)
+  const juego = htmlPlaca(j, '', 3, null, true, { papel: 'Jugada del juego', accion: '', juego: true });
+  assert.match(juego, /class="placa reemplazo con-estado"/);
+  assert.match(juego, /<div class="estado-pill juego"><b>Jugada del juego<\/b><\/div>/);
+  // sin estado (o con uno ilegible) la barra es la de siempre, con su texto chico bajo el nombre
+  assert.doesNotMatch(htmlPlaca(j, 'Predictor', 5, null), /estado-pill|con-estado/);
+  for (const nada of [null, undefined, {}, { papel: '' }, { papel: 7 }, 'x']) assert.doesNotMatch(htmlPlaca(j, '', 1, null, false, nada), /estado-pill|con-estado/, `estado ilegible ${JSON.stringify(nada)}`);
+  const malo = htmlPlaca(j, '', 1, null, false, { papel: '<img src=x onerror=alert(1)>', accion: '"><b>x</b>' });
+  assert.doesNotMatch(malo, /<img|<b>x<\/b>/, 'lo que viene de los datos no mete HTML');
+  assert.match(malo, /&lt;img/);
+  assert.match(malo, /&lt;b&gt;x&lt;\/b&gt;/);
+});
+
+test('la pastilla de quien actua ahora lleva la clase «ahora» para brillar (tambien la dorada de una jugada del juego); solo con ahora: true', () => {
+  assert.equal(htmlEstado({ papel: 'Activo', accion: 'juega una carta', ahora: true }), '<div class="estado-pill ahora"><b>Activo</b><span>juega una carta</span></div>');
+  assert.equal(htmlEstado({ papel: 'Predictor', accion: 'apuesta del juego', juego: true, ahora: true }), '<div class="estado-pill juego ahora"><b>Predictor</b><span>apuesta del juego</span></div>');
+  for (const no of [false, undefined, null, 'si', 1]) assert.doesNotMatch(htmlEstado({ papel: 'Activo', accion: 'x', ahora: no }), /ahora/, `ahora: ${String(no)}`);
+  assert.match(htmlPlaca({ id: 'claude', nombre: 'Claude' }, '', 5, null, false, { papel: 'Activo', accion: 'juega una carta', ahora: true }), /class="estado-pill ahora"/);
+});
+
+test('mesa.css trae el brillo de la pastilla de quien actua: mas clara, con aro blanco y resplandor, en verde y en dorado', () => {
+  const texto = css();
+  const brilla = /\.estado-pill\.ahora \{[^}]*\}/.exec(texto)?.[0] ?? '';
+  assert.match(brilla, /background:linear-gradient/, 'mas clara que la normal');
+  assert.match(brilla, /box-shadow:0 0 0 3px #fff,/, 'aro blanco');
+  assert.match(brilla, /box-shadow:[^;]*0 0 \d+px \d+px/, 'con resplandor');
+  const dorada = /\.estado-pill\.juego\.ahora \{[^}]*\}/.exec(texto)?.[0] ?? '';
+  assert.match(dorada, /box-shadow:/, 'la jugada del juego tambien brilla, en dorado');
+  assert.match(dorada, /#e0b25c/);
+});
+
+test('mesa.css trae la pastilla de papel: verde de la marca con texto oscuro, centrada entre el nombre y las fichas, y en horizontal en dos lineas para que quepa', () => {
+  const texto = css();
+  const pill = /\.estado-pill \{[^}]*\}/.exec(texto)?.[0] ?? '';
+  assert.match(pill, /background:linear-gradient\([^;]*var\(--verde\)\)/, 'verde de la marca');
+  assert.match(pill, /color:var\(--noche\)/, 'texto oscuro sobre el verde: se lee de lejos');
+  assert.match(pill, /border-radius:999px/);
+  assert.match(pill, /margin:0 auto/, 'centrada en lo que queda libre entre el nombre y las fichas');
+  assert.match(pill, /white-space:nowrap/);
+  assert.match(/\.estado-pill\.juego \{[^}]*\}/.exec(texto)?.[0] ?? '', /var\(--oro\)/, 'la jugada que puso el juego va en dorado, no en verde');
+  assert.match(texto, /\.placa\.con-estado \.quien \{[^}]*flex:0 1 auto/, 'el nombre deja de tomar todo el espacio libre');
+  assert.match(texto, /\.f-16x9 \.estado-pill \{[^}]*flex-direction:column/, 'la barra horizontal es mas angosta: dos lineas');
 });
 
 test('mesa.css trae el aspecto de la carta numerica y de la tira (usadas tachadas, la de ahora en dorado)', () => {

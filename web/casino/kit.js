@@ -64,11 +64,20 @@ export function htmlPila(n, tipo, max = 8) {
 // espacios = null: un solo grupo de fichas (los juegos que solo tienen un tipo, como Mayor o menor).
 export const htmlFichasPlaca = (fichas, espacios) => `<div class="fichas"><div class="grupo">${htmlPila(fichas, 'juego')}<span class="cuenta">${esc(fichas)}</span></div>${espacios === null ? '' : `<div class="grupo">${htmlPila(espacios, 'espacio')}<span class="cuenta">${esc(espacios)}</span></div>`}</div>`;
 
-// La placa de un jugador: color de su IA (de paleta.js; los bots usan el que trae el resultado guardado), inicial y nombre. `rol` es el texto chico de abajo.
-export function htmlPlaca(jugador, rol = '', fichas = 0, espacios = 0, reemplazo = false) {
+// El estado de un jugador en la ronda (Mayor o menor): una pastilla con su papel («Activo», «Predictor») y lo que le toca hacer, que va en el centro de su barra para que el publico vea quien hace que.
+// `juego`: la jugada la puso el juego (respuesta ilegible), no la IA. `ahora: true`: es quien actua en este momento y su pastilla brilla. Sin papel legible no hay pastilla.
+export function htmlEstado(estado) {
+  if (!estado || typeof estado.papel !== 'string' || !estado.papel) return '';
+  return `<div class="estado-pill${estado.juego === true ? ' juego' : ''}${estado.ahora === true ? ' ahora' : ''}"><b>${esc(estado.papel)}</b>${typeof estado.accion === 'string' && estado.accion ? `<span>${esc(estado.accion)}</span>` : ''}</div>`;
+}
+
+// La placa de un jugador: color de su IA (de paleta.js; los bots usan el que trae el resultado guardado), inicial y nombre. `rol` es el texto chico de abajo; `estado` (opcional, ver htmlEstado) pone en su lugar una
+// pastilla en el centro de la barra.
+export function htmlPlaca(jugador, rol = '', fichas = 0, espacios = 0, reemplazo = false, estado = null) {
   const j = jugador ?? {};
   const nombre = j.nombre ?? 'Jugador';
-  return `<div class="placa${reemplazo ? ' reemplazo' : ''}" style="--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))}"><div class="avatar" style="--fondo:${esc(fondoCSS(j.id, j.color))}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="rol">${esc(rol)}</div></div>${htmlFichasPlaca(fichas, espacios)}</div>`;
+  const pastilla = htmlEstado(estado);
+  return `<div class="placa${reemplazo ? ' reemplazo' : ''}${pastilla ? ' con-estado' : ''}" style="--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))}"><div class="avatar" style="--fondo:${esc(fondoCSS(j.id, j.color))}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="rol">${esc(rol)}</div></div>${pastilla}${htmlFichasPlaca(fichas, espacios)}</div>`;
 }
 
 // ---- Cartas con numero (Mayor o menor, El numero solitario): cara crema con el numero grande y chico, sin color ni palo (el numero se lee solo) ----
