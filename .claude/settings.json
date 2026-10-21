@@ -5,7 +5,6 @@
       "Read(./.env.*)",
       "Read(./data/pruebas/**)",
       "Read(./data/voz/**)",
-      "Read(./grabaciones/**)",
       "Read(./node_modules/**)"
     ]
   },
