@@ -58,6 +58,12 @@ export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, forma
   return `escena.html?${q}`;
 }
 
+// La direccion para grabar el gancho «Próximamente» de una parte (gancho.js): los cortes son unidades (manos, rondas o turnos) de la partida; sin voz (el gancho no se narra).
+export function direccionDeGancho({ archivo, partida = 1, cortes, parte = 1, de = 2, formato = 'hoja' }) {
+  const q = new URLSearchParams({ archivo, partida: String(partida), gancho: '1', cortes: (cortes ?? []).join(','), parte: String(parte), de: String(de), formato, auto: '1', limpio: '1', grabar: '1' });
+  return `escena.html?${q}`;
+}
+
 // ?archivo=NOMBRE.json (en data/) &partida=N (1 = la primera) &mano=A &hasta=B (clip por manos) &formato=9x16|16x9|hoja &camara=0..9 (a cuantos se les ve lo oculto; sin ella, el valor del juego)
 // &sonido=0 (apaga efectos y voz) &vel=2 &razon=1 &auto=1 &limpio=1 &grabar=1 (con auto y sin detener: margenes y fundidos de negro para grabar) &voz=voz.json &escala=1 (por defecto la escena se ajusta a la ventana)
 export function leerParametros(search) {
@@ -86,7 +92,20 @@ export function leerParametros(search) {
     limpio: bandera(q.get('limpio')),
     voz: esRutaRelativa(q.get('voz')) ? q.get('voz') : null,
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',
+    // gancho=1&cortes=10,6,14&parte=2&de=2: el gancho «Próximamente» de una parte (gancho.js). null = una pieza normal.
+    gancho: bandera(q.get('gancho')) ? { cortes: cortesDe(q.get('cortes')), parte: Math.max(1, entero(q.get('parte')) ?? 1), de: Math.max(1, entero(q.get('de')) ?? 2) } : null,
   };
+}
+
+const MAX_CORTES_URL = 8;
+// "10,6,14" -> [10, 6, 14]: enteros positivos, sin repetir, en el orden pedido y a lo mas MAX_CORTES_URL.
+function cortesDe(texto) {
+  const unidades = [];
+  for (const x of String(texto ?? '').split(',')) {
+    const n = /^\d+$/.test(x.trim()) ? Number(x) : null;
+    if (n >= 1 && !unidades.includes(n)) unidades.push(n);
+  }
+  return unidades.slice(0, MAX_CORTES_URL);
 }
 
 // m:ss de una duracion en ms (la usan las herramientas de partes y de paquete y los textos del paquete).
@@ -135,10 +154,12 @@ export function duracionDeBeat(beat, voz, vel = 1) {
 }
 
 // Cuando empieza y termina cada beat, uno tras otro: es la linea de tiempo que se exporta para re-doblar el video en otro idioma.
+// Un beat con `vel` propia (los cortes del gancho de gancho.js van acelerados) dura lo suyo entre esa velocidad Y la de la pagina; duracionDeBeat no la cuenta: la mesa la aplica sola.
 export function marcarTiempos(beats, voz, vel = 1) {
   let t = 0;
   return (Array.isArray(beats) ? beats : []).map((b) => {
-    const duracion = duracionDeBeat(b, voz, vel);
+    const propia = Number.isFinite(b?.vel) && b.vel > 0 ? b.vel : 1, pagina = Number.isFinite(vel) && vel > 0 ? vel : 1;
+    const duracion = duracionDeBeat(b, voz, pagina * propia);
     const marca = { id: b.id, mano: b.mano, tipo: b.tipo, texto: b.texto, inicioMs: t, finMs: t + duracion };
     t += duracion;
     return marca;

@@ -6,7 +6,7 @@
 <!--
   Carta de ajuste para probar la grabacion multiformato en OBS ANTES de tener la escena real.
   Uso: fuente "Navegador" en OBS, marcar "Archivo local" y elegir este archivo; ancho 3840, alto 2160, FPS 30.
-  Dibuja la hoja maestra con cada formato en su lugar, la zona segura, el recorte 4:5 y marcas de sincronia:
+  Dibuja la hoja maestra con cada formato en su lugar, la zona segura y marcas de sincronia:
     - esquinas de colores (rojo, verde, azul, blanco): tras recortar, cada archivo debe mostrar las cuatro en SUS esquinas;
     - barra que cruza cada region cada 2 s: debe ir en la misma posicion en los tres archivos al mismo instante;
     - cuadrito que alterna blanco/negro en cada cuadro: si en la grabacion se ve dos cuadros iguales seguidos, se perdio un cuadro;
@@ -33,21 +33,25 @@
       "alto": 1920,
       "x": 0,
       "y": 0,
-      "uso": "TikTok, Reels, Shorts y Facebook Reels"
-    },
-    "4x5": {
-      "ancho": 1080,
-      "alto": 1350,
-      "x": 0,
-      "y": 284,
-      "uso": "Instagram (feed): recorte central del 9x16 (2 px menos arriba que abajo)"
+      "redes": [
+        "fb",
+        "ig",
+        "tk",
+        "yt"
+      ],
+      "uso": "Reels de Facebook e Instagram, TikTok y Shorts de YouTube"
     },
     "16x9": {
       "ancho": 1920,
       "alto": 1080,
       "x": 1080,
       "y": 0,
-      "uso": "YouTube, X, Facebook y el sitio"
+      "redes": [
+        "fb",
+        "x",
+        "yt"
+      ],
+      "uso": "X, YouTube (versión larga) y Facebook"
     }
   },
   "zonaSegura": {
@@ -108,14 +112,10 @@
   }
 
   function guias(t) {
-    const v = G.formatos['9x16'], ig = G.formatos['4x5'], z = G.zonaSegura;
-    // recorte 4:5: dos lineas amarillas
+    const z = G.zonaSegura;
+    // zona segura: rectangulo verde
     ctx.setLineDash([24, 16]);
     ctx.lineWidth = 6;
-    ctx.strokeStyle = '#ffd400';
-    ctx.beginPath(); ctx.moveTo(v.x, ig.y); ctx.lineTo(v.x + v.ancho, ig.y); ctx.moveTo(v.x, ig.y + ig.alto); ctx.lineTo(v.x + v.ancho, ig.y + ig.alto); ctx.stroke();
-    texto('recorte 4:5 (Instagram)', v.x + 24, ig.y + 44, 36, '#ffd400');
-    // zona segura: rectangulo verde
     ctx.strokeStyle = '#2dff8a';
     ctx.strokeRect(z.x, z.y, z.ancho, z.alto);
     ctx.setLineDash([]);

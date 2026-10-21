@@ -13,26 +13,29 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { filtro, argumentosFfmpeg, negrosDe, ventanaDeContenido, NEGRO } from '../../herramientas/recortar-formatos.mjs';
 import { FORMATOS } from '../../herramientas/formatos.mjs';
+import { nombreDeVideo } from '../../herramientas/nombres.mjs';
 import { FUNDIDOS } from '../../web/casino/escena-config.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
+const mp4 = (dir, base, formato) => join(dir, `${nombreDeVideo(base, formato)}.mp4`); // el archivo que deja el recortador: BASE_FORMATO_REDES.mp4
 const hayFfmpeg = spawnSync('ffmpeg', ['-version']).status === 0 && spawnSync('ffprobe', ['-version']).status === 0;
 const saltar = !hayFfmpeg && 'ffmpeg no esta instalado';
 
 test('el filtro parte la hoja en un recorte por formato, con las medidas de formatos.mjs', () => {
   const f = filtro();
-  assert.match(f, /^\[0:v\]split=3\[s0\]\[s1\]\[s2\];/);
+  assert.match(f, /^\[0:v\]split=2\[s0\]\[s1\];/);
   assert.ok(f.includes('crop=1080:1920:0:0[f0]'));
-  assert.ok(f.includes('crop=1080:1350:0:284[f1]'));
-  assert.ok(f.includes('crop=1920:1080:1080:0[f2]'));
+  assert.ok(f.includes('crop=1920:1080:1080:0[f1]'));
 });
 
 test('los argumentos de ffmpeg dan un archivo por formato, con el audio opcional y sin pedir confirmacion', () => {
   const a = argumentosFfmpeg({ entrada: 'g.mkv', nombre: 'ep01', carpeta: 'sal', crf: 18, inicio: 3.5 });
   assert.deepEqual(a.slice(0, 4), ['-hide_banner', '-loglevel', 'error', '-y']);
   assert.ok(a.join(' ').includes('-ss 3.5 -i g.mkv'));
-  for (const k of Object.keys(FORMATOS)) assert.ok(a.includes(join('sal', `ep01_${k}.mp4`)), k);
-  assert.equal(a.filter((x) => x === '0:a?').length, 3);
+  for (const k of Object.keys(FORMATOS)) assert.ok(a.includes(mp4('sal', 'ep01', k)), k);
+  // el nombre dice el formato y las redes a las que sirve
+  for (const literal of ['ep01_9x16_fb-ig-tk-yt.mp4', 'ep01_16x9_fb-x-yt.mp4']) assert.ok(a.includes(join('sal', literal)), literal);
+  assert.equal(a.filter((x) => x === '0:a?').length, 2);
   assert.ok(a.includes('18'));
 });
 
@@ -48,7 +51,7 @@ const medidas = (archivo) => {
   return r.stdout.trim();
 };
 
-test('recortar-formatos saca de la hoja el 9x16, el 4x5 y el 16x9 desde el lugar correcto', { skip: saltar }, () => {
+test('recortar-formatos saca de la hoja el 9x16 y el 16x9 desde el lugar correcto', { skip: saltar }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'recorte-'));
   try {
     const maestro = join(dir, 'maestro.mkv');
@@ -60,14 +63,15 @@ test('recortar-formatos saca de la hoja el 9x16, el 4x5 y el 16x9 desde el lugar
     const r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', maestro, 'ep', `--carpeta=${dir}`], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 0, r.stderr || r.stdout);
 
-    const v = join(dir, 'ep_9x16.mp4'), ig = join(dir, 'ep_4x5.mp4'), h = join(dir, 'ep_16x9.mp4');
-    assert.deepEqual([medidas(v), medidas(ig), medidas(h)], ['1080x1920', '1080x1350', '1920x1080']);
+    const v = mp4(dir, 'ep', '9x16'), h = mp4(dir, 'ep', '16x9');
+    for (const f of [v, h]) assert.ok(existsSync(f), `no dejo ${f}`);
+    assert.equal(existsSync(mp4(dir, 'ep', '4x5')), false, 'el 4x5 ya no se saca');
+    assert.deepEqual([medidas(v), medidas(h)], ['1080x1920', '1920x1080']);
     assert.ok(es(pixel(v, 540, 100), [0, 255, 0]), 'el 9x16 empieza en la banda verde de arriba');
     assert.ok(es(pixel(v, 540, 1000), [255, 0, 0]), 'el 9x16 es rojo en el medio');
-    assert.ok(es(pixel(ig, 540, 10), [255, 0, 0]), 'el 4x5 ya no incluye la banda verde (empieza en y=284)');
     assert.ok(es(pixel(h, 960, 540), [0, 0, 255]), 'el 16x9 sale de la region azul');
-    // el audio se conserva en los tres
-    for (const f of [v, ig, h]) {
+    // el audio se conserva en los dos
+    for (const f of [v, h]) {
       const a = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', f], { encoding: 'utf8' });
       assert.equal(a.stdout.trim(), 'aac', f);
     }
@@ -84,7 +88,7 @@ test('recortar-formatos rechaza un video que no es la hoja de 3840x2160, y un ar
     let r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', chico, 'ep', `--carpeta=${dir}`], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 1);
     assert.match(r.stderr, /3840x2160/);
-    assert.equal(existsSync(join(dir, 'ep_9x16.mp4')), false);
+    assert.equal(existsSync(mp4(dir, 'ep', '9x16')), false);
 
     r = spawnSync(process.execPath, ['herramientas/recortar-formatos.mjs', join(dir, 'nada.mkv'), 'ep'], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 1);
@@ -210,7 +214,7 @@ test('recortar-formatos quita el negro de los margenes de una grabacion hecha co
   assert.equal(r.status, 0, r.stderr || r.stdout);
   const esperado = 2 * F + CONTENIDO + NEGRO.antes + NEGRO.despues; // los dos fundidos, el contenido y un poco de negro de holgura a cada lado
   for (const k of Object.keys(FORMATOS)) {
-    const f = join(dirDeMontaje(), `ep_${k}.mp4`), d = duracionDe(f), alAbrir = brilloEn(f, 0);
+    const f = mp4(dirDeMontaje(), 'ep', k), d = duracionDe(f), alAbrir = brilloEn(f, 0);
     assert.ok(Math.abs(d - esperado) < 0.4, `${k}: dura ${d} (esperado ~${esperado})`);
     assert.ok(alAbrir < 30, `${k}: abre en negro (brillo ${alAbrir})`);
     assert.ok(brilloEn(f, d - 0.05) < 30, `${k}: cierra en negro`);
@@ -227,15 +231,15 @@ test('recortar-formatos no recorta lo que no tiene negro de margenes (la carta d
   assert.equal(g.status, 0, String(g.stderr));
   let r = recortar(sin, 'sin');
   assert.equal(r.status, 0, r.stderr || r.stdout);
-  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'sin_9x16.mp4')) - 2) < 0.3, 'sin negro no se recorta nada');
+  assert.ok(Math.abs(duracionDe(mp4(dirDeMontaje(), 'sin', '9x16')) - 2) < 0.3, 'sin negro no se recorta nada');
   assert.match(r.stdout, /no encontr/i, 'avisa que no encontro los margenes');
 
   r = recortar(grabacionConMargenes(), 'manual', '--manual');
   assert.equal(r.status, 0, r.stderr || r.stdout);
-  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'manual_9x16.mp4')) - TOTAL) < 0.3, '--manual deja la grabacion entera');
+  assert.ok(Math.abs(duracionDe(mp4(dirDeMontaje(), 'manual', '9x16')) - TOTAL) < 0.3, '--manual deja la grabacion entera');
   r = recortar(sin, 'inicio', '--manual', '--inicio=1');
   assert.equal(r.status, 0, r.stderr || r.stdout);
-  assert.ok(Math.abs(duracionDe(join(dirDeMontaje(), 'inicio_9x16.mp4')) - 1) < 0.3, '--inicio=1 salta el primer segundo');
+  assert.ok(Math.abs(duracionDe(mp4(dirDeMontaje(), 'inicio', '9x16')) - 1) < 0.3, '--inicio=1 salta el primer segundo');
 });
 
 test('recortar-formatos recorta bien un MKV cuyos tiempos no empiezan en 0 (blackdetect da tiempos absolutos y la duracion de ffprobe no incluye ese desfase)', { skip: saltar }, () => {
@@ -247,7 +251,7 @@ test('recortar-formatos recorta bien un MKV cuyos tiempos no empiezan en 0 (blac
   const r = recortar(desfasado, 'desfasado');
   assert.equal(r.status, 0, r.stderr || r.stdout);
   const esperado = 2 * F + CONTENIDO + NEGRO.antes + NEGRO.despues;
-  const f = join(dirDeMontaje(), 'desfasado_9x16.mp4'), d = duracionDe(f);
+  const f = mp4(dirDeMontaje(), 'desfasado', '9x16'), d = duracionDe(f);
   assert.ok(Math.abs(d - esperado) < 0.4, `dura ${d} y deberia durar ~${esperado} (si no recorto los dos lados, el desfase confundio a la deteccion)`);
   assert.ok(brilloEn(f, 0) < 30 && brilloEn(f, d - 0.05) < 30 && brilloEn(f, d / 2) > 40, 'el recorte cae donde toca: abre y cierra en negro con el contenido en medio (-ss tambien cuenta desde el primer cuadro)');
   assert.doesNotMatch(r.stdout, /AVISO/, 'encuentra los dos margenes');

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Recorta la grabacion maestra de OBS (hoja de 3840x2160) en un archivo por formato, en UNA sola pasada de ffmpeg:
-// NOMBRE_9x16.mp4 (TikTok, Reels, Shorts), NOMBRE_4x5.mp4 (Instagram) y NOMBRE_16x9.mp4 (YouTube, X, el sitio).
+// NOMBRE_9x16_fb-ig-tk-yt.mp4 y NOMBRE_16x9_fb-x-yt.mp4: el nombre dice el formato y las redes a las que sirve (herramientas/nombres.mjs; las redes salen de formatos.mjs).
 // Las medidas salen de herramientas/formatos.mjs. Necesita ffmpeg y ffprobe en el PATH.
 //
-//   node herramientas/recortar-formatos.mjs GRABACION.mkv ep01
-//   node herramientas/recortar-formatos.mjs GRABACION.mkv ep01 --carpeta=salida --crf=17 --inicio=3.5
+//   node herramientas/recortar-formatos.mjs GRABACION.mkv j1_pt1
+//   node herramientas/recortar-formatos.mjs GRABACION.mkv j1_pt1 --carpeta=salida --crf=17 --inicio=3.5
 //
 // Una grabacion hecha con la direccion del paquete (grabar=1) trae negro al empezar y al terminar: se detecta y se recorta solo, dejando los fundidos (mas abajo, NEGRO). Si no encuentra
 // uno de los dos margenes (una grabacion vieja, la carta de ajuste) no recorta ese lado y lo dice.
@@ -18,6 +18,7 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOJA, FORMATOS } from './formatos.mjs';
+import { nombreDeVideo } from './nombres.mjs';
 import { FUNDIDOS } from '../web/casino/escena-config.js';
 
 // [0:v]split=N[s0]..[sN];[s0]crop=ancho:alto:x:y[f0];...
@@ -81,7 +82,7 @@ export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = 
       '-map', `[f${i}]`, '-map', '0:a?',
       '-c:v', 'libx264', '-crf', String(crf), '-preset', 'slow', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
-      join(carpeta, `${nombre}_${k}.mp4`)
+      join(carpeta, `${nombreDeVideo(nombre, k)}.mp4`)
     );
   });
   return args;
@@ -145,6 +146,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const r = spawnSync('ffmpeg', args, { stdio: ['ignore', 'inherit', 'inherit'] });
   if (r.error) salir('No encuentro ffmpeg. Instala ffmpeg (por ejemplo: winget install Gyan.FFmpeg) y abre una terminal nueva.');
   if (r.status !== 0) salir('ffmpeg fallo (mira el mensaje de arriba).');
-  for (const [k, f] of Object.entries(FORMATOS)) console.log(`  ${join(carpeta, `${nombre}_${k}.mp4`)}   ${f.ancho}x${f.alto}   ${f.uso}`);
+  for (const [k, f] of Object.entries(FORMATOS)) console.log(`  ${join(carpeta, `${nombreDeVideo(nombre, k)}.mp4`)}   ${f.ancho}x${f.alto}   ${f.uso}`);
   console.log('');
 }

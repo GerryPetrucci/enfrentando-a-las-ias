@@ -28,12 +28,9 @@ test('las medidas del lienzo y la zona segura de la web coinciden con herramient
   assert.deepEqual(FORMATOS_ESCENA['9x16'].zona, ZONA_SEGURA);
 });
 
-test('en 9:16 todo lo que se lee cabe en la zona segura, y esa zona cabe en el recorte 4:5 de Instagram', () => {
+test('en 9:16 todo lo que se lee cabe en la zona segura', () => {
   const L = colocar('9x16');
   for (const [nombre, r] of Object.entries(legibles(L))) assert.ok(dentro(r, ZONA_SEGURA), `${nombre} se sale de la zona segura: ${JSON.stringify(r)}`);
-  // El 4x5 empieza en y = 284 de la hoja y el 9x16 en y = 0: en coordenadas del 9x16 el recorte va de 284 a 284 + 1350.
-  const recorte45 = { x: 0, y: FORMATOS['4x5'].y - FORMATOS['9x16'].y, ancho: FORMATOS['4x5'].ancho, alto: FORMATOS['4x5'].alto };
-  assert.ok(dentro(ZONA_SEGURA, recorte45));
 });
 
 test('en 16:9 todo lo que se lee cabe en el lienzo, dentro del margen de seguridad de la zona', () => {

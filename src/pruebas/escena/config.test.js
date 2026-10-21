@@ -15,13 +15,13 @@ import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
-  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar' });
+  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null });
   assert.deepEqual(leerParametros(undefined), leerParametros(''));
 });
 
 test('los parametros se leen y se validan: lo ilegible vuelve al valor por defecto, nada lanza', () => {
   const p = leerParametros('?archivo=duda-1.json&partida=3&mano=4&hasta=9&formato=16x9&camara=4&sonido=0&vel=2.5&razon=1&auto=1&limpio=1&voz=voz.json&escala=1');
-  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1 });
+  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1, gancho: null });
   assert.equal(leerParametros('formato=hoja').formato, 'hoja');
   for (const [q, esperado] of [
     ['formato=1x1', { formato: '9x16' }], ['formato=4x5', { formato: '9x16' }],
@@ -37,6 +37,15 @@ test('los parametros se leen y se validan: lo ilegible vuelve al valor por defec
     const p2 = leerParametros(q);
     for (const [k, v] of Object.entries(esperado)) assert.equal(p2[k], v, `${q}: ${k}`);
   }
+});
+
+test('gancho=1 pide el gancho «Próximamente»: sus cortes (unidades, sin repetir, en el orden pedido), la parte que anuncia y de cuantas; lo ilegible vuelve a lo sensato', () => {
+  assert.deepEqual(leerParametros('gancho=1&cortes=10,6,14&parte=2&de=2').gancho, { cortes: [10, 6, 14], parte: 2, de: 2 });
+  assert.deepEqual(leerParametros('gancho=1&cortes=3').gancho, { cortes: [3], parte: 1, de: 2 }, 'parte y de tienen valor por omision');
+  assert.deepEqual(leerParametros('gancho=1&cortes=5,5,x,0,-2,7,,8&parte=0&de=x').gancho, { cortes: [5, 7, 8], parte: 1, de: 2 });
+  assert.deepEqual(leerParametros('gancho=1&cortes=1,2,3,4,5,6,7,8,9,10').gancho.cortes, [1, 2, 3, 4, 5, 6, 7, 8], 'a lo mas 8 cortes');
+  assert.deepEqual(leerParametros('gancho=1').gancho, { cortes: [], parte: 1, de: 2 }, 'sin cortes la pagina lo dice, no lo adivina');
+  for (const q of ['', 'cortes=3', 'gancho=0&cortes=3', 'gancho=false']) assert.equal(leerParametros(q).gancho, null, q);
 });
 
 test('el clip por manos recorta los beats y no inventa final ni se cuelga con un rango fuera de la partida', async () => {

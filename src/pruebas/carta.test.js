@@ -40,10 +40,11 @@ function correr(tiempos) {
   return { textos, rects };
 }
 
-test('la carta dibuja los formatos, la zona segura y el recorte 4:5', () => {
+test('la carta dibuja los formatos y la zona segura, y ya no el recorte 4:5', () => {
   const { textos, rects } = correr([0]);
   const todo = textos.join('\n');
-  for (const etiqueta of ['9:16', '16:9', '4:5', 'ZONA SEGURA']) assert.ok(todo.includes(etiqueta), `falta "${etiqueta}"`);
+  for (const etiqueta of ['9:16', '16:9', 'ZONA SEGURA']) assert.ok(todo.includes(etiqueta), `falta "${etiqueta}"`);
+  assert.ok(!todo.includes('4:5'), 'el 4:5 se quito');
   assert.ok(rects.length > 10, 'dibuja muy poco');
 });
 

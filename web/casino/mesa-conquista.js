@@ -86,7 +86,7 @@ export class Mesa extends MesaBase {
       g.beginPath(); g.roundRect(8, y - fila * 0.38, 8, fila * 0.76, 4); g.fill();
       g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 ${tam}px ${fam}`;
       g.fillStyle = colorDe(this.partida.jugadores[s]?.id, colorSolido(this.colores, s)); g.fillText(this.nombre(s), 26, y - (compacto ? 0 : fila * 0.12), compacto ? 150 : 180);
-      const x0 = compacto ? 240 : 230, paso = compacto ? 112 : 118; // donde empieza la columna de recursos y lo que mide cada una
+      const x0 = compacto ? 240 : 230, paso = compacto ? 112 : Math.min(118, Math.floor((ancho - 14 - 120 - x0) / RECURSOS.length)); // donde empieza la columna de recursos y lo que mide cada una (en 9:16 el marcador mide 890: dejan sitio a «NN reg.»)
       // el reino del asiento junto al nombre del modelo (las IAs hablan de «Azur» o «Rosa» en sus mensajes): en gris y solo si cabe antes de los recursos
       const reino = nombreDeReino(s, this.partida.reinos), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
       g.font = `600 ${Math.round(tam * 0.6)}px ${fam}`;
@@ -330,13 +330,15 @@ export class Mesa extends MesaBase {
     const momentos = f.momentos.length ? `<h3>Momentos clave</h3>${f.momentos.map((m) => `<div class="pf-mom"><b>Turno ${esc(m.turno)}</b>${esc(m.texto)}</div>`).join('')}` : '';
     const privados = f.sinRevelar.length ? `<h3>Lo que se dijeron en privado</h3>${f.sinRevelar.map((m) => `<div class="pf-priv"><small>${this.nombreHTML(m.k)} a ${this.nombreHTML(m.a)} · turno ${esc(m.turno)}</small>«${esc(m.texto)}»</div>`).join('')}` : '';
     this.finalEl.innerHTML = `<div class="pf-titulo">Fin de la guerra</div><div class="pf-sub">Mapa ${esc(NOMBRES_BIOMA[f.bioma] ?? '')}</div>${f.ganoPorMaravilla ? '<div class="pf-marca">Victoria por la Maravilla</div>' : ''}${filas}${momentos}${privados}`;
+    this.finalEl.classList.remove('apretado');
+    if (this.finalEl.scrollHeight > this.finalEl.clientHeight + 1) this.finalEl.classList.add('apretado'); // en vertical la zona segura deja menos alto: el panel se aprieta (letra y espacios mas chicos) antes de cortar los privados
     this.mostrar(this.finalEl, 600);
     await this.esperar(ms * 0.5);
   }
 
   // Los subtitulos son lo que se dice del beat (`dicho`: hechos tal cual y frases de contexto en cursiva); con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).
-  mostrarSubtitulos(beat) {
-    super.mostrarSubtitulos(beat);
+  pintarSubtitulos(beat) {
+    super.pintarSubtitulos(beat);
     const r = beat.pasos?.find((p) => p.tipo === 'razones');
     if (this.razon && r?.lista?.length) {
       this.subtitulos.insertAdjacentHTML('beforeend', r.lista.map((x) => `<div class="razon"><small>${esc(this.nombre(x.k))} piensa</small>${esc(x.texto)}</div>`).join(''));

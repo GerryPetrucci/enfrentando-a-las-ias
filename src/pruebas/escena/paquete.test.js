@@ -27,7 +27,7 @@ async function paqueteDe(id, partida, extra = {}) {
   const beats = await armarLinea(id, partida), destacadas = await destacadasDe(id, partida, 10);
   return { beats, paquete: construirPaquete({ partida, beats, destacadas, archivo: `pruebas/${id}.json`, partidaNumero: 1, enlace: ENLACE, ...extra }) };
 }
-const textosPlanos = (pieza) => [pieza.textos.tiktok, pieza.textos.instagram, pieza.textos.x, pieza.textos.youtube.titulo, pieza.textos.youtube.descripcion, pieza.comentarioFijado ?? ''];
+const textosPlanos = (pieza) => [pieza.textos.tiktok, pieza.textos.instagram, pieza.textos.facebook, pieza.textos.x, pieza.textos.youtube.titulo, pieza.textos.youtube.descripcion, pieza.comentarioFijado ?? ''];
 const params = (url) => Object.fromEntries(new URL(url, 'http://x/').searchParams);
 
 test('destacadasDe da, para cada uno de los 7 juegos, las unidades de sus mejores momentos (las mismas que usan sus beats)', async () => {
@@ -88,7 +88,7 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
       for (const [a, z] of ocupadas) assert.ok(c.grabar.hasta < a || c.grabar.desde > z, `${id}: ${c.id} se encima con otro clip`);
       ocupadas.push([c.grabar.desde, c.grabar.hasta]);
     }
-    for (const pieza of paquete.piezas) {
+    for (const pieza of paquete.piezas.filter((p) => p.tipo !== 'gancho')) { // el gancho tiene su propia direccion (gancho=1&cortes=...): su prueba esta mas abajo
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
       assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1'], `${id}: ${pieza.id}`);
@@ -149,9 +149,10 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida);
     assert.ok(paquete.piezas.length >= 2, id); // las dos partes (una partida muy corta puede no tener clips: el final no se puede adelantar)
-    for (const p of paquete.piezas) {
+    for (const p of paquete.piezas.filter((x) => x.tipo !== 'gancho')) { // los ganchos tienen sus propios textos: su prueba esta mas abajo
       const t = p.textos;
-      for (const red of ['tiktok', 'instagram', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
+      for (const red of ['tiktok', 'instagram', 'facebook', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
+      assert.ok(t.facebook.includes(ENLACE), `${id} ${p.id}: el texto de Facebook lleva el enlace al marcador (una pagina si puede ponerlo)`);
       assert.ok(t.x.length <= LIMITES.x, `${id} ${p.id}: X con ${t.x.length}`);
       assert.ok(t.tiktok.length <= LIMITES.tiktok, `${id} ${p.id}: TikTok con ${t.tiktok.length}`);
       assert.ok(t.instagram.length <= LIMITES.instagram, `${id} ${p.id}: Instagram con ${t.instagram.length}`);
@@ -159,11 +160,11 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
       assert.ok(t.youtube.descripcion.length <= LIMITES.youtubeDescripcion, `${id} ${p.id}: descripcion de YouTube`);
       const ig = t.instagram.match(/#[\p{L}\p{N}_]+/gu) ?? [];
       assert.ok(ig.length >= 3 && ig.length <= 5, `${id} ${p.id}: ${ig.length} hashtags en Instagram`);
-      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['x', t.x], ['youtube', t.youtube.descripcion]]) {
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['youtube', t.youtube.descripcion]]) {
         assert.match(texto, /generad[oa] por IA/i, `${id} ${p.id} ${red}: falta el aviso de IA`);
         assert.match(texto, /independiente/i, `${id} ${p.id} ${red}: falta el aviso de independencia`);
       }
-      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['x', t.x], ['titulo de YouTube', t.youtube.titulo]]) assert.match(texto, /\[GANCHO: .+\]/, `${id} ${p.id} ${red}: el gancho va marcado`);
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['titulo de YouTube', t.youtube.titulo]]) assert.match(texto, /\[GANCHO: .+\]/, `${id} ${p.id} ${red}: el gancho va marcado`);
     }
   }
 });
@@ -176,6 +177,7 @@ test('el resultado solo sale en la parte 2 y dice "en esta partida"; las partes 
     assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(p1)), `${id}: la parte 1 adelanta el resultado`);
     for (const c of clips) assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(c)), `${id}: un clip adelanta el resultado`);
     if (gan && partida.empate !== true) assert.match(p2.textos.instagram, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 dice quien gano`);
+    if (gan && partida.empate !== true) assert.match(p2.textos.facebook, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 de Facebook dice quien gano`);
     // solo se escriben cifras que el video muestra: los puntos del juego en La Fuga y en Guerra de territorios; en los demas, el orden final (los puntos del marcador no salen en pantalla)
     assert.match(p2.textos.instagram, id === 'fuga' || id === 'conquista' ? /Puntos: / : /Orden final: /, id);
     if (id !== 'fuga' && id !== 'conquista') assert.doesNotMatch(p2.textos.instagram, /Puntos: /, `${id}: puntos del marcador que no se ven en el video`);
@@ -274,4 +276,54 @@ test('se avisa de un modelo que casi no respondio (caido o ilegible): una partid
 test('el paquete es determinista: dos construcciones iguales dan lo mismo', async () => {
   const a = await paqueteDe('solitario', PARTIDAS.solitario), b = await paqueteDe('solitario', PARTIDAS.solitario);
   assert.deepEqual(a.paquete, b.paquete);
+});
+
+// ---- el gancho «Proximamente» (gancho.js): una pieza por parte, para subirla ANTES de esa parte ----
+test('un gancho por parte (gancho-1, gancho-2) cuando esa parte tiene momentos para 2 o mas cortes, con sus cortes DENTRO de esa parte, sin la tarjeta de arranque ni el final, de 12 a 26 s y sin voz', async () => {
+  const { paquete, beats } = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40) });
+  const ganchos = paquete.piezas.filter((p) => p.tipo === 'gancho');
+  assert.ok(ganchos.length >= 1 && ganchos.every((p) => /^gancho-[12]$/.test(p.id)), ganchos.map((p) => p.id).join());
+  assert.equal(ganchos.length + paquete.advertencias.filter((a) => /gancho de la parte/i.test(a)).length, 2, 'cada parte tiene su gancho o dice por que no');
+  const unidades = [...new Set(beats.map((b) => b.mano))];
+  const partes = dividirEnDos(beats);
+  for (const g of ganchos) {
+    const n = Number(g.id.slice(-1)), q = params(g.grabar.url), rango = n === 1 ? partes.parte1 : partes.parte2;
+    assert.deepEqual([q.gancho, q.parte, q.de, q.formato, q.grabar, q.auto, q.limpio], ['1', String(n), '2', 'hoja', '1', '1', '1']);
+    assert.equal(q.voz, undefined, 'el gancho no se narra: la musica la pone quien lo sube');
+    const cortes = q.cortes.split(',').map(Number);
+    assert.ok(cortes.length >= 2 && cortes.length <= 5, `${g.id}: ${cortes.length} cortes`);
+    for (const u of cortes) assert.ok(u >= rango.mano && u <= rango.hasta && u !== unidades[0] && u !== unidades.at(-1), `${g.id}: la unidad ${u} no vale (parte ${rango.mano}..${rango.hasta}; sin la primera ni la ultima de la partida)`);
+    assert.ok(g.grabar.ms >= 12000 && g.grabar.ms <= 26000, `${g.id}: dura ${g.grabar.ms}`);
+    assert.deepEqual(g.grabar.plan, planDeGrabacion(g.grabar.ms));
+    assert.equal(g.comentarioFijado, null, 'un gancho no lleva comentario fijado');
+  }
+});
+
+test('el texto de un gancho, en cada red: «Próximamente», la parte que anuncia, la linea de gancho marcada, el aviso de IA, dentro de cada limite y NUNCA un resultado', async () => {
+  for (const [id, partida] of Object.entries(PARTIDAS)) {
+    const { paquete } = await paqueteDe(id, partida);
+    for (const g of paquete.piezas.filter((p) => p.tipo === 'gancho')) {
+      const t = g.textos;
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['titulo de YouTube', t.youtube.titulo]]) {
+        assert.match(texto, /\[GANCHO: .+\]/, `${id} ${g.id} ${red}: el gancho va marcado`);
+        assert.match(texto.replace(/\[GANCHO: .+?\]/, ''), /Próximamente/i, `${id} ${g.id} ${red}: lo dice el cuerpo, no solo la linea de gancho (que la persona puede cambiar)`);
+      }
+      for (const [red, texto] of [['tiktok', t.tiktok], ['instagram', t.instagram], ['facebook', t.facebook], ['x', t.x], ['youtube', t.youtube.descripcion]]) {
+        assert.match(texto, /generad[oa] por IA/i, `${id} ${g.id} ${red}: falta el aviso de IA`);
+        assert.match(texto, /Parte [12] de 2/, `${id} ${g.id} ${red}: dice que parte anuncia`);
+      }
+      assert.ok(t.x.length <= LIMITES.x && t.tiktok.length <= LIMITES.tiktok && t.instagram.length <= LIMITES.instagram && t.youtube.titulo.length <= LIMITES.youtubeTitulo, `${id} ${g.id}: se pasa de un limite`);
+      const todo = textosPlanos(g).join('\n');
+      assert.doesNotMatch(todo, /Puntos:|Orden final:|En esta partida|ganó|terminó en empate/i, `${id} ${g.id}: un gancho nunca adelanta el resultado`);
+      assert.doesNotMatch(todo, /privad/i, `${id} ${g.id}: nada privado`);
+    }
+  }
+});
+
+test('un juego del que no se pueden sacar al menos 2 cortes buenos para una parte no inventa su gancho y lo advierte', async () => {
+  const { paquete, beats } = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: [] });
+  assert.equal(paquete.piezas.filter((p) => p.tipo === 'gancho').length, 0);
+  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 1/i);
+  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 2/i);
+  assert.ok(paquete.piezas.length >= 2 && beats.length > 0, 'las partes siguen saliendo');
 });

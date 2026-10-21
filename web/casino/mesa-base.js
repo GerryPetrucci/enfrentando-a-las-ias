@@ -8,6 +8,8 @@
 import { htmlLogo, htmlPlaca, esc } from './kit.js';
 import { eventosDePaso } from './sonido.js';
 import { dichoDe } from './linea-comun.js';
+import { SUBTITULO, msVisibleDeSubtitulo } from './subtitulos-vertical.js';
+import { htmlDeTarjeta } from './gancho.js';
 
 const ETIQUETA_IA = 'Contenido generado por IA · Proyecto independiente'; // el aviso fijo de toda escena (y el pie de la tarjeta de arranque)
 export const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
@@ -37,6 +39,7 @@ export class MesaBase {
     poner(this.etiqueta, L.etiqueta);
     this.subtitulos = el('fijo subtitulos');
     poner(this.subtitulos, L.subtitulos);
+    if (this.formato === '9x16') this.subtitulos.style.opacity = 0; // en vertical el cuadro aparece con cada beat que dice algo (aparecerSubtitulos)
     this.capa = el('capa-volar');
   }
 
@@ -51,11 +54,33 @@ export class MesaBase {
   // ---- sonido, nombres y texto ----
   sonar(paso) { for (const e of eventosDePaso(paso)) this.sfx[e](); }
   nombre(s) { return this.partida.jugadores[s]?.nombre ?? `Jugador ${s + 1}`; }
-  mostrarSubtitulos(beat) {
+  // Los subtitulos del beat: se pintan (cada mesa agrega lo suyo en `pintarSubtitulos`) y, en vertical, el cuadro aparece y se apaga solo (subtitulos-vertical.js); `ms` es lo que dura el beat.
+  mostrarSubtitulos(beat, ms) {
+    this.pintarSubtitulos(beat);
+    this.aparecerSubtitulos(ms);
+  }
+  pintarSubtitulos(beat) {
     const dichas = dichoDe(beat).map((l) => (l.tipo === 'comentario' ? `<em>${esc(l.texto)}</em>` : esc(l.texto))).join(' '); // lo que se oye (`dicho` si el beat lo trae): los subtitulos lo siguen
     const razon = this.razon && beat.razon ? `<div class="razon"><small>${esc(this.nombre(beat.asiento))} piensa</small>${esc(beat.razon)}</div>` : '';
     this.subtitulos.innerHTML = `${dichas}${razon}`;
     this.ajustarSubtitulos();
+  }
+  // Solo en vertical (en 16:9 el cuadro es fijo): con texto entra con un fundido y se programa su salida; sin texto queda apagado. En las capturas (`rapido`) queda a la vista y no se apaga.
+  aparecerSubtitulos(ms) {
+    if (this.formato !== '9x16') return;
+    const s = this.subtitulos, salida = this.salidaSubtitulos = (this.salidaSubtitulos ?? 0) + 1; // el beat siguiente invalida la salida programada por el anterior
+    s.getAnimations().forEach((x) => x.cancel());
+    const texto = String(s.innerHTML ?? '').replace(/<[^>]*>/g, '').trim();
+    if (!texto) { s.style.opacity = 0; return; }
+    s.style.opacity = 1;
+    if (this.rapido) return;
+    this.anim(s, [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: SUBTITULO.FUNDIDO_MS, easing: 'ease-out' });
+    this.programar(msVisibleDeSubtitulo(texto, ms), () => { if (salida === this.salidaSubtitulos) this.apagarSubtitulos(); });
+  }
+  apagarSubtitulos() {
+    const s = this.subtitulos;
+    const a = this.anim(s, [{ opacity: 1 }, { opacity: 0 }], { duration: SUBTITULO.FUNDIDO_MS, easing: 'ease-in', fill: 'forwards' });
+    a.onfinish = () => { s.style.opacity = 0; a.cancel(); };
   }
   // El texto se achica de dos en dos hasta caber en su caja (minimo 20 px).
   ajustarSubtitulos() {
@@ -92,8 +117,10 @@ export class MesaBase {
   // ---- el beat ----
   async ejecutar(beat, ms) {
     if (beat?.tipo === 'intro') return this.ejecutarIntro(beat, ms); // la tarjeta de arranque es la misma para todos los juegos: no pasa por METODOS ni por los subtitulos
+    if (beat?.tipo === 'tarjeta-gancho') return this.ejecutarTarjetaGancho(beat, ms); // lo mismo las tarjetas del gancho «Proximamente» (gancho.js)
+    if (this.ganchoEl) { this.ganchoEl.getAnimations().forEach((a) => a.cancel()); this.ganchoEl.style.opacity = 0; } // una tarjeta del gancho que quedo a la vista (modo rapido) se quita
     const t0 = performance.now();
-    this.mostrarSubtitulos(beat);
+    this.mostrarSubtitulos(beat, ms);
     const metodo = this.constructor.METODOS?.[beat.tipo]; // cada mesa declara METODOS: tipo de beat -> nombre del metodo que lo anima
     if (metodo) await this[metodo](beat, ms);
     await this.esperar(ms - (performance.now() - t0) * this.vel); // lo que ya paso, a velocidad 1
@@ -115,6 +142,32 @@ export class MesaBase {
         + `<div class="ij-pie">${ETIQUETA_IA}</div>`
       : '';
     nodo.style.opacity = 1;
+    this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
+    await this.esperar(Math.max(0, ms - FUNDIDO));
+    this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: FUNDIDO, easing: 'ease-in', fill: 'forwards' });
+    await this.esperar(Math.min(FUNDIDO, ms));
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.style.opacity = 0;
+  }
+
+  // ---- el gancho «Proximamente» (gancho.js): cortes rapidos de la partida entre tarjetas de apertura, etiqueta y cierre, a pantalla completa dentro de la zona segura ----
+  // En el gancho no se narra ni se subtitula: los cortes pasan acelerados y el cuadro de subtitulos se quita.
+  modoGancho() { this.subtitulos.style.display = 'none'; }
+
+  async ejecutarTarjetaGancho(beat, ms) {
+    const paso = Array.isArray(beat.pasos) ? beat.pasos.find((p) => p.tipo === 'gancho') : null;
+    if (!this.ganchoEl) {
+      this.ganchoEl = el('tarjeta-gancho');
+      const z = this.L?.zona ?? { x: 0, y: 0, ancho: this.L?.ancho ?? 0, alto: this.L?.alto ?? 0 };
+      poner(this.ganchoEl, z);
+      this.raiz.append(this.ganchoEl);
+    }
+    const nodo = this.ganchoEl, FUNDIDO = Math.min(350, ms * 0.3);
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.className = `tarjeta-gancho tg-${paso?.modo ?? 'vacia'}`;
+    nodo.innerHTML = htmlDeTarjeta(paso);
+    nodo.style.opacity = 1;
+    if (this.rapido) return; // en las capturas (que se detienen en un beat) la tarjeta se queda a la vista; el beat siguiente la quita
     this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
     await this.esperar(Math.max(0, ms - FUNDIDO));
     this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: FUNDIDO, easing: 'ease-in', fill: 'forwards' });

@@ -56,6 +56,14 @@ Tres reglas que no conviene romper:
 3. **Todo lo aleatorio pasa por el `rng` que recibes**, nunca por `Math.random()`.
    Si no, el seed deja de reproducir la partida.
 
+## La escena vertical no sale de la zona segura (obligatorio, decidido el 20 de octubre de 2026)
+
+En 9:16 las redes tapan arriba (285 px) y abajo (420 px) con su propia interfaz. Todo lo que dibuje la escena de tu juego (cabecera, mesa, fichas, subtitulos, tarjetas, pantalla final) va dentro de `ZONA_SEGURA` (`herramientas/formatos.mjs`; el layout la recibe como `L.zona`). Al agregar un juego:
+
+1. Agrega su funcion de layout a `JUEGOS` en `src/pruebas/escena/layoutzona.test.js`, una entrada por cada tamano de mesa que pueda tener (Guerra de territorios prueba sus 4 mapas). Si lo olvidas, otra prueba de ese archivo falla.
+2. Revisa a ojo una captura 9:16 del caso mas grande con `node herramientas/capturar-escena.mjs --formato=9x16` (el mas cargado: mas jugadores, mensajes mas largos, pantalla final).
+3. Solo una banda que cubre todo el ancho a proposito (como las bandas VS de Guerra) puede ir de lado a lado, y aun asi dentro de la zona a lo alto.
+
 ## Colores de las IAs (global, no se definen por juego)
 
 El color de cada IA vive en [`web/paleta.js`](../web/paleta.js) y es el mismo en todos los juegos, el sitio y el

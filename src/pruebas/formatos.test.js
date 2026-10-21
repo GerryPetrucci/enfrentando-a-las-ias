@@ -14,8 +14,12 @@ test('la hoja maestra es 4K a 30 fps', () => {
   assert.deepEqual(HOJA, { ancho: 3840, alto: 2160, fps: 30 });
 });
 
+test('solo hay dos formatos, 9x16 y 16x9 (el 4x5 se quito el 20 de octubre de 2026: ninguna red lo necesita)', () => {
+  assert.deepEqual(Object.keys(FORMATOS), ['9x16', '16x9']);
+});
+
 test('cada formato tiene su proporcion exacta y medidas pares (H.264 lo exige)', () => {
-  const proporcion = { '9x16': 9 / 16, '4x5': 4 / 5, '16x9': 16 / 9 };
+  const proporcion = { '9x16': 9 / 16, '16x9': 16 / 9 };
   for (const [k, f] of Object.entries(FORMATOS)) {
     assert.equal(f.ancho / f.alto, proporcion[k], k);
     for (const v of [f.ancho, f.alto, f.x, f.y]) assert.equal(v % 2, 0, `${k}: ${v} no es par`);
@@ -27,16 +31,7 @@ test('todo cabe en la hoja y el 9x16 y el 16x9 no se pisan', () => {
   assert.ok(sinChoque(FORMATOS['9x16'], FORMATOS['16x9']));
 });
 
-test('el 4x5 es un recorte centrado del 9x16 (no una region aparte)', () => {
-  const v = FORMATOS['9x16'], i = FORMATOS['4x5'];
-  assert.ok(dentro(i, v));
-  assert.equal(i.x, v.x);
-  const arriba = i.y - v.y, abajo = v.y + v.alto - (i.y + i.alto);
-  assert.ok(Math.abs(arriba - abajo) <= 2, `arriba sobran ${arriba} y abajo ${abajo}`);
-});
-
-test('la zona segura cabe en el recorte 4x5 y en el 9x16', () => {
-  assert.ok(dentro(ZONA_SEGURA, FORMATOS['4x5']));
+test('la zona segura cabe en el 9x16 y respeta los margenes de las redes', () => {
   assert.ok(dentro(ZONA_SEGURA, FORMATOS['9x16']));
   const v = FORMATOS['9x16'];
   assert.ok(ZONA_SEGURA.y >= v.y + 250, 'margen superior');

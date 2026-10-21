@@ -4,12 +4,14 @@
 // (herramientas/capturar-escena.mjs).
 //
 // Uso: escena.html?archivo=a.json,b.json&partida=1&mano=1&hasta=16&formato=9x16|16x9|hoja&camara=2&vel=1&razon=1&sonido=0&voz=data/voz/x-p1/voz.json&auto=1&limpio=1
+// El gancho «Proximamente» (gancho.js): gancho=1&cortes=10,6,14&parte=1&de=2 (en vez de mano/hasta): tarjeta de apertura, cortes rapidos de esas unidades y tarjeta de cierre.
 // Para grabar con OBS: agregar grabar=1 (con auto=1). La pagina nace en negro, espera su margen, se aclara, cuenta la partida, vuelve a negro y se queda en negro (escena-config.js: FUNDIDOS);
 // data-fundido dice en que punto va (margen, entrando, contenido, saliendo, negro) y data-cierre="1" marca que ya cerro.
 
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
-import { escenaDe, juegosConEscena, armarLinea } from './lineas.js';
+import { escenaDe, juegosConEscena, armarLinea, destacadasDe } from './lineas.js';
+import { cortesPedidos, armarGancho } from './gancho.js';
 import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
@@ -63,8 +65,17 @@ export async function iniciar() {
     const [linea, { Mesa }] = await Promise.all([escena.linea(), escena.mesa()]);
     if (miGeneracion !== generacion) return; // mientras se cargaban los modulos se abrio otra partida
     const camara = params.camara ?? escena.camaraPorDefecto;
-    let beats = recortarClip(await armarLinea(entrada.juego, partida, { camara }), params.mano, params.hasta);
-    if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
+    let beats;
+    if (params.gancho) {
+      // el gancho «Proximamente» (gancho.js): tarjetas y cortes rapidos de las unidades pedidas (cortes=), sin voz ni razones
+      const todos = await armarLinea(entrada.juego, partida, { camara });
+      const cortes = cortesPedidos(todos, params.gancho.cortes, await destacadasDe(entrada.juego, partida, 10));
+      beats = cortes.length ? armarGancho(todos, cortes, { juegoId: entrada.juego, partidaNumero: entrada.numero, parte: params.gancho.parte, de: params.gancho.de }) : [];
+      if (!beats.length) { marco.innerHTML = ''; actual = null; habilitar(false); return aviso(`El gancho no tiene cortes válidos (${escena.unidad === 'turno' ? 'turnos' : `${escena.unidad}s`} pedidos: ${params.gancho.cortes.join(', ') || 'ninguno'}; no valen el primero ni el último).`); }
+    } else {
+      beats = recortarClip(await armarLinea(entrada.juego, partida, { camara }), params.mano, params.hasta);
+      if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
+    }
     marco.innerHTML = '';
     if (!beats.length) { actual = null; habilitar(false); return aviso(`La partida no tiene ${escena.unidad === 'turno' ? 'ese turno' : `esa ${escena.unidad}`}.`); }
     azarSonido = crearAzar(seedDeTexto(`sonido:${partida.seed}`));
@@ -77,7 +88,8 @@ export async function iniciar() {
       Object.assign(m.raiz.style, { left: `${sitio.x}px`, top: `${sitio.y}px` });
       marco.append(m.raiz);
     });
-    const primero = beats.find((b) => b.tipo !== 'intro') ?? beats[0]; // la tarjeta de arranque no es de ningun juego: el estado inicial es el del primer beat de la partida
+    const primero = beats.find((b) => b.tipo !== 'intro' && b.tipo !== 'tarjeta-gancho') ?? beats[0]; // las tarjetas (de arranque, del gancho) no son de ningun juego: el estado inicial es el del primer beat de la partida
+    if (params.gancho) mesas.forEach((m) => m.modoGancho());
     mesas.forEach((m) => m.mostrarEstadoInicial(primero)); // antes de reproducir, la mesa ya muestra el estado con el que empieza el clip
     const marcas = marcarTiempos(beats, voz, params.vel);
     const { desacordes } = resumenDeVoz(beats, voz);
@@ -103,7 +115,7 @@ export async function iniciar() {
     try {
       for (const [i, beat] of beats.entries()) {
         const rapido = params.detener !== null && i <= params.detener;
-        mesas.forEach((m) => { m.rapido = rapido; });
+        mesas.forEach((m) => { m.rapido = rapido; m.vel = params.vel * (beat.vel ?? 1); }); // los cortes del gancho llevan su propia velocidad
         const audio = entradaDeVoz(voz, beat)?.archivo;
         if (audio && params.sonido && esRutaRelativa(audio)) reproductorDeVoz.sonar(audio, params.vel);
         await Promise.all(mesas.map((m) => m.ejecutar(beat, duracionDeBeat(beat, voz, 1)))); // los beats trabajan a velocidad 1; la mesa aplica vel

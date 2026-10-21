@@ -605,14 +605,14 @@ test('dichoDe: lo que se dice de un beat es su `dicho` si lo trae y, si no, sus 
   for (const basura of [null, undefined, {}, { lineas: 'x' }, { dicho: 'x' }, 7]) assert.deepEqual(dichoDe(basura), []);
 });
 
-test('mostrarSubtitulos dice lo que se dice (`dicho`): los comentarios en cursiva y, sin `dicho`, la lista de hechos de siempre', async () => {
+test('pintarSubtitulos dice lo que se dice (`dicho`): los comentarios en cursiva y, sin `dicho`, la lista de hechos de siempre', async () => {
   const { MesaBase } = await import('../../../web/casino/mesa-base.js');
   const mesa = new MesaBase('9x16', { jugadores: [{ nombre: 'Ana' }] }, { sfx: {}, vel: 1 }, {});
   mesa.subtitulos = { innerHTML: '' };
   mesa.ajustarSubtitulos = () => {};
-  mesa.mostrarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }], dicho: [{ tipo: 'comentario', texto: 'Ana toma una región sin dueño.' }, { tipo: 'hecho', texto: 'Ana dice: «hola»' }] });
+  mesa.pintarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }], dicho: [{ tipo: 'comentario', texto: 'Ana toma una región sin dueño.' }, { tipo: 'hecho', texto: 'Ana dice: «hola»' }] });
   assert.equal(mesa.subtitulos.innerHTML, '<em>Ana toma una región sin dueño.</em> Ana dice: «hola»');
-  mesa.mostrarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }] });
+  mesa.pintarSubtitulos({ lineas: [{ tipo: 'hecho', texto: 'Ana toma R07.' }] });
   assert.equal(mesa.subtitulos.innerHTML, 'Ana toma R07.');
 });
 
