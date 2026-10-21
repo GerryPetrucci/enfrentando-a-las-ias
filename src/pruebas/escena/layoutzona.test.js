@@ -13,11 +13,12 @@ import { colocarMayorMenor } from '../../../web/casino/layout-mayormenor.js';
 import { colocarSolitario } from '../../../web/casino/layout-solitario.js';
 import { colocarSubasta } from '../../../web/casino/layout-subasta.js';
 import { colocarTripleDado } from '../../../web/casino/layout-tripledado.js';
+import { juegosConEscena } from '../../../web/casino/lineas.js';
 import { CONFIG } from '../../mapa.js';
 
 const MAPAS = Object.values(CONFIG).map((c) => ({ ancho: c.W, alto: c.H, tile: c.T }));
 const JUEGOS = {
-  'duda': () => [colocar('9x16')],
+  'dudaapuesta': () => [colocar('9x16')],
   'conquista': () => MAPAS.map((m) => colocarConquista('9x16', m)),
   'fuga': () => [colocarFuga('9x16')],
   'mayormenor': () => [colocarMayorMenor('9x16')],
@@ -34,6 +35,10 @@ function* rectangulos(nombre, valor) {
   else if (Array.isArray(valor)) for (const [i, v] of valor.entries()) yield* rectangulos(`${nombre}[${i}]`, v);
   else if (valor && typeof valor === 'object') for (const [k, v] of Object.entries(valor)) yield* rectangulos(`${nombre}.${k}`, v);
 }
+
+test('TODO juego con escena esta en la prueba de la zona segura: un juego nuevo no puede quedar fuera (agregalo a JUEGOS de este archivo, con todos sus tamanos de mesa)', () => {
+  assert.deepEqual(Object.keys(JUEGOS).sort(), juegosConEscena().sort());
+});
 
 test('en 9:16 ninguna pieza de ningun juego se sale de la zona segura a lo alto (arriba 285 y abajo 420 libres para la interfaz de las redes)', () => {
   for (const [juego, hacer] of Object.entries(JUEGOS)) for (const L of hacer()) {
