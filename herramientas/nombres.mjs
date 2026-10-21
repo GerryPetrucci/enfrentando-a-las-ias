@@ -3,7 +3,7 @@
 //   26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4
 //   |        |  |    |    '-- redes a las que ese archivo sirve (siglas de REDES, orden alfabetico; salen de FORMATOS)
 //   |        |  |    '------- formato
-//   |        |  '------------ pieza: ptN = parte N, clpN = clip N
+//   |        |  '------------ pieza: hkN = gancho «Proximamente» (hook) de la parte N, ptN = parte N, clpN = clip N (se sube en ese orden)
 //   |        '--------------- partida de la serie
 //   '------------------------ fecha de la serie (AA-MM-DD)
 //
@@ -16,11 +16,11 @@ export const REDES = { fb: 'Facebook', ig: 'Instagram', tk: 'TikTok', x: 'X', yt
 // originales: lo que graba OBS · por-subir: los recortes listos · subidos: los que ya se subieron (se mueven a mano o cuando avisas) · revision: textos para revisar las partidas
 export const SUBCARPETAS = ['originales', 'por-subir', 'subidos', 'revision'];
 
-const ABREVIATURAS = { parte: 'pt', clip: 'clp' };
+const ABREVIATURAS = { parte: 'pt', clip: 'clp', gancho: 'hk' };
 
-// 'parte-2' -> 'pt2', 'clip-1' -> 'clp1'. Un id desconocido se limpia a letras y numeros; nunca lanza ni queda vacio.
+// 'parte-2' -> 'pt2', 'clip-1' -> 'clp1', 'gancho-1' -> 'hk1' (hook: el «Proximamente» que se sube antes de una parte). Un id desconocido se limpia a letras y numeros; nunca lanza ni queda vacio.
 export function abreviarPieza(id) {
-  const m = /^(parte|clip)-(\d+)$/.exec(String(id ?? ''));
+  const m = /^(parte|clip|gancho)-(\d+)$/.exec(String(id ?? ''));
   if (m) return `${ABREVIATURAS[m[1]]}${m[2]}`;
   return String(id ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'pieza';
 }

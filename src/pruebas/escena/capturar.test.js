@@ -16,6 +16,13 @@ test('el tamano de ventana de cada formato es el del lienzo', () => {
   assert.throws(() => tamanoDeFormato('1x1'), /formato/i);
 });
 
+test('la URL de captura del gancho lleva sus cortes, la parte y de cuantas; sin gancho no lleva nada de eso', () => {
+  const u = new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: '9x16', beat: 2, gancho: { cortes: [10, 6], parte: 2, de: 2 } }));
+  for (const [k, v] of [['gancho', '1'], ['cortes', '10,6'], ['parte', '2'], ['de', '2'], ['detener', '2']]) assert.equal(u.searchParams.get(k), v, k);
+  const normal = new URL(urlDeCaptura({ base: 'http://x', archivo: 'a.json', formato: '9x16' }));
+  for (const k of ['gancho', 'cortes', 'parte', 'de']) assert.equal(normal.searchParams.has(k), false, k);
+});
+
 test('la URL de captura apaga el sonido, oculta la barra, arranca sola y se detiene en el beat pedido', () => {
   const u = new URL(urlDeCaptura({ base: 'http://localhost:4321', archivo: 'pruebas/mi partida.json', formato: '16x9', beat: 6 }));
   assert.equal(u.origin + u.pathname, 'http://localhost:4321/escena.html');

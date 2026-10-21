@@ -12,6 +12,8 @@ test('abreviarPieza: parte-N es ptN y clip-N es clpN; un id raro nunca lanza y n
   assert.equal(abreviarPieza('parte-2'), 'pt2');
   assert.equal(abreviarPieza('clip-1'), 'clp1');
   assert.equal(abreviarPieza('clip-3'), 'clp3');
+  assert.equal(abreviarPieza('gancho-1'), 'hk1', 'el gancho «Proximamente» es hk (hook)');
+  assert.equal(abreviarPieza('gancho-2'), 'hk2');
   for (const raro of [null, undefined, '', 7, {}, 'Raro Nombre!']) {
     const r = abreviarPieza(raro);
     assert.match(r, /^[a-z0-9]+$/, String(raro));

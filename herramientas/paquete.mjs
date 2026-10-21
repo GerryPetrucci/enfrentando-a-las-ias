@@ -66,13 +66,15 @@ export function leemeDe(paquete, contexto = {}) {
     '',
     ...piezas,
     '## Paso 2 · Revisar cada video (no publiques ninguno sin marcar todo)',
-    '- [ ] Los primeros 3 segundos: la parte 1 abre con la tarjeta de arranque (se lee entera); un clip arranca directo en la jugada.',
+    '- [ ] Los primeros 3 segundos: la parte 1 abre con la tarjeta de arranque (se lee entera); un clip arranca directo en la jugada; un gancho abre con la tarjeta «Próximamente».',
+    '- [ ] Un gancho no adelanta el resultado ni lleva el último turno, y va sin voz: le pones tu música (que no tenga derechos) al subirlo.',
     '- [ ] Se lee bien en una pantalla pequeña (míralo en tu teléfono) y el texto no se corta.',
     '- [ ] Revisé a mano los mensajes y las razones de las IAs de esta partida. Si algo es ofensivo o raro, elegí otra partida y anoté por qué.',
     '- [ ] La etiqueta «Contenido generado por IA» se ve en el video.',
     '- [ ] No lleva marca de agua de otra app ni música con derechos: es el archivo limpio que grabó OBS. Revisa el `_9x16` de `por-subir/` (el de TikTok, Reels y Shorts): arranca dentro del fundido y termina en negro, sin segundos de negro de sobra.',
     '',
     '## Paso 3 · Poner el gancho, publicar y fijar el comentario',
+    '0. Orden de subida: primero el gancho (hk), luego la parte (pt) y al final los clips (clp). El gancho de una parte va antes que esa parte.',
     '1. Abre cada archivo de `textos/` y sustituye la línea `[GANCHO: ...]` por una frase tuya (o deja la sugerida si te convence, quitando los corchetes y la palabra GANCHO). **Nunca publiques un texto que todavía contenga «[GANCHO».**',
     '2. Cada red recibe el archivo cuyo nombre la lleva (las siglas del final: fb Facebook, ig Instagram, tk TikTok, x X, yt YouTube); el texto de cada red está en su archivo. Marca la opción de «contenido generado con IA» de cada red.',
     `3. X: el post lleva el video y el texto de \`-x.txt\` (sin enlace). Publica luego, como respuesta a tu propio post, el enlace al marcador: ${contexto.enlace || ENLACE_DEL_SITIO}`,
@@ -121,7 +123,7 @@ async function principal() {
   }
   if (rutaVoz) { try { voz = JSON.parse(readFileSync(resolve(rutaVoz), 'utf8')); } catch (e) { salir(`No pude leer la voz ${rutaVoz}: ${e.message}`); } }
 
-  const beats = await armarLinea(juegoId, partida), destacadas = await destacadasDe(juegoId, partida, 10);
+  const beats = await armarLinea(juegoId, partida), destacadas = await destacadasDe(juegoId, partida, 40); // los clips toman las mejores; los ganchos buscan momentos en cada parte
   const enlace = a.enlace ?? `${ENLACE_DEL_SITIO}?seed=${partida.seed}`; // el sitio busca por seed: el enlace lleva a la serie de este video
   const paquete = construirPaquete({ partida, beats, destacadas, archivo: a.archivo, partidaNumero: numero, voz, rutaVoz, formato: a.formato ?? 'hoja', enlace, totalPartidas: datos.partidas.length });
   if (!paquete.piezas.length) salir(`No se puede publicar esta partida: ${paquete.advertencias.join(' ')}`);

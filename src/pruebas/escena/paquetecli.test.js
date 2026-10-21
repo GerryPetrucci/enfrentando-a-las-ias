@@ -102,10 +102,15 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   }
   // el nombre de cada video dice fecha, partida, pieza, formato y redes: 26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4
   assert.ok(texto.includes('26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4') && texto.includes('26-10-19_p1_pt2_16x9_fb-x-yt.mp4'));
-  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^\d\d-\d\d-\d\d_p\d_(pt|clp)\d_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`);
+  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^\d\d-\d\d-\d\d_p\d_(hk|pt|clp)\d_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`);
   assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/guerra)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
   assert.match(texto, /subidos\//, 'dice que lo subido se mueve a subidos/');
   assert.ok(texto.includes('textos/parte-1-facebook.txt'), 'lista el texto de Facebook');
+  // el gancho «Proximamente»: se explica y se dice en que orden se sube
+  assert.match(texto, /### gancho-1/, 'el gancho es una pieza mas del LEEME');
+  assert.match(texto, /primero el gancho \(hk\), luego la parte \(pt\) y al final los clips \(clp\)/i, 'dice el orden de subida');
+  assert.match(texto, /Próximamente/, 'la lista de revision dice como abre un gancho');
+  assert.ok(texto.includes('26-10-19_p1_hk1_9x16_fb-ig-tk-yt.mp4'));
   assert.doesNotMatch(texto, /1080 × 1920/, 'la fuente de OBS es la hoja de 3840 × 2160');
   assert.match(texto, /3840 × 2160/, 'dice como esta la fuente de OBS');
   assert.match(texto, /negro/i, 'explica el margen y el fundido de negro');

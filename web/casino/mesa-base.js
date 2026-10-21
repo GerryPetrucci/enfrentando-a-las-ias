@@ -9,6 +9,7 @@ import { htmlLogo, htmlPlaca, esc } from './kit.js';
 import { eventosDePaso } from './sonido.js';
 import { dichoDe } from './linea-comun.js';
 import { SUBTITULO, msVisibleDeSubtitulo } from './subtitulos-vertical.js';
+import { htmlDeTarjeta } from './gancho.js';
 
 const ETIQUETA_IA = 'Contenido generado por IA · Proyecto independiente'; // el aviso fijo de toda escena (y el pie de la tarjeta de arranque)
 export const el = (clase, html = '') => Object.assign(document.createElement('div'), { className: clase, innerHTML: html });
@@ -116,6 +117,8 @@ export class MesaBase {
   // ---- el beat ----
   async ejecutar(beat, ms) {
     if (beat?.tipo === 'intro') return this.ejecutarIntro(beat, ms); // la tarjeta de arranque es la misma para todos los juegos: no pasa por METODOS ni por los subtitulos
+    if (beat?.tipo === 'tarjeta-gancho') return this.ejecutarTarjetaGancho(beat, ms); // lo mismo las tarjetas del gancho «Proximamente» (gancho.js)
+    if (this.ganchoEl) { this.ganchoEl.getAnimations().forEach((a) => a.cancel()); this.ganchoEl.style.opacity = 0; } // una tarjeta del gancho que quedo a la vista (modo rapido) se quita
     const t0 = performance.now();
     this.mostrarSubtitulos(beat, ms);
     const metodo = this.constructor.METODOS?.[beat.tipo]; // cada mesa declara METODOS: tipo de beat -> nombre del metodo que lo anima
@@ -139,6 +142,32 @@ export class MesaBase {
         + `<div class="ij-pie">${ETIQUETA_IA}</div>`
       : '';
     nodo.style.opacity = 1;
+    this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
+    await this.esperar(Math.max(0, ms - FUNDIDO));
+    this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: FUNDIDO, easing: 'ease-in', fill: 'forwards' });
+    await this.esperar(Math.min(FUNDIDO, ms));
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.style.opacity = 0;
+  }
+
+  // ---- el gancho «Proximamente» (gancho.js): cortes rapidos de la partida entre tarjetas de apertura, etiqueta y cierre, a pantalla completa dentro de la zona segura ----
+  // En el gancho no se narra ni se subtitula: los cortes pasan acelerados y el cuadro de subtitulos se quita.
+  modoGancho() { this.subtitulos.style.display = 'none'; }
+
+  async ejecutarTarjetaGancho(beat, ms) {
+    const paso = Array.isArray(beat.pasos) ? beat.pasos.find((p) => p.tipo === 'gancho') : null;
+    if (!this.ganchoEl) {
+      this.ganchoEl = el('tarjeta-gancho');
+      const z = this.L?.zona ?? { x: 0, y: 0, ancho: this.L?.ancho ?? 0, alto: this.L?.alto ?? 0 };
+      poner(this.ganchoEl, z);
+      this.raiz.append(this.ganchoEl);
+    }
+    const nodo = this.ganchoEl, FUNDIDO = Math.min(350, ms * 0.3);
+    nodo.getAnimations().forEach((a) => a.cancel());
+    nodo.className = `tarjeta-gancho tg-${paso?.modo ?? 'vacia'}`;
+    nodo.innerHTML = htmlDeTarjeta(paso);
+    nodo.style.opacity = 1;
+    if (this.rapido) return; // en las capturas (que se detienen en un beat) la tarjeta se queda a la vista; el beat siguiente la quita
     this.anim(nodo, [{ opacity: 0 }, { opacity: 1 }], { duration: FUNDIDO, easing: 'ease-out' });
     await this.esperar(Math.max(0, ms - FUNDIDO));
     this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: FUNDIDO, easing: 'ease-in', fill: 'forwards' });

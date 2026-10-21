@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
-import { leerParametros, FUNDIDOS, planDeGrabacion, segundos, direccionDeGrabacion } from '../../../web/casino/escena-config.js';
+import { leerParametros, FUNDIDOS, planDeGrabacion, segundos, direccionDeGrabacion, direccionDeGancho } from '../../../web/casino/escena-config.js';
 import { urlDeParte } from '../../../herramientas/partes.mjs';
 
 test('grabar=1 solo vale junto con auto=1: sin auto la pagina no arranca sola, asi que no hay nada que enmarcar', () => {
@@ -71,4 +71,14 @@ test('direccionDeGrabacion: la direccion de la escena para grabar una pieza (sin
   assert.deepEqual([p.mano, p.hasta, p.formato, p.auto, p.limpio, p.grabar], [1, 4, '9x16', true, true, true]);
   // partes.mjs imprime la misma direccion que el paquete: antes no llevaba limpio ni grabar y grababa sin margenes
   assert.equal(urlDeParte({ archivo: 'a.json', partida: 1, formato: 'hoja', parte: { mano: 1, hasta: 4 } }), direccionDeGrabacion({ archivo: 'a.json', partida: 1, desde: 1, hasta: 4, formato: 'hoja' }));
+});
+
+test('direccionDeGancho: la direccion para grabar el gancho de una parte (cortes, parte y de cuantas), sin voz, con margenes de negro; leerParametros la entiende tal cual', () => {
+  const d = new URL(`http://x/${direccionDeGancho({ archivo: 'pruebas/a b.json', partida: 2, cortes: [10, 6, 14], parte: 2, de: 2 })}`);
+  assert.equal(d.pathname, '/escena.html');
+  assert.deepEqual(Object.fromEntries(d.searchParams), { archivo: 'pruebas/a b.json', partida: '2', gancho: '1', cortes: '10,6,14', parte: '2', de: '2', formato: 'hoja', auto: '1', limpio: '1', grabar: '1' });
+  const p = leerParametros(d.search);
+  assert.deepEqual(p.gancho, { cortes: [10, 6, 14], parte: 2, de: 2 });
+  assert.deepEqual([p.formato, p.auto, p.limpio, p.grabar, p.voz], ['hoja', true, true, true, null]);
+  assert.equal(new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', cortes: [3], parte: 1, de: 2, formato: '9x16' })}`).searchParams.get('formato'), '9x16');
 });
