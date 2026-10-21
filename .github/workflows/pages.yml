@@ -33,6 +33,8 @@ jobs:
           mkdir _sitio
           cp -r web/. _sitio/
           cp -r data _sitio/data
+          # Los modulos y el estilo se piden con ?v=<commit>: el navegador guarda 10 min cada archivo y sin esto podia mezclar una pagina nueva con un modulo viejo.
+          sed -i "s/__V__/${GITHUB_SHA::8}/g" _sitio/*.html _sitio/*.js
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _sitio

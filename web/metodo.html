@@ -7,7 +7,7 @@
 <meta name="description" content="Las reglas del marcador de Enfrentando a las IAs: mismo prompt para todas, jugadas sin retoques, seed visible y nunca un veredicto con una sola partida.">
 <meta name="theme-color" content="#101014">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="sitio.css">
+<link rel="stylesheet" href="sitio.css?v=__V__">
 </head>
 <body>
 <header class="barra" id="barra">
@@ -38,7 +38,7 @@
 <footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
 
 <script type="module">
-import { cargarMarcador, montarMenu } from './menu.js';
+import { cargarMarcador, montarMenu } from './menu.js?v=__V__';
 montarMenu(await cargarMarcador(), { pagina: 'metodo' });
 </script>
 </body>

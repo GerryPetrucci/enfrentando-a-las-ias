@@ -12,7 +12,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#101014">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="sitio.css">
+<link rel="stylesheet" href="sitio.css?v=__V__">
 </head>
 <body>
 <header class="barra" id="barra">
@@ -29,12 +29,7 @@
       <input id="q" name="q" type="search" placeholder="Busca un juego, una IA o un seed…" enterkeyhint="search">
     </form>
     <p class="contador" id="contador" role="status" aria-live="polite"></p>
-    <div class="redes" aria-label="Redes">
-      <a href="https://www.tiktok.com/@enfrentandoalasias">TikTok</a>
-      <a href="https://www.instagram.com/enfrentandoalasias">Instagram</a>
-      <a href="https://www.youtube.com/@enfrentandoalasias">YouTube</a>
-      <a href="https://x.com/enfrentandoias">X</a>
-    </div>
+    <div id="redes"></div>
   </div>
 
   <section aria-labelledby="t-juegos">
@@ -58,9 +53,10 @@
 <footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
 
 <script type="module">
-import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida, etiquetaDePartida } from './catalogo.js';
-import { textoDeJuego } from './casino/textos-juego.js';
+import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
+import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida, etiquetaDePartida } from './catalogo.js?v=__V__';
+import { redesHtml } from './redes.js?v=__V__';
+import { textoDeJuego } from './casino/textos-juego.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
 const PARTIDAS_RECIENTES = 6, PARTIDAS_BUSCADAS = 30;
@@ -80,6 +76,7 @@ function tarjetaPartida(p) {
   return `<a class="tarjeta" href="${enlaceDePartida(p)}"><div class="fila"><span class="categoria">${esc(p.juego.nombre)}</span><span class="estado ${esc(p.estado)}">${esc(ESTADOS[p.estado] ?? p.estado)}</span></div><div class="jugadores">${ias(p.jugadores)}</div>${etiqueta(p)}<p class="meta resultado">${esc(resumenDePartida(p))}</p><p class="meta">${esc(fechaCorta(p.fecha))} · seed <span class="seed">${esc(p.seed)}</span></p></a>`;
 }
 
+$('redes').innerHTML = redesHtml();
 const datos = await cargarMarcador();
 montarMenu(datos, { pagina: 'inicio', generado: datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '' });
 

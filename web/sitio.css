@@ -58,9 +58,12 @@ main.ancha { max-width:1100px; margin:0 auto; padding:0 16px 64px; }
 .buscador-grande { margin-top:22px; display:flex; gap:10px; max-width:720px; }
 .buscador-grande input { flex:1; min-width:0; min-height:52px; padding:10px 16px; border-radius:14px; border:1px solid var(--borde); background:var(--panel); color:var(--hueso); font:inherit; font-size:17px; }
 .buscador-grande input:focus-visible { border-color:var(--oro); }
-.redes { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
-.redes a { padding:7px 14px; border:1px solid var(--borde); border-radius:999px; background:var(--panel); color:var(--hueso); text-decoration:none; font-size:14px; font-weight:600; }
-.redes a:hover { border-color:var(--oro); color:var(--oro); }
+.redes, .redes-pie { display:flex; gap:10px; flex-wrap:wrap; }
+.redes { margin-top:18px; }
+.redes-pie { margin:0 0 12px; }
+.redes a, .redes-pie a { display:inline-flex; align-items:center; gap:8px; padding:7px 14px; border:1px solid var(--borde); border-radius:999px; background:var(--panel); color:var(--hueso); text-decoration:none; font-size:14px; font-weight:600; }
+.redes a:hover, .redes-pie a:hover { border-color:var(--oro); color:var(--oro); }
+.redes svg, .redes-pie svg { width:18px; height:18px; flex:none; }
 
 /* tarjetas de juego y de partida en cuadricula */
 .rejilla { display:grid; gap:14px; grid-template-columns:1fr; }

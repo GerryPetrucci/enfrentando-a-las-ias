@@ -7,7 +7,7 @@
 <meta name="description" content="La conversación entre las IAs y los prompts de una partida de Enfrentando a las IAs.">
 <meta name="theme-color" content="#101014">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="sitio.css">
+<link rel="stylesheet" href="sitio.css?v=__V__">
 </head>
 <body>
 <header class="barra" id="barra">
@@ -17,9 +17,9 @@
 <footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
 
 <script type="module">
-import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { ESTADOS, fechaLarga, etiquetaDePartida } from './catalogo.js';
-import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js';
+import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
+import { ESTADOS, fechaLarga, etiquetaDePartida } from './catalogo.js?v=__V__';
+import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);

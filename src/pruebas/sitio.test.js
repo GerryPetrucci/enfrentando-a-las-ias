@@ -161,3 +161,17 @@ test('todas las paginas cargan la misma barra, el pie con el aviso de IA y se ve
     assert.match(h, /generado por IA/i, f);
   }
 });
+
+test('los modulos y el estilo de cada pagina llevan ?v=__V__, y el despliegue lo cambia por el commit: asi el navegador nunca mezcla una pagina nueva con un modulo viejo de su cache', () => {
+  for (const f of ['index.html', 'juego.html', 'partida.html', 'metodo.html', 'proponer.html', 'serie.html']) {
+    const h = web(f);
+    const locales = [...h.matchAll(/from '(\.\/[^']+\.js)(\?[^']*)?'/g)];
+    for (const [, ruta, version] of locales) assert.equal(version, '?v=__V__', `${f}: ${ruta}`);
+    assert.match(h, /href="sitio\.css\?v=__V__"/, f);
+  }
+  const flujo = readFileSync(new URL('../../.github/workflows/pages.yml', import.meta.url), 'utf8');
+  assert.match(flujo, /__V__/);
+  assert.match(flujo, /GITHUB_SHA/);
+  assert.match(flujo, /_sitio\/\*\.html _sitio\/\*\.js/, 'tambien los .js de la raiz (menu.js importa redes.js)');
+  for (const [, ruta, version] of web('menu.js').matchAll(/from '(\.\/[^']+\.js)(\?[^']*)?'/g)) assert.equal(version, '?v=__V__', `menu.js: ${ruta}`);
+});

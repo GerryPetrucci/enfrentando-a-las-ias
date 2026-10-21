@@ -1,6 +1,8 @@
 // La barra de arriba que comparten todas las paginas del sitio: marca, Inicio, Juegos (desplegable), Cómo se mide y Proponer. En el celular se pliega en un boton «Menú».
 // `menuHtml` y `cargarMarcador` son puros (se prueban en Node); `montarMenu` es lo unico que toca el DOM. Si falta el marcador, la barra sigue entera, solo sin la lista de juegos.
 
+import { redesHtml } from './redes.js?v=__V__';
+
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 const vacio = () => ({ juegos: [], partidas: [], error: true });
@@ -42,7 +44,8 @@ export function menuHtml(juegos, { pagina = '', juegoId = '' } = {}) {
 
 export function pieHtml(generado = '') {
   return `<p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos. Los nombres de los modelos se usan de forma descriptiva; no se usan sus logos.</p>
-    <p class="redes-pie"><a href="https://www.tiktok.com/@enfrentandoalasias">TikTok</a> · <a href="https://www.instagram.com/enfrentandoalasias">Instagram</a> · <a href="https://www.youtube.com/@enfrentandoalasias">YouTube</a> · <a href="https://x.com/enfrentandoias">X</a> · <a href="proponer.html">Proponer un juego</a></p>
+    ${redesHtml('redes-pie')}
+    <p><a href="proponer.html">Proponer un juego o un enfrentamiento</a></p>
     ${generado ? `<p>${esc(generado)}</p>` : ''}`;
 }
 

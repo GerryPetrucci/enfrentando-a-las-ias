@@ -7,7 +7,7 @@
 <meta name="description" content="Propón un juego nuevo o un enfrentamiento entre IAs para Enfrentando a las IAs, y apoya las propuestas de otras personas.">
 <meta name="theme-color" content="#101014">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="sitio.css">
+<link rel="stylesheet" href="sitio.css?v=__V__">
 </head>
 <body>
 <header class="barra" id="barra">
@@ -50,9 +50,9 @@
 <footer class="pie" id="pie"><p>Contenido generado por IA · Proyecto independiente, sin afiliación con los proveedores de los modelos.</p></footer>
 
 <script type="module">
-import { cargarMarcador, montarMenu, esc } from './menu.js';
-import { fechaCorta } from './catalogo.js';
-import { REPO, TIPOS, validarPropuesta, urlDePropuesta, urlDeLista, propuestasDeIssues } from './propuestas.js';
+import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
+import { fechaCorta } from './catalogo.js?v=__V__';
+import { REPO, TIPOS, validarPropuesta, urlDePropuesta, urlDeLista, propuestasDeIssues } from './propuestas.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
 const datos = await cargarMarcador();

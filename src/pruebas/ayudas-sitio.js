@@ -7,6 +7,7 @@ import * as catalogo from '../../web/catalogo.js';
 import * as menu from '../../web/menu.js';
 import * as propuestas from '../../web/propuestas.js';
 import * as textos from '../../web/casino/textos-juego.js';
+import * as redes from '../../web/redes.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -49,7 +50,7 @@ export async function correrPagina(archivo, { search = '', hash = '', marcador =
   };
   const window = { open: (...a) => abiertas.push(a) };
   const modulos = {
-    ...catalogo, ...menu, ...propuestas, ...textos,
+    ...catalogo, ...menu, ...propuestas, ...textos, ...redes,
     cargarMarcador: async () => (marcador === null ? { juegos: [], partidas: [], error: true } : marcador),
     montarMenu: (datos, opciones) => llamadasMenu.push(opciones),
   };
