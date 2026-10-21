@@ -1,13 +1,12 @@
 // Los nombres de los videos que se suben y la carpeta de cada serie (decidido el 20 de octubre de 2026). Puro: sin disco ni red.
 //
-//   26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4
-//   |        |  |    |    '-- redes a las que ese archivo sirve (siglas de REDES, orden alfabetico; salen de FORMATOS)
-//   |        |  |    '------- formato
-//   |        |  '------------ pieza: hkN = gancho «Proximamente» (hook) de la parte N, ptN = parte N, clpN = clip N (se sube en ese orden)
-//   |        '--------------- partida de la serie
-//   '------------------------ fecha de la serie (AA-MM-DD)
+//   j1_pt1_9x16_fb-ig-tk-yt.mp4
+//   |  |   |    '-- redes a las que ese archivo sirve (siglas de REDES, orden alfabetico; salen de FORMATOS)
+//   |  |   '------- formato
+//   |  '----------- pieza: hkN = gancho «Proximamente» (hook) de la parte N, ptN = parte N, clpN = clip N (se sube en ese orden)
+//   '-------------- numero de juego (una partida jugada y empaquetada): sube de uno en uno en cada juego nuevo de la carpeta del juego (elegirJuego); sin fecha
 //
-// La grabacion original de OBS lleva el mismo nombre SIN formato ni redes (26-10-19_p1_pt1.mkv): sus recortes quedan juntos y se reconocen de un vistazo.
+// La grabacion original de OBS lleva el mismo nombre SIN formato ni redes (j1_pt1.mkv): sus recortes quedan juntos y se reconocen de un vistazo. El paquete de cada juego se llama paquete-jN.
 // Cada serie vive en grabaciones/listos/<juego>/<AAAA-MM-DD>_seed-<seed>/ con una subcarpeta por estado (SUBCARPETAS); `grabaciones/` no se versiona.
 
 import { FORMATOS } from './formatos.mjs';
@@ -38,8 +37,21 @@ export function fechaDe(...candidatos) {
   return { largo: `${aa}-${dosDigitos(hoy.getMonth() + 1)}-${dosDigitos(hoy.getDate())}`, corto: `${dosDigitos(aa % 100)}-${dosDigitos(hoy.getMonth() + 1)}-${dosDigitos(hoy.getDate())}` };
 }
 
-// 26-10-19_p1_pt1: lo que comparten la grabacion original y todos sus recortes.
-export const nombreDePieza = ({ fecha, partida = 1, pieza }) => `${fecha.corto}_p${partida}_${abreviarPieza(pieza)}`;
+// j1_pt1: lo que comparten la grabacion original y todos sus recortes (`juego` es el numero de juego: elegirJuego).
+export const nombreDePieza = ({ juego, pieza }) => `j${juego}_${abreviarPieza(pieza)}`;
+
+// 'paquete-j12' -> 12; cualquier otra cosa -> null.
+export function juegoDeCarpeta(nombre) {
+  const m = /^paquete-j(\d+)$/.exec(typeof nombre === 'string' ? nombre : '');
+  return m ? Number(m[1]) : null;
+}
+
+// El numero de juego (jN) de una partida que se empaqueta: el que ya tiene si su serie ya trae paquete de esa partida (regenerarlo no lo cambia) y, si no, el maximo de los que hay en el juego mas uno.
+// `existentes`: [{ serie, juego, partida }] de todos los paquetes de la carpeta del juego. Datos raros se ignoran; nunca lanza.
+export function elegirJuego({ existentes, serie, partida } = {}) {
+  const lista = (Array.isArray(existentes) ? existentes : []).filter((e) => Number.isInteger(e?.juego) && e.juego >= 1);
+  return lista.find((e) => e.serie === serie && e.partida === partida)?.juego ?? lista.reduce((m, e) => Math.max(m, e.juego), 0) + 1;
+}
 
 // Los recortes: a la base se le agregan el formato y las redes (sin extension). Un formato desconocido no inventa redes.
 export function nombreDeVideo(base, formato) {

@@ -3,18 +3,19 @@
 // texto por pieza y por red (TikTok, Instagram, Facebook, YouTube y X, mas el comentario fijado). Las piezas son las dos partes y hasta 3 clips destacados; los textos salen de web/casino/paquete-textos.js
 // (solo hechos de la partida, nunca privados ni razones). No llama a ningun modelo, no sube nada y no gasta saldo.
 //
-//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=RUTA/voz.json | --sinvoz] [--salida=CARPETA_DE_LA_SERIE] [--enlace=URL] [--formato=hoja|9x16|16x9] [--forzar]
+//   node herramientas/paquete.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--voz=RUTA/voz.json | --sinvoz] [--salida=CARPETA_DE_LA_SERIE] [--juego=N] [--enlace=URL] [--formato=hoja|9x16|16x9] [--forzar]
 //
 // La carpeta de la serie (--salida) por omision es grabaciones/listos/<juego>/<AAAA-MM-DD>_seed-<seed>/ (herramientas/nombres.mjs): ahi nacen sus subcarpetas de estado (originales, por-subir, subidos,
-// revision) y el paquete de la partida queda en `paquete-p<N>/`. Los videos se nombran 26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4 (fecha, partida, pieza, formato y redes).
+// revision) y el paquete de la partida queda en `paquete-j<N>/`. Los videos se nombran j1_pt1_9x16_fb-ig-tk-yt.mp4 (numero de juego, pieza, formato y redes).
+// El numero de juego jN sube de uno en uno en cada partida que se empaqueta en la carpeta del juego (aunque sea de otra serie); regenerar una partida con --forzar conserva el suyo (paquete.json) y --juego=N lo fija a mano.
 // El formato por omision es `hoja`: la hoja maestra de 3840 x 2160 que graba el OBS del proyecto (el vertical y el horizontal juntos; despues se recorta con herramientas/recortar-formatos.mjs).
 // Todas las direcciones llevan grabar=1: la pagina arranca en negro, se aclara, cuenta la pieza, vuelve a negro y se queda en negro (margenes para empezar y detener la grabacion).
 //
 // La voz: si ya corriste herramientas/narrar.mjs para esa partida, se usa sola (la ruta que ese programa deja en data/voz/); --voz la indica a mano y --sinvoz no usa ninguna.
-// Escribe `<serie>/paquete-p<N>/` (LEEME.md y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que vuelve a escribir los archivos del paquete; lo que sobre de una corrida anterior se queda). `grabaciones/` no se versiona.
+// Escribe `<serie>/paquete-j<N>/` (LEEME.md, paquete.json y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que vuelve a escribir los archivos del paquete; lo que sobre de una corrida anterior se queda). `grabaciones/` no se versiona.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { resolve, join, relative, isAbsolute, basename } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
+import { resolve, join, relative, isAbsolute, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { armarLinea, destacadasDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { construirPaquete } from '../web/casino/paquete-textos.js';
@@ -22,21 +23,44 @@ import { FUNDIDOS, segundos } from '../web/casino/escena-config.js';
 import { formatoDeTiempo } from './partes.mjs';
 import { carpetaDeVoz } from './narrar.mjs';
 import { FORMATOS } from './formatos.mjs';
-import { REDES, SUBCARPETAS, fechaDe, nombreDePieza, nombreDeVideo, carpetaDeSerie } from './nombres.mjs';
+import { REDES, SUBCARPETAS, fechaDe, nombreDePieza, nombreDeVideo, carpetaDeSerie, juegoDeCarpeta, elegirJuego } from './nombres.mjs';
 
 const ENLACE_DEL_SITIO = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const SERVIDOR = 'http://localhost:4321';
 const REDES_DE_TEXTO = ['tiktok', 'instagram', 'facebook', 'x', 'youtube'];
 const LIMITE_X_MS = 140000; // lo que admite X con una cuenta gratis (por verificar en la pantalla de X)
 
-// El LEEME de una carpeta de paquete: pasos numerados y precisos. `contexto`: { archivo, partidaNumero, enlace, fecha, carpetaSerie }
-// (fecha: la de fechaDe(); carpetaSerie: la carpeta de la serie tal como se muestra en los comandos, con barras normales).
+// Los paquetes (paquete-jN) que ya hay en una serie: [{ serie, juego, partida }]; la partida sale de su paquete.json.
+export function paquetesDeSerie(rutaSerie) {
+  const serie = resolve(rutaSerie);
+  if (!existsSync(serie)) return [];
+  const salida = [];
+  for (const d of readdirSync(serie, { withFileTypes: true })) {
+    const juego = d.isDirectory() ? juegoDeCarpeta(d.name) : null;
+    if (juego === null) continue;
+    let partida = null;
+    // el JSON se lee sin BOM (PowerShell 5 y algunos editores lo agregan)
+    try { partida = JSON.parse(readFileSync(join(serie, d.name, 'paquete.json'), 'utf8').replace(String.fromCharCode(0xFEFF), '')).partida ?? null; } catch { /* un paquete sin paquete.json cuenta para la numeracion pero no se reconoce por partida */ }
+    salida.push({ serie, juego, partida });
+  }
+  return salida;
+}
+
+// Los de todas las series de la carpeta de un juego (grabaciones/listos/<juego>/): de ahi sale la cuenta de numeros de juego.
+export function paquetesDelJuego(rutaJuego) {
+  const raiz = resolve(rutaJuego);
+  if (!existsSync(raiz)) return [];
+  return readdirSync(raiz, { withFileTypes: true }).filter((d) => d.isDirectory()).flatMap((d) => paquetesDeSerie(join(raiz, d.name)));
+}
+
+// El LEEME de una carpeta de paquete: pasos numerados y precisos. `contexto`: { archivo, partidaNumero, juegoNumero, enlace, carpetaSerie }
+// (juegoNumero: el jN del juego, que da el nombre de los videos; carpetaSerie: la carpeta de la serie tal como se muestra en los comandos, con barras normales).
 export function leemeDe(paquete, contexto = {}) {
-  const fecha = contexto.fecha ?? fechaDe(contexto.archivo), serie = contexto.carpetaSerie ?? 'grabaciones/listos';
+  const juegoNumero = contexto.juegoNumero ?? contexto.partidaNumero ?? 1, serie = contexto.carpetaSerie ?? 'grabaciones/listos';
   const nombreJuego = paquete.piezas[0]?.titulo.split(' · ')[0] ?? paquete.juego ?? 'juego';
   const { margenMs, colaMs } = paquete.piezas[0]?.grabar.plan ?? FUNDIDOS; // los margenes que se le piden a quien graba: los del plan de las piezas (que salen de FUNDIDOS)
   const piezas = paquete.piezas.map((p) => {
-    const base = nombreDePieza({ fecha, partida: contexto.partidaNumero ?? 1, pieza: p.id });
+    const base = nombreDePieza({ juego: juegoNumero, pieza: p.id });
     return [
       `### ${p.id} · ${p.titulo}`,
       `- Dirección para abrir y grabar: ${SERVIDOR}/${p.grabar.url}`,
@@ -52,7 +76,7 @@ export function leemeDe(paquete, contexto = {}) {
     ].join('\n');
   });
   return [
-    `# Paquete de publicación · ${nombreJuego} · partida ${contexto.partidaNumero ?? 1}`,
+    `# Paquete de publicación · ${nombreJuego} · partida ${contexto.partidaNumero ?? 1} · juego j${juegoNumero}`,
     '',
     `Partida: data/${contexto.archivo ?? '?'} · generado el ${new Date().toISOString().slice(0, 10)}. Esta carpeta se puede borrar y volver a generar con \`node herramientas/paquete.mjs\` (con --forzar).`,
     '',
@@ -95,6 +119,8 @@ export function escribirPaquete(paquete, carpeta, contexto = {}) {
   mkdirSync(textos, { recursive: true });
   const escribir = (ruta, contenido) => { writeFileSync(ruta, contenido, 'utf8'); escritos.push(ruta); };
   escribir(join(carpeta, 'LEEME.md'), leemeDe(paquete, contexto));
+  // a que partida pertenece este jN: si se regenera el paquete, la partida conserva su numero (paquetesDeSerie lo lee)
+  escribir(join(carpeta, 'paquete.json'), `${JSON.stringify({ juego: contexto.juegoNumero, partida: contexto.partidaNumero, archivo: contexto.archivo })}\n`);
   for (const p of paquete.piezas) {
     for (const red of REDES_DE_TEXTO) escribir(join(textos, `${p.id}-${red}.txt`), red === 'youtube' ? formatoYoutube(p.textos.youtube) : `${p.textos[red]}\n`);
     if (p.comentarioFijado) escribir(join(textos, `${p.id}-comentario.txt`), `${p.comentarioFijado}\n`);
@@ -131,11 +157,17 @@ async function principal() {
   // la carpeta de la serie (por omision grabaciones/listos/<juego>/<fecha>_seed-<seed>) y, dentro, el paquete de esta partida
   const fecha = fechaDe(basename(a.archivo), datos.fecha);
   const rutaSerie = a.salida ?? carpetaDeSerie({ juego: partida.juego?.nombre ?? datos.juego?.nombre, fecha, seed: datos.seedBase ?? partida.seed });
-  const serie = resolve(rutaSerie), carpeta = join(serie, `paquete-p${numero}`);
+  const serie = resolve(rutaSerie);
+  // el numero de juego (jN): el que ya tiene esta partida, o el siguiente de la carpeta del juego (con --salida solo cuenta esa serie); --juego=N lo fija a mano
+  const pedido = a.juego === undefined ? null : Number(a.juego);
+  if (pedido !== null && !(Number.isInteger(pedido) && pedido >= 1)) salir('--juego=N pide un entero de 1 en adelante.');
+  const existentes = a.salida ? paquetesDeSerie(serie) : paquetesDelJuego(dirname(serie));
+  const juegoNumero = pedido ?? elegirJuego({ existentes, serie, partida: numero });
+  const carpeta = join(serie, `paquete-j${juegoNumero}`);
   if (existsSync(carpeta) && !a.forzar) salir(`La carpeta ${carpeta} ya existe: usa --forzar para reescribirla (se pierden los cambios que hayas hecho en ella).`);
   for (const sub of SUBCARPETAS) mkdirSync(join(serie, sub), { recursive: true });
   const relativa = relative(process.cwd(), serie).replaceAll('\\', '/'); // en los comandos del LEEME: relativa al proyecto si cae dentro de el
-  escribirPaquete(paquete, carpeta, { archivo: a.archivo, partidaNumero: numero, enlace, fecha, carpetaSerie: relativa.startsWith('..') || isAbsolute(relativa) ? serie.replaceAll('\\', '/') : relativa });
+  escribirPaquete(paquete, carpeta, { archivo: a.archivo, partidaNumero: numero, juegoNumero, enlace, fecha, carpetaSerie: relativa.startsWith('..') || isAbsolute(relativa) ? serie.replaceAll('\\', '/') : relativa });
   console.log(`Paquete de ${paquete.piezas[0].titulo.split(' · ')[0]} listo en ${carpeta}`);
   for (const p of paquete.piezas) console.log(`  ${p.id.padEnd(8)} ${formatoDeTiempo(p.grabar.ms)}  ${p.titulo}`);
   for (const adv of paquete.advertencias) console.log(`  AVISO: ${adv}`);

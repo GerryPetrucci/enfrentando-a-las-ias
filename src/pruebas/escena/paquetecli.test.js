@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { escribirPaquete, leemeDe } from '../../../herramientas/paquete.mjs';
+import { escribirPaquete, leemeDe, paquetesDeSerie } from '../../../herramientas/paquete.mjs';
 import { formatoDeTiempo } from '../../../herramientas/partes.mjs';
 import { fechaDe, nombreDePieza, nombreDeVideo, SUBCARPETAS } from '../../../herramientas/nombres.mjs';
 import { FORMATOS } from '../../../herramientas/formatos.mjs';
@@ -24,7 +24,7 @@ const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
 const PARTIDA = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
 const ENLACE = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const FECHA = fechaDe('2026-10-19-guerra.json'), SERIE = 'grabaciones/listos/guerra-de-territorios/2026-10-19_seed-777';
-const CTX = { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE, fecha: FECHA, carpetaSerie: SERIE }; // lo que paquete.mjs le pasa a leemeDe
+const CTX = { archivo: 'pruebas/guerra.json', partidaNumero: 1, juegoNumero: 1, enlace: ENLACE, fecha: FECHA, carpetaSerie: SERIE }; // lo que paquete.mjs le pasa a leemeDe
 const REDES_DE_TEXTO = ['tiktok', 'instagram', 'facebook', 'x', 'youtube'];
 
 function lanzar(args, { cwd = RAIZ } = {}) {
@@ -49,7 +49,7 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida');
   const r = lanzar([`--archivo=${archivo}`, `--salida=${salida}`, `--enlace=${ENLACE}`]);
   assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
-  const carpeta = join(salida, 'paquete-p1');
+  const carpeta = join(salida, 'paquete-j1');
   assert.ok(existsSync(join(carpeta, 'LEEME.md')));
   for (const sub of SUBCARPETAS) assert.ok(existsSync(join(salida, sub)), `la serie nace con su carpeta ${sub}/`);
   const archivos = readdirSync(join(carpeta, 'textos')).sort();
@@ -68,7 +68,7 @@ test('sin --enlace, el comentario fijado manda al sitio con el seed de la partid
   const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida');
   const r = lanzar([`--archivo=${archivo}`, `--salida=${salida}`]);
   assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
-  const comentario = readFileSync(join(salida, 'paquete-p1', 'textos', 'parte-1-comentario.txt'), 'utf8');
+  const comentario = readFileSync(join(salida, 'paquete-j1', 'textos', 'parte-1-comentario.txt'), 'utf8');
   assert.ok(comentario.includes(`${ENLACE}?seed=${PARTIDA.seed}`), comentario);
 }));
 
@@ -92,7 +92,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const texto = leemeDe(paquete, CTX);
   for (const p of paquete.piezas) {
-    const base = nombreDePieza({ fecha: FECHA, partida: 1, pieza: p.id });
+    const base = nombreDePieza({ juego: 1, pieza: p.id });
     assert.ok(texto.includes(`http://localhost:4321/${p.grabar.url}`), `${p.id}: falta su direccion`);
     assert.ok(texto.includes(`${base}.mkv`), `${p.id}: falta el nombre de la grabacion (OBS graba la hoja en MKV)`);
     assert.ok(texto.includes(`Dura: ${formatoDeTiempo(p.grabar.ms)} `), `${p.id}: falta la duracion`);
@@ -100,9 +100,9 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
     assert.ok(texto.includes(`node herramientas/recortar-formatos.mjs "${SERIE}/originales/${base}.mkv" ${base} --carpeta=${SERIE}/por-subir`), `${p.id}: falta el comando exacto de recorte, de originales/ a por-subir/`);
     for (const k of Object.keys(FORMATOS)) assert.ok(texto.includes(`${nombreDeVideo(base, k)}.mp4`), `${p.id}: no dice como se llama el recorte ${k}`);
   }
-  // el nombre de cada video dice fecha, partida, pieza, formato y redes: 26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4
-  assert.ok(texto.includes('26-10-19_p1_pt1_9x16_fb-ig-tk-yt.mp4') && texto.includes('26-10-19_p1_pt2_16x9_fb-x-yt.mp4'));
-  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^\d\d-\d\d-\d\d_p\d_(hk|pt|clp)\d_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`);
+  // el nombre de cada video dice el juego, la pieza, el formato y las redes: j1_pt1_9x16_fb-ig-tk-yt.mp4
+  assert.ok(texto.includes('j1_pt1_9x16_fb-ig-tk-yt.mp4') && texto.includes('j1_pt2_16x9_fb-x-yt.mp4'));
+  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_(hk|pt|clp)\d_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`);
   assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/guerra)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
   assert.match(texto, /subidos\//, 'dice que lo subido se mueve a subidos/');
   assert.ok(texto.includes('textos/parte-1-facebook.txt'), 'lista el texto de Facebook');
@@ -110,7 +110,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   assert.match(texto, /### gancho-1/, 'el gancho es una pieza mas del LEEME');
   assert.match(texto, /primero el gancho \(hk\), luego la parte \(pt\) y al final los clips \(clp\)/i, 'dice el orden de subida');
   assert.match(texto, /Próximamente/, 'la lista de revision dice como abre un gancho');
-  assert.ok(texto.includes('26-10-19_p1_hk1_9x16_fb-ig-tk-yt.mp4'));
+  assert.ok(texto.includes('j1_hk1_9x16_fb-ig-tk-yt.mp4'));
   assert.doesNotMatch(texto, /1080 × 1920/, 'la fuente de OBS es la hoja de 3840 × 2160');
   assert.match(texto, /3840 × 2160/, 'dice como esta la fuente de OBS');
   assert.match(texto, /negro/i, 'explica el margen y el fundido de negro');
@@ -154,18 +154,18 @@ test('paquete.mjs usa solo la voz que narrar.mjs dejo para esa partida (sin que 
   const con = lanzar([`--archivo=${archivo}`, `--salida=${salida}`], { cwd: tmp });
   assert.equal(con.status, 0, `${con.stdout}${con.stderr}`);
   assert.match(con.stdout, /voz/i, 'dice que uso la voz que encontro');
-  const leeme = readFileSync(join(salida, 'paquete-p1', 'LEEME.md'), 'utf8');
+  const leeme = readFileSync(join(salida, 'paquete-j1', 'LEEME.md'), 'utf8');
   assert.match(leeme, /voz=data%2Fvoz%2F/, 'la direccion lleva la voz');
   const sin = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 'salida2')}`, '--sinvoz'], { cwd: tmp });
   assert.equal(sin.status, 0, `${sin.stdout}${sin.stderr}`);
-  assert.doesNotMatch(readFileSync(join(tmp, 'salida2', 'paquete-p1', 'LEEME.md'), 'utf8'), /voz=/);
+  assert.doesNotMatch(readFileSync(join(tmp, 'salida2', 'paquete-j1', 'LEEME.md'), 'utf8'), /voz=/);
   const ninguna = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 'salida3')}`], { cwd: join(tmp, 'salida') });
   assert.equal(ninguna.status, 0, `${ninguna.stdout}${ninguna.stderr}`);
-  assert.doesNotMatch(readFileSync(join(tmp, 'salida3', 'paquete-p1', 'LEEME.md'), 'utf8'), /voz=/, 'sin voz generada no se pone ninguna');
+  assert.doesNotMatch(readFileSync(join(tmp, 'salida3', 'paquete-j1', 'LEEME.md'), 'utf8'), /voz=/, 'sin voz generada no se pone ninguna');
 }));
 
 test('paquete.mjs no pisa una carpeta existente sin --forzar; con --forzar la reescribe', () => conTemporal((tmp) => {
-  const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida'), leeme = join(salida, 'paquete-p1', 'LEEME.md');
+  const archivo = guardar(tmp, PARTIDA), salida = join(tmp, 'salida'), leeme = join(salida, 'paquete-j1', 'LEEME.md');
   assert.equal(lanzar([`--archivo=${archivo}`, `--salida=${salida}`]).status, 0);
   writeFileSync(leeme, 'MIS NOTAS');
   const otra = lanzar([`--archivo=${archivo}`, `--salida=${salida}`]);
@@ -219,13 +219,13 @@ test('paquete.mjs arma por omision las direcciones para la hoja maestra de OBS (
   const archivo = guardar(tmp, PARTIDA);
   const hoja = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's1')}`]);
   assert.equal(hoja.status, 0, `${hoja.stdout}${hoja.stderr}`);
-  const leemeHoja = readFileSync(join(tmp, 's1', 'paquete-p1', 'LEEME.md'), 'utf8');
+  const leemeHoja = readFileSync(join(tmp, 's1', 'paquete-j1', 'LEEME.md'), 'utf8');
   const direcciones = leemeHoja.match(/http:\/\/localhost:4321\/escena\.html\?[^\s)]+/g) ?? [];
   assert.ok(direcciones.length >= 3, 'las direcciones de las piezas salen en el LEEME');
   for (const d of direcciones) { const q = new URL(d).searchParams; assert.equal(q.get('formato'), 'hoja', d); assert.equal(q.get('grabar'), '1', d); assert.equal(q.get('auto'), '1', d); }
   const vertical = lanzar([`--archivo=${archivo}`, `--salida=${join(tmp, 's2')}`, '--formato=9x16']);
   assert.equal(vertical.status, 0, `${vertical.stdout}${vertical.stderr}`);
-  assert.match(readFileSync(join(tmp, 's2', 'paquete-p1', 'LEEME.md'), 'utf8'), /formato=9x16/);
+  assert.match(readFileSync(join(tmp, 's2', 'paquete-j1', 'LEEME.md'), 'utf8'), /formato=9x16/);
 }));
 
 test('sin --salida, paquete.mjs arma la carpeta de la serie en grabaciones/listos/<juego>/<fecha>_seed-<seedBase>/ con sus subcarpetas de estado y el paquete dentro', () => conTemporal((tmp) => {
@@ -234,8 +234,42 @@ test('sin --salida, paquete.mjs arma la carpeta de la serie en grabaciones/listo
   const r = lanzar([`--archivo=${ruta}`, '--sinvoz'], { cwd: tmp });
   assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
   const serie = join(tmp, 'grabaciones', 'listos', 'guerra-de-territorios', '2026-10-19_seed-777');
-  for (const sub of [...SUBCARPETAS, 'paquete-p1']) assert.ok(existsSync(join(serie, sub)), `falta ${sub}/`);
-  const leeme = readFileSync(join(serie, 'paquete-p1', 'LEEME.md'), 'utf8');
-  assert.match(leeme, /grabaciones\/listos\/guerra-de-territorios\/2026-10-19_seed-777\/originales\/26-10-19_p1_pt1\.mkv/, 'las rutas del LEEME son las de la serie');
+  for (const sub of [...SUBCARPETAS, 'paquete-j1']) assert.ok(existsSync(join(serie, sub)), `falta ${sub}/`);
+  const leeme = readFileSync(join(serie, 'paquete-j1', 'LEEME.md'), 'utf8');
+  assert.match(leeme, /grabaciones\/listos\/guerra-de-territorios\/2026-10-19_seed-777\/originales\/j1_pt1\.mkv/, 'las rutas del LEEME son las de la serie');
   assert.match(r.stdout, /2026-10-19_seed-777/, 'dice donde dejo el paquete');
+  assert.deepEqual(JSON.parse(readFileSync(join(serie, 'paquete-j1', 'paquete.json'), 'utf8')), { juego: 1, partida: 1, archivo: ruta }, 'el paquete recuerda a que partida pertenece (para conservar su numero al regenerarlo)');
+}));
+
+test('paquetesDeSerie lee el paquete.json de cada paquete-jN aunque lo haya escrito alguien con BOM, y cuenta tambien un paquete sin paquete.json (sin partida conocida)', () => conTemporal((tmp) => {
+  mkdirSync(join(tmp, 'paquete-j1'));
+  writeFileSync(join(tmp, 'paquete-j1', 'paquete.json'), '﻿{"juego":1,"partida":2}');
+  mkdirSync(join(tmp, 'paquete-j4'));
+  mkdirSync(join(tmp, 'paquete-p1')); // el esquema viejo no cuenta
+  writeFileSync(join(tmp, 'paquete-j9'), 'esto es un archivo, no una carpeta');
+  const lista = paquetesDeSerie(tmp).map(({ juego, partida }) => ({ juego, partida })).sort((a, b) => a.juego - b.juego);
+  assert.deepEqual(lista, [{ juego: 1, partida: 2 }, { juego: 4, partida: null }]);
+  assert.deepEqual(paquetesDeSerie(join(tmp, 'no-existe')), []);
+}));
+
+test('el numero de juego sube de uno en uno por cada partida empaquetada del juego (aunque sea de otra serie), y regenerar un paquete conserva el suyo', () => conTemporal((tmp) => {
+  const escribir = (nombre, seedBase, partidas) => { const ruta = join(tmp, nombre); writeFileSync(ruta, JSON.stringify({ juego: PARTIDA.juego, seedBase, partidas })); return ruta; };
+  const a = escribir('2026-10-19-guerra.json', 111, [PARTIDA, PARTIDA]), b = escribir('2026-10-20-guerra.json', 222, [PARTIDA]);
+  const correr = (archivo, partida, ...extra) => { const r = lanzar([`--archivo=${archivo}`, `--partida=${partida}`, '--sinvoz', ...extra], { cwd: tmp }); assert.equal(r.status, 0, `${r.stdout}${r.stderr}`); return r; };
+  const juego = (serie) => join(tmp, 'grabaciones', 'listos', 'guerra-de-territorios', serie);
+  correr(a, 1);
+  correr(a, 2);
+  correr(b, 1);
+  assert.ok(existsSync(join(juego('2026-10-19_seed-111'), 'paquete-j1', 'LEEME.md')), 'la partida 1 de la primera serie es el juego 1');
+  assert.ok(existsSync(join(juego('2026-10-19_seed-111'), 'paquete-j2', 'LEEME.md')), 'la partida 2, el juego 2');
+  assert.ok(existsSync(join(juego('2026-10-20_seed-222'), 'paquete-j3', 'LEEME.md')), 'otra serie del mismo juego sigue la cuenta: el juego 3');
+  assert.match(readFileSync(join(juego('2026-10-20_seed-222'), 'paquete-j3', 'LEEME.md'), 'utf8'), /j3_pt1_9x16_fb-ig-tk-yt\.mp4/);
+  correr(a, 1, '--forzar');
+  correr(a, 2, '--forzar');
+  assert.ok(!existsSync(join(juego('2026-10-19_seed-111'), 'paquete-j4')) && !existsSync(join(juego('2026-10-20_seed-222'), 'paquete-j4')), 'regenerar la partida 1 o la 2 no les da otro numero');
+  const otra = lanzar([`--archivo=${a}`, '--partida=1', '--sinvoz'], { cwd: tmp });
+  assert.equal(otra.status, 1);
+  assert.match(otra.stderr, /paquete-j1.*ya existe/s, 'sin --forzar se niega, y dice cual carpeta');
+  correr(a, 2, '--juego=9', '--forzar');
+  assert.ok(existsSync(join(juego('2026-10-19_seed-111'), 'paquete-j9')), '--juego=N manda sobre la cuenta');
 }));

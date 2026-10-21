@@ -3,8 +3,8 @@
 // NOMBRE_9x16_fb-ig-tk-yt.mp4 y NOMBRE_16x9_fb-x-yt.mp4: el nombre dice el formato y las redes a las que sirve (herramientas/nombres.mjs; las redes salen de formatos.mjs).
 // Las medidas salen de herramientas/formatos.mjs. Necesita ffmpeg y ffprobe en el PATH.
 //
-//   node herramientas/recortar-formatos.mjs GRABACION.mkv 26-10-19_p1_pt1
-//   node herramientas/recortar-formatos.mjs GRABACION.mkv 26-10-19_p1_pt1 --carpeta=salida --crf=17 --inicio=3.5
+//   node herramientas/recortar-formatos.mjs GRABACION.mkv j1_pt1
+//   node herramientas/recortar-formatos.mjs GRABACION.mkv j1_pt1 --carpeta=salida --crf=17 --inicio=3.5
 //
 // Una grabacion hecha con la direccion del paquete (grabar=1) trae negro al empezar y al terminar: se detecta y se recorta solo, dejando los fundidos (mas abajo, NEGRO). Si no encuentra
 // uno de los dos margenes (una grabacion vieja, la carta de ajuste) no recorta ese lado y lo dice.

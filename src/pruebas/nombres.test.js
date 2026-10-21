@@ -1,11 +1,11 @@
-// Los nombres de los videos que se suben y la carpeta de cada serie: que digan fecha, partida, pieza, formato y a que redes sirve, sin lanzar nunca ante un dato raro.
+// Los nombres de los videos que se suben y la carpeta de cada serie: que digan el numero de juego, la pieza, el formato y a que redes sirve, sin lanzar nunca ante un dato raro.
 //
 //   npm test
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FORMATOS } from '../../herramientas/formatos.mjs';
-import { REDES, SUBCARPETAS, abreviarPieza, fechaDe, nombreDePieza, nombreDeVideo, slugDe, carpetaDeSerie } from '../../herramientas/nombres.mjs';
+import { REDES, SUBCARPETAS, abreviarPieza, fechaDe, nombreDePieza, nombreDeVideo, slugDe, carpetaDeSerie, juegoDeCarpeta, elegirJuego } from '../../herramientas/nombres.mjs';
 
 test('abreviarPieza: parte-N es ptN y clip-N es clpN; un id raro nunca lanza y nunca queda vacio', () => {
   assert.equal(abreviarPieza('parte-1'), 'pt1');
@@ -28,15 +28,32 @@ test('fechaDe saca AAAA-MM-DD del nombre de la serie (con carpeta o sin ella) o 
   assert.deepEqual(fechaDe(null, 7, new Date(2026, 11, 31)), { largo: '2026-12-31', corto: '26-12-31' });
 });
 
-test('nombreDePieza: fecha corta, partida y pieza, separados por guion bajo', () => {
-  const fecha = fechaDe('2026-10-19-x.json');
-  assert.equal(nombreDePieza({ fecha, partida: 1, pieza: 'parte-1' }), '26-10-19_p1_pt1');
-  assert.equal(nombreDePieza({ fecha, partida: 2, pieza: 'clip-3' }), '26-10-19_p2_clp3');
+test('nombreDePieza: el numero de juego (jN) y la pieza, separados por guion bajo; sin fecha', () => {
+  assert.equal(nombreDePieza({ juego: 1, pieza: 'parte-1' }), 'j1_pt1');
+  assert.equal(nombreDePieza({ juego: 12, pieza: 'clip-3' }), 'j12_clp3');
+  assert.equal(nombreDePieza({ juego: 3, pieza: 'gancho-2' }), 'j3_hk2');
+});
+
+test('juegoDeCarpeta lee el numero de una carpeta paquete-jN y nada mas', () => {
+  assert.equal(juegoDeCarpeta('paquete-j1'), 1);
+  assert.equal(juegoDeCarpeta('paquete-j12'), 12);
+  for (const no of ['paquete-p1', 'paquete-j', 'paquete-j1x', 'xpaquete-j1', 'textos', '', null, undefined, 7]) assert.equal(juegoDeCarpeta(no), null, String(no));
+});
+
+test('elegirJuego: el numero de juego sube de uno en uno en cada juego nuevo del juego (carpeta), y una partida que ya tiene paquete conserva el suyo', () => {
+  const ya = [{ serie: 'a', juego: 1, partida: 1 }, { serie: 'a', juego: 2, partida: 2 }];
+  assert.equal(elegirJuego({ existentes: [], serie: 'a', partida: 1 }), 1);
+  assert.equal(elegirJuego({ existentes: ya, serie: 'a', partida: 1 }), 1, 'regenerar el paquete no cambia el numero');
+  assert.equal(elegirJuego({ existentes: ya, serie: 'a', partida: 2 }), 2);
+  assert.equal(elegirJuego({ existentes: ya, serie: 'b', partida: 1 }), 3, 'otra serie del mismo juego sigue la cuenta');
+  assert.equal(elegirJuego({ existentes: [{ serie: 'a', juego: 1, partida: 1 }, { serie: 'a', juego: 5, partida: 2 }], serie: 'b', partida: 1 }), 6, 'con huecos, el maximo mas uno');
+  assert.equal(elegirJuego({ existentes: [null, {}, { serie: 'a', juego: 'x', partida: 1 }, { serie: 'a', juego: 0, partida: 1 }], serie: 'a', partida: 1 }), 1, 'datos raros se ignoran');
+  for (const raro of [undefined, {}, { existentes: null }]) assert.equal(elegirJuego(raro), 1, String(raro));
 });
 
 test('nombreDeVideo agrega el formato y las redes a las que sirve, en orden alfabetico y con guiones', () => {
-  assert.equal(nombreDeVideo('26-10-19_p1_pt1', '9x16'), '26-10-19_p1_pt1_9x16_fb-ig-tk-yt');
-  assert.equal(nombreDeVideo('26-10-19_p1_pt1', '16x9'), '26-10-19_p1_pt1_16x9_fb-x-yt');
+  assert.equal(nombreDeVideo('j1_pt1', '9x16'), 'j1_pt1_9x16_fb-ig-tk-yt');
+  assert.equal(nombreDeVideo('j1_pt1', '16x9'), 'j1_pt1_16x9_fb-x-yt');
   assert.equal(nombreDeVideo('ep', 'raro'), 'ep_raro', 'un formato desconocido no inventa redes');
   assert.equal(nombreDeVideo('ep', '4x5'), 'ep_4x5', 'el 4x5 ya no existe: no hereda redes');
 });
