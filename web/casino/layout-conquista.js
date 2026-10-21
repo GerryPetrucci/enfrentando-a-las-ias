@@ -23,16 +23,24 @@ function ajustarMapa(espacio, mapa) {
   return { celda, rect: r(espacio.x + Math.floor((espacio.ancho - w) / 2), espacio.y + Math.floor((espacio.alto - h) / 2), w, h) };
 }
 
+// Todo dentro de la zona segura (arriba 285 y abajo 420 los ocupa la interfaz de las redes: decidido el 20 de octubre de 2026). Cabecera y aviso arriba, el marcador pegado al pie de la zona
+// (una fila de 38 px por reino) y el mapa en lo que queda con la celda entera mas grande que quepa; el feed y los subtitulos aparecen SOBRE el pie del mapa, uno junto al otro, y se apagan solos.
+// Lo transitorio (cartel, flashback, tarjetas, panel final) empieza debajo de la cabecera para no taparla.
 function dibujar9x16(mapa) {
-  const m = ajustarMapa(r(0, 200, 1080, 1500), mapa);
+  const { x, y, ancho, alto } = FORMATOS_ESCENA['9x16'].zona;
+  const filas = Number.isInteger(mapa?.k) && mapa.k >= 2 && mapa.k <= 5 ? mapa.k : 5; // reinos = filas del marcador (sin dato: el caso mas alto)
+  const cabecera = r(x, y, ancho, 76), etiqueta = r(x, y + 78, ancho, 32);
+  const inicio = etiqueta.y + etiqueta.alto + 8, fin = y + alto;
+  const marcador = r(x, fin - 38 * filas, ancho, 38 * filas), pie = marcador.y - 8;
+  const m = ajustarMapa(r(x, inicio, ancho, pie - inicio), mapa);
   return {
     escalaCelda: m.celda, mapa: m.rect,
-    etiqueta: r(60, 150, 960, 36), cabecera: r(60, 20, 960, 126),
-    marcador: r(30, 1700, 1020, 200), feed: r(22, 1290, 590, 392), subtitulos: r(620, 1290, 330, 210),
-    cartel: r(60, 300, 890, 80), flashback: r(60, 395, 890, 420),
-    tarjeta: r(60, 300, 890, 590), tarjetaAbajo: r(60, 910, 890, 590),
-    vs: r(0, 300, 1080, 620), vsAbajo: r(0, 880, 1080, 620),
-    panelFinal: r(60, 300, 890, 1180),
+    etiqueta, cabecera, marcador,
+    feed: r(x, pie - 300, 540, 300), subtitulos: r(x + 550, pie - 260, ancho - 550, 260),
+    cartel: r(x, inicio, ancho, 80), flashback: r(x, inicio + 95, ancho, 420),
+    tarjeta: r(x, inicio, ancho, 590), tarjetaAbajo: r(x, fin - 590, ancho, 590),
+    vs: r(0, inicio, 1080, 620), vsAbajo: r(0, fin - 620, 1080, 620),
+    panelFinal: r(x, inicio, ancho, fin - inicio),
   };
 }
 

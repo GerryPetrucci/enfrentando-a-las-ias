@@ -33,7 +33,7 @@ test('lo que hay que leer (tarjetas, cartel, flashback, subtitulos y pantalla fi
     for (const nombre of ['vs', 'vsAbajo']) assert.ok(L[nombre].y >= L.zona.y && L[nombre].y + L[nombre].alto <= L.zona.y + L.zona.alto, `${formato} ${nombre}: la banda VS sale de la zona a lo alto`);
   }
   const v = colocarConquista('9x16', MAPAS[2]);
-  assert.ok(dentro(v.feed, { x: 0, y: v.zona.y, ancho: v.ancho, alto: v.alto }), 'el feed va sobre el mapa aprobado');
+  assert.ok(seCruzan(v.feed, v.mapa), 'el feed va sobre el mapa, pegado a su pie');
 });
 
 test('la caja del flashback alcanza para el pacto cumplido: cabecera, y dos privados de 140 caracteres (quien + 3 lineas de cita) con su relleno', () => {
@@ -52,13 +52,23 @@ test('las piezas que no se pueden encimar no se tocan: cabecera, mapa, marcador,
   }
 });
 
-test('el mapa se dibuja con una celda entera, conservando su proporcion y sin salirse de su espacio: en 9:16 ocupa todo el ancho (como el mapa aprobado)', () => {
+test('en 9:16 la cabecera, el aviso, el mapa, el marcador y el feed van dentro de la zona segura y los avisos de batalla no tapan la cabecera (decidido el 20 de octubre de 2026)', () => {
+  for (const m of MAPAS) {
+    const L = colocarConquista('9x16', m);
+    for (const nombre of ['cabecera', 'etiqueta', 'mapa', 'marcador', 'feed', 'subtitulos']) assert.ok(dentro(L[nombre], L.zona), `${m.ancho}x${m.alto}: ${nombre} sale de la zona segura`);
+    for (const nombre of ['cartel', 'flashback', 'tarjeta', 'tarjetaAbajo', 'vs', 'vsAbajo', 'panelFinal']) assert.ok(L[nombre].y >= L.etiqueta.y + L.etiqueta.alto, `${m.ancho}x${m.alto}: ${nombre} tapa la cabecera`);
+    assert.equal(L.marcador.y + L.marcador.alto, L.zona.y + L.zona.alto, 'el marcador va pegado al pie de la zona');
+    assert.ok(L.escalaCelda >= 10, `${m.ancho}x${m.alto}: la celda de ${L.escalaCelda} px deja el mapa ilegible`);
+  }
+});
+
+test('el mapa se dibuja con una celda entera, conservando su proporcion y sin salirse de su espacio: en 9:16 la mas grande que quepa en la zona segura', () => {
   for (const formato of FORMATOS) for (const m of MAPAS) {
     const L = colocarConquista(formato, m);
     assert.ok(Number.isInteger(L.escalaCelda) && L.escalaCelda >= 1);
     assert.equal(L.mapa.ancho, m.ancho * L.escalaCelda);
     assert.equal(L.mapa.alto, m.alto * L.escalaCelda);
-    if (formato === '9x16') { assert.equal(L.escalaCelda, m.tile, 'en 9:16 la celda es la del motor'); assert.equal(L.mapa.ancho, 1080); }
+    if (formato === '9x16') { assert.ok(L.escalaCelda <= m.tile, 'en 9:16 la celda no pasa de la del motor'); assert.ok(dentro(L.mapa, L.zona), 'en 9:16 el mapa cabe en la zona segura'); }
     else assert.ok(L.mapa.alto <= L.zona.alto && L.mapa.x >= L.zona.x, '16:9: el mapa cabe en la zona, a la izquierda');
   }
 });

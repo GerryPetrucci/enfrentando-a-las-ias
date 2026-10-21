@@ -83,6 +83,16 @@
 .panel-conq .pf-nom { flex:1; min-width:0; font:800 36px/1 var(--titulos); text-transform:uppercase; color:var(--t); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .panel-conq .pf-datos { font:600 22px var(--texto); color:#c9c9d2; text-align:right; white-space:nowrap; }
 .panel-conq .pf-pts { font:800 40px var(--titulos); color:var(--hueso); min-width:92px; text-align:right; }
+/* en vertical la cabecera mide 890 (zona segura): letra mas chica para que «Guerra de territorios · Continente» y «Turno 10 / 30» quepan sin cortarse */
+.f-9x16.mesa-conquista .cabecera .tit { font-size:34px; }
+.f-9x16.mesa-conquista .cabecera .mano { font-size:34px; }
+.mesa-conquista .panel-conq.apretado { padding:14px 22px; gap:6px; }
+.panel-conq.apretado .pf-titulo { font-size:40px; }
+.panel-conq.apretado .pf-fila { padding:4px 12px; }
+.panel-conq.apretado .pf-nom { font-size:32px; }
+.panel-conq.apretado .pf-mom, .panel-conq.apretado .pf-priv { font-size:21px; line-height:1.18; }
+.panel-conq.apretado .pf-priv small { font-size:17px; }
+.panel-conq.apretado h3 { font-size:22px; margin-top:0; }
 .panel-conq h3 { font:800 26px var(--titulos); letter-spacing:.14em; color:var(--oro); text-transform:uppercase; margin-top:4px; }
 .panel-conq .pf-mom { font:600 24px/1.25 var(--texto); color:#dcdce2; }
 .panel-conq .pf-mom b { color:var(--oro); font-weight:800; margin-right:8px; }
