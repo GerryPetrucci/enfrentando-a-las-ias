@@ -8,12 +8,24 @@ test('limpiar quita acentos, mayusculas y espacios de mas', () => {
 });
 
 const CASOS = [
-  ['reclutar R03 4', { tipo: 'reclutar', region: 2, n: 4 }],
-  ['  Mover r7   R12 5 ', { tipo: 'mover', de: 6, a: 11, n: 5 }],
+  ['reclutar R03 4', { tipo: 'reclutar', region: 2, pila: [4, 0, 0, 0], n: 4 }], // la forma de 1.x: solo un numero = Lanceros
+  ['reclutar R03 L4', { tipo: 'reclutar', region: 2, pila: [4, 0, 0, 0], n: 4 }],
+  ['reclutar R03 a3', { tipo: 'reclutar', region: 2, pila: [0, 3, 0, 0], n: 3 }],
+  ['Reclutar R03 4 jinetes', { tipo: 'reclutar', region: 2, pila: [0, 0, 4, 0], n: 4 }],
+  ['reclutar R03 L 2, A 3', { tipo: 'reclutar', region: 2, pila: [2, 3, 0, 0], n: 5 }],
+  ['reclutar R03 2L 3A', { tipo: 'reclutar', region: 2, pila: [2, 3, 0, 0], n: 5 }],
+  ['reclutar R03 L4A2', { tipo: 'reclutar', region: 2, pila: [4, 2, 0, 0], n: 6 }],
+  ['reclutar R03 ingenio 1', { tipo: 'reclutar', region: 2, pila: [0, 0, 0, 1], n: 1 }],
+  ['  Mover r7   R12 5 ', { tipo: 'mover', de: 6, a: 11, pila: [5, 0, 0, 0], n: 5 }],
+  ['mover R07 R12 L4 A2', { tipo: 'mover', de: 6, a: 11, pila: [4, 2, 0, 0], n: 6 }],
+  ['mover R07 R12 J3', { tipo: 'mover', de: 6, a: 11, pila: [0, 0, 3, 0], n: 3 }],
+  ['mover R07 R12 4 lanceros, 2 arqueros', { tipo: 'mover', de: 6, a: 11, pila: [4, 2, 0, 0], n: 6 }],
+  ['mover R07 R12 l2 l3', { tipo: 'mover', de: 6, a: 11, pila: [5, 0, 0, 0], n: 5 }], // el mismo tipo dos veces se suma
   ['mover R07 R12 todo', { tipo: 'mover', de: 6, a: 11, todo: true }],
   ['  MOVER r7 r12 Todo ', { tipo: 'mover', de: 6, a: 11, todo: true }],
   ['fortificar R01', { tipo: 'fortificar', region: 0 }],
-  ['ARMAR', { tipo: 'armar' }],
+  ['mejorar L', { tipo: 'mejorar', unidad: 0 }],
+  ['Mejorar Jinetes', { tipo: 'mejorar', unidad: 2 }],
   ['mercenarios R10 3', { tipo: 'mercenarios', region: 9, n: 3 }],
   ['regalar oro 5 Violeta', { tipo: 'regalar', recurso: 'Oro', n: 5, reino: 2 }],
   ['ofrecer Ámbar Hierro 4 Madera 4', { tipo: 'ofrecer', reino: 1, doy: 'Hierro', dc: 4, pido: 'Madera', pc: 4 }],
@@ -30,7 +42,7 @@ for (const [texto, esperado] of CASOS) {
   });
 }
 
-const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'mover R01 R02 todos', 'mover R01 R02 todo 3', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar 3', 'aceptar'];
+const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'mover R01 R02 todos', 'mover R01 R02 todo 3', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar', 'armar 3', 'mejorar', 'mejorar X', 'mejorar L A', 'reclutar R03 L', 'reclutar R03 L0', 'reclutar R03 X4', 'reclutar R03 4 5', 'mover R01 R02 L', 'aceptar'];
 for (const texto of MALAS) {
   test(`descarta "${texto}" con un motivo`, () => {
     const r = parsearOrden(texto);
@@ -54,16 +66,16 @@ test('normaliza una respuesta completa', () => {
   assert.equal(n.nota, 'Plan: tomar R12');
 });
 
-test('mas de 12 ordenes: se ignoran las sobrantes y quedan anotadas', () => {
-  const n = normalizarRespuesta({ ordenes: Array.from({ length: 15 }, () => 'armar') });
-  assert.equal(n.ordenes.length, 12);
+test('mas de 14 ordenes: se ignoran las sobrantes y quedan anotadas', () => {
+  const n = normalizarRespuesta({ ordenes: Array.from({ length: 17 }, () => 'fortificar R01') });
+  assert.equal(n.ordenes.length, 14);
   assert.equal(n.descartadas.length, 3);
-  assert.match(n.descartadas[0].motivo, /12/);
+  assert.match(n.descartadas[0].motivo, /14/);
 });
 
 test('ordenes como un solo texto, o con elementos que no son texto', () => {
-  assert.equal(normalizarRespuesta({ ordenes: 'armar' }).ordenes.length, 1);
-  const n = normalizarRespuesta({ ordenes: ['armar', 7, null, { a: 1 }, ['x']] });
+  assert.equal(normalizarRespuesta({ ordenes: 'fortificar R01' }).ordenes.length, 1);
+  const n = normalizarRespuesta({ ordenes: ['fortificar R01', 7, null, { a: 1 }, ['x']] });
   assert.equal(n.ordenes.length, 1);
   assert.equal(n.descartadas.length, 4);
 });

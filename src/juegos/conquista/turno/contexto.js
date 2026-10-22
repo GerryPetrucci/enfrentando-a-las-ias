@@ -1,7 +1,8 @@
 // Contexto de un turno: lo que comparten todas las fases (estado, turno, registros del turno y ayudas chicas).
 
-import { TERRENO, ARMAS } from '../constantes.js';
-import { tropasDe } from '../estado.js';
+import { TERRENO, MEJORAS } from '../constantes.js';
+import { pila as pilaDe } from '../estado.js';
+import { fuerzaDeMiembro } from '../unidades.js';
 
 export function nuevoContexto(E, jugadas = []) {
   const k = E.k;
@@ -21,7 +22,8 @@ export function nuevoContexto(E, jugadas = []) {
   ctx.pagar = (s, costo) => { for (const [r, v] of Object.entries(costo)) ctx.R[s].stock[r] -= v; };
   ctx.propia = (s, r) => Number.isInteger(r) && r >= 0 && r < ctx.NR && E.dueno[r] === s;
   ctx.activa = (s) => ctx.R[s]?.vivo === true;
-  ctx.defensa = (r) => tropasDe(E, r) * (1 + 0.5 * E.fort[r]) * TERRENO[ctx.regs[r].terr];
-  ctx.ataque = (s, n) => n * (1 + ARMAS.bono * ctx.R[s].armas);
+  // Ayudas de lectura (la batalla real vive en batalla.js): la defensa de la guarnicion del dueno contra un rival sin unidades (sin dominio) y la fuerza de N Lanceros atacando.
+  ctx.defensa = (r) => (E.dueno[r] < 0 ? 0 : fuerzaDeMiembro(pilaDe(E, r, E.dueno[r]), ctx.R[E.dueno[r]].mejoras, [0, 0, 0, 0], false) * (1 + 0.5 * E.fort[r]) * TERRENO[ctx.regs[r].terr]);
+  ctx.ataque = (s, n) => n * (1 + MEJORAS.bono * ctx.R[s].mejoras[0]);
   return ctx;
 }

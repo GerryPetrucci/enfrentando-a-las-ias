@@ -1,7 +1,7 @@
 // Estado de una partida de Guerra de territorios y funciones para consultarlo. Aqui no hay reglas de turno.
 
 import { crearMapa, biomaDeSeed } from '../../mapa.js';
-import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS } from './constantes.js';
+import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS, N_TIPOS } from './constantes.js';
 import { nombresValidos } from './nombres.js';
 
 export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
@@ -9,7 +9,7 @@ export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
 // ---- Unidades: cada region guarda, para CADA reino presente (el dueno y a veces invitados), cuantas unidades hay de cada tipo ----
 // E.uni es un Int16Array de (regiones x reinos x tipos): indice (r * k + reino) * N_TIPOS + tipo. Tipos: 0 Lancero, 1 Arquero, 2 Jinete, 3 Ingenio.
 // `tropasDe(E, r)` es la guarnicion del DUENO de la region (0 si no tiene dueno): lo que antes era E.tropas[r].
-export const N_TIPOS = 4;
+export { N_TIPOS };
 const idx = (E, r, k, t = 0) => (r * E.k + k) * N_TIPOS + t;
 export const uniDe = (E, r, k, t) => E.uni[idx(E, r, k, t)];
 export const sumarUni = (E, r, k, t, n) => { E.uni[idx(E, r, k, t)] += n; };
@@ -22,6 +22,8 @@ export function ponerTropas(E, r, n, k = E.dueno[r]) {
   const i = idx(E, r, k);
   E.uni[i] = n; E.uni[i + 1] = E.uni[i + 2] = E.uni[i + 3] = 0;
 }
+// Deja la pila de unidades [L, A, J, I] del reino k en la region (sin tocar a los demas reinos).
+export function ponerPila(E, r, k, p) { const i = idx(E, r, k); E.uni[i] = p[0]; E.uni[i + 1] = p[1]; E.uni[i + 2] = p[2]; E.uni[i + 3] = p[3]; }
 export function limpiarRegion(E, r) { E.uni.fill(0, idx(E, r, 0), idx(E, r, E.k)); }
 export function presentes(E, r) { const out = []; for (let k = 0; k < E.k; k++) if (totalPila(E, r, k) > 0) out.push(k); return out; }
 // Todas las unidades de un reino, en cualquier region (tambien las que estan de visita).
@@ -40,7 +42,7 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } 
   const dueno = Int8Array.from(m.inicio.dueno), uni = new Int16Array(NR * k * N_TIPOS), fort = new Int8Array(NR);
   m.inicio.capitales.forEach((c) => { fort[c] = 1; });
   const reinos = Array.from({ length: k }, (_, s) => ({
-    s, nombre: nombreDe(s), vivo: true, capital: m.inicio.capitales[s], stock: { ...ALMACEN_INICIAL }, armas: 0,
+    s, nombre: nombreDe(s), vivo: true, capital: m.inicio.capitales[s], stock: { ...ALMACEN_INICIAL }, mejoras: Array(N_TIPOS).fill(0),
     honor: HONOR.inicial, deshonrado: false, pactos: Array(k).fill(0), pactoOk: Array(k).fill(false), propuestaPrevia: null,
     nota: '', privIn: [], ofertasIn: [], cayoEn: null, regsAlCaer: 0,
   }));
@@ -89,7 +91,7 @@ export function instantanea(E) {
   return {
     dueno: Array.from(E.dueno), tropas: Array.from({ length: E.dueno.length }, (_, r) => tropasDe(E, r)), fort: Array.from(E.fort),
     edif: E.edif.map((e) => (e ? EDIFICIOS[e].letra : null)), dan: Array.from(E.dan),
-    stock: E.reinos.map((r) => ({ ...r.stock })), armas: E.reinos.map((r) => r.armas), honor: E.reinos.map((r) => r.honor),
+    stock: E.reinos.map((r) => ({ ...r.stock })), armas: E.reinos.map((r) => Math.max(...r.mejoras)), mejoras: E.reinos.map((r) => [...r.mejoras]), honor: E.reinos.map((r) => r.honor),
     vivo: E.reinos.map((r) => r.vivo), pactos: E.reinos.map((r) => [...r.pactos]),
     maravilla: E.maravilla ? { ...E.maravilla } : null, notas: E.reinos.map((r) => r.nota),
   };

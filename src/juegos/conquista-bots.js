@@ -72,7 +72,8 @@ export function azar(E, s, rng) {
   const NR = E.mapa.regs.length, entero = (n) => Math.floor(rng() * n), reg = () => nr(entero(NR + 2)), n = () => 1 + entero(6);
   const nombres = nombresDeLaPartida(E), nombre = () => nombres[entero(5)], rec = () => RECURSOS[entero(6)]; // los de la partida primero: con los de siempre sale lo mismo que antes
   const plantillas = [
-    () => `reclutar ${reg()} ${n()}`, () => `mover ${reg()} ${reg()} ${n()}`, () => `fortificar ${reg()}`, () => 'armar', () => `mercenarios ${reg()} ${n()}`,
+    () => `reclutar ${reg()} ${n()}`, () => `mover ${reg()} ${reg()} ${n()}`, () => `fortificar ${reg()}`, () => `mejorar ${['L', 'A', 'J', 'I', 'X'][entero(5)]}`, () => `mercenarios ${reg()} ${n()}`,
+    () => `reclutar ${reg()} ${['L', 'A', 'J', 'I'][entero(4)]}${n()}`, () => `mover ${reg()} ${reg()} ${['L', 'A', 'J', 'I'][entero(4)]}${n()}`, () => `mover ${reg()} ${reg()} todo`,
     () => `regalar ${rec()} ${n()} ${nombre()}`, () => `ofrecer ${nombre()} ${rec()} ${n()} ${rec()} ${n()}`, () => `aceptar ${nombre()}`,
     () => `construir ${reg()} ${['granja', 'mercado', 'cuartel', 'maravilla'][entero(4)]}`, () => `romper ${nombre()}`, () => 'basura sin sentido',
   ];

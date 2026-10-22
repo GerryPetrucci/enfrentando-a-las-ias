@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nuevoEstado, contexto, R, capital, frontera, dosPasos, vecinaComun, fijarTropas, tropasDe } from './ayudas.js';
-import { regionesDe } from '../../juegos/conquista/estado.js';
+import { regionesDe, sumarUni, pila as pilaDe } from '../../juegos/conquista/estado.js';
 import { distancias } from '../../mapa.js';
 import { ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
 import { movimientos } from '../../juegos/conquista/turno/movimiento.js';
@@ -29,10 +29,10 @@ test('combate: gana la mayor fuerza, el defensor cuenta fortaleza y terreno, el 
   assert.equal(ctx.combates.length, 1);
 });
 
-test('combate: las armas suben el ataque un 25% por nivel', () => {
+test('combate: cada mejora del tipo suma 25 % a su fuerza', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 4); E.fort[d] = 1; E.mapa.regs[d].terr = 'bo';
-  fijarTropas(E, a, 11); E.reinos[0].armas = 1; // ataque 12.5 contra 7.5
+  fijarTropas(E, a, 11); E.reinos[0].mejoras[0] = 1; // ataque 12.5 contra 7.5 (una mejora de Lanceros: +25 %)
   mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 10`] } });
   assert.equal(tropasDe(E, d), 4); // floor(10 x (1 - 7.5/12.5))
 });
@@ -98,20 +98,23 @@ test('no se puede atacar a un aliado: la orden se descarta', () => {
   assert.equal(E.dueno[d], 1);
 });
 
-test('con Caballos (1 por cada 3 tropas) se llega a 2 regiones; sin ellos no, y mas lejos tampoco', () => {
+test('solo los Jinetes llegan a 2 regiones: con otro tipo, o mezclados, la orden se descarta; mas lejos tampoco', () => {
   const E = nuevoEstado(4), [a, , c] = dosPasos(E);
-  E.dueno[a] = 0; fijarTropas(E, a, 10); E.dueno[c] = -1; fijarTropas(E, c, 0); E.fort[c] = 0; E.edif[c] = null;
-  E.reinos[0].stock.Caballos = 2;
-  let ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 9`] } });
-  assert.equal(ctx.descartes[0][0].motivo, 'faltan Caballos para mover a 2 regiones'); // 9 tropas piden 3 Caballos
-  E.reinos[0].stock.Caballos = 3;
-  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 9`] } });
+  E.dueno[a] = 0; fijarTropas(E, a, 10); sumarUni(E, a, 0, 2, 4); // 10 Lanceros y 4 Jinetes
+  E.dueno[c] = -1; fijarTropas(E, c, 0); E.fort[c] = 0; E.edif[c] = null;
+  let ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} L5`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'solo los Jinetes llegan a 2 regiones');
+  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} L2 J2`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'solo los Jinetes llegan a 2 regiones', 'una mezcla tampoco llega');
+  assert.equal(E.dueno[c], -1);
+  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} J3`] } });
+  assert.deepEqual(ctx.descartes[0], []);
   assert.equal(E.dueno[c], 0);
-  assert.equal(E.reinos[0].stock.Caballos, 0);
+  assert.deepEqual(pilaDe(E, c, 0), [0, 0, 3, 0]);
+  assert.deepEqual(pilaDe(E, a, 0), [10, 0, 1, 0]);
   const d3 = distancias(E.mapa.regs, a);
   const lejos = d3.findIndex((x) => x >= 3 && x < 99);
-  fijarTropas(E, a, 10); E.reinos[0].stock.Caballos = 9;
-  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(lejos)} 3`] } });
+  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(lejos)} J1`] } });
   assert.equal(ctx.descartes[0][0].motivo, 'la region de destino no es vecina');
 });
 
@@ -160,14 +163,14 @@ test('un reino que ya cayo no mueve ni recibe llamadas: sus movimientos se ignor
 
 // ---- Lo que registra cada combate para la escena del video (solo datos: los campos de siempre no cambian) ----
 
-test('un combate de dos bandos registra bandos, terreno, fortaleza, resultado y tropas que quedan', () => {
+test('un combate de dos bandos registra bandos (con sus unidades por tipo), terreno, fortaleza, resultado y tropas que quedan', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 9); E.fort[d] = 1; E.mapa.regs[d].terr = 'll'; // defensa 9 x 1.5 = 13.5
-  fijarTropas(E, a, 12); E.reinos[0].armas = 1; // ataque 11 x 1.25 = 13.75
+  fijarTropas(E, a, 12); E.reinos[0].mejoras[0] = 1; // ataque 11 x 1.25 = 13.75
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 11`] } });
   assert.deepEqual(ctx.combates, [{
     d, k: 0, perdidas: 19, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
-    bandos: [{ k: 0, n: 11, f: 13.75, defensor: false, armas: 1 }, { k: 1, n: 9, f: 13.5, defensor: true, armas: 0 }],
+    bandos: [{ k: 0, n: 11, f: 13.75, defensor: false, armas: 1, uni: [11, 0, 0, 0] }, { k: 1, n: 9, f: 13.5, defensor: true, armas: 0, uni: [9, 0, 0, 0] }],
   }]);
 });
 
@@ -243,22 +246,20 @@ test('una conquista sin lucha (region con dueno pero sin tropas) no registra com
 function saltoCon(medio, pacto = false) {
   const E = nuevoEstado(4), [a, , c] = dosPasos(E), regs = E.mapa.regs;
   const comunes = regs[a].vecinos.filter((v) => regs[c].vecinos.includes(v));
-  E.dueno[a] = 0; fijarTropas(E, a, 10); E.dueno[c] = -1; fijarTropas(E, c, 0); E.fort[c] = 0; E.edif[c] = null;
+  E.dueno[a] = 0; fijarTropas(E, a, 10); sumarUni(E, a, 0, 2, 3); E.dueno[c] = -1; fijarTropas(E, c, 0); E.fort[c] = 0; E.edif[c] = null; // 10 Lanceros y 3 Jinetes
   for (const w of comunes) { E.dueno[w] = medio; fijarTropas(E, w, medio < 0 ? 0 : 3); E.edif[w] = null; }
   if (pacto) E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 1; // vigente en el turno 1
-  E.reinos[0].stock.Caballos = 9;
-  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 3`] } });
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} J3`] } });
   return { E, ctx, c };
 }
 
-test('con Caballos no se cruza territorio de otro reino: la orden se descarta y la region de destino no se toca', () => {
+test('los Jinetes no cruzan territorio de otro reino: la orden se descarta y la region de destino no se toca', () => {
   const { E, ctx, c } = saltoCon(1);
   assert.equal(ctx.descartes[0][0].motivo, 'no puedes cruzar territorio de otro reino');
   assert.equal(E.dueno[c], -1);
-  assert.equal(E.reinos[0].stock.Caballos, 9, 'no se gastan Caballos en una orden descartada');
 });
 
-test('con Caballos se cruza una region propia, una libre o una de un aliado con pacto vigente', () => {
+test('los Jinetes cruzan una region propia, una libre o una de un aliado con pacto vigente', () => {
   for (const [nombre, medio, pacto] of [['propia', 0, false], ['libre', -1, false], ['de un aliado', 1, true]]) {
     const { E, ctx, c } = saltoCon(medio, pacto);
     assert.deepEqual(ctx.descartes[0], [], `medio ${nombre}: la orden debia valer`);
@@ -271,8 +272,8 @@ test('el salto vale si AL MENOS UNA region intermedia se puede cruzar', () => {
   const comunes = regs[a].vecinos.filter((v) => regs[c].vecinos.includes(v));
   E.dueno[a] = 0; fijarTropas(E, a, 10); E.dueno[c] = -1; fijarTropas(E, c, 0); E.fort[c] = 0; E.edif[c] = null;
   comunes.forEach((w, i) => { E.dueno[w] = i === 0 ? -1 : 1; fijarTropas(E, w, i === 0 ? 0 : 3); E.edif[w] = null; });
-  E.reinos[0].stock.Caballos = 9;
-  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 3`] } });
+  sumarUni(E, a, 0, 2, 3);
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} J3`] } });
   assert.deepEqual(ctx.descartes[0], []);
   assert.equal(E.dueno[c], 0);
 });
@@ -289,4 +290,60 @@ test('mover ... todo lleva todas las tropas menos 1; con 1 sola tropa no hay nad
   const ctx = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} todo`] } });
   assert.equal(ctx.descartes[0][0].motivo, 'no hay tropas de sobra: debe quedar al menos 1 en la region de origen');
   assert.equal(E2.dueno[d2], -1);
+});
+
+// ---- Guerra 2.0.0, etapa 3: unidades en las ordenes de movimiento ----
+
+test('mover con tipos lleva exactamente esas unidades; pedir las que no hay se descarta', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  fijarTropas(E, a, 6); sumarUni(E, a, 0, 1, 3); // 6 Lanceros y 3 Arqueros
+  let ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} J1`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'no tienes esas unidades en la region de origen');
+  ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L4 A2`] } });
+  assert.deepEqual(ctx.descartes[0], []);
+  assert.deepEqual(pilaDe(E, d, 0), [4, 2, 0, 0]);
+  assert.deepEqual(pilaDe(E, a, 0), [2, 1, 0, 0]);
+  assert.deepEqual(ctx.movs, [{ f: a, d, n: 6, k: 0, uni: [4, 2, 0, 0] }]);
+});
+
+test('mover todo deja la unidad mas barata (la de menor indice) y lleva el resto', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  fijarTropas(E, a, 3); sumarUni(E, a, 0, 1, 2); sumarUni(E, a, 0, 2, 1);
+  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} todo`] } });
+  assert.deepEqual(pilaDe(E, a, 0), [1, 0, 0, 0]);
+  assert.deepEqual(pilaDe(E, d, 0), [2, 2, 1, 0]);
+  const E2 = nuevoEstado(4), [a2, d2] = frontera(E2, 0, -1);
+  fijarTropas(E2, a2, 0); sumarUni(E2, a2, 0, 1, 2); sumarUni(E2, a2, 0, 2, 1); // sin Lanceros: se queda 1 Arquero
+  mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} todo`] } });
+  assert.deepEqual(pilaDe(E2, a2, 0), [0, 1, 0, 0]);
+  assert.deepEqual(pilaDe(E2, d2, 0), [0, 1, 1, 0]);
+});
+
+test('la region de origen no puede quedar sin unidades aunque se pidan todas las de un tipo', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  fijarTropas(E, a, 5);
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L5`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'debe quedar al menos 1 tropa en la region de origen');
+  assert.equal(E.dueno[d], -1);
+});
+
+test('el dominio decide la batalla: 6 Jinetes contra 12 Lanceros que los dominan pierden aunque suman mas fuerza', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; fijarTropas(E, d, 12); E.fort[d] = 0; E.mapa.regs[d].terr = 'll'; // defensa 12 x 1 x 1 = 12 (los Jinetes atacantes no la dominan)
+  fijarTropas(E, a, 1); sumarUni(E, a, 0, 2, 6); // 6 Jinetes atacan: 18 de fuerza, pero cada Lancero rinde x2 contra ellos: 24
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} J6`] } });
+  assert.equal(E.dueno[d], 1, 'los Lanceros defienden');
+  assert.equal(ctx.combates[0].resultado, 'repelido');
+  assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, b.f]), [[1, 24], [0, 18]]);
+  assert.deepEqual(pilaDe(E, d, 1), [3, 0, 0, 0]); // floor(12 x (1 - 18/24))
+});
+
+test('una captura deja en la region las unidades que sobreviven, con su composicion', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.dueno[d] = 1; fijarTropas(E, d, 4); E.fort[d] = 0; E.mapa.regs[d].terr = 'll'; // defensa 4
+  fijarTropas(E, a, 1); sumarUni(E, a, 0, 1, 6); sumarUni(E, a, 0, 0, 3); // 4 Lanceros + 6 Arqueros atacan: los Arqueros dominan a los Lanceros (x2)
+  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L3 A6`] } });
+  assert.equal(E.dueno[d], 0);
+  assert.deepEqual(pilaDe(E, d, 0), [2, 5, 0, 0]); // fuerza 3 + 24 = 27 contra 4: conserva el 85 % (floor)
+  assert.deepEqual(pilaDe(E, d, 1), [0, 0, 0, 0], 'el dueno anterior no deja unidades');
 });

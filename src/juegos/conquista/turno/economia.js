@@ -1,7 +1,8 @@
 // Fases economicas del turno: recoleccion, honor, hambre, ordenes de gasto, regalos y comercio.
 
-import { regionesDe, totalTropas, contarEdificios, tropasDe, sumarUni } from '../estado.js';
-import { COMIDA, HONOR, TURNOS, FORTALEZA, ARMAS, MERCENARIOS, MAX_EDIFICIOS_POR_TIPO, MARAVILLA, EDIFICIOS } from '../constantes.js';
+import { regionesDe, contarEdificios, sumarUni, uniDe, pila as pilaDe, totalPila } from '../estado.js';
+import { COMIDA, HONOR, TURNOS, FORTALEZA, MEJORAS, MERCENARIOS, MAX_EDIFICIOS_POR_TIPO, MARAVILLA, EDIFICIOS, CUARTEL, N_TIPOS } from '../constantes.js';
+import { costoDePila, racionesDe } from '../unidades.js';
 
 // 1. Recoleccion: nodos de recurso, cosecha base, granjas y mercados (la mitad si estan danados).
 export function recoleccion(ctx) {
@@ -34,30 +35,39 @@ export function honorYPactos(ctx) {
   for (const r of R) if (r.deshonrado && r.honor > HONOR.deshonrado) r.deshonrado = false;
 }
 
-// 3. Hambre: cada 4 tropas comen 1 Comida; si falta, desertan el 10% (minimo 1 por region, nunca la ultima tropa).
+// 3. Hambre: cada 4 raciones comen 1 Comida (Jinetes e Ingenios pesan 2); si falta, desertan el 10% de cada pila (minimo 1; en una region propia nunca la ultima unidad), primero los Lanceros.
 export function hambre(ctx) {
   const { E, R, NR } = ctx;
   for (const reino of R) {
     if (!reino.vivo) continue;
-    const necesita = Math.ceil(totalTropas(E, reino.s) / COMIDA.tropasPorRacion);
+    let raciones = 0;
+    for (let r = 0; r < NR; r++) raciones += racionesDe(pilaDe(E, r, reino.s));
+    const necesita = Math.ceil(raciones / COMIDA.tropasPorRacion);
     if (reino.stock.Comida >= necesita) { reino.stock.Comida -= necesita; continue; }
     reino.stock.Comida = 0;
     let perdidas = 0;
     for (let r = 0; r < NR; r++) {
-      if (E.dueno[r] !== reino.s || tropasDe(E, r) <= 1) continue;
-      const d = Math.min(tropasDe(E, r) - 1, Math.max(1, Math.round(tropasDe(E, r) * COMIDA.deserta)));
-      sumarUni(E, r, reino.s, 0, -d); perdidas += d;
+      const total = totalPila(E, r, reino.s), minimo = E.dueno[r] === reino.s ? 1 : 0;
+      if (total <= minimo) continue;
+      let d = Math.min(total - minimo, Math.max(1, Math.round(total * COMIDA.deserta)));
+      perdidas += d;
+      for (let t = 0; t < N_TIPOS && d > 0; t++) { const q = Math.min(d, uniDe(E, r, reino.s, t)); sumarUni(E, r, reino.s, t, -q); d -= q; }
     }
     if (perdidas) ctx.evt({ tipo: 'hambre', k: reino.s, n: perdidas });
   }
 }
 
+// Reclutar una pila de unidades en una region propia: se paga lo que suman sus tipos (cuartel: la mitad; danado: tres cuartos). Los Ingenios solo se reclutan donde hay cuartel.
 function reclutar(ctx, s, o) {
   const { E, R } = ctx;
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
-  const f = E.edif[o.region] === 'cuartel' ? (E.dan[o.region] ? 0.75 : 0.5) : 1, costo = Math.ceil(o.n * f);
-  if (R[s].stock.Comida < costo) return 'Comida insuficiente';
-  R[s].stock.Comida -= costo; sumarUni(E, o.region, s, 0, o.n);
+  const cuartel = E.edif[o.region] === 'cuartel';
+  if (o.pila[3] > 0 && !cuartel) return 'los Ingenios solo se reclutan en una region con cuartel';
+  const costo = costoDePila(o.pila, cuartel ? (E.dan[o.region] ? CUARTEL.danado : CUARTEL.entero) : 1);
+  const falta = Object.entries(costo).find(([rec, v]) => R[s].stock[rec] < v);
+  if (falta) return `${falta[0]} insuficiente`;
+  ctx.pagar(s, costo);
+  for (let t = 0; t < N_TIPOS; t++) if (o.pila[t]) sumarUni(E, o.region, s, t, o.pila[t]);
   return null;
 }
 function contratar(ctx, s, o, usados) {
@@ -79,11 +89,14 @@ function fortificar(ctx, s, o) {
   ctx.pagar(s, costo); E.fort[o.region] = nivel + 1;
   return null;
 }
-function armar(ctx, s) {
-  const { R } = ctx;
-  if (R[s].armas >= ARMAS.maximo) return 'las armas ya estan al maximo';
-  if (!ctx.puede(s, ARMAS.costo)) return 'recursos insuficientes para armar';
-  ctx.pagar(s, ARMAS.costo); R[s].armas++;
+// Mejora de un tipo de unidad (+25 % de fuerza a todas las de ese tipo, 2 niveles): hace falta un cuartel propio.
+function mejorar(ctx, s, o) {
+  const { E, R } = ctx, nivel = R[s].mejoras[o.unidad];
+  if (nivel >= MEJORAS.maximo) return 'esa mejora ya esta al maximo';
+  if (contarEdificios(E, s, 'cuartel') < 1) return 'hace falta un cuartel para mejorar';
+  const costo = MEJORAS.costo[nivel];
+  if (!ctx.puede(s, costo)) return 'recursos insuficientes para mejorar';
+  ctx.pagar(s, costo); R[s].mejoras[o.unidad] = nivel + 1;
   return null;
 }
 function construir(ctx, s, o) {
@@ -145,7 +158,7 @@ export function ordenesEconomicas(ctx) {
         case 'reclutar': motivo = reclutar(ctx, s, o); break;
         case 'mercenarios': motivo = contratar(ctx, s, o, mercenarios); if (!motivo) mercenarios += o.n; break;
         case 'fortificar': motivo = fortificar(ctx, s, o); break;
-        case 'armar': motivo = armar(ctx, s); break;
+        case 'mejorar': motivo = mejorar(ctx, s, o); break;
         case 'construir': motivo = construir(ctx, s, o); break;
         case 'regalar': motivo = regalar(ctx, s, o); break;
         case 'ofrecer': motivo = ofrecer(ctx, s, o, ofertas); if (!motivo) ofertas++; break;

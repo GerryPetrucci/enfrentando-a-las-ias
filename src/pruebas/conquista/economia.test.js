@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nuevoEstado, contexto, R, capital, fijarTropas, tropasDe } from './ayudas.js';
-import { regionesDe } from '../../juegos/conquista/estado.js';
+import { regionesDe, sumarUni, pila as pilaDe } from '../../juegos/conquista/estado.js';
 import { recoleccion, honorYPactos, hambre, ordenesEconomicas, entregas } from '../../juegos/conquista/turno/economia.js';
 
 const vaciar = (E, s, extra = {}) => { E.reinos[s].stock = { Comida: 0, Madera: 0, Roca: 0, Hierro: 0, Oro: 0, Caballos: 0, ...extra }; };
@@ -124,14 +124,75 @@ test('fortificar sube nivel a nivel y la muralla (nivel 3) cuesta 6 Roca + 3 Hie
   assert.equal(ctx.descartes[0].length, 1); // la tercera: ya esta al maximo
 });
 
-test('armar: cuesta 4 Hierro + 2 Madera y se puede 2 veces', () => {
-  const E = nuevoEstado(4);
-  vaciar(E, 0, { Hierro: 20, Madera: 20 });
-  const ctx = correr(E, { 0: { ordenes: ['armar', 'armar', 'armar'] } });
-  assert.equal(E.reinos[0].armas, 2);
-  assert.equal(E.reinos[0].stock.Hierro, 12);
-  assert.equal(E.reinos[0].stock.Madera, 16);
-  assert.equal(ctx.descartes[0].length, 1);
+test('mejorar: +1 nivel al tipo, 3 Hierro + 2 Oro y luego 5 Hierro + 4 Oro, maximo 2 niveles y hace falta un cuartel', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  vaciar(E, 0, { Hierro: 20, Oro: 20 });
+  let ctx = correr(E, { 0: { ordenes: ['mejorar L'] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'hace falta un cuartel para mejorar');
+  assert.deepEqual(E.reinos[0].mejoras, [0, 0, 0, 0]);
+  E.edif[c] = 'cuartel';
+  ctx = correr(E, { 0: { ordenes: ['mejorar L', 'mejorar L', 'mejorar L', 'mejorar a'] } });
+  assert.deepEqual(E.reinos[0].mejoras, [2, 1, 0, 0]);
+  assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['esa mejora ya esta al maximo']);
+  assert.equal(E.reinos[0].stock.Hierro, 20 - 3 - 5 - 3);
+  assert.equal(E.reinos[0].stock.Oro, 20 - 2 - 4 - 2);
+  vaciar(E, 0, { Hierro: 2, Oro: 20 });
+  ctx = correr(E, { 0: { ordenes: ['mejorar J'] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'recursos insuficientes para mejorar');
+});
+
+test('reclutar por tipo: cada tipo cuesta lo suyo y se suman los recursos', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  vaciar(E, 0, { Comida: 20, Madera: 5, Caballos: 3 });
+  const ctx = correr(E, { 0: { ordenes: [`reclutar ${R(c)} L3 A2 J1`] } });
+  assert.deepEqual(ctx.descartes[0], []);
+  assert.deepEqual(pilaDe(E, c, 0), [13, 2, 1, 0]);
+  assert.deepEqual(E.reinos[0].stock, { Comida: 20 - 6, Madera: 3, Roca: 0, Hierro: 0, Oro: 0, Caballos: 2 });
+});
+
+test('reclutar falla con el nombre del recurso que falta, y no gasta nada', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  vaciar(E, 0, { Comida: 20, Madera: 5, Caballos: 0 });
+  const ctx = correr(E, { 0: { ordenes: [`reclutar ${R(c)} J2`, `reclutar ${R(c)} A9`] } });
+  assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['Caballos insuficiente', 'Madera insuficiente']);
+  assert.deepEqual(pilaDe(E, c, 0), [10, 0, 0, 0]);
+  assert.equal(E.reinos[0].stock.Comida, 20);
+});
+
+test('los Ingenios solo se reclutan en una region con cuartel, y cuestan Comida + Madera + Roca + Hierro (cuartel: la mitad)', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  vaciar(E, 0, { Comida: 10, Madera: 10, Roca: 10, Hierro: 10 });
+  let ctx = correr(E, { 0: { ordenes: [`reclutar ${R(c)} I2`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'los Ingenios solo se reclutan en una region con cuartel');
+  E.edif[c] = 'cuartel';
+  ctx = correr(E, { 0: { ordenes: [`reclutar ${R(c)} I3`] } });
+  assert.deepEqual(ctx.descartes[0], []);
+  assert.deepEqual(pilaDe(E, c, 0), [10, 0, 0, 3]);
+  assert.deepEqual(E.reinos[0].stock, { Comida: 8, Madera: 8, Roca: 8, Hierro: 8, Oro: 0, Caballos: 0 }); // ceil(3 x 0.5) = 2 de cada uno
+});
+
+test('hambre por tipo: Jinetes e Ingenios pesan doble en las raciones y desertan primero los Lanceros', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  for (const r of regionesDe(E, 0)) if (r !== c) fijarTropas(E, r, 1);
+  fijarTropas(E, c, 8); sumarUni(E, c, 0, 2, 2); sumarUni(E, c, 0, 3, 1); // 8 L + 2 J + 1 I = 8 + 4 + 2 = 14 raciones
+  const otras = regionesDe(E, 0).length - 1;
+  vaciar(E, 0, { Comida: 10 });
+  hambre(contexto(E));
+  assert.equal(E.reinos[0].stock.Comida, 10 - Math.ceil((14 + otras) / 4));
+  vaciar(E, 0);
+  const ctx = contexto(E);
+  hambre(ctx);
+  assert.deepEqual(pilaDe(E, c, 0), [7, 0, 2, 1], 'solo 1 de 11 unidades (10 %): un Lancero');
+  assert.equal(ctx.eventos.find((e) => e.tipo === 'hambre' && e.k === 0).n, 1);
+});
+
+test('la desercion no acaba con las unidades caras mientras queden Lanceros, y deja siempre 1 unidad en una region propia', () => {
+  const E = nuevoEstado(4), c = capital(E, 0);
+  for (const r of regionesDe(E, 0)) if (r !== c) fijarTropas(E, r, 1);
+  fijarTropas(E, c, 1); sumarUni(E, c, 0, 2, 19); // 1 Lancero y 19 Jinetes: 20 unidades, 10 % = 2
+  vaciar(E, 0);
+  hambre(contexto(E));
+  assert.deepEqual(pilaDe(E, c, 0), [0, 0, 18, 0], 'se va el Lancero y despues 1 Jinete');
 });
 
 test('construir edificios: uno por region, maximo 3 de cada tipo, con su costo', () => {

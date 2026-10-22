@@ -77,12 +77,12 @@ test('mismo seed y mismos bots (incluido el azar): la misma partida, turno por t
 });
 
 test('el registro de cada turno trae lo que el espectador necesita: razon, ordenes, pacto y la causa si algo fallo', async () => {
-  const valido = { ...resolverAgente('pacifico', conquista), necesitaEstado: false, async jugar() { return { respuesta: { ordenes: ['armar'], pacto_con: 'Ambar', razon: 'por si acaso' }, crudo: 'texto', uso: null }; } };
+  const valido = { ...resolverAgente('pacifico', conquista), necesitaEstado: false, async jugar() { return { respuesta: { ordenes: ['mejorar L'], pacto_con: 'Ambar', razon: 'por si acaso' }, crudo: 'texto', uso: null }; } };
   const basura = { ...resolverAgente('azar', conquista), necesitaEstado: false, async jugar() { return { respuesta: 'hola', crudo: 'x'.repeat(1000), uso: null }; } };
   const roto = { ...resolverAgente('azar', conquista), necesitaEstado: false, async jugar() { throw new Error('se cayo la red'); } };
   const r = await correrPartida({ juego: conquista, agentes: [valido, basura, roto], seed: 1, maxRondas: 1 });
   const [x] = r.rondas;
-  assert.deepEqual(x.respuestas[0], { ordenes: ['armar'], pactoCon: 1, razon: 'por si acaso', invalida: false, motivo: null, crudo: null });
+  assert.deepEqual(x.respuestas[0], { ordenes: ['mejorar L'], pactoCon: 1, razon: 'por si acaso', invalida: false, motivo: null, crudo: null });
   assert.equal(x.respuestas[1].invalida, true);
   assert.ok(x.respuestas[1].motivo);
   assert.equal(x.respuestas[1].crudo.length, 400);

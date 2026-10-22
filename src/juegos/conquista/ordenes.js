@@ -3,6 +3,7 @@
 // se valida despues, con el estado, en las fases del turno.
 
 import { RECURSOS, NOMBRES_REINOS, MAX_ORDENES, MAX_PRIVADOS, LARGO_MENSAJE, LARGO_NOTA, LARGO_RAZON } from './constantes.js';
+import { unidadDeTexto, sumaPila } from './unidades.js';
 
 export const limpiar = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -21,35 +22,73 @@ export const nombresDeLaPartida = (E) => {
 const recurso = (t) => RECURSOS_POR_NOMBRE.get(t) ?? null;
 const entero = (t) => (/^\d{1,4}$/.test(t ?? '') && Number(t) >= 1 ? Number(t) : null);
 
+// Unidades escritas como "L4", "4L", "L 4", "lancero 4", "4 lanceros", "L4 A2" (tambien separadas por comas) o solo un numero (= Lanceros, la forma de 1.x).
+// -> la pila [Lanceros, Arqueros, Jinetes, Ingenios], o null si algo no se entiende o no hay ninguna unidad.
+function pilaDeTokens(crudos) {
+  // "l4a2" se lee como "l4" "a2"; "4l3a" como "4l" "3a"
+  const tokens = crudos.flatMap((x) => (/^(?:[a-z]+\d{1,4}|\d{1,4}[a-z]+){2,}$/.test(x) ? x.match(/[a-z]+\d{1,4}|\d{1,4}[a-z]+/g) : [x]));
+  if (!tokens.length) return null;
+  const pila = [0, 0, 0, 0], num = (x) => (/^\d{1,4}$/.test(x ?? '') ? Number(x) : null);
+  let i = 0;
+  while (i < tokens.length) {
+    const t = tokens[i];
+    let m;
+    if (num(t) !== null) { // "4 L" / "4 lanceros", o un numero solo
+      const tipo = unidadDeTexto(tokens[i + 1]);
+      if (tipo !== null) { pila[tipo] += num(t); i += 2; continue; }
+      if (tokens.length === 1) { pila[0] += num(t); i += 1; continue; }
+      return null;
+    }
+    if ((m = /^([a-z]+)(\d{1,4})$/.exec(t)) && unidadDeTexto(m[1]) !== null) { pila[unidadDeTexto(m[1])] += Number(m[2]); i += 1; continue; } // "L4"
+    if ((m = /^(\d{1,4})([a-z]+)$/.exec(t)) && unidadDeTexto(m[2]) !== null) { pila[unidadDeTexto(m[2])] += Number(m[1]); i += 1; continue; } // "4L"
+    if (unidadDeTexto(t) !== null) { // "L 4"
+      const n = num(tokens[i + 1]);
+      if (n === null) return null;
+      pila[unidadDeTexto(t)] += n; i += 2; continue;
+    }
+    return null;
+  }
+  return sumaPila(pila) > 0 ? pila : null;
+}
+
 const ok = (orden) => ({ ok: true, orden });
 const mal = (motivo) => ({ ok: false, motivo });
 const uso = (u) => mal(`faltan o sobran datos (uso: ${u})`);
 const campo = (que, valor) => mal(`${que} invalido: "${String(valor).slice(0, 30)}"`);
 
 export function parsearOrden(texto, reinos = REINOS) {
-  const t = limpiar(texto).split(' ').filter(Boolean);
+  const t = limpiar(texto).replace(/[,;]+/g, ' ').split(' ').filter(Boolean);
   const verbo = t[0];
   const reino = (nombre) => { const i = reinos.indexOf(nombre); return i >= 0 ? i : null; };
   switch (verbo) {
-    case 'armar':
-      return t.length === 1 ? ok({ tipo: 'armar' }) : uso('armar');
-    case 'reclutar':
     case 'mercenarios': {
-      if (t.length !== 3) return uso(`${verbo} REGION N`);
+      if (t.length !== 3) return uso('mercenarios REGION N');
       const r = region(t[1]), n = entero(t[2]);
       if (r === null) return campo('region', t[1]);
       if (n === null) return campo('cantidad', t[2]);
       return ok({ tipo: verbo, region: r, n });
     }
+    case 'reclutar': {
+      if (t.length < 3) return uso('reclutar REGION TIPO N');
+      const r = region(t[1]), pila = pilaDeTokens(t.slice(2));
+      if (r === null) return campo('region', t[1]);
+      if (pila === null) return campo('unidades', t.slice(2).join(' '));
+      return ok({ tipo: 'reclutar', region: r, pila, n: sumaPila(pila) });
+    }
     case 'mover': {
-      if (t.length !== 4) return uso('mover DESDE HASTA N (o todo)');
+      if (t.length < 4) return uso('mover DESDE HASTA TIPO N (o todo)');
       const de = region(t[1]), a = region(t[2]);
       if (de === null) return campo('region de origen', t[1]);
       if (a === null) return campo('region de destino', t[2]);
-      if (t[3] === 'todo') return ok({ tipo: 'mover', de, a, todo: true }); // todas las tropas menos 1 (la que debe quedar)
-      const n = entero(t[3]);
-      if (n === null) return campo('cantidad', t[3]);
-      return ok({ tipo: 'mover', de, a, n });
+      if (t.length === 4 && t[3] === 'todo') return ok({ tipo: 'mover', de, a, todo: true }); // todas las unidades menos 1 (la que debe quedar)
+      const pila = pilaDeTokens(t.slice(3));
+      if (pila === null) return campo('unidades', t.slice(3).join(' '));
+      return ok({ tipo: 'mover', de, a, pila, n: sumaPila(pila) });
+    }
+    case 'mejorar': {
+      if (t.length !== 2) return uso('mejorar TIPO');
+      const unidad = unidadDeTexto(t[1]);
+      return unidad === null ? campo('tipo de unidad', t[1]) : ok({ tipo: 'mejorar', unidad });
     }
     case 'fortificar': {
       if (t.length !== 2) return uso('fortificar REGION');

@@ -2,8 +2,9 @@
 // aqui se decide que sabe cada reino. Solo entran los datos propios del reino i y los publicos. Nunca almacenes,
 // armas, notas, privados ni ofertas de otros reinos.
 
-import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS } from './constantes.js';
-import { nombreRegion, tropasDe } from './estado.js';
+import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES } from './constantes.js';
+import { nombreRegion, pila as pilaDe } from './estado.js';
+import { sumaPila } from './unidades.js';
 
 const SEP = ' | ';
 
@@ -11,14 +12,17 @@ function mapaFijo(E) {
   return E.mapa.regs.map((r) => `${r.nombre} ${r.terr}${r.rec ? '+' + r.rec : ''}: ${r.vecinos.map((v) => nombreRegion(v)).join(' ')}`).join('\n');
 }
 
-// region(tropas, fN, edificio): g = granja, m = mercado, c = cuartel; el guion marca el edificio danado
+// Una pila de unidades como "L5A3" (letra del tipo y cantidad, sin los tipos que no hay); "0" si no hay ninguna.
+export const pilaTexto = (p) => (sumaPila(p) ? UNIDADES.map((u, t) => (p[t] ? u.id + p[t] : '')).join('') : '0');
+
+// region(unidades, fN, edificio): L5A3 = 5 Lanceros y 3 Arqueros; g = granja, m = mercado, c = cuartel; el guion marca el edificio danado
 function ocupacion(E) {
   return E.reinos.map((reino) => {
     const lista = [];
     for (let i = 0; i < E.dueno.length; i++) {
       if (E.dueno[i] !== reino.s) continue;
       const ed = E.edif[i] ? ',' + EDIFICIOS[E.edif[i]].letra + (E.dan[i] ? '-' : '') : '';
-      lista.push(`${nombreRegion(i)}(${tropasDe(E, i)}${E.fort[i] ? ',f' + E.fort[i] : ''}${ed})`);
+      lista.push(`${nombreRegion(i)}(${pilaTexto(pilaDe(E, i, reino.s))}${E.fort[i] ? ',f' + E.fort[i] : ''}${ed})`);
     }
     return `${reino.nombre}${reino.vivo ? '' : ' (cayo)'}: ${lista.join(' ')}`;
   });
@@ -30,7 +34,7 @@ export function vistaTexto(E, i) {
   L.push('Capitales: ' + R.map((r) => `${r.nombre} ${nombreRegion(r.capital)}`).join(SEP));
   L.push('Honor: ' + R.map((r) => `${r.nombre} ${r.honor}`).join(SEP));
   L.push(E.maravilla ? `Maravilla de ${R[E.maravilla.k].nombre} en ${nombreRegion(E.maravilla.r)} (faltan ${Math.max(0, MARAVILLA.turnos - E.maravilla.n)} turnos)` : 'Maravilla: ninguna');
-  L.push(`Tu almacen: ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}armas nivel ${yo.armas}`);
+  L.push(`Tu almacen: ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}mejoras ${UNIDADES.map((u, t) => u.id + yo.mejoras[t]).join(' ')}`);
   const pactos = R.filter((r) => r.s !== i && yo.pactos[r.s] >= t).map((r) => `${r.nombre} (hasta el turno ${yo.pactos[r.s]})`);
   const abierta = yo.propuestaPrevia !== null && !(yo.pactos[yo.propuestaPrevia] >= t) ? ` Tu propuesta abierta: ${R[yo.propuestaPrevia].nombre}.` : '';
   L.push(`Pactos vigentes: ${pactos.length ? pactos.join(', ') : 'ninguno'}.${abierta}`);
@@ -39,7 +43,7 @@ export function vistaTexto(E, i) {
   if (yo.privIn.length) L.push('Privados recibidos: ' + yo.privIn.map((p) => `${R[p.de].nombre}: "${p.texto}"`).join(SEP));
   if (E.mensajesPrevios.length) L.push('Mensajes publicos: ' + E.mensajesPrevios.map((m) => `${R[m.k].nombre}: "${m.texto}"`).join(SEP));
   if (E.regalosPrevios[i].length) L.push('Regalos recibidos: ' + E.regalosPrevios[i].map((g) => `${R[g.de].nombre} te regalo ${g.n} ${g.recurso}`).join(SEP));
-  L.push('', 'MAPA (terreno, recurso y vecinas):', mapaFijo(E), '', 'OCUPACION (region(tropas, fN, edificio; - = danado)):', ...ocupacion(E).map((l, s) => (s === i ? l.replace(':', ' (tu):') : l)), 'Sin dueno: el resto.', '');
+  L.push('', 'MAPA (terreno, recurso y vecinas):', mapaFijo(E), '', 'OCUPACION (region(unidades, fN, edificio; - = danado)):', ...ocupacion(E).map((l, s) => (s === i ? l.replace(':', ' (tu):') : l)), 'Sin dueno: el resto.', '');
   L.push('Sucedio el turno anterior: ' + (E.resumenPrevio.length ? E.resumenPrevio.join('. ') + '.' : 'nada notable.'));
   return L.join('\n');
 }

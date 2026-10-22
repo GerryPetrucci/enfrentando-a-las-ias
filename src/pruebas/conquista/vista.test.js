@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { nuevoEstado, R, vistasDePartida } from './ayudas.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
+import { sumarUni } from '../../juegos/conquista/estado.js';
 import { resumenPublico } from '../../juegos/conquista/texto.js';
 
 test('la vista trae lo tuyo y lo publico', () => {
@@ -11,7 +12,7 @@ test('la vista trae lo tuyo y lo publico', () => {
   assert.match(v, /Capitales: Azur R\d\d/);
   assert.ok(v.includes('Honor: Azur 5 | Ambar 5 | Violeta 5 | Rosa 5'));
   assert.match(v, /Maravilla: ninguna/);
-  assert.ok(v.includes('Tu almacen: Comida 6 | Madera 4 | Roca 2 | Hierro 0 | Oro 4 | Caballos 0 | armas nivel 0'));
+  assert.ok(v.includes('Tu almacen: Comida 6 | Madera 4 | Roca 2 | Hierro 0 | Oro 4 | Caballos 0 | mejoras L0 A0 J0 I0'));
   assert.match(v, /Pactos vigentes: ninguno/);
   assert.match(v, /Tu nota del turno anterior: \(ninguna\)/);
   assert.match(v, /MAPA \(terreno, recurso y vecinas\):\nR01 /);
@@ -19,10 +20,12 @@ test('la vista trae lo tuyo y lo publico', () => {
   assert.match(v, /Sucedio el turno anterior: nada notable\./);
 });
 
-test('la ocupacion muestra tropas, fortaleza y edificio, y marca el danado', () => {
+test('la ocupacion muestra las unidades por tipo, la fortaleza y el edificio, y marca el danado', () => {
   const E = nuevoEstado(4), c = E.reinos[0].capital;
   E.edif[c] = 'granja'; E.dan[c] = 1;
-  assert.ok(vistaTexto(E, 1).includes(`${R(c)}(10,f1,g-)`));
+  assert.ok(vistaTexto(E, 1).includes(`${R(c)}(L10,f1,g-)`));
+  sumarUni(E, c, 0, 1, 4); sumarUni(E, c, 0, 3, 1);
+  assert.ok(vistaTexto(E, 1).includes(`${R(c)}(L10A4I1,f1,g-)`), 'los tipos que no hay no aparecen');
 });
 
 test('la vista de un reino no contiene secretos de los rivales', () => {
@@ -30,18 +33,18 @@ test('la vista de un reino no contiene secretos de los rivales', () => {
   E.reinos[1].stock.Comida = 7771; E.reinos[1].nota = 'CENTINELA-NOTA-1';
   E.reinos[2].privIn = [{ de: 3, texto: 'CENTINELA-PRIV-2' }];
   E.reinos[2].ofertasIn = [{ de: 0, doy: 'Hierro', dc: 7, pido: 'Madera', pc: 7772 }];
-  E.reinos[3].stock.Oro = 7773; E.reinos[3].armas = 2;
+  E.reinos[3].stock.Oro = 7773; E.reinos[3].mejoras[0] = 2;
   const v0 = vistaTexto(E, 0);
   for (const c of ['7771', 'CENTINELA-NOTA-1', 'CENTINELA-PRIV-2', '7772', '7773']) assert.ok(!v0.includes(c), `la vista del reino 0 filtra ${c}`);
-  assert.equal((v0.match(/armas nivel/g) ?? []).length, 1);
-  assert.ok(!/armas nivel 2/.test(v0));
+  assert.equal((v0.match(/mejoras L/g) ?? []).length, 1);
+  assert.ok(!/mejoras L2/.test(v0));
   // cada reino si ve lo suyo
   assert.ok(vistaTexto(E, 1).includes('7771'));
   assert.ok(vistaTexto(E, 1).includes('CENTINELA-NOTA-1'));
   assert.ok(vistaTexto(E, 2).includes('CENTINELA-PRIV-2'));
   assert.ok(vistaTexto(E, 2).includes('Azur te da 7 Hierro por 7772 Madera'));
   assert.ok(vistaTexto(E, 3).includes('7773'));
-  assert.ok(vistaTexto(E, 3).includes('armas nivel 2'));
+  assert.ok(vistaTexto(E, 3).includes('mejoras L2 A0 J0 I0'));
 });
 
 test('lo publico lo ve todo el mundo: mensajes, resumen y estado de la Maravilla; los regalos solo su destinatario', () => {
@@ -85,10 +88,12 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // 18 de octubre de 2026: la huella 2 cambio a proposito con la Maravilla nueva (costo x1.5, 8 turnos; el bot economico la construye cuando alcanza el costo de constantes.js): en esa partida un bot la
 // construye y la vista dice «faltan N turnos» con otra cuenta. Con los valores viejos puestos a mano las tres huellas siguen siendo estas de origen, y los nombres de reino por modelo (nombres.js) no
 // mueven nada en partidas solo de bots: no cambio nada mas de lo que ven las IAs.
+// 22 de octubre de 2026 (Guerra 2.0.0, etapa 3): las huellas cambian A PROPOSITO. La vista ahora muestra las unidades por tipo (R07(L5A3,f1,g)) y las mejoras en vez de las armas, el bot al azar
+// manda ordenes nuevas (mejorar, tipos, todo) y por eso las tres partidas son otras. Huellas anteriores: 53a109e7..., c3ca496d..., 59cba0a4... Cada cambio del texto de las vistas vuelve a mover estas huellas.
 const HUELLAS_DE_LAS_VISTAS = {
-  1: '53a109e7cc9331e97936615ae0125ecc66ded444',
-  2: 'c3ca496d3cfaa029cb8386408d4c80d064f3f4dc',
-  3: '59cba0a43a22a2b3a200b453ae063968feb626fa',
+  1: 'c405e1066c63c7e4d773a1f156720350c883eb95',
+  2: '69a040b431a51417c9b429f4181b0aa1f47a0901',
+  3: '27fe1742029e919266443fbbee5dc58e43a08d9f',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

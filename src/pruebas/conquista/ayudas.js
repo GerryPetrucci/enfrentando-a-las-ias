@@ -69,7 +69,7 @@ export function verificarInvariantes(E) {
   }
   E.reinos.forEach((r, s) => {
     assert.ok(r.honor >= 0 && r.honor <= 10, `honor fuera de rango en ${r.nombre}`);
-    assert.ok(r.armas >= 0 && r.armas <= 2);
+    assert.ok(r.mejoras.length === 4 && r.mejoras.every((x) => Number.isInteger(x) && x >= 0 && x <= 2), `mejoras fuera de rango en ${r.nombre}`);
     for (const [rec, v] of Object.entries(r.stock)) assert.ok(Number.isInteger(v) && v >= 0, `${r.nombre} ${rec}=${v}`);
     if (r.vivo) assert.equal(E.dueno[r.capital], s, `la capital de ${r.nombre} no es suya y sigue vivo`);
     else assert.equal(regionesDe(E, s).length, 0, `${r.nombre} cayo y conserva regiones`);

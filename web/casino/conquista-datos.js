@@ -16,7 +16,7 @@ export const PACTO_TURNOS = 2;
 export const MARAVILLA_TURNOS = 8;
 export const PUNTOS_POSICION = [5, 3, 1, 0, 0];
 export const TERRENO = { ll: 1, bo: 1.25, mo: 1.5 }; // multiplicador de defensa por terreno
-export const BONO_ARMAS = 0.25; // por nivel de armas
+export const BONO_ARMAS = 0.25; // por nivel de mejora de un tipo de unidad (en 1.x era el nivel de armas; la tarjeta aun lo llama «Armas»)
 export const BONO_FORTALEZA = 0.5; // por nivel de fortaleza (la formula de ctx.defensa del motor)
 export const LETRA_DE_EDIFICIO = { g: 'granja', m: 'mercado', c: 'cuartel' }; // lo que guarda registro.estado.edif
 
@@ -74,6 +74,7 @@ export function estadoInicial(partida) {
       dan: Array(NR).fill(0),
       stock: Array.from({ length: k }, () => ({ ...ALMACEN_INICIAL })),
       armas: Array(k).fill(0),
+      mejoras: Array.from({ length: k }, () => [0, 0, 0, 0]),
       honor: Array(k).fill(HONOR_INICIAL),
       vivo: Array(k).fill(true),
       pactos: Array.from({ length: k }, () => Array(k).fill(0)),

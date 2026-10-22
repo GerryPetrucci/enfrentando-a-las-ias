@@ -67,7 +67,7 @@ test('las constantes que usa la escena son las del motor (la web no puede import
   assert.equal(web.PACTO_TURNOS, motor.PACTO_TURNOS);
   assert.equal(web.MARAVILLA_TURNOS, motor.MARAVILLA.turnos);
   assert.deepEqual(web.TERRENO, motor.TERRENO);
-  assert.equal(web.BONO_ARMAS, motor.ARMAS.bono);
+  assert.equal(web.BONO_ARMAS, motor.MEJORAS.bono);
   assert.deepEqual(web.PUNTOS_POSICION, motor.PUNTOS_POSICION);
   assert.deepEqual(web.RECURSOS, motor.RECURSOS);
   assert.deepEqual(web.LETRA_DE_EDIFICIO, Object.fromEntries(Object.entries(motor.EDIFICIOS).map(([nombre, e]) => [e.letra, nombre])));
@@ -78,7 +78,7 @@ test('los multiplicadores que muestra la tarjeta son los de las formulas del com
   const r = E.mapa.regs.find((x) => x.terr === 'mo')?.id ?? 0;
   E.mapa.regs[r].terr = 'mo'; E.dueno[r] = 0; fijarTropas(E, r, 8); E.fort[r] = 2;
   assert.equal(ctx.defensa(r), 8 * web.multiplicadorDeFortaleza(2) * web.TERRENO.mo);
-  E.reinos[0].armas = 2;
+  E.reinos[0].mejoras[0] = 2;
   assert.equal(ctx.ataque(0, 10), 10 * web.multiplicadorDeArmas(2));
   assert.equal(web.multiplicadorDeArmas(0), 1);
   assert.equal(web.multiplicadorDeFortaleza(0), 1);

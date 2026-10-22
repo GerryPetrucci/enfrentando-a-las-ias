@@ -17,7 +17,7 @@ test('crear acepta de 2 a 5 jugadores, vista es texto, activos marca a los vivos
   assert.equal(typeof conquista.vista(E, 1), 'string');
   assert.deepEqual(conquista.activos(E), [true, true, true]);
   assert.equal(conquista.terminado(E), false);
-  const registro = conquista.aplicar(E, [conquista.normalizar({ ordenes: ['armar'] }), null, conquista.normalizar(null)], crearRng(4));
+  const registro = conquista.aplicar(E, [conquista.normalizar({ ordenes: ['mejorar L'] }), null, conquista.normalizar(null)], crearRng(4));
   assert.equal(registro.turno, 1);
   E.reinos[2].vivo = false;
   assert.deepEqual(conquista.activos(E), [true, true, false]);
