@@ -23,6 +23,11 @@ const CASOS = [
   ['mover R07 R12 l2 l3', { tipo: 'mover', de: 6, a: 11, pila: [5, 0, 0, 0], n: 5 }], // el mismo tipo dos veces se suma
   ['mover R07 R12 todo', { tipo: 'mover', de: 6, a: 11, todo: true }],
   ['  MOVER r7 r12 Todo ', { tipo: 'mover', de: 6, a: 11, todo: true }],
+  ['atacar R05', { tipo: 'atacar', region: 4, todo: true }], // atacar donde ya estas: sin lista = todas tus unidades ahi
+  ['  Atacar r5   TODO', { tipo: 'atacar', region: 4, todo: true }],
+  ['atacar R05 L4', { tipo: 'atacar', region: 4, pila: [4, 0, 0, 0], n: 4 }],
+  ['atacar R05 L4 A2', { tipo: 'atacar', region: 4, pila: [4, 2, 0, 0], n: 6 }],
+  ['atacar R05 3 jinetes', { tipo: 'atacar', region: 4, pila: [0, 0, 3, 0], n: 3 }],
   ['fortificar R01', { tipo: 'fortificar', region: 0 }],
   ['mejorar L', { tipo: 'mejorar', unidad: 0 }],
   ['Mejorar Jinetes', { tipo: 'mejorar', unidad: 2 }],
@@ -42,7 +47,7 @@ for (const [texto, esperado] of CASOS) {
   });
 }
 
-const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'mover R01 R02 todos', 'mover R01 R02 todo 3', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar', 'armar 3', 'mejorar', 'mejorar X', 'mejorar L A', 'reclutar R03 L', 'reclutar R03 L0', 'reclutar R03 X4', 'reclutar R03 4 5', 'mover R01 R02 L', 'aceptar'];
+const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'mover R01 R02 todos', 'mover R01 R02 todo 3', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar', 'armar 3', 'mejorar', 'mejorar X', 'mejorar L A', 'reclutar R03 L', 'reclutar R03 L0', 'reclutar R03 X4', 'reclutar R03 4 5', 'mover R01 R02 L', 'aceptar', 'atacar', 'atacar R00', 'atacar R05 todo 3', 'atacar R05 X4', 'atacar R05 L0'];
 for (const texto of MALAS) {
   test(`descarta "${texto}" con un motivo`, () => {
     const r = parsearOrden(texto);

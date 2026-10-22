@@ -165,6 +165,7 @@ export function ordenesEconomicas(ctx) {
         case 'aceptar': ctx.pend.aceptaciones.push({ s, o }); continue;
         case 'romper': ctx.pend.rupturas.push({ s, o }); continue;
         case 'mover': ctx.pend.movimientos.push({ s, o }); continue;
+        case 'atacar': ctx.pend.ataques.push({ s, o }); continue;
         default: motivo = 'orden no soportada';
       }
       if (motivo) ctx.mal(s, o.texto, motivo); else ctx.bien(s);

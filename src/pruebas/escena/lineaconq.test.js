@@ -14,7 +14,9 @@ import { ESCENARIOS, partidasDeEjemplo, jugarConqBots, jugarConqConCaido } from 
 import { enPalabras } from '../../../web/casino/narracion-conquista.js';
 import { duracionDeBeat } from '../../../web/casino/escena-config.js';
 
-const IDX = { P18: 0, P61: 1, P94: 2 };
+// Cada prueba pide la partida de ejemplo por lo que necesita (la lista sale de herramientas/buscar-escenarios-conquista.mjs y cambia cuando cambian el motor o los bots).
+const idx = (escenario) => { const i = ESCENARIOS.findIndex((e) => e.cubre.includes(escenario)); assert.ok(i >= 0, `ninguna partida de ejemplo cubre "${escenario}"`); return i; };
+const IDX = { PACTO: idx('pacto cumplido'), CUATRO: idx('maximo 4 combates en un turno'), RUPTURA: idx('ruptura con privado previo') };
 const ejemplos = await partidasDeEjemplo();
 const por = (beats) => beats.reduce((m, b) => m.set(b.mano, [...(m.get(b.mano) ?? []), b]), new Map());
 const paso = (beat, tipo) => beat.pasos.find((p) => p.tipo === tipo);
@@ -103,7 +105,7 @@ test('esDecisiva: solo por las cuatro reglas (capital que cae, diferencia menor 
 });
 
 test('maximo 3 tarjetas por turno, de mayor a menor importancia; las demas batallas siguen diciendose en la resolucion', () => {
-  const p = ejemplos[IDX.P61], beats = construirLineaDeTiempo(p);
+  const p = ejemplos[IDX.CUATRO], beats = construirLineaDeTiempo(p);
   const turnoCon4 = p.rondas.find((r) => r.combates.length >= 4);
   assert.ok(turnoCon4, 'la partida de ejemplo debe tener un turno con 4 combates');
   const delTurno = por(beats).get(turnoCon4.turno);
@@ -131,7 +133,7 @@ function conCentinelas(p) {
 const dondeSale = (beats, texto) => beats.filter((b) => JSON.stringify(b).includes(texto)).map((b) => b.tipo);
 
 test('el privado de una traicion NO aparece antes de la ruptura y SI en ella; los privados de los beats de ordenes no llevan texto', () => {
-  const { q, todos } = conCentinelas(ejemplos[IDX.P94]);
+  const { q, todos } = conCentinelas(ejemplos[IDX.RUPTURA]);
   const beats = construirLineaDeTiempo(q);
   const rupturas = q.rondas.flatMap((r) => r.eventos.filter((e) => e.tipo === 'ruptura').map((e) => ({ ...e, turno: r.turno })));
   assert.ok(rupturas.length >= 1);
@@ -154,7 +156,7 @@ test('el privado de una traicion NO aparece antes de la ruptura y SI en ella; lo
 });
 
 test('una ruptura sin privado previo muestra el cartel sin flashback', () => {
-  const { q } = conCentinelas(ejemplos[IDX.P94]);
+  const { q } = conCentinelas(ejemplos[IDX.RUPTURA]);
   q.rondas.forEach((r) => { r.privados = []; });
   const beats = construirLineaDeTiempo(q);
   const traiciones = beats.filter((b) => b.tipo === 'traicion');
@@ -163,7 +165,7 @@ test('una ruptura sin privado previo muestra el cartel sin flashback', () => {
 });
 
 test('los privados sin traicion salen en el aviso del pacto cumplido o, a mas tardar, en la pantalla final (nunca se pierden, el final trae los 3 mas recientes)', () => {
-  for (const idx of [IDX.P18, IDX.P61, IDX.P94]) {
+  for (const idx of [IDX.PACTO, IDX.CUATRO, IDX.RUPTURA]) {
     const { q, todos } = conCentinelas(ejemplos[idx]);
     const beats = construirLineaDeTiempo(q);
     const reveladosEnTraicion = pasos(beats, 'flashback').map((f) => f.texto);
@@ -177,7 +179,7 @@ test('los privados sin traicion salen en el aviso del pacto cumplido o, a mas ta
 });
 
 test('un pacto cumplido trae los privados que se cruzaron la pareja durante el pacto', () => {
-  const { q, todos } = conCentinelas(ejemplos[IDX.P18]);
+  const { q, todos } = conCentinelas(ejemplos[IDX.PACTO]);
   const beats = construirLineaDeTiempo(q);
   const cumplidos = pasos(beats, 'cumplido');
   assert.ok(cumplidos.length >= 1);
@@ -189,7 +191,7 @@ test('un pacto cumplido trae los privados que se cruzaron la pareja durante el p
 });
 
 test('el pacto cumplido muestra de verdad los 2 privados mas recientes de la pareja DURANTE el pacto (no los del turno del cumplimiento ni los de antes) y los marca como revelados', () => {
-  const q = structuredClone(ejemplos[IDX.P18]);
+  const q = structuredClone(ejemplos[IDX.PACTO]);
   const rc = q.rondas.find((r) => r.eventos.some((e) => e.tipo === 'pacto_cumplido')), cumplido = rc.eventos.find((e) => e.tipo === 'pacto_cumplido');
   const mismaPareja = (e) => [e.k, e.con].sort().join() === [cumplido.k, cumplido.con].sort().join();
   const firma = q.rondas.filter((r) => r.turno < rc.turno && r.eventos.some((e) => e.tipo === 'pacto' && mismaPareja(e))).at(-1);
@@ -222,18 +224,18 @@ test('la linea de tiempo no lanza con datos raros que la lista deja pasar (JSON 
     'mensaje null': (q) => { q.rondas[2].mensajes.push(null); },
   };
   for (const [nombre, alterar] of Object.entries(alteraciones)) {
-    const q = structuredClone(ejemplos[IDX.P18]);
+    const q = structuredClone(ejemplos[IDX.PACTO]);
     alterar(q);
     let beats;
     assert.doesNotThrow(() => { beats = construirLineaDeTiempo(q); }, nombre);
     assert.ok(Array.isArray(beats), nombre);
   }
   // un estado ilegible (sin tropas) no llega a la mesa, que lo dibujaria: la resolucion de ese turno conserva el estado anterior
-  const q = structuredClone(ejemplos[IDX.P18]);
+  const q = structuredClone(ejemplos[IDX.PACTO]);
   delete q.rondas[2].estado.tropas;
   const resolucion = construirLineaDeTiempo(q).find((b) => b.tipo === 'resolucion' && b.mano === q.rondas[2].turno);
   assert.ok(Array.isArray(paso(resolucion, 'estado').tropas), 'el estado de la resolucion trae tropas');
-  assert.deepEqual(paso(resolucion, 'estado').dueno, ejemplos[IDX.P18].rondas[1].estado.dueno, 'es el estado del turno anterior');
+  assert.deepEqual(paso(resolucion, 'estado').dueno, ejemplos[IDX.PACTO].rondas[1].estado.dueno, 'es el estado del turno anterior');
 });
 
 test('una respuesta ilegible o un reino caido de la API no se cuenta como decision: se dice que no respondio y pasa el turno', async () => {
@@ -245,7 +247,7 @@ test('una respuesta ilegible o un reino caido de la API no se cuenta como decisi
     assert.ok(!paso(b, 'flechas').lista.some((f) => f.k === 1), 'un reino que no respondio no manda tropas');
     assert.ok(!paso(b, 'privados').pares.some((x) => x.k === 1));
   }
-  assert.ok(construirLineaDeTiempo(ejemplos[IDX.P18]).every((b) => b.reemplazo === false), 'una partida sana nunca marca un beat como reemplazo');
+  assert.ok(construirLineaDeTiempo(ejemplos[IDX.PACTO]).every((b) => b.reemplazo === false), 'una partida sana nunca marca un beat como reemplazo');
 });
 
 test('con 2 reinos no hay pactos; una partida cortada no inventa final; un reino caido deja de dar ordenes; la entrada ilegible no lanza', async () => {
@@ -254,13 +256,13 @@ test('con 2 reinos no hay pactos; una partida cortada no inventa final; un reino
   assert.ok(bd.length > 0);
   assert.equal(pasos(bd, 'pacto').length + pasos(bd, 'cumplido').length + pasos(bd, 'cartel').length, 0);
 
-  const corta = structuredClone(ejemplos[IDX.P18]); corta.rondas = corta.rondas.slice(0, 10); corta.truncada = true;
+  const corta = structuredClone(ejemplos[IDX.PACTO]); corta.rondas = corta.rondas.slice(0, 10); corta.truncada = true;
   const bc = construirLineaDeTiempo(corta);
   assert.equal(bc.some((b) => b.tipo === 'final'), false);
   assert.equal(bc.at(-1).tipo, 'resolucion');
   assert.equal(bc.at(-1).mano, 10);
 
-  const p = ejemplos[IDX.P18], beats = construirLineaDeTiempo(p);
+  const p = ejemplos[IDX.PACTO], beats = construirLineaDeTiempo(p);
   const caida = p.rondas.flatMap((r) => r.eventos.filter((e) => e.tipo === 'caida').map((e) => ({ ...e, turno: r.turno })))[0];
   assert.ok(caida, 'la partida de ejemplo tiene una caida');
   for (const b of beats.filter((x) => x.tipo === 'ordenes' && x.mano > caida.turno)) {
@@ -268,13 +270,13 @@ test('con 2 reinos no hay pactos; una partida cortada no inventa final; un reino
   }
 
   for (const raro of [null, undefined, {}, { rondas: 'x' }, { rondas: [] }, { rondas: [null, {}] }, { mapa: 7, rondas: [{}] }, 7]) assert.deepEqual(construirLineaDeTiempo(raro), []);
-  const sinBandos = structuredClone(ejemplos[IDX.P18]);
+  const sinBandos = structuredClone(ejemplos[IDX.PACTO]);
   sinBandos.rondas.forEach((r) => r.combates.forEach((c) => { delete c.bandos; }));
   assert.doesNotThrow(() => construirLineaDeTiempo(sinBandos));
 });
 
 test('razon=1: la razon de cada IA sale solo en el beat de resolucion (con la consecuencia), nunca antes', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   p.rondas.forEach((r) => r.respuestas.forEach((x, s) => { if (x) x.razon = `RAZON-${r.turno}-${s}`; }));
   const beats = construirLineaDeTiempo(p);
   for (const b of beats) {
@@ -299,7 +301,7 @@ test('las flechas de ordenes son los ataques y capturas mas los 5 movimientos de
 });
 
 test('con muchos movimientos solo se dibujan 10: los ataques mas grandes primero y, si sobra sitio, hasta 5 movimientos propios de mas tropas', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   // un turno y un reino con regiones de sobra para armar los movimientos: el registro i trae el estado de ANTES del turno i + 1
   let sitio = null;
   for (let i = 0; i < p.rondas.length - 1 && !sitio; i++) for (let k = 0; k < p.jugadores.length && !sitio; k++) {
@@ -423,7 +425,7 @@ test('las cifras de las frases de contexto son las de los registros: las tomas p
 
 test('el panorama no se dice en el turno final de una partida terminada (viene la pantalla del final) y si en una partida cortada', () => {
   // una partida que termina en el turno 10 (multiplo de 5): su ultimo turno trae el final, no el panorama
-  const terminada = structuredClone(ejemplos[IDX.P18]);
+  const terminada = structuredClone(ejemplos[IDX.PACTO]);
   terminada.rondas = terminada.rondas.slice(0, 10);
   const bt = construirLineaDeTiempo(terminada);
   assert.equal(bt.at(-1).tipo, 'final', 'la partida de prueba termina en el turno 10');
@@ -474,7 +476,7 @@ test('en lo rutinario ya no se leen listas de «X manda N tropas de R a R» ni d
 });
 
 test('el resumen cuenta TODOS los ataques del turno, no solo los 10 que se dibujan: un ataque contra otro reino que no cabe en el dibujo igual se dice', () => {
-  const p = structuredClone(ejemplos[IDX.P18]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
+  const p = structuredClone(ejemplos[IDX.PACTO]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
   const libres = antes.flatMap((d, id) => (d === -1 ? [id] : [])), ajenas = antes.flatMap((d, id) => (d >= 1 ? [id] : []));
   assert.ok(libres.length >= 11 && ajenas.length >= 1, 'precondicion: hacen falta 11 regiones sin dueño y una de otro reino');
   r.movs = [...libres.slice(0, 11).map((d) => ({ f: 0, d, n: 5, k: 0 })), { f: 0, d: ajenas[0], n: 1, k: 0 }];
@@ -499,8 +501,8 @@ function ataquesDichos(texto) {
   return contados ? aNumero(contados[1]) : porPareja;
 }
 
-test('el numero de ataques que se dice sale de los objetivos distintos del turno, no de los movimientos: coincide con un calculo independiente sobre los registros (ejemplos y dos partidas del motor con movimientos dobles)', async () => {
-  const partidas = [...ejemplos, await jugarConqBots(28, ['agresivo', 'agresivo', 'agresivo', 'azar', 'azar']), await jugarConqBots(85, ['agresivo', 'agresivo', 'agresivo', 'azar', 'azar'])];
+test('el numero de ataques que se dice sale de los objetivos distintos del turno, no de los movimientos: coincide con un calculo independiente sobre los registros (las partidas de ejemplo, una de ellas con movimientos dobles)', async () => {
+  const partidas = ejemplos;
   let turnosConAtaques = 0, conMovimientosDobles = 0;
   for (const p of partidas) {
     for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes')) {
@@ -512,11 +514,11 @@ test('el numero de ataques que se dice sale de los objetivos distintos del turno
     }
   }
   assert.ok(turnosConAtaques >= 5, `cobertura: ${turnosConAtaques} turnos con ataques contra otros reinos`);
-  assert.ok(conMovimientosDobles >= 2, `cobertura: ${conMovimientosDobles} turnos con movimientos dobles (si el motor cambio y ya no hay, buscar otros seeds como dicen las ayudas)`);
+  assert.ok(conMovimientosDobles >= 2, `cobertura: ${conMovimientosDobles} turnos con movimientos dobles (si el motor cambio y ya no hay, volver a correr herramientas/buscar-escenarios-conquista.mjs)`);
 });
 
 test('dos movimientos de un reino a la misma region de otro se dicen como UN ataque; a dos regiones, dos', () => {
-  const p = structuredClone(ejemplos[IDX.P18]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
+  const p = structuredClone(ejemplos[IDX.PACTO]), i = 1, antes = p.rondas[i - 1].estado.dueno, r = p.rondas[i];
   const de1 = antes.flatMap((d, id) => (d === 1 ? [id] : []));
   assert.ok(de1.length >= 2, 'precondicion: el reino 1 tiene dos regiones');
   const ataca = (...regiones) => { r.movs = regiones.map((d) => ({ f: 0, d, n: 3, k: 0 })); return construirLineaDeTiempo(p).find((x) => x.tipo === 'ordenes' && x.mano === r.turno).texto; };
@@ -526,7 +528,7 @@ test('dos movimientos de un reino a la misma region de otro se dicen como UN ata
 });
 
 test('un estado ilegible en unos turnos no se da por «sin cambios»: el panorama de esos turnos calla y no afirma que ninguna region cambio de dueño', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   for (const idx of [5, 6, 7, 8, 9]) delete p.rondas[idx].estado.tropas; // los turnos 6 a 10 no traen un estado legible
   const beats = construirLineaDeTiempo(p);
   const panorama = (turno) => beats.filter((b) => b.mano === turno && b.dicho).flatMap((b) => b.dicho).filter((l) => l.datos?.cuentas);
@@ -557,7 +559,7 @@ test('el hambre se cuenta en cada turno como dice el registro: primera vez, segu
 });
 
 test('si todos los reinos en pie salen a las regiones sin dueño, se dice «todos» (y si uno cayo, el que cayo no cuenta)', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   const libres = estadoInicial(p).dueno.flatMap((d, id) => (d === -1 ? [id] : []));
   p.rondas[0].movs = p.jugadores.map((_, k) => ({ f: 0, d: libres[k], n: 3, k }));
   const turno1 = (q) => construirLineaDeTiempo(q).find((x) => x.tipo === 'ordenes' && x.mano === 1);
@@ -568,7 +570,7 @@ test('si todos los reinos en pie salen a las regiones sin dueño, se dice «todo
 });
 
 test('si el estado del turno anterior no dice quienes siguen en pie, no se dice «todos» aunque salgan todos los reinos (podria haber uno caido)', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   const antes = p.rondas[0].estado;
   delete antes.vivo;
   const libres = antes.dueno.flatMap((d, id) => (d === -1 ? [id] : []));
@@ -581,7 +583,7 @@ test('si el estado del turno anterior no dice quienes siguen en pie, no se dice 
 });
 
 test('el hambre, el comercio y las tomas se cuentan como el narrador manda (con el tipo de cada hecho), y sus hechos siguen completos en las lineas', () => {
-  const p = structuredClone(ejemplos[IDX.P18]);
+  const p = structuredClone(ejemplos[IDX.PACTO]);
   const evento = (r, e) => r.eventos.push({ ...e, t: r.turno });
   [2, 3, 4].forEach((idx) => { p.rondas[idx].eventos = p.rondas[idx].eventos.filter((e) => e.tipo !== 'hambre'); evento(p.rondas[idx], { tipo: 'hambre', k: 0, n: 2 }); }); // la partida de ejemplo ya trae hambre: se deja solo la de este reino
   evento(p.rondas[5], { tipo: 'comercio', k: 0, con: 1 }); evento(p.rondas[5], { tipo: 'comercio', k: 2, con: 3 });
@@ -617,7 +619,7 @@ test('pintarSubtitulos dice lo que se dice (`dicho`): los comentarios en cursiva
 });
 
 test('mejoresTurnos elige por batallas decisivas, traiciones, caidas y Maravilla; beatsDeEstado y erroresDeEstado sirven a la herramienta de capturas', () => {
-  const p = ejemplos[IDX.P94], beats = construirLineaDeTiempo(p);
+  const p = ejemplos[IDX.RUPTURA], beats = construirLineaDeTiempo(p);
   const top = mejoresTurnos(p, 3);
   assert.equal(top.length, 3);
   assert.ok(top[0].puntos >= top[1].puntos && top[1].puntos >= top[2].puntos);

@@ -12,7 +12,7 @@ export function nuevoContexto(E, jugadas = []) {
     eventos: [], movs: [], combates: [], mensajes: [], privados: [], regalos: [],
     descartes: Array.from({ length: k }, () => []),
     obed: Array.from({ length: k }, () => ({ validas: 0, total: 0 })),
-    pend: { regalos: [], aceptaciones: [], rupturas: [], movimientos: [], ofertas: {} },
+    pend: { regalos: [], aceptaciones: [], rupturas: [], movimientos: [], ataques: [], ofertas: {} },
     caidas: [],
   };
   ctx.evt = (e) => { ctx.eventos.push({ ...e, t: ctx.t }); };

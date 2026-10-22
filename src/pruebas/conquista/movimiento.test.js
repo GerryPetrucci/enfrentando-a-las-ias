@@ -17,13 +17,14 @@ test('mover a una region sin dueno la toma con las tropas que llegan', () => {
   assert.equal(tropasDe(E, a), 4);
 });
 
+// Desde la etapa 4 (alianzas), quien ataca una region de otro reino sin pacto rinde x0.85 (tierra ajena): los numeros de estas pruebas ya lo incluyen.
 test('combate: gana la mayor fuerza, el defensor cuenta fortaleza y terreno, el ganador conserva tropas x (1 - segunda / suya)', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 4); E.fort[d] = 1; E.mapa.regs[d].terr = 'bo'; // defensa 4 x 1.5 x 1.25 = 7.5
-  fijarTropas(E, a, 11);
-  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 10`] } });
+  fijarTropas(E, a, 13);
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 12`] } });
   assert.equal(E.dueno[d], 0);
-  assert.equal(tropasDe(E, d), 2); // floor(10 x (1 - 7.5/10))
+  assert.equal(tropasDe(E, d), 3); // ataque 12 x 0.85 = 10.2: floor(12 x (1 - 7.5/10.2))
   assert.equal(E.fort[d], 0); // la conquista baja la fortaleza un nivel
   assert.ok(ctx.eventos.some((e) => e.tipo === 'conquista' && e.k === 0 && e.contra === 1 && e.r === d));
   assert.equal(ctx.combates.length, 1);
@@ -32,9 +33,9 @@ test('combate: gana la mayor fuerza, el defensor cuenta fortaleza y terreno, el 
 test('combate: cada mejora del tipo suma 25 % a su fuerza', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 4); E.fort[d] = 1; E.mapa.regs[d].terr = 'bo';
-  fijarTropas(E, a, 11); E.reinos[0].mejoras[0] = 1; // ataque 12.5 contra 7.5 (una mejora de Lanceros: +25 %)
-  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 10`] } });
-  assert.equal(tropasDe(E, d), 4); // floor(10 x (1 - 7.5/12.5))
+  fijarTropas(E, a, 13); E.reinos[0].mejoras[0] = 1; // ataque 12 x 1.25 x 0.85 = 12.75 contra 7.5 (una mejora de Lanceros: +25 %)
+  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 12`] } });
+  assert.equal(tropasDe(E, d), 4); // floor(12 x (1 - 7.5/12.75)); sin la mejora quedan 3
 });
 
 test('combate: si el defensor gana se queda con sus tropas x (1 - segunda / suya) y el atacante queda repelido', () => {
@@ -43,15 +44,15 @@ test('combate: si el defensor gana se queda con sus tropas x (1 - segunda / suya
   fijarTropas(E, a, 6);
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 5`] } });
   assert.equal(E.dueno[d], 1);
-  assert.equal(tropasDe(E, d), 2); // floor(6 x (1 - 5/9))
+  assert.equal(tropasDe(E, d), 3); // ataque 5 x 0.85 = 4.25: floor(6 x (1 - 4.25/9))
   assert.ok(ctx.eventos.some((e) => e.tipo === 'repelido' && e.k === 0 && e.contra === 1));
 });
 
 test('combate: en un empate el defensor resiste con 1 tropa', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
-  E.dueno[d] = 1; fijarTropas(E, d, 6); E.fort[d] = 0; E.mapa.regs[d].terr = 'll';
-  fijarTropas(E, a, 7);
-  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 6`] } });
+  E.dueno[d] = 1; fijarTropas(E, d, 17); E.fort[d] = 0; E.mapa.regs[d].terr = 'll'; // defensa 17
+  fijarTropas(E, a, 21);
+  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 20`] } }); // 20 x 0.85 = 17
   assert.equal(E.dueno[d], 1);
   assert.equal(tropasDe(E, d), 1);
 });
@@ -76,8 +77,8 @@ test('dos reinos que se intercambian regiones a la vez: todo se resuelve sin err
   mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(b)} 4`] }, 1: { ordenes: [`mover ${R(b)} ${R(a)} 4`] } });
   assert.equal(E.dueno[a], 1);
   assert.equal(E.dueno[b], 0);
-  assert.equal(tropasDe(E, a), 3); // floor(4 x (1 - 1/4)) en cada lado
-  assert.equal(tropasDe(E, b), 3);
+  assert.equal(tropasDe(E, a), 2); // 4 x 0.85 = 3.4 contra 1: floor(4 x (1 - 1/3.4)) en cada lado
+  assert.equal(tropasDe(E, b), 2);
 });
 
 test('siempre debe quedar al menos 1 tropa en la region de origen', () => {
@@ -89,13 +90,16 @@ test('siempre debe quedar al menos 1 tropa en la region de origen', () => {
   assert.equal(tropasDe(E, a), 1);
 });
 
-test('no se puede atacar a un aliado: la orden se descarta', () => {
+test('un aliado con pacto vigente no es atacado: mover a su region es una visita aunque sobre fuerza (para atacarlo hay que romper)', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 1); fijarTropas(E, a, 10);
   E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 1; // vigente en el turno 1
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 8`] } });
-  assert.equal(ctx.descartes[0][0].motivo, 'esa region es de un aliado (usa romper antes)');
+  assert.deepEqual(ctx.descartes[0], []);
+  assert.equal(ctx.combates.length, 0);
   assert.equal(E.dueno[d], 1);
+  assert.equal(tropasDe(E, d), 1);
+  assert.deepEqual(pilaDe(E, d, 0), [8, 0, 0, 0], 'las 8 unidades quedan de visita');
 });
 
 test('solo los Jinetes llegan a 2 regiones: con otro tipo, o mezclados, la orden se descarta; mas lejos tampoco', () => {
@@ -166,11 +170,14 @@ test('un reino que ya cayo no mueve ni recibe llamadas: sus movimientos se ignor
 test('un combate de dos bandos registra bandos (con sus unidades por tipo), terreno, fortaleza, resultado y tropas que quedan', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
   E.dueno[d] = 1; fijarTropas(E, d, 9); E.fort[d] = 1; E.mapa.regs[d].terr = 'll'; // defensa 9 x 1.5 = 13.5
-  fijarTropas(E, a, 12); E.reinos[0].mejoras[0] = 1; // ataque 11 x 1.25 = 13.75
-  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 11`] } });
+  fijarTropas(E, a, 14); E.reinos[0].mejoras[0] = 1; // ataque 13 x 1.25 x 0.85 (tierra ajena) = 13.8125
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 13`] } });
   assert.deepEqual(ctx.combates, [{
-    d, k: 0, perdidas: 19, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
-    bandos: [{ k: 0, n: 11, f: 13.75, defensor: false, armas: 1, uni: [11, 0, 0, 0] }, { k: 1, n: 9, f: 13.5, defensor: true, armas: 0, uni: [9, 0, 0, 0] }],
+    d, k: 0, perdidas: 21, dueno: 1, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
+    bandos: [
+      { k: 0, n: 13, f: 13.8125, defensor: false, armas: 1, uni: [13, 0, 0, 0], miembros: [{ k: 0, uni: [13, 0, 0, 0] }] },
+      { k: 1, n: 9, f: 13.5, defensor: true, armas: 0, uni: [9, 0, 0, 0], miembros: [{ k: 1, uni: [9, 0, 0, 0] }] },
+    ],
   }]);
 });
 
@@ -190,14 +197,14 @@ test('el combate que repele el defensor y el empate con defensor registran su re
   fijarTropas(E, a, 6);
   const repelido = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 5`] } }).combates[0];
   assert.equal(repelido.resultado, 'repelido');
-  assert.equal(repelido.quedan, 2); // floor(6 x (1 - 5/9))
+  assert.equal(repelido.quedan, 3); // floor(6 x (1 - 4.25/9)), con el ataque de 5 x 0.85
   assert.equal(repelido.k, 1);
   assert.deepEqual(repelido.bandos.map((b) => [b.k, b.defensor]), [[1, true], [0, false]]); // de mayor a menor fuerza
 
   const E2 = nuevoEstado(4), [a2, d2] = frontera(E2, 0, -1);
-  E2.dueno[d2] = 1; fijarTropas(E2, d2, 6); E2.fort[d2] = 0; E2.mapa.regs[d2].terr = 'll';
-  fijarTropas(E2, a2, 7);
-  const empate = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} 6`] } }).combates[0];
+  E2.dueno[d2] = 1; fijarTropas(E2, d2, 17); E2.fort[d2] = 0; E2.mapa.regs[d2].terr = 'll';
+  fijarTropas(E2, a2, 21);
+  const empate = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} 20`] } }).combates[0]; // 20 x 0.85 = 17 contra 17
   assert.equal(empate.resultado, 'empate');
   assert.equal(empate.quedan, 1);
   assert.equal(empate.k, 1);
@@ -220,7 +227,7 @@ test('tres bandos: se registran los tres, de mayor a menor fuerza, y el refuerzo
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 6`] }, 1: { ordenes: [`mover ${R(b)} ${R(d)} 5`] } });
   const c = ctx.combates[0];
   assert.equal(c.bandos.length, 3);
-  assert.deepEqual(c.bandos.map((x) => [x.k, x.n, x.f, x.defensor]), [[0, 6, 6, false], [1, 5, 5, false], [2, 3, 3, true]]);
+  assert.deepEqual(c.bandos.map((x) => [x.k, x.n, x.f, x.defensor]), [[0, 6, 5.1, false], [1, 5, 4.25, false], [2, 3, 3, true]]); // los atacantes rinden x0.85 en tierra ajena
   assert.equal(c.resultado, 'captura');
   assert.equal(c.quedan, 1);
 
@@ -334,8 +341,8 @@ test('el dominio decide la batalla: 6 Jinetes contra 12 Lanceros que los dominan
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} J6`] } });
   assert.equal(E.dueno[d], 1, 'los Lanceros defienden');
   assert.equal(ctx.combates[0].resultado, 'repelido');
-  assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, b.f]), [[1, 24], [0, 18]]);
-  assert.deepEqual(pilaDe(E, d, 1), [3, 0, 0, 0]); // floor(12 x (1 - 18/24))
+  assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, +b.f.toFixed(4)]), [[1, 24], [0, 15.3]]); // los Jinetes atacan en tierra ajena: 18 x 0.85
+  assert.deepEqual(pilaDe(E, d, 1), [4, 0, 0, 0]); // floor(12 x (1 - 15.3/24))
 });
 
 test('una captura deja en la region las unidades que sobreviven, con su composicion', () => {
@@ -344,6 +351,6 @@ test('una captura deja en la region las unidades que sobreviven, con su composic
   fijarTropas(E, a, 1); sumarUni(E, a, 0, 1, 6); sumarUni(E, a, 0, 0, 3); // 4 Lanceros + 6 Arqueros atacan: los Arqueros dominan a los Lanceros (x2)
   mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L3 A6`] } });
   assert.equal(E.dueno[d], 0);
-  assert.deepEqual(pilaDe(E, d, 0), [2, 5, 0, 0]); // fuerza 3 + 24 = 27 contra 4: conserva el 85 % (floor)
+  assert.deepEqual(pilaDe(E, d, 0), [2, 4, 0, 0]); // fuerza (3 + 24) x 0.85 = 22.95 contra 4: conserva el 82.6 % (floor)
   assert.deepEqual(pilaDe(E, d, 1), [0, 0, 0, 0], 'el dueno anterior no deja unidades');
 });

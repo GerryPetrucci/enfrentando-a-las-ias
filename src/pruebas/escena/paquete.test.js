@@ -16,7 +16,7 @@ import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
 import { jugarSub } from './ayudas-sub.js';
 import { jugarFuga } from './ayudas-fuga.js';
-import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
+import { jugarConqBots, partidasDeEjemplo, ESCENARIOS } from './ayudas-conq.js';
 
 const ENLACE = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const PARTIDAS = {
@@ -236,8 +236,10 @@ test('una parte que pasa de 3 minutos (el limite de los Shorts y de los Reels re
   const largo = (await paqueteDe('tripledado', PARTIDAS.tripledado)).paquete;
   assert.ok(largo.piezas[0].grabar.ms > 180000, 'precondicion: Triple dado dura mas de 3 minutos por parte');
   assert.match(largo.advertencias.join(' '), /parte 1 dura \d+:\d\d: pasa de 3 minutos/);
-  const corto = (await paqueteDe('conquista', PARTIDAS.conquista)).paquete;
-  assert.ok(corto.piezas.every((p) => p.grabar.ms <= 180000));
+  // La partida de ejemplo mas corta (una de 30 turnos con mucha actividad dura cerca de 3 minutos por parte; una que termina antes, menos).
+  const corta = (await partidasDeEjemplo()).reduce((m, p) => (p.rondas.length < m.rondas.length ? p : m));
+  const corto = (await paqueteDe('conquista', corta)).paquete;
+  assert.ok(corto.piezas.every((p) => p.grabar.ms <= 180000), corto.piezas.map((p) => `${p.id} ${Math.round(p.grabar.ms / 1000)}s`).join(' '));
   assert.doesNotMatch(corto.advertencias.join(' '), /3 minutos/);
 });
 

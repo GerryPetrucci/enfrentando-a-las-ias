@@ -1,24 +1,20 @@
 // Ayudas de las pruebas de la escena de la Guerra de territorios. No es un archivo de pruebas.
 //
-// Partidas REALES del motor (la misma estructura que se guarda en data/), jugadas por bots de control: sin red y sin API. Los bots casi no pelean, asi que los seeds de abajo salen de una
-// busqueda (17 de octubre de 2026, 2,550 partidas de 2 a 5 reinos) de las partidas que cubren los escenarios que la escena tiene que saber dibujar. Una prueba comprueba que cada una
-// siga cubriendo lo que dice: si el motor cambia y alguna ya no lo cubre, hay que volver a buscar los seeds (no editar la prueba).
+// Partidas REALES del motor (la misma estructura que se guarda en data/), jugadas por bots de control: sin red y sin API. Los bots casi no pelean, asi que la lista sale de una busqueda
+// (herramientas/buscar-escenarios-conquista.mjs, que la guarda en escenarios-conquista.json) de las partidas que cubren los escenarios que la escena tiene que saber dibujar. Una prueba comprueba
+// que cada una siga cubriendo lo que dice: si el motor o los bots cambian y alguna ya no lo cubre, se vuelve a correr la herramienta (no se edita la prueba ni el JSON a mano).
+import { readFileSync } from 'node:fs';
 import { correrPartida } from '../../arena.js';
 import { resolverAgente } from '../../agentes.js';
 import conquista from '../../juegos/conquista.js';
+import { estadoInicial } from '../../../web/casino/conquista-datos.js';
 
 export const ESCENARIOS_NECESARIOS = [
   'dos bandos con defensor', 'tres bandos', 'empate', 'repelido', 'decisiva por diferencia', 'maximo 4 combates en un turno',
-  'caida de capital', 'pacto formado', 'pacto cumplido', 'ruptura con privado previo', 'maravilla',
+  'caida de capital', 'pacto formado', 'pacto cumplido', 'ruptura con privado previo', 'maravilla', 'dos turnos con movimientos dobles',
 ];
 
-const MEZCLA_A = ['azar', 'azar', 'agresivo', 'economico', 'pacifico'];
-const MEZCLA_B = ['agresivo', 'agresivo', 'agresivo', 'agresivo', 'azar']; // 22 oct 2026 (Guerra 2.0.0): con el bot al azar nuevo la mezcla de 3 agresivos y 2 azar ya no daba tres bandos; seeds buscados con privado/prototipos/guerra-2.0.0/buscar-*.mjs
-export const ESCENARIOS = [
-  { id: 'guerra-18', seed: 18, bots: MEZCLA_A, cubre: ['empate', 'dos bandos con defensor', 'repelido', 'decisiva por diferencia', 'caida de capital', 'pacto formado', 'pacto cumplido'] },
-  { id: 'guerra-61', seed: 61, bots: MEZCLA_B, cubre: ['dos bandos con defensor', 'repelido', 'maximo 4 combates en un turno', 'tres bandos', 'caida de capital'] },
-  { id: 'guerra-770', seed: 770, bots: MEZCLA_A, cubre: ['dos bandos con defensor', 'maravilla', 'pacto formado', 'ruptura con privado previo'] },
-];
+export const ESCENARIOS = JSON.parse(readFileSync(new URL('./escenarios-conquista.json', import.meta.url), 'utf8')).escenarios;
 
 const agentes = (claves) => claves.map((c) => resolverAgente(c, conquista));
 const cache = new Map();
@@ -47,7 +43,12 @@ export const partidasDeEjemplo = () => Promise.all(ESCENARIOS.map((e) => jugarCo
 // Que escenarios de ESCENARIOS_NECESARIOS cubre una partida, leyendo solo sus registros.
 export function escenariosDe(partida) {
   const cubre = new Set(), privados = [];
-  for (const r of partida?.rondas ?? []) {
+  let dobles = 0; // turnos en que un reino manda dos movimientos a la misma region de otro reino (el motor los junta en un solo bando)
+  for (const [i, r] of (partida?.rondas ?? []).entries()) {
+    const antes = i === 0 ? estadoInicial(partida)?.dueno : partida.rondas[i - 1].estado?.dueno, vistos = new Set();
+    let doble = false;
+    for (const m of antes ? r.movs ?? [] : []) if (antes[m.d] >= 0 && antes[m.d] !== m.k) { const c = `${m.k}|${m.d}`; doble ||= vistos.has(c); vistos.add(c); }
+    if (doble) dobles++;
     for (const c of r.combates ?? []) {
       if (c.bandos.length === 2 && c.bandos.some((b) => b.defensor)) cubre.add('dos bandos con defensor');
       if (c.bandos.length >= 3) cubre.add('tres bandos');
@@ -66,5 +67,6 @@ export function escenariosDe(partida) {
     }
     privados.push(...(r.privados ?? []));
   }
+  if (dobles >= 2) cubre.add('dos turnos con movimientos dobles');
   return cubre;
 }

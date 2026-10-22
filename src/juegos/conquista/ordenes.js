@@ -85,6 +85,15 @@ export function parsearOrden(texto, reinos = REINOS) {
       if (pila === null) return campo('unidades', t.slice(3).join(' '));
       return ok({ tipo: 'mover', de, a, pila, n: sumaPila(pila) });
     }
+    case 'atacar': { // atacar donde ya estas (tropas de visita, o el dueno contra los hostiles que tiene dentro): sin lista o `todo` = todas tus unidades en esa region
+      if (t.length < 2) return uso('atacar REGION [TIPO N ... | todo]');
+      const r = region(t[1]);
+      if (r === null) return campo('region', t[1]);
+      if (t.length === 2 || (t.length === 3 && t[2] === 'todo')) return ok({ tipo: 'atacar', region: r, todo: true });
+      const pila = pilaDeTokens(t.slice(2));
+      if (pila === null) return campo('unidades', t.slice(2).join(' '));
+      return ok({ tipo: 'atacar', region: r, pila, n: sumaPila(pila) });
+    }
     case 'mejorar': {
       if (t.length !== 2) return uso('mejorar TIPO');
       const unidad = unidadDeTexto(t[1]);

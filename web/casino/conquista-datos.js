@@ -75,6 +75,8 @@ export function estadoInicial(partida) {
       stock: Array.from({ length: k }, () => ({ ...ALMACEN_INICIAL })),
       armas: Array(k).fill(0),
       mejoras: Array.from({ length: k }, () => [0, 0, 0, 0]),
+      // unidades por region y reino ([region, reino, L, A, J, I], solo las pilas que existen): al empezar, solo Lanceros del dueno
+      uni: dueno.flatMap((d, r) => (d < 0 ? [] : [[r, d, r === capitales[d] ? TROPAS_CAPITAL : TROPAS_VECINA, 0, 0, 0]])),
       honor: Array(k).fill(HONOR_INICIAL),
       vivo: Array(k).fill(true),
       pactos: Array.from({ length: k }, () => Array(k).fill(0)),

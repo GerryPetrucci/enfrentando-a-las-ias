@@ -110,6 +110,21 @@ test('un bando con varios reinos (aliados) suma sus fuerzas, tiene de lider al q
   assert.deepEqual(r.supervivientes, [{ k: 0, pila: [4, 0, 0, 0] }, { k: 2, pila: [2, 0, 0, 0] }]); // conservan 1 - 6/12 = la mitad
 });
 
+test('los supervivientes no pierden una unidad por el redondeo de los decimales: 12 x (1 - 4.25 / 10.2) son 7 exactos, no 6.999...', () => {
+  const r = abierto(miembro(0, [12, 0, 0, 0], SIN, 0.85), miembro(1, [5, 0, 0, 0], SIN, 0.85)); // 10.2 contra 4.25: la cuenta exacta es 12 x 7/12
+  assert.deepEqual(r.supervivientes, [{ k: 0, pila: [7, 0, 0, 0] }]);
+  assert.equal(r.perdidas, 12 - 7 + 5);
+});
+
+test('el dueno que gana conserva al menos 1 unidad aunque la cuenta le deje 0 (con otros miembros en su bando)', () => {
+  const r = resolverBatalla([
+    { miembros: [miembro(2, [6, 0, 0, 0], SIN, 0.85)], defensor: false, ataca: true },
+    { miembros: [miembro(1, [3, 0, 0, 0]), miembro(0, [4, 0, 0, 0])], defensor: true, ataca: false },
+  ], { terr: 'll', fort: 0, dueno: 1 }); // 5.1 contra 7
+  assert.equal(r.ganador.defensor, true);
+  assert.deepEqual(r.supervivientes, [{ k: 1, pila: [1, 0, 0, 0] }, { k: 0, pila: [1, 0, 0, 0] }], 'floor(3 x 0.27) = 0 pero el dueno conserva 1; floor(4 x 0.27) = 1');
+});
+
 test('los modificadores del reino (tierra ajena, Reconquista...) multiplican la fuerza de ese reino', () => {
   const r = abierto(miembro(0, [10, 0, 0, 0], SIN, 0.85), miembro(1, [9, 0, 0, 0]));
   assert.deepEqual(r.fichas.map((f) => [f.k, f.f]), [[1, 9], [0, 8.5]]);

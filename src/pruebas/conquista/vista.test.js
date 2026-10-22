@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { nuevoEstado, R, vistasDePartida } from './ayudas.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
-import { sumarUni } from '../../juegos/conquista/estado.js';
+import { sumarUni, regionesDe } from '../../juegos/conquista/estado.js';
 import { resumenPublico } from '../../juegos/conquista/texto.js';
 
 test('la vista trae lo tuyo y lo publico', () => {
@@ -26,6 +26,27 @@ test('la ocupacion muestra las unidades por tipo, la fortaleza y el edificio, y 
   assert.ok(vistaTexto(E, 1).includes(`${R(c)}(L10,f1,g-)`));
   sumarUni(E, c, 0, 1, 4); sumarUni(E, c, 0, 3, 1);
   assert.ok(vistaTexto(E, 1).includes(`${R(c)}(L10A4I1,f1,g-)`), 'los tipos que no hay no aparecen');
+});
+
+// ---- Guerra 2.0.0, etapa 4: tropas de visita (invitados) ----
+
+test('la ocupacion muestra a los invitados de cada region con su reino y sus unidades, y la leyenda lo explica', () => {
+  const E = nuevoEstado(4), d = regionesDe(E, 1).find((r) => r !== E.reinos[1].capital);
+  sumarUni(E, d, 0, 0, 2); sumarUni(E, d, 2, 1, 3);
+  const v = vistaTexto(E, 3);
+  assert.ok(v.includes(`${R(d)}(L3 +Azur L2 +Violeta A3)`), v.split('\n').find((l) => l.startsWith('Ambar')));
+  assert.match(v, /OCUPACION \(region\(unidades, fN, edificio; - = danado\); \+Reino L2 = tropas de visita de ese reino\)/);
+  assert.ok(!vistaTexto(nuevoEstado(4), 3).includes(' +Azur '), 'sin invitados no aparece nada');
+});
+
+test('"Tus tropas de visita" lista donde estan las tuyas, y marca como hostiles las que ya no tienen pacto con el dueno', () => {
+  const E = nuevoEstado(4), d = regionesDe(E, 1).find((r) => r !== E.reinos[1].capital), e = regionesDe(E, 2).find((r) => r !== E.reinos[2].capital);
+  assert.ok(!vistaTexto(E, 0).includes('Tus tropas de visita'));
+  sumarUni(E, d, 0, 0, 2); sumarUni(E, e, 0, 1, 1); sumarUni(E, e, 0, 2, 4);
+  E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 5; // vigente con Ambar, no con Violeta
+  const v = vistaTexto(E, 0);
+  assert.ok(v.includes(`Tus tropas de visita: ${R(d)} de Ambar (L2) | ${R(e)} de Violeta (A1J4, hostiles)`), v.split('\n').find((l) => l.startsWith('Tus tropas')));
+  assert.ok(!vistaTexto(E, 1).includes('Tus tropas de visita'), 'las visitas de otro reino no son tuyas');
 });
 
 test('la vista de un reino no contiene secretos de los rivales', () => {
@@ -78,6 +99,10 @@ test('pactos, propuesta abierta, ofertas y privados recibidos aparecen solo para
   assert.ok(!vistaTexto(E, 1).includes('ven conmigo'));
 });
 
+test('el resumen publico cuenta el duelo entre dos reinos de visita dentro de la region de un tercero', () => {
+  assert.deepEqual(resumenPublico([{ tipo: 'duelo', k: 0, contra: 2, r: 4, t: 3 }]), ['Azur derroto a Violeta dentro de R05']);
+});
+
 test('el resumen publico (lo que ven las IAs del turno anterior) ignora el evento pacto_cumplido', () => {
   assert.deepEqual(resumenPublico([{ tipo: 'pacto_cumplido', k: 0, con: 1, t: 7 }]), []);
   assert.deepEqual(resumenPublico([{ tipo: 'pacto', k: 0, con: 1, t: 5 }, { tipo: 'pacto_cumplido', k: 0, con: 1, t: 7 }]).length, 1);
@@ -90,10 +115,12 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // mueven nada en partidas solo de bots: no cambio nada mas de lo que ven las IAs.
 // 22 de octubre de 2026 (Guerra 2.0.0, etapa 3): las huellas cambian A PROPOSITO. La vista ahora muestra las unidades por tipo (R07(L5A3,f1,g)) y las mejoras en vez de las armas, el bot al azar
 // manda ordenes nuevas (mejorar, tipos, todo) y por eso las tres partidas son otras. Huellas anteriores: 53a109e7..., c3ca496d..., 59cba0a4... Cada cambio del texto de las vistas vuelve a mover estas huellas.
+// 22 de octubre de 2026 (etapa 4, alianzas): vuelven a cambiar A PROPOSITO: la leyenda de OCUPACION explica «+Reino L2» (tropas de visita), el combate cuenta tierra ajena (x0.85) y los aliados ya pueden
+// visitarse. Huellas anteriores: c405e106..., 69a040b4..., 27fe1742...
 const HUELLAS_DE_LAS_VISTAS = {
-  1: 'c405e1066c63c7e4d773a1f156720350c883eb95',
-  2: '69a040b431a51417c9b429f4181b0aa1f47a0901',
-  3: '27fe1742029e919266443fbbee5dc58e43a08d9f',
+  1: '1df8209858bf29fc646324ef97789acca6e86bae',
+  2: '0d3c2c44361283e371da8466e980ee7f380ca196',
+  3: 'd0e8e9689600870d949559437dd9ae1bfd91d207',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

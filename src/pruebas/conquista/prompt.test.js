@@ -7,6 +7,7 @@ import dilema from '../../juegos/dilema.js';
 import { obtenerJuego, JUEGOS } from '../../juegos/index.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
 import { BIOMAS } from '../../mapa.js';
+import { TIERRA_AJENA } from '../../juegos/conquista/constantes.js';
 
 const ASCII = /^[\x00-\x7F]*$/;
 
@@ -34,9 +35,23 @@ test('el peor caso de 5 reinos cabe en el tope con los cuatro biomas y 100 seeds
 
 test('el prompt escribe las reglas de movimiento que el motor aplica: quedar 1 tropa, la palabra todo y no cruzar territorio de otro reino', () => {
   // 22 de octubre de 2026: el 78 % de las ordenes descartadas de la partida publicada (112 de 144) eran "debe quedar al menos 1 tropa", una regla que el motor aplicaba y el prompt no decia.
-  assert.match(conquista.reglas, /Siempre debe quedar 1 unidad en la region de origen/);
+  assert.match(conquista.reglas, /En una region tuya siempre debe quedar 1 unidad/);
   assert.match(conquista.reglas, /"todo"/);
   assert.match(conquista.reglas, /nunca de otro reino/);
+});
+
+test('el prompt escribe las reglas de alianzas que el motor aplica (etapa 4): visitas, capital cerrada, defensa conjunta, atacar en sitio, hostiles al terminar el pacto y tierra ajena', () => {
+  const r = conquista.reglas;
+  assert.match(r, /entras de visita/);
+  assert.match(r, /su capital esta cerrada/);
+  assert.match(r, /defienden junto a las de el, con su fortaleza y su terreno/);
+  assert.match(r, /si eres aliado de los dos bandos, no participas/);
+  assert.match(r, /pelean del mismo lado: se la queda quien conserve mas unidades/);
+  assert.match(r, /- atacar REGION \[TIPO N \.\.\. \| todo\]/);
+  assert.match(r, /las tropas de visita pasan a hostiles: pueden quedarse sin pelear, irse \(mover\) o atacar/);
+  assert.match(r, /romper REINO: terminas tu pacto con ese reino\. No te obliga a atacar/);
+  assert.match(r, new RegExp(`rinden x${TIERRA_AJENA} \\(tierra ajena\\)`), 'el numero sale de constantes.js');
+  assert.match(r, /En los ultimos 2 turnos no hay alianzas \(tus tropas de visita pasan a hostiles\)/);
 });
 
 test('construirUsuario no cambia para el Dilema (vista como objeto) y acepta una vista en texto', () => {

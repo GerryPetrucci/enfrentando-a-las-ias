@@ -62,10 +62,14 @@ export function verificarInvariantes(E) {
     const d = E.dueno[r];
     assert.ok(d >= -1 && d < E.k, `dueno invalido en R${r + 1}`);
     assert.ok(Number.isInteger(tropasDe(E, r)) && tropasDe(E, r) >= 0, `tropas invalidas en R${r + 1}`);
-    if (d === -1) { assert.equal(tropasDe(E, r), 0, `region sin dueno con tropas R${r + 1}`); assert.equal(E.edif[r], null, `edificio sin dueno R${r + 1}`); }
+    if (d === -1) { assert.equal(E.reinos.reduce((s, x) => s + totalPila(E, r, x.s), 0), 0, `region sin dueno con unidades R${r + 1}`); assert.equal(E.edif[r], null, `edificio sin dueno R${r + 1}`); }
     else assert.ok(tropasDe(E, r) >= 1, `region del reino ${d} sin tropas R${r + 1}`);
     assert.ok(E.fort[r] >= 0 && E.fort[r] <= 3);
-    for (let k = 0; k < E.k; k++) if (k !== d) assert.equal(totalPila(E, r, k), 0, `unidades del reino ${k} en R${r + 1}, que es de ${d} (todavia no hay invitados)`);
+    // Invitados (unidades de un reino que no es el dueno): solo de reinos vivos; nunca en la capital de un reino vivo si son aliados de su dueno (la capital esta cerrada) -- no se puede comprobar el pacto aqui sin el turno.
+    for (let k = 0; k < E.k; k++) if (k !== d) {
+      assert.ok(Number.isInteger(totalPila(E, r, k)) && totalPila(E, r, k) >= 0, `unidades invalidas del reino ${k} en R${r + 1}`);
+      if (!E.reinos[k].vivo) assert.equal(totalPila(E, r, k), 0, `unidades del reino ${k}, que cayo, en R${r + 1}`);
+    }
   }
   E.reinos.forEach((r, s) => {
     assert.ok(r.honor >= 0 && r.honor <= 10, `honor fuera de rango en ${r.nombre}`);

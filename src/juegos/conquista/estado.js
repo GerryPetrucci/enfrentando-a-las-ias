@@ -24,6 +24,8 @@ export function ponerTropas(E, r, n, k = E.dueno[r]) {
 }
 // Deja la pila de unidades [L, A, J, I] del reino k en la region (sin tocar a los demas reinos).
 export function ponerPila(E, r, k, p) { const i = idx(E, r, k); E.uni[i] = p[0]; E.uni[i + 1] = p[1]; E.uni[i + 2] = p[2]; E.uni[i + 3] = p[3]; }
+// Suma una pila [L, A, J, I] a la del reino k en la region.
+export function sumarPila(E, r, k, p) { const i = idx(E, r, k); E.uni[i] += p[0]; E.uni[i + 1] += p[1]; E.uni[i + 2] += p[2]; E.uni[i + 3] += p[3]; }
 export function limpiarRegion(E, r) { E.uni.fill(0, idx(E, r, 0), idx(E, r, E.k)); }
 export function presentes(E, r) { const out = []; for (let k = 0; k < E.k; k++) if (totalPila(E, r, k) > 0) out.push(k); return out; }
 // Todas las unidades de un reino, en cualquier region (tambien las que estan de visita).
@@ -59,6 +61,8 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } 
 
 // a y b son aliados en el turno t si el pacto entre ellos sigue vigente en ese turno
 export const aliado = (E, a, b, t) => a !== b && E.reinos[a].pactos[b] >= t;
+// hostil: distintos y sin pacto vigente en el turno t (los libres no son de nadie: no hay hostilidad con ellos)
+export const hostil = (E, a, b, t) => a !== b && !aliado(E, a, b, t);
 
 export function regionesDe(E, s) {
   const out = [];
@@ -94,5 +98,13 @@ export function instantanea(E) {
     stock: E.reinos.map((r) => ({ ...r.stock })), armas: E.reinos.map((r) => Math.max(...r.mejoras)), mejoras: E.reinos.map((r) => [...r.mejoras]), honor: E.reinos.map((r) => r.honor),
     vivo: E.reinos.map((r) => r.vivo), pactos: E.reinos.map((r) => [...r.pactos]),
     maravilla: E.maravilla ? { ...E.maravilla } : null, notas: E.reinos.map((r) => r.nota),
+    // `uni`: las pilas no vacias como [region, reino, L, A, J, I] (incluye a los invitados; `tropas` es solo la guarnicion del dueno)
+    uni: pilasNoVacias(E),
   };
+}
+
+function pilasNoVacias(E) {
+  const out = [];
+  for (let r = 0; r < E.dueno.length; r++) for (let k = 0; k < E.k; k++) if (totalPila(E, r, k) > 0) out.push([r, k, ...pila(E, r, k)]);
+  return out;
 }

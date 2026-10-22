@@ -34,6 +34,9 @@ export const DOMINIO = 2;
 export const MEJORAS = { maximo: 2, bono: 0.25, costo: [{ Hierro: 3, Oro: 2 }, { Hierro: 5, Oro: 4 }] };
 // Parte de Ingenios entre las unidades atacantes con la que la fortaleza del defensor cuenta la mitad / no cuenta.
 export const FORT_INGENIO = { mitad: 0.25, anula: 0.5 };
+// Tierra ajena (2.0.0): las unidades que luchan en una region cuyo dueno es otro reino SIN pacto con ellas rinden esta fraccion. Aplica siempre (al que entra a una region enemiga y al traidor
+// que se queda en tierra de su ex aliado); no en regiones libres ni de un aliado. Se calibra con bots (privado/spec/guerra-2.0.0-medicion.md).
+export const TIERRA_AJENA = 0.85;
 // Factor de costo al reclutar en una region con cuartel entero / danado.
 export const CUARTEL = { entero: 0.5, danado: 0.75 };
 export const MERCENARIOS = { maximoPorTurno: 3, costo: 2, costoDeshonrado: 3 };
