@@ -7,7 +7,7 @@
 //   camara    los asientos cuya carta oculta ve el publico en esa ronda (ver camara.js: 1 de 2 por defecto)
 //   reemplazo la carta o la apuesta de ese beat la puso el juego por una respuesta ilegal (se marca; nunca se le atribuye a la IA)
 //   pasos     los movimientos de la animacion (vocabulario fijado en el plan, tarea A5):
-//     roles {activo, predictor} · crupier {asiento, carta, quedan} · jugar {asiento, carta | null (solo con la camara)} · pregunta {}
+//     roles {activo, predictor} · crupier {asiento, carta, quedan} · jugar {asiento, carta | null (solo con la camara)} · pregunta {apuesta: {asiento, fichas, lado, todo, maximo, reemplazo}} (la apuesta que se muestra con la carta)
 //     apuesta {asiento, fichas, lado, todo} · revelar {carta} · comparar {veredicto, crupier, carta} · sello {sello: acierta | falla | igual}
 //     cobra {asiento, fichas} (de la banca) · paga {asiento, fichas} (a la banca) · devuelve {asiento, fichas} (la apuesta vuelve a su dueno)
 //     estado {fichas, disponibles, crupierQuedan} · final {final}
@@ -59,8 +59,13 @@ export function construirLineaDeTiempo(partida, { seed, camara = CAMARA_POR_DEFE
     const avisoDoble = comentarios.filter((l) => ANUNCIO_DOBLE.test(l.texto)).map((l) => ({ ...l, tipo: 'apertura' }));
     crear('apertura', { lineas: [...lineasDe('apertura'), ...avisoDoble], pasos: [{ tipo: 'roles', activo: r.activo, predictor: r.predictor, doble: r.doble === 2 }, { tipo: 'estado', fichas: r.fichasAntes, disponibles: disponibles(false), crupierQuedan: quedan(false), manoInicial: inicial }] });
     crear('crupier', { lineas: lineasDe('crupier'), pasos: [{ tipo: 'crupier', asiento: r.activo, carta: r.crupier, quedan: r.crupierQuedan[r.activo].length }] });
-    crear('jugada', { lineas: lineasDe('jugada'), reemplazo: r.invalidas?.[r.activo] === true, pasos: [{ tipo: 'jugar', asiento: r.activo, carta: visible ? r.carta : null }, { tipo: 'pregunta' }] });
-    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: r.invalidas?.[r.predictor] === true, pasos: [{ tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true, maximo: r.apostoTodo === true && r.invalidas?.[r.predictor] !== true && r.apuestaMaxima < r.fichasAntes?.[r.predictor] }] }); // maximo: apuesta lo maximo que permite el tope (reglas 2.0.0), no todas sus fichas
+    // La apuesta del predictor: la caja «X apuesta N fichas a que sera M» aparece cuando el activo juega su carta (ahi es cuando el predictor tiene que adivinar), asi que el paso «pregunta» del beat de la jugada la trae;
+    // la voz la dice despues, en el beat de la apuesta. maximo: apuesta lo maximo que permite el tope (reglas 2.0.0), no todas sus fichas.
+    const apuestaIlegal = r.invalidas?.[r.predictor] === true;
+    const pasoApuesta = { tipo: 'apuesta', asiento: r.predictor, fichas: r.apuesta, lado: r.lado, todo: r.apostoTodo === true && !apuestaIlegal, maximo: r.apostoTodo === true && !apuestaIlegal && r.apuestaMaxima < r.fichasAntes?.[r.predictor] };
+    const { tipo: _, ...datosApuesta } = pasoApuesta;
+    crear('jugada', { lineas: lineasDe('jugada'), reemplazo: r.invalidas?.[r.activo] === true, pasos: [{ tipo: 'jugar', asiento: r.activo, carta: visible ? r.carta : null }, { tipo: 'pregunta', apuesta: { ...datosApuesta, reemplazo: apuestaIlegal } }] });
+    crear('apuesta', { asiento: r.predictor, lineas: lineasDe('apuesta'), reemplazo: apuestaIlegal, pasos: [pasoApuesta] });
     crear('revelado', {
       lineas: lineasDe('revelacion'),
       pasos: [

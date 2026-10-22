@@ -26,7 +26,8 @@ const carta = (n = null) => Object.assign(document.createElement('div'), { inner
 
 // Lo de la apuesta (la caja «X apuesta N fichas a que sera M», el sello y la flecha) se apaga cuando la ronda se resuelve, no se queda hasta la ronda siguiente (grabacion del 21 de octubre de 2026).
 export const APAGADO_MS = 350; // lo que tarda el fundido de apagado
-export const LECTURA_MS = 1100; // lo que se deja leer el resultado (fichas ya pagadas y contadores al dia) antes de apagar la caja
+export const LECTURA_MS = 1100; // lo que se deja leer el resultado (fichas ya pagadas y contadores al dia) antes de apagar el sello y la flecha
+export const APUESTA_MS = 900; // cuando (ms desde que se juega la carta del activo) sale la caja de la apuesta: al terminar de aparecer el «¿mayor o menor?» (500 ms de espera y 400 de entrada)
 // Cuando (ms desde que empieza el beat de resultado) se apaga: despues de pagar y de actualizar los contadores (a los 700 ms del ultimo pago) y de dejarlos leer, y con tiempo de que el fundido termine antes del final
 // del beat; si el beat es cortisimo, justo despues de actualizar los contadores.
 export const momentoDeLimpieza = (retrasoMs, beatMs) => Math.min(retrasoMs + 700 + LECTURA_MS, Math.max(beatMs - APAGADO_MS - 250, retrasoMs + 700));
@@ -126,15 +127,16 @@ export class Mesa extends MesaBase {
   }
 
   // ---- los beats ----
-  // Lo de la apuesta se apaga cuando la ronda se resuelve (pagar -> quitarResolucion): la caja, el sello y la flecha ya no esperan a la ronda siguiente. Si algo quedo (una ronda cortada, una animacion a medias), se corta de golpe.
-  quitarResolucion() {
-    for (const nombre of [...(this.visibles ?? [])]) {
+  // Lo de la apuesta se apaga cuando la ronda se resuelve (pagar -> quitarResolucion): la caja se va en cuanto salen de ella las fichas, y el sello y la flecha despues de dejar leer los contadores; ya no esperan a la ronda
+  // siguiente. `solo` son las piezas a apagar ('apuesta', 'sello', 'indicador'); sin ella, todas las que esten a la vista.
+  quitarResolucion(solo = null) {
+    for (const nombre of [...(this.visibles ?? [])].filter((n) => solo === null || solo.includes(n))) {
       const nodo = nombre === 'apuesta' ? this.apuesta : nombre === 'sello' ? this.sello : this.indicador; // solo se apaga lo que estaba a la vista: un fundido de 1 a 0 encenderia por un instante lo que ya estaba apagado
       const a = this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: APAGADO_MS, easing: 'ease-in', fill: 'forwards' });
       // al terminar se cancelan TODAS las animaciones del nodo, no solo esta: la de entrada sigue «forwards» en opacidad 1 y le gana al estilo en linea (la caja volveria a verse despues del fundido)
       a.onfinish = () => { nodo.getAnimations().forEach((x) => x.cancel()); nodo.style.opacity = 0; };
+      this.visibles.delete(nombre);
     }
-    this.visibles?.clear();
   }
   apagarYa() {
     // Las animaciones con fill:'forwards' le ganan a un estilo en linea: se cancelan o el sello y la apuesta de la ronda anterior siguen visibles.
@@ -202,21 +204,28 @@ export class Mesa extends MesaBase {
       if (p.tipo === 'pregunta') {
         this.indicador.innerHTML = '<div class="flecha" style="opacity:.35">?</div><div class="txt" style="color:#9a9aa6;font-size:.7em">¿mayor<br>o menor?</div>';
         this.anim(this.indicador, [{ opacity: 0 }, { opacity: 1 }], { duration: 400, delay: 500, fill: 'forwards' }); // este «?» se cambia por la flecha de verdad al revelar: ahi (revelarCarta) se marca para apagarse
+        if (p.apuesta) this.programar(APUESTA_MS, () => this.mostrarApuesta(p.apuesta, p.apuesta.reemplazo)); // ahi es cuando el predictor tiene que adivinar: sale su apuesta (la voz la dice despues, en el beat de la apuesta)
       }
     }
   }
 
-  async apostar(beat) {
-    const p = beat.pasos.find((x) => x.tipo === 'apuesta');
+  // La caja «X apuesta N fichas a que sera M»: sale cuando se juega la carta del activo (ahi es cuando el predictor tiene que adivinar) y se va cuando se reparten las fichas (pagar). `p` es la apuesta (asiento, fichas,
+  // lado, todo, maximo) y `reemplazo` dice si la puso el juego. Si ya salio con la carta no se repite: el beat de la apuesta, que es cuando la voz la dice, no la dibuja ni mueve las fichas otra vez.
+  mostrarApuesta(p, reemplazo = false) {
+    if (this.visibles.has('apuesta')) return;
     const a = this.asientos[p.asiento];
-    a.reemplazo = beat.reemplazo;
+    a.reemplazo = reemplazo;
     a.rol = 'predictor';
     this.actuaAhora(p.asiento); // brilla su pastilla mientras apuesta (y se apaga la del activo)
-    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(etiquetaDeApuesta(beat, this.nombre(p.asiento)).titulo)}${p.todo ? ` <span class="todo">${p.maximo ? '¡Máximo!' : '¡Todo!'}</span>` : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
+    this.apuesta.innerHTML = `<div class="pila" style="width:var(--fw);height:60px;transform:scale(1.5);transform-origin:left center;margin-right:30px">${htmlPila(p.fichas, 'juego')}</div><div><div class="t1">${esc(etiquetaDeApuesta({ reemplazo }, this.nombre(p.asiento)).titulo)}${p.todo ? ` <span class="todo">${p.maximo ? '¡Máximo!' : '¡Todo!'}</span>` : ''}</div><div class="t2">${esc(p.fichas)} ${p.fichas === 1 ? 'ficha' : 'fichas'} · a que será <span class="lado">${esc(p.lado)}</span></div></div>`;
     this.anim(this.apuesta, [{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 380, fill: 'forwards', easing: 'cubic-bezier(.2,1.3,.4,1)' });
     this.visibles.add('apuesta');
-    this.sonar(p);
+    this.sonar({ ...p, tipo: 'apuesta' });
     this.volarFichas(this.centroPlaca(p.asiento), centro(this.L.centro.apuesta, 0.12), p.fichas, 'juego');
+  }
+
+  async apostar(beat) {
+    this.mostrarApuesta(beat.pasos.find((x) => x.tipo === 'apuesta'), beat.reemplazo);
     await this.esperar(900);
   }
 
@@ -250,18 +259,22 @@ export class Mesa extends MesaBase {
 
   async pagar(beat, ms) {
     const banca = centro(this.L.centro.banca), caja = centro(this.L.centro.apuesta, 0.12);
-    let retraso = 0;
+    let retraso = 0, cajaSale = null; // cajaSale: cuando salen las fichas de la caja de la apuesta (se devuelven o se pagan a la banca): ahi la caja se va
     for (const p of beat.pasos) {
       if (p.tipo === 'estado') { this.programar(retraso + 700, () => this.aplicarEstado(p)); continue; }
       this.programar(retraso, () => this.sonar(p));
       if (p.tipo === 'cobra') this.programar(retraso, () => this.volarFichas(banca, this.centroPlaca(p.asiento), p.fichas, 'juego'));
       if (p.tipo === 'devuelve') this.programar(retraso, () => this.volarFichas(caja, this.centroPlaca(p.asiento), p.fichas, 'juego'));
       if (p.tipo === 'paga') this.programar(retraso, () => this.volarFichas(caja, banca, p.fichas, 'juego'));
+      if ((p.tipo === 'devuelve' || p.tipo === 'paga') && cajaSale === null) cajaSale = retraso;
       retraso += 450;
     }
-    // La ronda ya esta resuelta: cuando se pagaron las fichas y los contadores muestran el resultado (y se alcanzan a leer) se apaga la caja de la apuesta con el sello y la flecha. En las capturas que se detienen
-    // en un beat (rapido) no: la captura del resultado conserva lo que se ve, y la ronda siguiente lo corta.
-    if (!this.rapido) this.programar(momentoDeLimpieza(retraso, ms), () => this.quitarResolucion());
+    // La ronda ya esta resuelta: la caja de la apuesta se va en cuanto salen de ella las fichas (a quien acerto o a la banca); el sello y la flecha, cuando se pagaron las fichas y los contadores muestran el resultado (y se
+    // alcanzan a leer). En las capturas que se detienen en un beat (rapido) no se apaga nada: la captura del resultado conserva lo que se ve, y la ronda siguiente lo corta.
+    if (!this.rapido) {
+      this.programar(cajaSale ?? 0, () => this.quitarResolucion(['apuesta']));
+      this.programar(momentoDeLimpieza(retraso, ms), () => this.quitarResolucion(['sello', 'indicador']));
+    }
     await this.esperar(Math.min(ms * 0.5, retraso + 900));
   }
 

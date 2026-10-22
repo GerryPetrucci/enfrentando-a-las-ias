@@ -46,6 +46,23 @@ test('cubre todos los registros en orden y no pierde ni repite una sola linea de
   }
 });
 
+test('la apuesta se muestra cuando se juega la carta del activo: el paso «pregunta» del beat de la jugada trae la apuesta del predictor, igual a la del beat de la apuesta (con su marca de jugada del juego), y nunca la carta jugada', async () => {
+  let reemplazadas = 0, rondas = 0;
+  for (const p of [...await muchasMM(), await jugarMMConCaido(2, 0), await jugarMMConCaido(3, 1)]) {
+    for (const [ronda, bs] of porRonda(construirLineaDeTiempo(p).filter((b) => b.tipo !== 'final'))) {
+      const jugada = bs.find((b) => b.tipo === 'jugada'), apuesta = bs.find((b) => b.tipo === 'apuesta');
+      const pregunta = jugada.pasos.find((x) => x.tipo === 'pregunta');
+      const { tipo, ...paso } = apuesta.pasos.find((x) => x.tipo === 'apuesta');
+      assert.equal(tipo, 'apuesta');
+      assert.deepEqual(pregunta.apuesta, { ...paso, reemplazo: apuesta.reemplazo }, `seed ${p.seed} ronda ${ronda}: la apuesta que se muestra con la carta es la del beat de la apuesta`);
+      assert.ok(!('carta' in pregunta) && !('carta' in pregunta.apuesta), `ronda ${ronda}: la apuesta no lleva la carta jugada`);
+      rondas++;
+      if (apuesta.reemplazo) reemplazadas++;
+    }
+  }
+  assert.ok(rondas > 100 && reemplazadas > 0, `la prueba no vio apuestas puestas por el juego (${reemplazadas} de ${rondas})`);
+});
+
 test('una partida cortada no inventa final; con entrada ilegible no hay beats', async () => {
   const corta = await jugarMM(3, undefined, { maxRondas: 5 });
   assert.equal(corta.truncada, true);

@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Mesa, ESTADOS, APAGADO_MS, LECTURA_MS, momentoDeLimpieza } from '../../../web/casino/mesa-mayormenor.js';
+import { Mesa, ESTADOS, APAGADO_MS, LECTURA_MS, APUESTA_MS, momentoDeLimpieza } from '../../../web/casino/mesa-mayormenor.js';
 
 function nodo() {
   const n = { style: {}, animaciones: [], hijos: [], innerHTML: '', textContent: '', quitado: false, clases: new Set(), sub: {} };
@@ -90,6 +90,21 @@ test('quitarResolucion solo apaga lo que estaba a la vista (no enciende por un i
   assert.doesNotThrow(() => sinCampo.quitarResolucion());
 });
 
+test('quitarResolucion con una lista apaga solo esas piezas y deja las demas marcadas para despues (la caja se va con las fichas; el sello y la flecha, mas tarde)', () => {
+  const m = mesaFalsa();
+  aVista(m);
+  m.quitarResolucion(['apuesta']);
+  assert.equal(m.apuesta.animaciones.length, 1);
+  assert.equal(m.sello.animaciones.length, 0);
+  assert.equal(m.indicador.animaciones.length, 0);
+  assert.deepEqual([...m.visibles].sort(), ['indicador', 'sello']);
+  m.quitarResolucion(['sello', 'indicador']);
+  assert.equal(m.sello.animaciones.length, 1);
+  assert.equal(m.indicador.animaciones.length, 1);
+  assert.equal(m.apuesta.animaciones.length, 1, 'la caja no se apaga dos veces');
+  assert.equal(m.visibles.size, 0);
+});
+
 test('la velocidad acorta el fundido de apagado, como el de todo lo demas', () => {
   const m = mesaFalsa();
   m.vel = 5;
@@ -105,6 +120,58 @@ test('apostar deja la caja a la vista y la marca para apagarla despues', async (
   assert.ok(m.visibles.has('apuesta'));
   assert.match(m.apuesta.innerHTML, /Beto apuesta/);
   assert.match(m.apuesta.innerHTML, /¡Máximo!/);
+});
+
+test('la caja de la apuesta aparece cuando se juega la carta del activo (ahi el predictor tiene que adivinar): jugarCarta la programa para cuando termina de salir el «¿mayor o menor?» y, al aparecer, dibuja la caja, pasa el brillo al predictor y manda sus fichas', async () => {
+  const m = mesaFalsa();
+  const vuelos = [], sonidos = [];
+  m.volarFichas = (...a) => vuelos.push(a);
+  m.sonar = (p) => sonidos.push(p.tipo);
+  const apuesta = { asiento: 1, fichas: 6, lado: 'mayor', todo: true, maximo: true, reemplazo: false };
+  await m.jugarCarta({ asiento: 0, reemplazo: false, pasos: [{ tipo: 'pregunta', apuesta }] });
+  assert.ok(!m.visibles.has('apuesta'), 'todavia no: sale despues de que aparece el «¿mayor o menor?»');
+  assert.deepEqual(m.asientos.map((a) => a.actua), [true, false], 'mientras tanto brilla el activo, que esta jugando su carta');
+  const programada = m.programadas.find((p) => p.ms === APUESTA_MS);
+  assert.ok(programada, `se programa a los ${APUESTA_MS} ms; programadas: ${m.programadas.map((p) => p.ms)}`);
+  programada.fn();
+  assert.ok(m.visibles.has('apuesta'), 'la caja queda marcada para apagarse cuando se repartan las fichas');
+  assert.match(m.apuesta.innerHTML, /Beto apuesta/);
+  assert.match(m.apuesta.innerHTML, /¡Máximo!/);
+  assert.deepEqual([m.asientos[1].rol, m.asientos[1].reemplazo], ['predictor', false]);
+  assert.deepEqual(m.asientos.map((a) => a.actua), [false, true], 'el brillo pasa del activo al predictor');
+  assert.equal(vuelos.length, 1, 'salen las fichas de la apuesta');
+  assert.ok(sonidos.includes('apuesta'));
+  assert.equal(m.apuesta.animaciones.length, 1, 'la caja entra con su animacion');
+});
+
+test('si la apuesta la puso el juego (la respuesta del predictor no sirvio), la caja lo dice y no se le atribuye a la IA', async () => {
+  const m = mesaFalsa();
+  const apuesta = { asiento: 1, fichas: 1, lado: 'menor', todo: false, maximo: false, reemplazo: true };
+  await m.jugarCarta({ asiento: 0, reemplazo: false, pasos: [{ tipo: 'pregunta', apuesta }] });
+  m.programadas.find((p) => p.ms === APUESTA_MS).fn();
+  assert.match(m.apuesta.innerHTML, /El juego apuesta por Beto/);
+  assert.deepEqual([m.asientos[1].rol, m.asientos[1].reemplazo], ['predictor', true]);
+});
+
+test('jugarCarta sin apuesta en el paso «pregunta» (una partida con otro formato) no programa nada: la caja sale en el beat de la apuesta, como siempre', async () => {
+  const m = mesaFalsa();
+  await m.jugarCarta({ asiento: 0, reemplazo: false, pasos: [{ tipo: 'pregunta' }] });
+  assert.ok(!m.programadas.some((p) => p.ms === APUESTA_MS));
+  assert.ok(!m.visibles.has('apuesta'));
+});
+
+test('apostar (el beat de la apuesta, que es cuando la voz la dice) no vuelve a dibujar ni a mover las fichas de una caja que ya salio con la carta; si no habia salido, la dibuja', async () => {
+  const m = mesaFalsa();
+  const vuelos = [];
+  m.volarFichas = (...a) => vuelos.push(a);
+  const beat = { reemplazo: false, pasos: [{ tipo: 'apuesta', asiento: 1, fichas: 4, lado: 'menor', todo: false, maximo: false }] };
+  await m.apostar(beat);
+  assert.equal(vuelos.length, 1);
+  assert.equal(m.apuesta.animaciones.length, 1);
+  await m.apostar(beat);
+  assert.equal(vuelos.length, 1, 'las fichas no salen otra vez');
+  assert.equal(m.apuesta.animaciones.length, 1, 'la caja no entra otra vez');
+  assert.ok(m.visibles.has('apuesta'));
 });
 
 test('revelarCarta marca el sello y la flecha para apagarlos, quita la pastilla de la camara (ya se ve la carta) y apaga el brillo de quien apostaba', async () => {
@@ -133,19 +200,29 @@ test('momentoDeLimpieza: despues de actualizar los contadores y dejarlos leer, y
   }
 });
 
-test('pagar (en vivo) programa el apagado de la apuesta despues de pagar; el apagado llama a quitarResolucion', async () => {
+// Ejecuta lo programado y dice a que hora (ms) y con que piezas se llamo a quitarResolucion.
+const apagadasDe = (m) => {
+  const llamadas = [], hechas = [];
+  m.quitarResolucion = (solo) => { llamadas.push(solo); };
+  for (const { ms, fn } of m.programadas) { const n = llamadas.length; fn(); if (llamadas.length > n) hechas.push([ms, llamadas.at(-1)]); }
+  return hechas;
+};
+const estadoFinal = { tipo: 'estado', fichas: [13, 16], disponibles: [[], []], crupierQuedan: [8, 8] };
+
+test('pagar (en vivo): la caja de la apuesta se va en cuanto salen de ella las fichas (se devuelven a quien acerto) y el sello y la flecha despues de actualizar y dejar leer los contadores', async () => {
   const m = mesaFalsa();
-  let apagadas = 0;
-  m.quitarResolucion = () => { apagadas++; };
-  const beat = { pasos: [{ tipo: 'cobra', asiento: 0, fichas: 3 }, { tipo: 'devuelve', asiento: 1, fichas: 6 }, { tipo: 'estado', fichas: [13, 16], disponibles: [[], []], crupierQuedan: [8, 8] }] };
-  await m.pagar(beat, 6700);
-  const retraso = 450 * 2; // un paso de pago cada 450 ms (el de estado no cuenta)
-  const apagado = m.programadas.find((p) => p.ms === momentoDeLimpieza(retraso, 6700));
-  assert.ok(apagado, `se programa a los ${momentoDeLimpieza(retraso, 6700)} ms; programadas: ${m.programadas.map((p) => p.ms)}`);
-  assert.ok(apagado.ms > m.programadas.find((p) => p.ms === retraso + 700).ms - 1, 'despues de actualizar los contadores');
-  assert.equal(apagadas, 0, 'todavia no se apago: se programo');
-  apagado.fn();
-  assert.equal(apagadas, 1);
+  await m.pagar({ pasos: [{ tipo: 'cobra', asiento: 0, fichas: 3 }, { tipo: 'devuelve', asiento: 1, fichas: 6 }, { tipo: 'cobra', asiento: 1, fichas: 6 }, estadoFinal] }, 6700);
+  const retraso = 450 * 3; // un paso de pago cada 450 ms (el de estado no cuenta)
+  assert.deepEqual(apagadasDe(m), [[450, ['apuesta']], [momentoDeLimpieza(retraso, 6700), ['sello', 'indicador']]]);
+});
+
+test('pagar: si el predictor falla, la caja se va cuando su apuesta se paga a la banca; con carta igual (se devuelve sin mas), al empezar el pago', async () => {
+  const falla = mesaFalsa();
+  await falla.pagar({ pasos: [{ tipo: 'cobra', asiento: 0, fichas: 3 }, { tipo: 'paga', asiento: 1, fichas: 6 }, estadoFinal] }, 6700);
+  assert.deepEqual(apagadasDe(falla)[0], [450, ['apuesta']]);
+  const igual = mesaFalsa();
+  await igual.pagar({ pasos: [{ tipo: 'devuelve', asiento: 1, fichas: 6 }, estadoFinal] }, 6700);
+  assert.deepEqual(apagadasDe(igual)[0], [0, ['apuesta']]);
 });
 
 test('pagar con modo rapido (capturas que se detienen en un beat) NO apaga nada: la captura del resultado conserva lo que se ve', async () => {
@@ -211,6 +288,7 @@ test('jugarCarta pone al activo en su papel y apostar al predictor en el suyo; s
   await m.apostar(apuesta(false));
   assert.deepEqual([m.asientos[1].rol, m.asientos[1].reemplazo], ['predictor', false]);
   assert.deepEqual(m.asientos.map((a) => a.actua), [false, true], 'al apostar brilla la del predictor y se apaga la del activo');
+  m.visibles.clear(); // la ronda siguiente empieza sin nada de la apuesta a la vista
   await m.apostar(apuesta(true));
   assert.deepEqual([m.asientos[1].rol, m.asientos[1].reemplazo], ['predictor', true]);
 });
