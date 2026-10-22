@@ -125,3 +125,31 @@ test('paletaDe da 6 colores hex distintos para cada bioma, los biomas se disting
   assert.deepEqual(Object.keys(web.NOMBRES_BIOMA), BIOMAS);
   assert.ok(web.TINTE_DE_REINO > 0 && web.TINTE_DE_REINO < 0.5);
 });
+
+// ---- Guerra 2.0.0 (etapa 11): lo que la escena lee de las unidades por tipo ----
+test('tropasDeReino suma todas las unidades del reino, tambien las de visita, desde `uni`; sin `uni` (formato anterior) cae a la guarnicion de sus regiones', () => {
+  const estado = { dueno: [0, 0, 1], tropas: [5, 3, 7], uni: [[0, 0, 5, 0, 0, 0], [1, 0, 3, 0, 0, 0], [2, 1, 7, 0, 0, 0], [2, 0, 4, 2, 1, 0]] };
+  assert.equal(web.tropasDeReino(estado, 0), 5 + 3 + 4 + 2 + 1, 'las 7 de visita en la region del reino 1 cuentan para el reino 0');
+  assert.equal(web.tropasDeReino(estado, 1), 7);
+  assert.equal(web.tropasDeReino({ dueno: [0, 0, 1], tropas: [5, 3, 7] }, 0), 8, 'formato anterior: la guarnicion');
+  assert.equal(web.tropasDeReino({ dueno: [0], tropas: [4], uni: 'x' }, 0), 4, 'un `uni` roto cae a la guarnicion');
+  for (const raro of [null, undefined, {}, 7]) assert.equal(web.tropasDeReino(raro, 0), 0);
+  assert.equal(web.tropasDeReino({ dueno: [0], tropas: [4], uni: [null, [0], 'x', [0, 0, 6, 0, 0, 0]] }, 0), 6, 'las filas rotas se ignoran');
+});
+
+test('composicionTexto dice las unidades por tipo (L5 A3); una pila vacia o rota, nada', () => {
+  assert.equal(web.composicionTexto([5, 3, 0, 0]), 'L5 A3');
+  assert.equal(web.composicionTexto([0, 0, 2, 1]), 'J2 I1');
+  assert.equal(web.composicionTexto([7, 0, 0, 0]), 'L7');
+  assert.equal(web.composicionTexto([1, 1, 1, 1]), 'L1 A1 J1 I1');
+  for (const raro of [null, undefined, [], [0, 0, 0, 0], 'x', {}]) assert.equal(web.composicionTexto(raro), '');
+});
+
+test('las letras de los tipos de unidad de la escena son las del motor, y los eventos del mundo que se cuentan en pantalla tienen los numeros del motor', () => {
+  assert.deepEqual(web.LETRAS_DE_UNIDAD, motor.UNIDADES.map((u) => u.id));
+  assert.deepEqual(web.NOMBRES_DE_UNIDAD, motor.UNIDADES.map((u) => u.nombre + 's'));
+  assert.equal(web.SEQUIA_TURNOS, motor.EVENTOS.sequiaTurnos);
+  assert.deepEqual(web.CARAVANA, motor.EVENTOS.caravana);
+  assert.equal(web.PESTE_PORCIENTO, Math.round(motor.EVENTOS.peste * 100));
+  assert.equal(web.HEGEMON_BONO, Math.round((motor.HEGEMON.bonoAtaque - 1) * 100));
+});

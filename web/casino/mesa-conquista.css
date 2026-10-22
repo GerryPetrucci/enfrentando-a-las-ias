@@ -109,3 +109,7 @@
 .panel-conq .rg-fila span { font:600 30px/1.2 var(--texto); color:#c9c9d2; }
 .panel-conq .rg-fila.nota { background:rgba(224,178,92,.12); border-left-color:var(--oro); }
 .panel-conq .rg-fila.nota span { color:var(--hueso); font-weight:700; }
+
+/* Guerra 2.0.0: la mezcla de unidades y los aliados en la tarjeta de batalla */
+.tarjeta-conq .tc-chips span i, .tarjeta-vs .vs-chips span i { font-style:normal; font-weight:800; }
+.tarjeta-conq .tc-chips span.alia, .tarjeta-vs .vs-chips span.alia { border-color:rgba(255,255,255,.25); font-size:19px; }

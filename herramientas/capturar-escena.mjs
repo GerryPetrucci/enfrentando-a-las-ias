@@ -148,7 +148,9 @@ export function buscarChrome(env = process.env, existe = existsSync) {
 }
 
 // Los argumentos de Chrome sin cabeza de toda captura: ventana del tamano del formato y `presupuesto` ms de tiempo virtual; `resto` agrega lo propio (--dump-dom, --screenshot=..., la direccion).
-const argsChrome = (formato, presupuesto, ...resto) => ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, `--virtual-time-budget=${presupuesto}`, ...resto];
+// Como root (contenedores y sesiones en la nube) Chrome se niega a abrir sin --no-sandbox.
+const COMO_ROOT = typeof process.getuid === 'function' && process.getuid() === 0;
+const argsChrome = (formato, presupuesto, ...resto) => ['--headless=new', ...(COMO_ROOT ? ['--no-sandbox'] : []), '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', `--window-size=${tamanoDeFormato(formato)}`, `--virtual-time-budget=${presupuesto}`, ...resto];
 
 function ejecutarChrome(chrome, argumentos) {
   const r = spawnSync(chrome, argumentos, { encoding: 'utf8', timeout: 180000, maxBuffer: 64 * 1024 * 1024 });

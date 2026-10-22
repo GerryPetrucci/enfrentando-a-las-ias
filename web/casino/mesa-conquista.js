@@ -7,8 +7,8 @@
 // y la resolucion actualiza el mapa, el marcador y el feed. Al final, el ranking, los momentos clave y los privados que nunca salieron.
 
 import { colocarConquista } from './layout-conquista.js';
-import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza } from './conquista-datos.js';
-import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, colorSolido } from './mapa-dibujo.js';
+import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza, tropasDeReino, LETRAS_DE_UNIDAD } from './conquista-datos.js';
+import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, pintarCorona, pintarLeyendaUnidades, colorSolido, COLOR_DE_TIPO } from './mapa-dibujo.js';
 import { f2, tropas } from './linea-de-tiempo-conquista.js';
 import { nombreDeReino } from './reinos-conquista.js';
 import { FEED, msVisibleDelFeed } from './feed-conquista.js';
@@ -28,6 +28,8 @@ const ICONOS = {
   regalo: SVG('<rect x="4" y="9" width="16" height="11"/><path d="M12 9v11M4 14h16M12 9c-3-5-6-2-3 0M12 9c3-5 6-2 3 0"/>'),
   hambre: SVG('<path d="M6 21V8M12 21V4M18 21V8"/><path d="M4 8l2-3 2 3M10 4l2-3 2 3M16 8l2-3 2 3"/>'),
   caida: SVG('<path d="M4 20V8l4 4 4-7 4 7 4-4v12z"/><path d="M3 3l18 18" stroke="#d8584e"/>'),
+  corona: SVG('<path d="M4 20V8l4 4 4-7 4 7 4-4v12z"/>'), // el Hegemon
+  evento: SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>'), // un evento del mundo (Sequia, Peste, Cosecha, Caravana)
 };
 
 // Los metodos se llaman con verbos distintos de los campos (this.feedEl, this.tarjetaEl... son piezas del DOM): un campo con el mismo nombre taparia al metodo.
@@ -91,7 +93,7 @@ export class Mesa extends MesaBase {
       const reino = nombreDeReino(s, this.partida.reinos), xReino = 26 + Math.min(g.measureText(this.nombre(s)).width, compacto ? 150 : 180) + 8;
       g.font = `600 ${Math.round(tam * 0.6)}px ${fam}`;
       if (reino && xReino + g.measureText(reino).width < x0 - 8) { g.fillStyle = '#9a9aa6'; g.fillText(reino, xReino, y - (compacto ? 0 : fila * 0.12)); }
-      const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = (estado.dueno ?? []).reduce((a, d, r) => a + (d === s ? estado.tropas[r] : 0), 0);
+      const regiones = (estado.dueno ?? []).filter((d) => d === s).length, tr = tropasDeReino(estado, s); // todas sus unidades, tambien las que tiene de visita en tierra de otros
       const pactos = (estado.pactos?.[s] ?? []).flatMap((v, j) => (j !== s && v >= this.turno ? [this.nombre(j)] : []));
       g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = vivo ? '#6fbf8a' : '#d8584e';
       if (!compacto) g.fillText(vivo ? (pactos.length ? `pacto con ${pactos.join(', ')}` : 'sin pactos') : 'cayó', 26, y + fila * 0.26, 200);
@@ -102,6 +104,7 @@ export class Mesa extends MesaBase {
       });
       g.textAlign = 'right'; g.fillStyle = '#f2f0ed'; g.font = `700 ${Math.round(tam * 0.92)}px ${fam}`;
       g.fillText(`${regiones} reg.`, ancho - 14, y - (compacto ? 0 : fila * 0.14));
+      if (vivo && estado.hegemon === s) pintarCorona(g, ancho - 14 - g.measureText(`${regiones} reg.`).width - 22, y - (compacto ? 0 : fila * 0.14) + 1, tam / 30); // el Hegemon: los demas lo atacan con +50 %
       if (!compacto) { g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = '#9a9aa6'; g.fillText(`${tr} tropas · honor ${estado.honor?.[s] ?? 0}`, ancho - 14, y + fila * 0.26); }
       g.globalAlpha = 1;
     }
@@ -112,6 +115,7 @@ export class Mesa extends MesaBase {
     const g = this.cReinos.getContext('2d');
     pintarReinos(g, this.mapa, this.geom, estado.dueno, this.colores);
     pintarFichas(g, this.mapa, this.geom, estado, this.colores);
+    if (Array.isArray(estado.uni)) pintarLeyendaUnidades(g, this.geom.ox + 8, this.geom.oy + 8, Math.max(14, this.radioFicha() * 0.9)); // los colores de la barra de cada ficha (solo en partidas con unidades por tipo)
     this.pintarMarcador(estado);
   }
 
@@ -234,8 +238,13 @@ export class Mesa extends MesaBase {
     await this.esperar(ms * 0.4);
   }
 
+  // «L5 A3» con la letra de cada tipo en su color (el de la barra de las fichas).
+  composicionHTML(pila) { return (pila ?? []).map((n, t) => (n > 0 ? `<i style="color:${COLOR_DE_TIPO[t]}">${LETRAS_DE_UNIDAD[t]}${n}</i>` : '')).filter(Boolean).join(' '); }
   htmlColumna(t, b, tipo) {
     const chips = [];
+    // 2.0.0: con mas de un tipo de unidad (o uno que no es Lancero) la tarjeta dice la mezcla; y si el bando es una coalicion, quienes lo acompanan (con sus tropas de visita)
+    if (Array.isArray(b.uni) && (b.uni.filter((n) => n > 0).length > 1 || b.uni[0] === 0)) chips.push(`<span>${this.composicionHTML(b.uni)}</span>`);
+    for (const m of (b.miembros ?? []).filter((x) => x.k !== b.k)) chips.push(`<span class="alia">con ${esc(this.nombre(m.k))} ${this.composicionHTML(m.uni)}</span>`);
     if (!b.defensor && b.armas > 0) chips.push(`<span class="oro">Armas ×${f2(multiplicadorDeArmas(b.armas))}</span>`);
     if (b.defensor) {
       if (t.fort > 0) chips.push(`<span class="oro">Fortaleza ×${f2(multiplicadorDeFortaleza(t.fort))}</span>`);

@@ -648,3 +648,50 @@ test('mejoresTurnos elige por batallas decisivas, traiciones, caidas y Maravilla
   assert.equal(erroresDeEstado({ ...limpio, flechas: Math.max(0, propias - 1) }, b).length, propias > 0 ? 1 : 0, 'flechas que faltan');
   assert.equal(erroresDeEstado(null, beats[0]).length, 1);
 });
+
+// ---- Guerra 2.0.0 (etapa 11): lo que la resolucion cuenta del Hegemon, los duelos y los eventos del mundo ----
+function resolucionConEventos(eventos) {
+  const q = structuredClone(ejemplos[0]), r = q.rondas[2];
+  r.eventos.push(...eventos.map((e) => ({ ...e, t: r.turno })));
+  const beats = construirLineaDeTiempo(q), res = beats.find((b) => b.tipo === 'resolucion' && b.mano === r.turno);
+  return { q, res, feed: paso(res, 'feed')?.lista ?? [], textos: res.lineas.map((l) => l.texto) };
+}
+
+test('la resolucion cuenta el Hegemon que aparece y el que deja de serlo (con el bono de ataque que reciben los demas)', () => {
+  const { q, feed, textos } = resolucionConEventos([{ tipo: 'hegemon', k: 1 }, { tipo: 'hegemon_fin', k: 2 }]);
+  const n = (k) => q.jugadores[k].nombre;
+  assert.ok(textos.includes(`${n(1)} es ahora el Hegemón: los demás lo atacan con +50 %.`), textos.join(' | '));
+  assert.ok(textos.includes(`${n(2)} deja de ser el Hegemón.`), textos.join(' | '));
+  assert.ok(feed.some((f) => f.icono === 'corona' && f.partes.some((p) => p.k === 1)), 'el feed lleva la corona');
+});
+
+test('la resolucion cuenta un duelo entre dos reinos de visita dentro de la region de un tercero', () => {
+  const { q, feed, textos } = resolucionConEventos([{ tipo: 'duelo', k: 0, contra: 2, r: 4 }]);
+  assert.ok(textos.includes(`${q.jugadores[0].nombre} derrota a ${q.jugadores[2].nombre} dentro de R05.`), textos.join(' | '));
+  assert.ok(feed.some((f) => f.icono === 'espada' && f.partes.some((p) => typeof p === 'string' && p.includes('dentro de R05'))));
+});
+
+test('la resolucion cuenta los cuatro eventos del mundo con sus cifras: Sequia, Peste (quien pierde cuanto), Cosecha y Caravana (quien recibe)', () => {
+  const n = (q, k) => q.jugadores[k].nombre;
+  let r = resolucionConEventos([{ tipo: 'evento', evento: 'sequia', afectados: [] }]);
+  assert.ok(r.textos.includes('Evento: Sequía. La cosecha base baja a la mitad 2 turnos.'), r.textos.join(' | '));
+  assert.ok(r.feed.some((f) => f.icono === 'evento'));
+  r = resolucionConEventos([{ tipo: 'evento', evento: 'peste', afectados: [{ k: 0, n: 4 }] }]);
+  assert.ok(r.textos.includes(`Evento: Peste. ${n(r.q, 0)} pierde 4 unidades.`), r.textos.join(' | '));
+  r = resolucionConEventos([{ tipo: 'evento', evento: 'peste', afectados: [{ k: 0, n: 4 }, { k: 1, n: 3 }] }]);
+  assert.ok(r.textos.includes(`Evento: Peste. ${n(r.q, 0)} pierde 4 unidades y ${n(r.q, 1)} pierde 3 unidades.`), r.textos.join(' | '));
+  r = resolucionConEventos([{ tipo: 'evento', evento: 'cosecha', afectados: [] }]);
+  assert.ok(r.textos.includes('Evento: Cosecha. +1 Comida por región.'), r.textos.join(' | '));
+  r = resolucionConEventos([{ tipo: 'evento', evento: 'caravana', afectados: [{ k: 2 }] }]);
+  assert.ok(r.textos.includes(`Evento: Caravana. ${n(r.q, 2)} recibe 6 Oro y 3 Caballos.`), r.textos.join(' | '));
+  r = resolucionConEventos([{ tipo: 'evento', evento: 'caravana', afectados: [{ k: 1 }, { k: 2 }] }]);
+  assert.ok(r.textos.includes(`Evento: Caravana. ${n(r.q, 1)} y ${n(r.q, 2)} reciben 6 Oro y 3 Caballos.`), r.textos.join(' | '));
+});
+
+test('un evento raro o roto (tipo desconocido, afectados que no son una lista, un reino que no existe) no lanza ni inventa texto', () => {
+  for (const raro of [{ tipo: 'evento', evento: 'terremoto', afectados: [] }, { tipo: 'evento', evento: 'peste', afectados: 'x' }, { tipo: 'evento' }, { tipo: 'hegemon' }, { tipo: 'duelo', k: 0 }, { tipo: 'evento', evento: 'peste', afectados: [{ k: 99, n: 2 }, null] }]) {
+    assert.doesNotThrow(() => resolucionConEventos([raro]), JSON.stringify(raro));
+  }
+  const { textos } = resolucionConEventos([{ tipo: 'evento', evento: 'terremoto', afectados: [] }]);
+  assert.ok(!textos.some((t) => /terremoto/i.test(t)), 'un evento que no conoce no se cuenta');
+});

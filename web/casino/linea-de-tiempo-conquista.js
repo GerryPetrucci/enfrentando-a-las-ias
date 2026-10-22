@@ -21,7 +21,7 @@
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
 import { duracion, objetos } from './linea-comun.js';
-import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, estadoInicial, leerMapa } from './conquista-datos.js';
+import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, SEQUIA_TURNOS, CARAVANA, HEGEMON_BONO, estadoInicial, leerMapa } from './conquista-datos.js';
 import { crearNarrador } from './narracion-conquista.js';
 import { evaluarPartida, ETIQUETAS } from './evaluacion-conquista.js';
 
@@ -82,6 +82,21 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
   if (!mapa || !rondas.length || rondas.some((r) => !r || typeof r !== 'object')) return [];
   const nombre = (k) => partida.jugadores?.[k]?.nombre ?? `Jugador ${Number(k) + 1}`;
   const region = (d) => mapa.regs[d]?.nombre ?? `R${d + 1}`;
+  const reino = (k) => Number.isInteger(k) && k >= 0 && k < (partida.jugadores?.length ?? 0); // un asiento que existe
+  const unirNombres = (ks) => (ks.length === 1 ? nombre(ks[0]) : `${ks.slice(0, -1).map(nombre).join(', ')} y ${nombre(ks.at(-1))}`);
+  // Un evento del mundo (Sequia, Peste, Cosecha o Caravana) como hecho de la resolucion: { texto, feed }, o null si no se sabe contar (tipo desconocido o datos rotos): nunca se inventa.
+  const hechoDeEvento = (e) => {
+    const afectados = (Array.isArray(e.afectados) ? e.afectados : []).filter((a) => a && typeof a === 'object' && reino(a.k));
+    const hecho = (texto, partes) => ({ texto, feed: { icono: 'evento', partes } });
+    if (e.evento === 'sequia') return hecho(`Evento: Sequía. La cosecha base baja a la mitad ${SEQUIA_TURNOS} turnos.`, ['Evento: Sequía']);
+    if (e.evento === 'cosecha') return hecho('Evento: Cosecha. +1 Comida por región.', ['Evento: Cosecha']);
+    if (e.evento === 'peste' && afectados.length) {
+      const quien = afectados.map((a) => `${nombre(a.k)} pierde ${tropas(Number(a.n) || 0).replace('tropas', 'unidades').replace('tropa', 'unidad')}`);
+      return hecho(`Evento: Peste. ${quien.length === 1 ? quien[0] : `${quien.slice(0, -1).join(', ')} y ${quien.at(-1)}`}.`, ['Evento: Peste']);
+    }
+    if (e.evento === 'caravana' && afectados.length) return hecho(`Evento: Caravana. ${unirNombres(afectados.map((a) => a.k))} ${afectados.length === 1 ? 'recibe' : 'reciben'} ${CARAVANA.Oro} Oro y ${CARAVANA.Caballos} Caballos.`, ['Evento: Caravana']);
+    return null;
+  };
   const capitales = mapa.inicio.capitales;
   const beats = [];
   let previo = estadoInicial(partida);
@@ -207,6 +222,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       else if (e.tipo === 'maravilla_cae') empujar(e, { clave, texto: `${nombre(e.k)} conquista la Maravilla de ${nombre(e.de)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' conquistó la Maravilla de ', { k: e.de }], alerta: true } });
       else if (e.tipo === 'maravilla_gana') empujar(e, { clave, texto: `${nombre(e.k)} completa la Maravilla y gana la partida.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' completó la Maravilla y ganó'], alerta: true } });
       else if (e.tipo === 'deshonra') empujar(e, { clave, texto: `${nombre(e.k)} queda deshonrado.`, feed: { icono: 'ruptura', partes: [{ k: e.k }, ' quedó deshonrado'] } });
+      // Guerra 2.0.0: el Hegemon, un duelo entre dos reinos de visita y los eventos del mundo (lo que el motor registra en `eventos`, contado igual que se lo cuenta a las IAs)
+      else if (e.tipo === 'hegemon' && reino(e.k)) empujar(e, { clave, texto: `${nombre(e.k)} es ahora el Hegemón: los demás lo atacan con +${HEGEMON_BONO} %.`, feed: { icono: 'corona', partes: [{ k: e.k }, ' es ahora el Hegemón'] } });
+      else if (e.tipo === 'hegemon_fin' && reino(e.k)) empujar(e, { clave, texto: `${nombre(e.k)} deja de ser el Hegemón.`, feed: { icono: 'corona', partes: [{ k: e.k }, ' dejó de ser el Hegemón'] } });
+      else if (e.tipo === 'duelo' && reino(e.k) && reino(e.contra) && Number.isInteger(e.r)) empujar(e, { clave, texto: `${nombre(e.k)} derrota a ${nombre(e.contra)} dentro de ${region(e.r)}.`, feed: { icono: 'espada', partes: [{ k: e.k }, ' derrotó a ', { k: e.contra }, ` dentro de ${region(e.r)}`] } });
+      else if (e.tipo === 'evento') { const h = hechoDeEvento(e); if (h) empujar(e, { clave, ...h }); }
     }
     // tomas de una region libre (el motor no emite evento): las que no tienen tarjeta salen aqui, con los movimientos y el cambio de dueno
     const tomadas = new Set();

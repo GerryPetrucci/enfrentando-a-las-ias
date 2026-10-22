@@ -18,11 +18,31 @@ export const PUNTOS_POSICION = [5, 3, 1, 0, 0];
 export const TERRENO = { ll: 1, bo: 1.25, mo: 1.5 }; // multiplicador de defensa por terreno
 export const BONO_ARMAS = 0.25; // por nivel de mejora de un tipo de unidad (en 1.x era el nivel de armas; la tarjeta aun lo llama «Armas»)
 export const BONO_FORTALEZA = 0.5; // por nivel de fortaleza (la formula de ctx.defensa del motor)
+// Guerra 2.0.0: los tipos de unidad (constantes.js, UNIDADES: Lancero, Arquero, Jinete e Ingenio) y los numeros de los eventos del mundo y del Hegemon que la escena cuenta en pantalla.
+export const LETRAS_DE_UNIDAD = ['L', 'A', 'J', 'I'];
+export const NOMBRES_DE_UNIDAD = ['Lanceros', 'Arqueros', 'Jinetes', 'Ingenios'];
+export const SEQUIA_TURNOS = 2; // EVENTOS.sequiaTurnos
+export const CARAVANA = { Oro: 6, Caballos: 3 }; // EVENTOS.caravana
+export const PESTE_PORCIENTO = 15; // EVENTOS.peste (15 %)
+export const HEGEMON_BONO = 50; // HEGEMON.bonoAtaque: los demas lo atacan con +50 %
 export const LETRA_DE_EDIFICIO = { g: 'granja', m: 'mercado', c: 'cuartel' }; // lo que guarda registro.estado.edif
 
 // Los multiplicadores que muestra la tarjeta de batalla ("Armas x1.25", "Fortaleza x1.5"): la misma cuenta que hace el motor al calcular las fuerzas.
 export const multiplicadorDeArmas = (nivel) => 1 + BONO_ARMAS * (Number(nivel) || 0);
 export const multiplicadorDeFortaleza = (nivel) => 1 + BONO_FORTALEZA * (Number(nivel) || 0);
+
+// Todas las unidades de un reino: las de `estado.uni` (tambien las que tiene de visita en tierra de otros). Sin `uni` (partida de formato anterior) o con `uni` roto, la guarnicion de sus regiones.
+export function tropasDeReino(estado, s) {
+  if (!estado || typeof estado !== 'object') return 0;
+  if (Array.isArray(estado.uni)) return estado.uni.reduce((a, f) => (Array.isArray(f) && f.length >= 6 && f[1] === s ? a + [2, 3, 4, 5].reduce((b, i) => b + (Number(f[i]) || 0), 0) : a), 0);
+  return (Array.isArray(estado.dueno) ? estado.dueno : []).reduce((a, d, r) => (d === s ? a + (Number(estado.tropas?.[r]) || 0) : a), 0);
+}
+
+// Una pila [L, A, J, I] como «L5 A3» (solo los tipos que hay); vacia o rota, ''.
+export function composicionTexto(pila) {
+  if (!Array.isArray(pila)) return '';
+  return LETRAS_DE_UNIDAD.map((l, t) => ((Number(pila[t]) || 0) > 0 ? `${l}${Number(pila[t])}` : '')).filter(Boolean).join(' ');
+}
 
 // ---- biomas: como se llaman en pantalla y de que color es su terreno [mar hondo, agua, arena, llano, bosque, montana] ----
 export const NOMBRES_BIOMA = { continente: 'Continente', arido: 'Árido', mares: 'Mucho mar', interior: 'Mar interior', cordillera: 'Cordillera', istmo: 'Istmo', golfo: 'Golfo', peninsulas: 'Penínsulas' };

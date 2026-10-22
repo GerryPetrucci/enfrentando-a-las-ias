@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geometriaDelMapa, centroDeRegion, bordesDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono } from '../../../web/casino/mapa-dibujo.js';
+import { geometriaDelMapa, centroDeRegion, bordesDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, pilasDeRegion, pintarLeyendaUnidades, COLOR_DE_TIPO, COLOR_CORONA } from '../../../web/casino/mapa-dibujo.js';
 import { leerMapa, estadoInicial, paletaDe } from '../../../web/casino/conquista-datos.js';
 import { colocarConquista } from '../../../web/casino/layout-conquista.js';
 import { crearMapa, serializarMapa, BIOMAS, CONFIG } from '../../mapa.js';
@@ -128,4 +128,83 @@ test('pintarFlecha y pintarEstallido dibujan sin lanzar y la flecha lleva su num
   const cero = ctxFalso();
   assert.doesNotThrow(() => pintarFlecha(cero.ctx, { x: 5, y: 5 }, { x: 5, y: 5 }, '#f00', 3, 13), 'origen y destino iguales no dividen por cero');
   assert.equal(cero.llamadas.some((args) => args.slice(1).some((a) => typeof a === 'number' && !Number.isFinite(a))), false, 'una flecha de largo cero no dibuja con NaN');
+});
+
+// ---- Guerra 2.0.0: composicion por tipo, tropas de visita, regiones aisladas y Hegemon en las fichas ----
+const COLORES5 = ['#d97757', '#f4f4f2', '#4285f4', '#4d6bfe', '#d946ef'];
+async function fichasDe() {
+  const p = await jugarConqBots(18, ['azar', 'azar', 'agresivo', 'economico', 'pacifico']), m = leerMapa(p.mapa);
+  const g = geometriaDelMapa(m, colocarConquista('9x16', m).mapa), base = estadoInicial(p), capital = m.inicio.capitales[0];
+  const dibujar = (estado) => { const f = ctxFalso(); pintarFichas(f.ctx, m, g, estado, COLORES5); return f; };
+  const conPila = (r, k, pila) => ({ ...base, tropas: base.tropas.map((n, i) => (i === r && k === base.dueno[r] ? pila.reduce((a, b) => a + b, 0) : n)), uni: [...base.uni.filter(([rr, kk]) => !(rr === r && kk === k)), [r, k, ...pila]] });
+  const tiene = (f, nombre, valor) => f.propiedades.some(([n, v]) => n === nombre && v === valor);
+  return { p, m, g, base, capital, dibujar, conPila, tiene };
+}
+
+test('pilasDeRegion lee las unidades de cada reino en una region desde `estado.uni`; sin `uni` (partida de formato anterior) o con filas rotas no inventa nada', () => {
+  const estado = { uni: [[3, 0, 5, 3, 0, 0], [3, 2, 2, 0, 0, 1], [4, 1, 7, 0, 0, 0], null, [3], 'x', [3, 1, 0, 0, 0, 0]] };
+  assert.deepEqual(pilasDeRegion(estado, 3), [{ k: 0, pila: [5, 3, 0, 0], total: 8 }, { k: 2, pila: [2, 0, 0, 1], total: 3 }], 'una pila vacia no cuenta');
+  assert.deepEqual(pilasDeRegion(estado, 9), []);
+  for (const raro of [{}, null, undefined, { uni: 'x' }, { uni: null }]) assert.deepEqual(pilasDeRegion(raro, 3), []);
+});
+
+test('pintarFichas (2.0.0): una barra de composicion bajo la ficha con los colores de los tipos que hay, y ninguna si el ejercito es solo de Lanceros', async () => {
+  const { conPila, dibujar, tiene, capital, base } = await fichasDe();
+  const mixto = dibujar(conPila(capital, 0, [5, 3, 2, 0]));
+  assert.ok(tiene(mixto, 'fillStyle', COLOR_DE_TIPO[0]) && tiene(mixto, 'fillStyle', COLOR_DE_TIPO[1]) && tiene(mixto, 'fillStyle', COLOR_DE_TIPO[2]), 'Lanceros, Arqueros y Jinetes');
+  assert.ok(!tiene(mixto, 'fillStyle', COLOR_DE_TIPO[3]), 'sin Ingenios no hay su color');
+  const soloL = dibujar(base);
+  for (const c of COLOR_DE_TIPO) assert.ok(!tiene(soloL, 'fillStyle', c), 'al empezar todo son Lanceros: ninguna barra');
+  const soloA = dibujar(conPila(capital, 0, [0, 6, 0, 0]));
+  assert.ok(tiene(soloA, 'fillStyle', COLOR_DE_TIPO[1]), 'un ejercito de un solo tipo que no es Lancero se marca');
+});
+
+test('pintarFichas (2.0.0): cada tramo de la barra mide lo que pesa su tipo (6 Lanceros y 2 Arqueros: el tramo de los Lanceros es 3 veces el de los Arqueros)', async () => {
+  const { conPila, dibujar, capital, g } = await fichasDe();
+  const rad = Math.max(13, g.T * 0.62), alto = Math.max(3, rad * 0.24);
+  const tramos = dibujar(conPila(capital, 0, [6, 2, 0, 0])).llamadas.filter(([n, , , , h]) => n === 'fillRect' && Math.abs(h - alto) < 1e-9).map(([, , , w]) => w);
+  assert.equal(tramos.length, 2, 'un tramo por tipo presente');
+  assert.ok(Math.abs(tramos[0] / tramos[1] - 3) < 1e-9, tramos.join(' y '));
+  assert.ok(Math.abs(tramos[0] + tramos[1] - rad * 1.7) < 1e-9, 'entre los dos llenan la barra');
+});
+
+test('pintarFichas (2.0.0): un pip por cada reino de visita con su color y su numero de unidades; sin visitas, ninguno', async () => {
+  const { base, dibujar, tiene, capital } = await fichasDe();
+  const conVisita = { ...base, uni: [...base.uni, [capital, 2, 20, 10, 5, 2]] }; // 37 unidades del reino 2 de visita en la capital del 0
+  const f = dibujar(conVisita);
+  assert.ok(f.llamadas.some(([n, t]) => n === 'fillText' && t === '37'), 'el numero de la visita');
+  assert.ok(tiene(f, 'fillStyle', COLORES5[2]), 'en el color del reino de visita');
+  assert.ok(!dibujar(base).llamadas.some(([n, t]) => n === 'fillText' && t === '37'));
+});
+
+test('pintarFichas (2.0.0): las regiones aisladas llevan un anillo punteado (y el punteado se apaga despues)', async () => {
+  const { base, dibujar, m } = await fichasDe();
+  const propias = base.dueno.map((d, r) => (d >= 0 ? r : -1)).filter((r) => r >= 0).slice(0, 2);
+  const punteados = (f) => f.llamadas.filter(([n, a]) => n === 'setLineDash' && Array.isArray(a) && a.length > 0).length;
+  assert.equal(punteados(dibujar({ ...base, aisladas: propias })), propias.length);
+  assert.equal(punteados(dibujar(base)), 0);
+  const f = dibujar({ ...base, aisladas: propias });
+  assert.ok(f.llamadas.filter(([n, a]) => n === 'setLineDash' && Array.isArray(a) && a.length === 0).length >= propias.length, 'cada punteado se deshace para no manchar lo que se dibuja despues');
+  assert.doesNotThrow(() => dibujar({ ...base, aisladas: [9999, -1, 'x'] }), `${m.regs.length} regiones: lo que no es una region no dibuja ni lanza`);
+});
+
+test('pintarFichas (2.0.0): la capital del Hegemon lleva una corona y solo ella', async () => {
+  const { base, dibujar, tiene } = await fichasDe();
+  assert.ok(!tiene(dibujar(base), 'fillStyle', COLOR_CORONA), 'sin Hegemon no hay corona');
+  assert.ok(!tiene(dibujar({ ...base, hegemon: -1 }), 'fillStyle', COLOR_CORONA));
+  const coronas = (f) => f.propiedades.filter(([n, v]) => n === 'fillStyle' && v === COLOR_CORONA).length;
+  assert.equal(coronas(dibujar({ ...base, hegemon: 0 })), 1, 'una corona, en la capital del reino 0');
+  assert.equal(coronas(dibujar({ ...base, hegemon: 3 })), 1);
+  const traslados = (f) => f.llamadas.filter(([n]) => n === 'translate').map(([, x, y]) => `${x},${y}`).sort();
+  assert.deepEqual(traslados(dibujar({ ...base, hegemon: 0 })), traslados(dibujar(base)), 'la corona ocupa el lugar de la estrella de la capital, encima de la ficha (no debajo, donde tapa la barra)');
+});
+
+test('pintarLeyendaUnidades dibuja los cuatro tipos con su letra y su color', () => {
+  const { ctx, llamadas, propiedades } = ctxFalso();
+  pintarLeyendaUnidades(ctx, 20, 20, 14);
+  const letras = llamadas.filter(([n]) => n === 'fillText').map(([, t]) => t);
+  for (const l of ['L', 'A', 'J', 'I']) assert.ok(letras.includes(l), l);
+  for (const c of COLOR_DE_TIPO) assert.ok(propiedades.some(([n, v]) => n === 'fillStyle' && v === c), c);
+  assert.equal(COLOR_DE_TIPO.length, 4);
+  assert.equal(new Set(COLOR_DE_TIPO).size, 4, 'cuatro colores distintos');
 });

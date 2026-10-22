@@ -192,7 +192,7 @@ destacadas por IA, en ese orden de prioridad; todo sale de lo guardado, sin llam
 en el orden del ranking (beat `rasgos`: pantalla con las cinco filas y las notables resaltadas, y la voz dice las destacadas, precedida de «Así jugó cada una.»), y el video cierra con el ranking (`final`). Una partida
 cortada no tiene fichas. Las escenas de los otros juegos todavia no muestran su evaluacion.
 
-### Guerra de territorios 2.0.0 (22 de octubre de 2026, rama `guerra-2.0.0`, sin fusionar a `main`)
+### Guerra de territorios 2.0.0 (22 de octubre de 2026, construida en la rama `guerra-2.0.0` y fusionada a `main` el mismo dia por orden expresa del usuario)
 
 Se construyo con el usuario dormido y las decisiones delegadas («toma las decisiones que creas necesarias»); cada una vive en una constante o una regla y se puede revertir. Reglas completas, huecos cerrados y
 mediciones: `privado/spec/guerra-2.0.0-diseno.md` y `-medicion.md`; plan y registro por etapas: `privado/planes/plan-guerra-2.0.0.md` y `-ledger.md`. Version de reglas `conquista-2.0.0` (las partidas 1.x quedan como ensayo).
@@ -221,8 +221,14 @@ mediciones: `privado/spec/guerra-2.0.0-diseno.md` y `-medicion.md`; plan y regis
   prompts para el sitio (`replay.js`) compara tambien las unidades de cada reino por region antes de dar un prompt por fiel (60 partidas de bots de todos los tipos y los 8 biomas, 30 con tropas de visita: 0 no fieles).
 - **Bots de control** (`src/juegos/conquista-bots-v2.js`): `lancero-masa`, `arquero-defensivo`, `jinete-relampago`, `mixto-adaptativo`, `traidor` y `leal` (se suman a los 4 de siempre) y la herramienta
   `node herramientas/medir-conquista.mjs` (asientos rotados, ablacion con `--sin=`, `--bioma=`, victorias por asiento).
-- **Pendiente:** la escena (video) todavia dibuja la guarnicion y no la composicion por tipo, las tropas de visita, las regiones aisladas ni el Hegemon (etapa 11); la serie con modelos reales (AL FINAL, con orden y
-  tope), `cache_control` para Claude y la fusion a `main` esperan orden del usuario.
+- **Escena (etapa 11, 22 de octubre de 2026):** el mapa dibuja la composicion de cada region (barra proporcional de L/A/J/I cuando hay algo mas que Lanceros), puntos con el color del reino visitante donde hay tropas
+  de visita, un anillo punteado en las regiones aisladas y una corona en el Hegemon (en el marcador y sobre su capital); una leyenda `L A J I` va en la esquina del mapa. El marcador cuenta las unidades totales del reino
+  (las de visita tambien); la tarjeta de batalla muestra la composicion de cada bando junto al terreno (`L15 A5`), los aliados de una coalicion y la voz y el feed cuentan el Hegemon (entra y sale), el duelo entre dos
+  aliados y cada evento del mundo (Presagio incluido). Todo se lee de `estado.uni` y del registro guardado, sin llamadas extra, y una partida de formato anterior se ve como siempre (sin barra, sin puntos). El dibujo
+  esta en `web/casino/mapa-dibujo.js` (`pintarFichas`, `pintarCorona`, `pintarLeyendaUnidades`; puro salvo el canvas), las constantes copiadas en `conquista-datos.js` y la linea de tiempo en
+  `linea-de-tiempo-conquista.js`; `herramientas/capturar-escena.mjs` corre ahora como root (agrega `--no-sandbox` cuando es root, como en la nube).
+- **Pendiente:** la serie con modelos reales (AL FINAL, con orden y tope), `cache_control` para Claude, grabar y publicar la serie 2.0.0 esperan orden del usuario. El juego nuevo de civilizaciones tiene spec
+  (`privado/spec/civilizaciones-diseno.md`); el plan y la construccion esperan aprobacion.
 
 **Mapas: ocho biomas** (etapa 9). A `continente`, `arido`, `mares` e `interior` se suman cuatro con una `forma` propia (`FORMAS` en `src/mapa.js`; cada una sube o baja la elevacion segun el centro del mapa y donde estan las
 capitales, asi que se reparte igual entre los reinos): **cordillera** (cadenas de montana del centro a la costa entre cada par de capitales vecinas, cortadas por un paso a media distancia; el doble o mas de montana que el

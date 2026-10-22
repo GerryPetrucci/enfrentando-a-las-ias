@@ -4,6 +4,8 @@
 // capturas (herramientas/capturar-escena.mjs). Cada funcion de dibujo recibe el contexto 2D y no toca nada fuera del espacio del mapa.
 //
 // `colores[k]` es el color del reino k: un texto, o una lista de textos para uno multicolor (Gemini: se alternan por celda).
+// Guerra 2.0.0 (etapa 11): cada ficha muestra ademas la composicion del ejercito por tipo (una barra de colores bajo la ficha), un pip por cada reino de visita, un anillo punteado si la region esta aislada
+// y una corona en la capital del Hegemon. Todo sale de la foto del turno (`estado.uni`, `estado.aisladas`, `estado.hegemon`): una partida de formato anterior no trae esos datos y se ve como siempre.
 
 import { TINTE_DE_REINO, LETRA_DE_EDIFICIO, MARAVILLA_TURNOS } from './conquista-datos.js';
 
@@ -19,6 +21,25 @@ function hash2(ix, iy, seed) {
 const sombrear = (hex, f) => { const n = parseInt(hex.slice(1), 16), q = (s) => Math.max(0, Math.min(255, Math.round(((n >> s) & 255) * f))); return `rgb(${q(16)},${q(8)},${q(0)})`; };
 const colorDe = (colores, k, x = 0, y = 0) => { const c = colores?.[k]; return Array.isArray(c) ? c[(x + y) % c.length] : (c ?? '#888888'); };
 export const colorSolido = (colores, k) => { const c = colores?.[k]; return Array.isArray(c) ? c[0] : (c ?? '#888888'); };
+
+// ---- Guerra 2.0.0: unidades por tipo [Lancero, Arquero, Jinete, Ingenio] ----
+export const COLOR_DE_TIPO = ['#c9ccd4', '#74c68a', '#f0a43a', '#5fd0d0'];
+export const LETRA_DE_TIPO = ['L', 'A', 'J', 'I'];
+export const COLOR_CORONA = '#ffd23f';
+
+// Las pilas de unidades que hay en una region, una por reino presente (el dueno y los de visita): [{ k, pila: [L, A, J, I], total }]. Sale de `estado.uni` (filas [region, reino, L, A, J, I]); sin `uni`
+// (partida de formato anterior), con filas rotas o con pilas vacias no inventa nada.
+export function pilasDeRegion(estado, region) {
+  const uni = estado?.uni;
+  if (!Array.isArray(uni)) return [];
+  const pilas = [];
+  for (const f of uni) {
+    if (!Array.isArray(f) || f.length < 6 || f[0] !== region) continue;
+    const pila = [2, 3, 4, 5].map((i) => Number(f[i]) || 0), total = pila.reduce((a, b) => a + b, 0);
+    if (total > 0) pilas.push({ k: f[1], pila, total });
+  }
+  return pilas;
+}
 
 // ---- lo puro ----
 // La celda entera (T) y el desplazamiento (ox, oy) con que el mapa cabe, centrado, en `rect`.
@@ -128,13 +149,40 @@ function estrella(ctx, x, y, s) {
   for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 6 : 13; if (i) ctx.lineTo(r * Math.cos(a), r * Math.sin(a)); else ctx.moveTo(r * Math.cos(a), r * Math.sin(a)); }
   ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
 }
+export function pintarCorona(ctx, x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = COLOR_CORONA; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(-12, 8); ctx.lineTo(-12, -6); ctx.lineTo(-6, 0); ctx.lineTo(0, -10); ctx.lineTo(6, 0); ctx.lineTo(12, -6); ctx.lineTo(12, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+}
+// La barra de composicion: un tramo por tipo presente, de ancho proporcional a sus unidades.
+function barraDeComposicion(ctx, cx, y, ancho, alto, pila) {
+  const total = pila.reduce((a, b) => a + b, 0);
+  if (!(total > 0)) return;
+  ctx.save(); ctx.fillStyle = '#0b0b0e'; ctx.fillRect(cx - ancho / 2 - 1.5, y - 1.5, ancho + 3, alto + 3);
+  let x = cx - ancho / 2;
+  pila.forEach((n, t) => { if (n <= 0) return; const w = (ancho * n) / total; ctx.fillStyle = COLOR_DE_TIPO[t]; ctx.fillRect(x, y, w, alto); x += w; });
+  ctx.restore();
+}
+function pipDeVisita(ctx, x, y, r, color, total) {
+  ctx.save(); ctx.fillStyle = '#0b0b0e'; ctx.beginPath(); ctx.arc(x, y, r + 2, 0, 7); ctx.fill(); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.restore();
+  texto(ctx, total, x, y + 1, r * 1.15, 800, '#0b0b0e');
+}
+function anilloAislado(ctx, x, y, r) {
+  ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = '#d8584e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+}
+// La leyenda de los colores de la barra: cuatro cuadros con la letra de cada tipo, en la esquina del mapa que se le indique.
+export function pintarLeyendaUnidades(ctx, x, y, tam) {
+  const paso = tam * 1.7, ancho = paso * 4 - tam * 0.7 + 10;
+  ctx.save(); ctx.fillStyle = 'rgba(8,8,12,.8)'; ctx.beginPath(); ctx.roundRect(x - 5, y - 5, ancho, tam + 10, 6); ctx.fill();
+  LETRA_DE_TIPO.forEach((letra, t) => { const cx = x + t * paso; ctx.fillStyle = COLOR_DE_TIPO[t]; ctx.fillRect(cx, y, tam, tam); texto(ctx, letra, cx + tam / 2, y + tam / 2 + 1, tam * 0.78, 800, '#0b0b0e'); });
+  ctx.restore();
+}
 function texto(ctx, s, x, y, tam, peso = 800, color = '#f2f0ed', alineacion = 'center') {
   ctx.fillStyle = color; ctx.font = `${peso} ${tam}px ${FUENTE}`; ctx.textAlign = alineacion; ctx.textBaseline = 'middle'; ctx.fillText(String(s), x, y);
 }
 
 // `estado` es la foto del mapa (registro.estado o estadoInicial): duenos, tropas, fortaleza, edificios (letra) y si estan danados, y la Maravilla.
 export function pintarFichas(ctx, mapa, g, estado, colores) {
-  const T = g.T, rad = Math.max(13, T * 0.62), capitales = mapa.inicio.capitales;
+  const T = g.T, rad = Math.max(13, T * 0.62), capitales = mapa.inicio.capitales, aisladas = new Set((Array.isArray(estado?.aisladas) ? estado.aisladas : []).filter(Number.isInteger));
   for (const reg of mapa.regs) {
     const c = centroDeRegion(mapa, reg.id, g), x = c.x, y = c.y, k = estado?.dueno?.[reg.id] ?? -1;
     if (reg.rec) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y - rad * 1.15, rad * 0.72, 0, 7); ctx.fill(); pintarIcono(ctx, reg.rec, x, y - rad * 1.15, rad * 0.5); }
@@ -142,9 +190,16 @@ export function pintarFichas(ctx, mapa, g, estado, colores) {
       const col = colorSolido(colores, k);
       ctx.fillStyle = 'rgba(8,8,12,.9)'; ctx.beginPath(); ctx.arc(x, y + rad * 0.3, rad, 0, 7); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
       texto(ctx, estado.tropas?.[reg.id] ?? 0, x, y + rad * 0.34, rad * 1.15);
+      const pilas = pilasDeRegion(estado, reg.id), mia = pilas.find((p) => p.k === k);
+      if (mia && mia.pila.some((n, t) => t > 0 && n > 0)) barraDeComposicion(ctx, x, y + rad * 1.42, rad * 1.7, Math.max(3, rad * 0.24), mia.pila); // solo Lanceros: sin barra (es lo normal)
+      pilas.filter((p) => p.k !== k).slice(0, 2).forEach((v, i) => pipDeVisita(ctx, x + (i ? -1 : 1) * rad * 0.98, y - rad * 0.5, rad * 0.48, colorSolido(colores, v.k), v.total));
+      if (aisladas.has(reg.id)) anilloAislado(ctx, x, y + rad * 0.3, rad * 1.22);
       const fort = estado.fort?.[reg.id] ?? 0;
       if (fort > 0) torre(ctx, x - rad * 1.25, y + rad * 0.3, fort, col, rad / 24);
-      if (capitales.includes(reg.id)) estrella(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
+      if (capitales.includes(reg.id)) {
+        if (estado.hegemon === k) pintarCorona(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
+        else estrella(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
+      }
       const letra = estado.edif?.[reg.id];
       if (letra) {
         const ex = x + rad * 1.25, ey = y + rad * 0.3;
