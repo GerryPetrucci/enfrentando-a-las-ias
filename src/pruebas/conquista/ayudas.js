@@ -108,7 +108,7 @@ export function vistasDePartida(seed, k = 4, nombresBots = ['agresivo', 'pacific
 
 // --- Tamano del prompt: lo usan prompt.test.js y herramientas/medir-prompt.mjs, para medir lo mismo ---
 export const CARACTERES_POR_TOKEN = 1.97; // Claude en espanol (los demas modelos cuentan menos tokens)
-export const TOPE_TOKENS_ENTRADA = 4450;  // excepcion aprobada de la Guerra de territorios (CLAUDE.md)
+export const TOPE_TOKENS_ENTRADA = 6000;  // excepcion de la Guerra de territorios (CLAUDE.md): 4,450 hasta 1.1.0; 6,000 desde el 22 de octubre de 2026 (2.0.0, decision delegada por el usuario)
 export const tokensDelPrompt = (E, i = 0) =>
   Math.round((construirSistema(conquista).length + construirUsuario(vistaTexto(E, i)).length) / CARACTERES_POR_TOKEN);
 // El peor caso de 5 reinos: mapa lleno de tropas y edificios, y los 4 rivales mandando mensaje, privado y nota al largo maximo.

@@ -108,6 +108,9 @@ por llamada; con sus 6 reglas extra mide 3,681 tokens de entrada tipicos en 5 re
 `node herramientas/medir-prompt.mjs` (no hace llamadas: mide el texto real del juego con los caracteres por token medidos)
 antes de aceptar mas reglas; `npm test` vigila el mismo tope.
 
+**Ampliada (22 oct 2026, Guerra 2.0.0):** hasta 6,000 tokens de entrada en el peor caso de 5 reinos y 700 de salida visible (14 ordenes), por decision delegada
+del usuario para sostener mas complejidad. Una partida completa de 4 reinos ronda $1.0-1.25 con 1.1.0 (medido: ~$0.0104 por llamada); con 2.0.0 el tope es $1.50 blando / $2.00 duro.
+
 Antes de implementar, estimar llamadas y costo con los precios vigentes de OpenRouter.
 
 **Los tokens se miden con Claude**, que para el mismo texto en espanol cuenta ~1.5 veces mas tokens que

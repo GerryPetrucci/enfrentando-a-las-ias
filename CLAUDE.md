@@ -158,6 +158,10 @@ reglas extra (mensajes privados, comercio, edificios, maravilla, honor y nota de
 tokens en el caso tipico de 5 reinos. Sigue siendo **una llamada por
 jugador por turno**, 30 turnos y <= ~100 llamadas por partida de 4 jugadores; el costo con modelos de
 pago sube a ~$0.44 por partida con la mezcla media (dentro del tope mensual de ~$20).
+**Ampliada el 22 de octubre de 2026 (Guerra 2.0.0, decision delegada por el usuario, que propuso subir tokens para sostener mas complejidad):** entrada <= **6,000** (peor caso de 5 reinos,
+caracteres / 1.97; el borrador completo de 2.0.0 mide ~5,700) y salida visible <= 700 con hasta 14 ordenes; `max_tokens` 4000 no cambia. El costo medido con modelos reales es ~$0.0104 por llamada
+(~$1.0-1.25 una partida completa de 4 reinos; el $0.44 de arriba era una estimacion): con 2.0.0 sube ~25 % y el tope queda en **$1.50 blando / $2.00 duro por partida completa de 4 reinos**.
+Llamadas, turnos y jugadores no cambian. Mediciones y razones en `privado/spec/guerra-2.0.0-propuesta.md`.
 
 ## Invariantes de diseno (romper esto rompe el proyecto)
 
