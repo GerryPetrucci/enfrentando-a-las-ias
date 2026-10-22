@@ -53,7 +53,7 @@ function caos(E, s, rng) {
 }
 
 function jugar(k, seed) {
-  const E = crearEstado(crearRng(seed), { jugadores: k, mapa: mapaDe(seed, k) }), rng = crearRng((seed ^ 0xca05) >>> 0), cuenta = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0 };
+  const E = crearEstado(crearRng(seed), { jugadores: k, mapa: mapaDe(seed, k) }), rng = crearRng((seed ^ 0xca05) >>> 0), cuenta = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0, eventos: 0, hegemones: 0 };
   while (E.ganador === null) {
     const jugadas = E.reinos.map((r, s) => (r.vivo ? normalizarRespuesta(caos(E, s, rng), E) : null));
     const reg = aplicarTurno(E, jugadas);
@@ -63,13 +63,15 @@ function jugar(k, seed) {
     cuenta.conquistas += reg.eventos.filter((e) => e.tipo === 'conquista').length;
     cuenta.caidas += reg.eventos.filter((e) => e.tipo === 'caida').length;
     if (reg.estado.aisladas.length) cuenta.aisladas++;
+    cuenta.eventos += reg.eventos.filter((e) => e.tipo === 'evento').length;
+    cuenta.hegemones += reg.eventos.filter((e) => e.tipo === 'hegemon').length;
     if (E.turno > 31) throw new Error('la partida no termina');
   }
   return { E, cuenta };
 }
 
-test('partidas al azar de 2 a 5 reinos con ordenes de todo tipo: los invariantes se cumplen en todos los turnos y hay visitas, coaliciones, tres bandos, conquistas, caidas y regiones aisladas', () => {
-  const total = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0 };
+test('partidas al azar de 2 a 5 reinos con ordenes de todo tipo: los invariantes se cumplen en todos los turnos y hay visitas, coaliciones, tres bandos, conquistas, caidas, regiones aisladas, eventos del mundo y Hegemon', () => {
+  const total = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0, eventos: 0, hegemones: 0 };
   for (const k of [2, 3, 4, 5]) for (let seed = 1; seed <= 25; seed++) {
     const { cuenta } = jugar(k, seed);
     for (const c of Object.keys(total)) total[c] += cuenta[c];

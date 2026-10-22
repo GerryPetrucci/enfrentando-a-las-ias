@@ -192,6 +192,7 @@ test('un pacto cumplido trae los privados que se cruzaron la pareja durante el p
 
 test('el pacto cumplido muestra de verdad los 2 privados mas recientes de la pareja DURANTE el pacto (no los del turno del cumplimiento ni los de antes) y los marca como revelados', () => {
   const q = structuredClone(ejemplos[IDX.PACTO]);
+  q.rondas.forEach((r) => { r.privados = []; }); // la prueba pone todos los privados de la pareja: los que mandaron los bots de la partida de ejemplo no cuentan
   const rc = q.rondas.find((r) => r.eventos.some((e) => e.tipo === 'pacto_cumplido')), cumplido = rc.eventos.find((e) => e.tipo === 'pacto_cumplido');
   const mismaPareja = (e) => [e.k, e.con].sort().join() === [cumplido.k, cumplido.con].sort().join();
   const firma = q.rondas.filter((r) => r.turno < rc.turno && r.eventos.some((e) => e.tipo === 'pacto' && mismaPareja(e))).at(-1);

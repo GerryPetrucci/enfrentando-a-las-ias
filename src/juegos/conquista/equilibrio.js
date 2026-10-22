@@ -1,0 +1,40 @@
+// Paquete de equilibrio de la Guerra de territorios (2.0.0): funciones puras sobre el estado. Las reglas de cada pieza estan en constantes.js (HEGEMON, RECONQUISTA, PATRIA, EVENTOS).
+
+import { crearRng } from '../../rng.js';
+import { HEGEMON, EVENTOS } from './constantes.js';
+
+// Hegemon: el reino con mas regiones desde `entra` de las regiones con dueno; lo conserva mientras siga entre los de mas regiones y no baje de `sale` (histeresis, para que no parpadee).
+// Para entrar debe ser el unico de la punta. Devuelve el Hegemon (-1 si no hay) y lo deja en E.hegemon.
+export function actualizarHegemon(E) {
+  const cuenta = Array(E.k).fill(0);
+  let total = 0;
+  for (const d of E.dueno) if (d >= 0) { cuenta[d]++; total++; }
+  let nuevo = -1;
+  if (HEGEMON.activo && total > 0) {
+    const punta = Math.max(...cuenta), lideres = cuenta.flatMap((n, s) => (n === punta && E.reinos[s].vivo ? [s] : []));
+    const actual = E.hegemon;
+    if (actual >= 0 && lideres.includes(actual) && cuenta[actual] / total >= HEGEMON.sale) nuevo = actual;
+    else if (lideres.length === 1 && cuenta[lideres[0]] / total >= HEGEMON.entra) nuevo = lideres[0];
+  }
+  E.hegemon = nuevo;
+  return nuevo;
+}
+
+// El calendario de eventos de una partida: [{ t, tipo }] en los turnos de EVENTOS.turnos, sin repetir el tipo dos veces seguidas. Sale solo del seed del mapa (un rng propio, para no mover el de la partida),
+// asi que es el mismo pase lo que pase y lo conocen todos los reinos por igual. Con los eventos apagados, [].
+export function sortearCalendario(seedMapa) {
+  if (!EVENTOS.activo) return [];
+  const rng = crearRng((seedMapa ^ 0x5ee7) >>> 0), calendario = [];
+  let previo = null;
+  for (const t of EVENTOS.turnos) {
+    const opciones = EVENTOS.tipos.filter((x) => x !== previo), tipo = opciones[Math.floor(rng() * opciones.length)];
+    calendario.push({ t, tipo }); previo = tipo;
+  }
+  return calendario;
+}
+
+// El evento del turno t (o null).
+export const eventoDe = (E, t) => (EVENTOS.activo ? E.calendario?.find((e) => e.t === t) ?? null : null);
+
+// Como se llama cada evento ante las IAs.
+export const NOMBRE_EVENTO = { sequia: 'Sequia', peste: 'Peste', cosecha: 'Cosecha', caravana: 'Caravana' };

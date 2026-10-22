@@ -12,7 +12,7 @@ Se esta construyendo **Guerra de territorios 2.0.0** en la rama **`guerra-2.0.0`
 
 1. `git fetch origin && git checkout guerra-2.0.0 && git pull`; `git -C privado pull` (el respaldo privado trae el plan y las specs); `npm test` (verde en cada commit de la rama).
 2. Leer `privado/planes/plan-guerra-2.0.0-ledger.md` (ultima etapa terminada y siguiente tarea) y `privado/planes/plan-guerra-2.0.0.md` (etapas 0 a 12 con checklist). Reglas completas: `privado/spec/guerra-2.0.0-diseno.md`. Hallazgos y mediciones: `privado/spec/guerra-2.0.0-propuesta.md`. Juego nuevo de civilizaciones: `privado/spec/civilizaciones-propuesta.md`.
-3. El usuario dejo trabajando a Claude mientras dormia y delego las decisiones: las que se tomaron estan en la seccion 10 del diseno (tope de entrada 6,000 tokens y costo $1.50/$2.00 por partida, capital cerrada a aliados, tierra ajena x0.85, suministro por regiones aisladas, paquete de equilibrio, mejoras en vez de armas). Son revisables: cada una vive en una constante o una regla.
+3. El usuario dejo trabajando a Claude mientras dormia y delego las decisiones: las que se tomaron estan en la seccion 10 del diseno (tope de entrada 6,500 tokens y costo $1.50/$2.00 por partida, capital cerrada a aliados, tierra ajena x0.85, suministro por regiones aisladas, paquete de equilibrio, mejoras en vez de armas). Son revisables: cada una vive en una constante o una regla.
 4. Espera orden expresa del usuario: pruebas con modelos reales (AL FINAL, con tope), `cache_control` para Claude (medir `cached_tokens`), PR y fusion, grabar y publicar la serie 2.0.0.
 
 ## Donde vive que
@@ -158,8 +158,8 @@ reglas extra (mensajes privados, comercio, edificios, maravilla, honor y nota de
 tokens en el caso tipico de 5 reinos. Sigue siendo **una llamada por
 jugador por turno**, 30 turnos y <= ~100 llamadas por partida de 4 jugadores; el costo con modelos de
 pago sube a ~$0.44 por partida con la mezcla media (dentro del tope mensual de ~$20).
-**Ampliada el 22 de octubre de 2026 (Guerra 2.0.0, decision delegada por el usuario, que propuso subir tokens para sostener mas complejidad):** entrada <= **6,000** (peor caso de 5 reinos,
-caracteres / 1.97; el borrador completo de 2.0.0 mide ~5,700) y salida visible <= 700 con hasta 14 ordenes; `max_tokens` 4000 no cambia. El costo medido con modelos reales es ~$0.0104 por llamada
+**Ampliada el 22 de octubre de 2026 (Guerra 2.0.0, decision delegada por el usuario, que propuso subir tokens para sostener mas complejidad):** entrada <= **6,500** (peor caso de 5 reinos,
+caracteres / 1.97; era 6,000 al empezar la rama y se subio a 6,500 al llegar el paquete de equilibrio y los frentes: el texto fijo se comprimio y aun asi no cabia; la parte fija de las reglas y el mapa es el prefijo que cachean los proveedores) y salida visible <= 700 con hasta 14 ordenes; `max_tokens` 4000 no cambia. El costo medido con modelos reales es ~$0.0104 por llamada
 (~$1.0-1.25 una partida completa de 4 reinos; el $0.44 de arriba era una estimacion): con 2.0.0 sube ~25 % y el tope queda en **$1.50 blando / $2.00 duro por partida completa de 4 reinos**.
 Llamadas, turnos y jugadores no cambian. Mediciones y razones en `privado/spec/guerra-2.0.0-propuesta.md`.
 

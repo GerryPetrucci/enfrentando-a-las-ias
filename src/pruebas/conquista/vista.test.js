@@ -15,7 +15,8 @@ test('la vista trae lo tuyo y lo publico', () => {
   assert.ok(v.includes('Tu almacen: Comida 6 | Madera 4 | Roca 2 | Hierro 0 | Oro 4 | Caballos 0 | mejoras L0 A0 J0 I0'));
   assert.match(v, /Pactos vigentes: ninguno/);
   assert.match(v, /Tu nota del turno anterior: \(ninguna\)/);
-  assert.match(v, /MAPA \(terreno, recurso y vecinas\):\nR01 /);
+  assert.match(v, /MAPA \(terreno, recurso y vecinas por numero: 5 = R05\):\nR01 /);
+  assert.match(v, /\nR01 (ll|bo|mo)(\+\w+)?: \d+( \d+)*\n/, 'las vecinas van como numeros de region');
   assert.match(v, /OCUPACION[^\n]*\nAzur \(tu\): R\d\d\(/);
   assert.match(v, /Sucedio el turno anterior: nada notable\./);
 });
@@ -35,7 +36,7 @@ test('la ocupacion muestra a los invitados de cada region con su reino y sus uni
   sumarUni(E, d, 0, 0, 2); sumarUni(E, d, 2, 1, 3);
   const v = vistaTexto(E, 3);
   assert.ok(v.includes(`${R(d)}(L3 +Azur L2 +Violeta A3)`), v.split('\n').find((l) => l.startsWith('Ambar')));
-  assert.match(v, /OCUPACION \(region\(unidades, fN, edificio; - = danado\); \+Reino L2 = tropas de visita de ese reino\)/);
+  assert.match(v, /OCUPACION \(region\(unidades, fN, edificio; - = danado\); \+Reino L2 = tropas de visita\)/);
   assert.ok(!vistaTexto(nuevoEstado(4), 3).includes(' +Azur '), 'sin invitados no aparece nada');
 });
 
@@ -117,10 +118,12 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // manda ordenes nuevas (mejorar, tipos, todo) y por eso las tres partidas son otras. Huellas anteriores: 53a109e7..., c3ca496d..., 59cba0a4... Cada cambio del texto de las vistas vuelve a mover estas huellas.
 // 22 de octubre de 2026 (etapa 4, alianzas): vuelven a cambiar A PROPOSITO: la leyenda de OCUPACION explica «+Reino L2» (tropas de visita), el combate cuenta tierra ajena (x0.85) y los aliados ya pueden
 // visitarse. Huellas anteriores: c405e106..., 69a040b4..., 27fe1742...
+// 22 de octubre de 2026 (etapa 6, equilibrio): vuelven a cambiar A PROPOSITO: las vecinas del MAPA van como numeros, hay lineas de Hegemon, Evento, Presagio, Reconquista y Patria, y los eventos del
+// mundo, el Hegemon y la Reconquista cambian las partidas. Huellas anteriores: 1df82098..., 0d3c2c44..., d0e8e968...
 const HUELLAS_DE_LAS_VISTAS = {
-  1: '1df8209858bf29fc646324ef97789acca6e86bae',
-  2: '0d3c2c44361283e371da8466e980ee7f380ca196',
-  3: 'd0e8e9689600870d949559437dd9ae1bfd91d207',
+  1: '8296b27404a11e5af882fc487b1e4d6da133ad14',
+  2: 'cf5a43e7ebc13d616f89ea9ca4e0055125cc5bc7',
+  3: '171ab1f200bf53444aa6167b6e6bb568ce2264c0',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

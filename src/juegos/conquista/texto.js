@@ -1,8 +1,17 @@
 // Resumen publico del turno: lo que todos los reinos saben de lo ocurrido. Sin acentos (es parte del prompt).
 // Nunca incluye cantidades de comercio, regalos, almacenes, ordenes ni notas.
 
-import { NOMBRES_REINOS } from './constantes.js';
+import { NOMBRES_REINOS, EVENTOS } from './constantes.js';
 import { nombreRegion } from './estado.js';
+
+const unir = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : xs[0]);
+const COSTO_CARAVANA = `${EVENTOS.caravana.Oro} Oro y ${EVENTOS.caravana.Caballos} Caballos`;
+function textoDeEvento(e, N) {
+  if (e.evento === 'sequia') return `Evento: Sequia (la cosecha base baja a la mitad ${EVENTOS.sequiaTurnos} turnos)`;
+  if (e.evento === 'cosecha') return 'Evento: Cosecha (+1 Comida por region)';
+  if (e.evento === 'peste') return `Evento: Peste (${unir((e.afectados ?? []).map((a) => `${N(a.k)} pierde ${a.n} unidades`))})`;
+  return `Evento: Caravana (${unir((e.afectados ?? []).map((a) => N(a.k)))} ${(e.afectados ?? []).length > 1 ? 'reciben' : 'recibe'} ${COSTO_CARAVANA})`;
+}
 
 // `nombres`: el nombre de reino de cada asiento en esta partida (nombres.js); sin ellos, los de siempre.
 export function resumenPublico(eventos, nombres = NOMBRES_REINOS) {
@@ -19,6 +28,9 @@ export function resumenPublico(eventos, nombres = NOMBRES_REINOS) {
     else if (e.tipo === 'maravilla') l.push(`${N(e.k)} construyo la Maravilla en ${nombreRegion(e.r)}`);
     else if (e.tipo === 'maravilla_cae') l.push(`${N(e.k)} conquisto la Maravilla de ${N(e.de)}`);
     else if (e.tipo === 'deshonra') l.push(`${N(e.k)} quedo deshonrado`);
+    else if (e.tipo === 'hegemon') l.push(`${N(e.k)} es ahora el Hegemon`);
+    else if (e.tipo === 'hegemon_fin') l.push(`${N(e.k)} deja de ser el Hegemon`);
+    else if (e.tipo === 'evento') l.push(textoDeEvento(e, N));
   }
   return l;
 }

@@ -15,7 +15,12 @@ export function recoleccion(ctx) {
     if (ed === 'granja') R[s].stock.Comida += E.dan[r] ? 1 : 2;
     else if (ed === 'mercado') R[s].stock.Oro += E.dan[r] ? 1 : 2;
   }
-  for (const reino of R) if (reino.vivo) reino.stock.Comida += Math.floor(regionesDe(E, reino.s).filter((r) => !ctx.aisladas[r]).length / COMIDA.regionesPorCosecha);
+  const sequia = ctx.t <= E.sequiaHasta, cosecha = ctx.mundo?.tipo === 'cosecha'; // eventos del mundo: la sequia baja la cosecha base a la mitad; la cosecha da +1 Comida por region
+  for (const reino of R) {
+    if (!reino.vivo) continue;
+    const n = regionesDe(E, reino.s).filter((r) => !ctx.aisladas[r]).length, base = Math.floor(n / COMIDA.regionesPorCosecha);
+    reino.stock.Comida += (sequia ? Math.floor(base / 2) : base) + (cosecha ? n : 0);
+  }
 }
 
 // 2. Honor (+1 cada 3 turnos, +1 a cada parte de un pacto cumplido) y fin de los pactos en la muerte subita.

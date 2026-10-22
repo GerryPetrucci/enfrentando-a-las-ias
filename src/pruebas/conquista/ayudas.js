@@ -117,7 +117,7 @@ export function vistasDePartida(seed, k = 4, nombresBots = ['agresivo', 'pacific
 
 // --- Tamano del prompt: lo usan prompt.test.js y herramientas/medir-prompt.mjs, para medir lo mismo ---
 export const CARACTERES_POR_TOKEN = 1.97; // Claude en espanol (los demas modelos cuentan menos tokens)
-export const TOPE_TOKENS_ENTRADA = 6000;  // excepcion de la Guerra de territorios (CLAUDE.md): 4,450 hasta 1.1.0; 6,000 desde el 22 de octubre de 2026 (2.0.0, decision delegada por el usuario)
+export const TOPE_TOKENS_ENTRADA = 6500;  // excepcion de la Guerra de territorios (CLAUDE.md): 4,450 hasta 1.1.0; 6,000 desde el 22 de octubre de 2026 (2.0.0, decision delegada por el usuario); 6,500 con el paquete de equilibrio (etapa 6)
 export const tokensDelPrompt = (E, i = 0) =>
   Math.round((construirSistema(conquista).length + construirUsuario(vistaTexto(E, i)).length) / CARACTERES_POR_TOKEN);
 // El peor caso de 5 reinos: mapa lleno de tropas y edificios, y los 4 rivales mandando mensaje, privado y nota al largo maximo.
@@ -133,5 +133,8 @@ export function estadoPeorCaso(seed = 7, bioma = 'continente') {
   E.resumenPrevio = Array.from({ length: 8 }, (_, i) => `Azur conquisto R${i + 10} de Ambar`);
   E.regalosPrevios[0] = [{ de: 1, a: 0, recurso: 'Madera', n: 3 }];
   E.maravilla = { r: E.reinos[1].capital, k: 1, n: 2, t0: 3 };
+  // Paquete de equilibrio (etapa 6): un Hegemon, un evento este turno y otro anunciado, y tres regiones del reino 0 que acaba de perder (Reconquista).
+  E.hegemon = 1; E.calendario = [{ t: 14, tipo: 'caravana' }, { t: 15, tipo: 'cosecha' }];
+  [1, 2, 4].forEach((r, i) => { E.perdidas[E.dueno.indexOf(i + 1, r + 7)] = { k: 0, t: 12 }; });
   return E;
 }

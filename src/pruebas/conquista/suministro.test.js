@@ -7,6 +7,7 @@ import { regionesDe, instantanea, limpiarRegion } from '../../juegos/conquista/e
 import { regionesAisladas } from '../../juegos/conquista/suministro.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
 import { recoleccion, hambre, ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
+import { eventosDelMundo } from '../../juegos/conquista/turno/mundo.js';
 
 const vaciar = (E, s, extra = {}) => { E.reinos[s].stock = { Comida: 0, Madera: 0, Roca: 0, Hierro: 0, Oro: 0, Caballos: 0, ...extra }; };
 const pacto = (E, a, b, hasta = 30) => { E.reinos[a].pactos[b] = E.reinos[b].pactos[a] = hasta; };
@@ -96,6 +97,14 @@ test('una region aislada no produce recursos ni edificios y no cuenta para la co
   recoleccion(contexto(E));
   assert.equal(E.reinos[0].stock.Hierro, 2);
   assert.equal(E.reinos[0].stock.Comida, 2 + 1, 'granja +2 y cosecha de 2 regiones (floor(2 / 2) = 1)');
+});
+
+test('el evento Cosecha (+1 Comida por region) no cuenta las regiones aisladas', () => {
+  const E = mapaAbierto(); rodeada(E); // capital + una region aislada
+  E.calendario = [{ t: 1, tipo: 'cosecha' }]; vaciar(E, 0);
+  const ctx = contexto(E);
+  eventosDelMundo(ctx); recoleccion(ctx);
+  assert.equal(E.reinos[0].stock.Comida, 0 + 1, 'floor(1 / 2) de base + 1 por la unica region conectada');
 });
 
 test('en una region aislada no se recluta, no se contratan mercenarios, no se fortifica ni se construye; el motivo lo dice y no se paga nada', () => {

@@ -4,6 +4,7 @@ import { crearMapa, biomaDeSeed } from '../../mapa.js';
 import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS, N_TIPOS } from './constantes.js';
 import { nombresValidos } from './nombres.js';
 import { listaDeAisladas } from './suministro.js';
+import { sortearCalendario } from './equilibrio.js';
 
 export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
 
@@ -52,6 +53,8 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } 
   const E = {
     turno: 0, k, mapa: m, dueno, uni, fort, edif: Array(NR).fill(null), dan: new Uint8Array(NR), reinos,
     maravilla: null, ganador: null, ganoPorMaravilla: false,
+    // Paquete de equilibrio (2.0.0): el Hegemon (-1 = ninguno), quien perdio cada region y cuando (Reconquista), el calendario de eventos (del seed del mapa) y hasta que turno dura la sequia
+    hegemon: -1, perdidas: Array(NR).fill(null), calendario: sortearCalendario(seedMapa), sequiaHasta: 0,
     desempate: Array.from({ length: k }, () => rng()),
     stats: Array.from({ length: k }, () => ({ rupturas: 0, pactos: 0, cumplidos: 0, comercios: 0, edificios: 0, validas: 0, total: 0, invalidas: 0 })),
     resumenPrevio: [], mensajesPrevios: [], regalosPrevios: Array.from({ length: k }, () => []), historial: [],
@@ -103,6 +106,8 @@ export function instantanea(E) {
     uni: pilasNoVacias(E),
     // `aisladas`: las regiones sin camino a la capital de su dueno al empezar el turno siguiente (no producen ni se recluta ahi)
     aisladas: listaDeAisladas(E, E.turno + 1),
+    // `hegemon`: el reino que mas regiones tiene (-1 = ninguno) · `sequia`: si el turno siguiente es de sequia
+    hegemon: E.hegemon, sequia: E.sequiaHasta >= E.turno + 1,
   };
 }
 
