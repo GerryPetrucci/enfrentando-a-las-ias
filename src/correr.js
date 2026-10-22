@@ -10,7 +10,7 @@
 //
 //   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4 --bioma=arido   (fuerza la forma del mapa)
 //
-// BIOMA (solo Guerra de territorios): `--bioma=continente|arido|mares|interior` fuerza la forma del mapa; sin el, sale del seed (una serie de rotacion
+// BIOMA (solo Guerra de territorios): `--bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas` fuerza la forma del mapa; sin el, sale del seed (una serie de rotacion
 // usa el mismo seed y por eso el mismo mapa). Cada partida guarda su mapa completo y su bioma, y la consola dice cual se jugo.
 //
 // MODO (obligatorio en cada ejecucion con modelos, no hay valor por defecto):
@@ -84,7 +84,7 @@ export async function correr(argv, {
   const errCantidad = errorDeCantidad(juego, k);
   if (errCantidad) salir(errCantidad);
 
-  // --bioma=continente|arido|mares|interior fuerza la forma del mapa de la Guerra de territorios; sin el, sale del seed. Se valida antes de cualquier llamada.
+  // --bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas fuerza la forma del mapa de la Guerra de territorios; sin el, sale del seed. Se valida antes de cualquier llamada.
   if (o.bioma !== undefined) {
     if (juego.id !== 'conquista') salir('--bioma solo vale para la Guerra de territorios (--juego=conquista).');
     if (!BIOMAS.includes(o.bioma)) salir(`--bioma debe ser uno de: ${BIOMAS.join(', ')}.`);

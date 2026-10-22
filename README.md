@@ -40,7 +40,7 @@ La **Guerra de territorios** se juega de 2 a 5 jugadores y se corre en serie de 
 
 ```bash
 node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4      # bots de control, sin API
-node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4 --bioma=arido   # fuerza la forma del mapa: continente, arido, mares o interior (sin el, sale del seed)
+node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4 --bioma=arido   # fuerza la forma del mapa: continente, arido, mares, interior, cordillera, istmo, golfo o peninsulas (sin el, sale del seed)
 node src/correr.js --juego=conquista --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago
 node src/humo.js                                                                                      # prueba de humo con 2 modelos gratis
 ```

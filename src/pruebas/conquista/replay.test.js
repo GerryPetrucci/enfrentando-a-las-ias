@@ -53,6 +53,22 @@ test('hasta un turno: solo los turnos pedidos; un reino caido no recibe prompt',
   assert.equal(todo.turnos[0].prompts.every((p) => typeof p === 'string'), true);
 });
 
+test('las tropas de visita tambien cuentan: si lo guardado cambia las unidades de un invitado la rejugada ya no es fiel', async () => {
+  // una partida con aliados que dejan tropas de visita en tierra del otro (traidor y leal pactan y visitan)
+  let partida = null;
+  for (const seed of [3, 5, 8, 13, 21, 34]) {
+    const { partida: p } = await conVistas(seed, ['traidor', 'leal', 'traidor', 'leal']);
+    if (p.rondas.some((r) => (r.estado.uni ?? []).some(([reg, k]) => r.estado.dueno[reg] !== k))) { partida = p; break; }
+  }
+  assert.ok(partida, 'ninguna de las partidas de prueba dejo tropas de visita');
+  assert.equal(reconstruirPrompts(partida).fiel, true);
+  const manipulada = structuredClone(partida);
+  const ronda = manipulada.rondas.find((r) => r.estado.uni.some(([reg, k]) => r.estado.dueno[reg] !== k));
+  const visita = ronda.estado.uni.find(([reg, k]) => ronda.estado.dueno[reg] !== k);
+  visita[2] += 1; // una unidad de mas de visita: la guarnicion del dueno y los duenos siguen igual
+  assert.equal(reconstruirPrompts(manipulada).fiel, false);
+});
+
 test('si lo guardado no cuadra (un estado cambiado) la reconstruccion lo dice y nunca lanza', async () => {
   const { partida } = await conVistas(18, ['agresivo', 'pacifico', 'economico', 'azar']);
   const manipulada = structuredClone(partida);

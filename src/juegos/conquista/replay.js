@@ -1,11 +1,12 @@
 // Reconstruye lo que vio cada IA en cada turno de una partida YA guardada (el prompt de usuario que se le mando). La partida guarda lo que respondio cada reino y lo que paso, no el texto que recibio; pero el motor
 // es determinista, asi que rejugando las respuestas guardadas sobre el mismo mapa y seed se obtiene el mismo estado y, con el, la misma vista. `fiel` dice si la rejugada coincide con los estados guardados
-// (duenos y tropas de cada turno): si no, esos prompts NO son de fiar y no se publican. Solo para la web y los archivos publicos: nunca cambia nada de lo jugado.
+// (duenos, guarnicion y unidades de cada reino en cada region, tambien las de visita, de cada turno): si no, esos prompts NO son de fiar y no se publican. Solo para la web y los archivos publicos: nunca
+// cambia nada de lo jugado.
 
 import { crearRng } from '../../rng.js';
 import { restaurarMapa } from '../../mapa.js';
 import { construirUsuario } from '../../prompt.js';
-import { crearEstado, tropasDe } from './estado.js';
+import { crearEstado, tropasDe, instantanea } from './estado.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { aplicarTurno } from './turno/index.js';
 import { vistaTexto } from './vista.js';
@@ -37,6 +38,7 @@ export function reconstruirPrompts(partida, hastaTurno = Infinity) {
       });
       aplicarTurno(E, jugadas);
       if (!igual(E.dueno, r.estado?.dueno) || !igual(Array.from({ length: E.dueno.length }, (_, x) => tropasDe(E, x)), r.estado?.tropas)) fiel = false;
+      if (r.estado?.uni !== undefined && JSON.stringify(instantanea(E).uni) !== JSON.stringify(r.estado.uni)) fiel = false; // las partidas 2.0.0 guardan las unidades de cada reino por region
     }
     return { fiel, turnos };
   } catch {

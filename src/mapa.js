@@ -16,16 +16,29 @@ const AGUA_PROFUNDA = 0, AGUA = 1, ARENA = 2, PASTO = 3, BOSQUE = 4, MONTANA = 5
 // Biomas: cambian SOLO la forma y el aspecto de la tierra (no las reglas). Cada uno es un juego de umbrales sobre la elevacion (mar profundo, agua, arena, montana)
 // y la humedad (bosque), el sesgo de la costa (mas alto = mas tierra), la escala del ruido (mas alta = costa mas quebrada) y, en el mar interior, la fuerza del hundimiento central.
 // `continente` es el generador de siempre, bit a bit en terreno, regiones e inicio: una prueba fija su huella. (Unica excepcion: reponerMinimos corrige un defecto, solo si un recurso quedaba bajo su minimo.)
-export const BIOMAS = ['continente', 'arido', 'mares', 'interior'];
+// Guerra 2.0.0 suma cuatro biomas con una `forma` propia (mas abajo: FORMAS), pensados para dar mas variedad de mapa: cordillera (cadenas de montana que salen del centro y se cortan en pasos),
+// istmo (dos masas de tierra unidas por un cuello), golfo (una bahia grande que entra por un borde) y peninsulas (un brazo de tierra hacia cada capital).
+export const BIOMAS = ['continente', 'arido', 'mares', 'interior', 'cordillera', 'istmo', 'golfo', 'peninsulas'];
 const PARAMETROS = {
   continente: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.04, esc: 1 },
   arido:      { mar: 0.22, agua: 0.29, arena: 0.37, mont: 0.66, bosq: 0.82, sesgo: -0.02, esc: 1.5 }, // costa quebrada y tierra no tan compacta: con tierra mas ancha y pareja el arido pasaba el tope de tokens del prompt (mas vecinas por region; plan-mapa-biomas, revision final)
   mares:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: -0.07, esc: 1.5 },
   interior:   { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, lago: 0.55 },
+  cordillera: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.06, esc: 1, forma: 'cordillera', fuerza: 0.36 },
+  istmo:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, forma: 'istmo', fuerza: 0.65 },
+  golfo:      { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, forma: 'golfo', fuerza: 0.70 },
+  peninsulas: { mar: 0.30, agua: 0.40, arena: 0.44, mont: 0.72, bosq: 0.56, sesgo: 0.10, esc: 1, forma: 'peninsulas', fuerza: 0.55 },
 };
 // El bioma que le toca a un seed de mapa: un sorteo con su PROPIO rng derivado del seed, para no mover el rng de la partida. Es lo que usa la Guerra de territorios cuando
 // nadie fuerza el bioma, asi una serie de rotacion (que repite el seed) juega siempre sobre el mismo mapa.
-export const biomaDeSeed = (seedMapa) => BIOMAS[Math.floor(crearRng(((seedMapa >>> 0) ^ 0xb10a5eed) >>> 0)() * BIOMAS.length)];
+// El istmo parte el mapa en dos masas de tierra: con un numero impar de reinos uno queda solo en una de ellas (medido con bots el 22 de octubre de 2026: con 3 reinos el solitario ganaba 74 % de las partidas
+// y con 5 el solitario 2 %). Por eso el sorteo por seed no lo elige con 3 o 5 reinos; forzarlo con --bioma= sigue siendo posible.
+const SOLO_CON_PARES = ['istmo'];
+export const biomasPara = (k) => BIOMAS.filter((b) => !(SOLO_CON_PARES.includes(b) && k % 2 === 1));
+export const biomaDeSeed = (seedMapa, k = 4) => {
+  const lista = biomasPara(k);
+  return lista[Math.floor(crearRng(((seedMapa >>> 0) ^ 0xb10a5eed) >>> 0)() * lista.length)];
+};
 const AJUSTES_MAX = 10; // si un seed no da tierra suficiente tras 40 intentos, se sube el sesgo de la costa en pasos de 0.02 (hasta 10 veces) sin cambiar de bioma
 
 function hash2(ix, iy, seed) {
@@ -46,13 +59,65 @@ function fbm(x, y, seed) {
   return v / 0.9375;
 }
 
-function generarTerreno(semilla, W, H, P) {
-  const t = new Uint8Array(W * H), escala = 0.085 * (54 / W) * P.esc; // misma forma relativa en cualquier tamano
+// ---- Formas de los biomas nuevos (Guerra 2.0.0) ----
+// Una forma sube o baja la elevacion de cada celda segun donde cae respecto del centro del mapa y de las capitales (objetivosSalida). Las cadenas, los brazos y las bahias se reparten entre los
+// reinos por igual (una por cada par de capitales vecinas), asi que ningun reino sale con mejor sitio que otro. Solo las usan los biomas que traen `forma`: el continente no las toca.
+const gauss = (d, s) => Math.exp(-((d / s) ** 2));
+const giro = (a) => ((((a + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI; // un angulo llevado a (-PI, PI]
+function distSegmento(px, py, bx, by) { // distancia del punto (px, py) al segmento que va del centro (0, 0) a (bx, by)
+  const l2 = bx * bx + by * by, t = l2 ? Math.max(0, Math.min(1, (px * bx + py * by) / l2)) : 0;
+  return Math.hypot(px - t * bx, py - t * by);
+}
+// Lo que las formas necesitan saber del mapa: las capitales (en celdas desde el centro), el rumbo a cada una y los rumbos a mitad de camino entre capitales vecinas ("espinas").
+function geometriaDe(k, W, H) {
+  const capitales = objetivosSalida(k, W, H).map(([fx, fy]) => ({ x: fx * W - W / 2, y: fy * H - H / 2 }));
+  const rumbos = capitales.map((c) => Math.atan2(c.y, c.x)).sort((a, b) => a - b);
+  const espinas = k === 2 ? [rumbos[0] + Math.PI / 2, rumbos[0] - Math.PI / 2] : rumbos.map((a, i) => a + giro(rumbos[(i + 1) % k] - a) / 2);
+  const largo = (a) => Math.min(W / 2 / Math.max(Math.abs(Math.cos(a)), 1e-9), H / 2 / Math.max(Math.abs(Math.sin(a)), 1e-9)); // del centro al borde del mapa por ese rumbo
+  return { capitales, espinas, largo };
+}
+const FORMAS = {
+  // cadenas de montana del centro a la costa entre cada par de capitales vecinas, cortadas por un paso a media distancia
+  cordillera(P, g, px, py, W) {
+    let m = 0;
+    for (const a of g.espinas) {
+      const L = g.largo(a), ux = Math.cos(a), uy = Math.sin(a), s = Math.max(0, Math.min(1, (px * ux + py * uy) / L));
+      m = Math.max(m, gauss(distSegmento(px, py, ux * L, uy * L), 0.055 * W) * (1 - gauss(s - 0.55, 0.12)));
+    }
+    return P.fuerza * m;
+  },
+  // una cintura de mar a media altura con un cuello de tierra en el centro
+  istmo(P, g, px, py, W, H) {
+    const banda = gauss(py, 0.07 * H), cuello = gauss(px, 0.11 * W);
+    return -P.fuerza * banda * (1 - cuello) + 0.35 * banda * cuello;
+  },
+  // una bahia grande que entra desde el borde por el primer rumbo entre capitales
+  golfo(P, g, px, py, W) {
+    const a = g.espinas[0], L = g.largo(a), ux = Math.cos(a), uy = Math.sin(a), a1 = px * ux + py * uy, a2 = -px * uy + py * ux;
+    return -P.fuerza * Math.exp(-(((a1 - 0.9 * L) / (0.55 * L)) ** 2 + (a2 / (0.2 * W)) ** 2) * 1.5);
+  },
+  // un cuerpo central con un brazo de tierra hacia cada capital; entre brazos, mar
+  peninsulas(P, g, px, py, W) {
+    let tierra = gauss(Math.hypot(px, py), 0.26 * W);
+    for (const c of g.capitales) { const a = Math.atan2(c.y, c.x), L = g.largo(a); tierra = Math.max(tierra, gauss(distSegmento(px, py, Math.cos(a) * L, Math.sin(a) * L), (g.capitales.length === 2 ? 0.24 : 0.17) * W)); }
+    return -P.fuerza * (1 - tierra);
+  },
+};
+// Cada capital con su comarca: alrededor de su punto de salida la tierra nunca es mar ni montana, para que el reino arranque en lo mismo con cualquier forma de mapa.
+function comarca(el, g, px, py, W, P) {
+  let w = 0;
+  for (const c of g.capitales) w = Math.max(w, gauss(Math.hypot(px - c.x, py - c.y), 0.15 * W));
+  return el * (1 - w) + Math.max(P.arena + 0.04, Math.min(P.mont - 0.04, el)) * w;
+}
+
+function generarTerreno(semilla, W, H, P, k) {
+  const t = new Uint8Array(W * H), escala = 0.085 * (54 / W) * P.esc, g = P.forma ? geometriaDe(k, W, H) : null; // misma forma relativa en cualquier tamano
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const e = fbm(x * escala, y * escala, semilla), h = fbm(x * escala * 1.3 + 50, y * escala * 1.3 + 50, semilla + 999);
     const borde = Math.min(1, Math.min(x, W - 1 - x) / (W * 0.16), Math.min(y, H - 1 - y) / (H * 0.10));
     let el = e - (1 - borde) * 0.30 + P.sesgo;
     if (P.lago) { const dx = x / W - 0.5, dy = y / H - 0.52; el -= P.lago * Math.exp(-((dx * dx) / 0.05 + (dy * dy) / 0.05) * 1.2); } // mar interior: la elevacion se hunde en el centro
+    if (g) { const px = x + 0.5 - W / 2, py = y + 0.5 - H / 2; el = comarca(el + FORMAS[P.forma](P, g, px, py, W, H), g, px, py, W, P); }
     t[y * W + x] = el < P.mar ? AGUA_PROFUNDA : el < P.agua ? AGUA : el < P.arena ? ARENA : el > P.mont ? MONTANA : h > P.bosq ? BOSQUE : PASTO;
   }
   return t;
@@ -236,7 +301,7 @@ export function crearMapa(seed, k, { bioma = 'continente' } = {}) {
   for (let ajuste = 0; ajuste <= AJUSTES_MAX && tiles.length < minTierra; ajuste++) {
     const P = ajuste === 0 ? base : { ...base, sesgo: base.sesgo + 0.02 * ajuste };
     for (let intento = 0; intento < 40 && tiles.length < minTierra; intento++) {
-      terreno = generarTerreno((seed + intento * 7919) >>> 0, c.W, c.H, P);
+      terreno = generarTerreno((seed + intento * 7919) >>> 0, c.W, c.H, P, k);
       tiles = mayorContinente(terreno, c.W, c.H);
     }
   }

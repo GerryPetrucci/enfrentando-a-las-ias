@@ -34,14 +34,14 @@ export function presentes(E, r) { const out = []; for (let k = 0; k < E.k; k++) 
 export function totalUnidades(E, k) { let n = 0; for (let r = 0; r < E.dueno.length; r++) n += totalPila(E, r, k); return n; }
 export const totalTropas = totalUnidades;
 
-// `bioma` fuerza la forma del mapa (continente, arido, mares o interior); sin el, sale del seed del mapa (biomaDeSeed). Si viene `mapa` ya creado, manda ese y se ignora el bioma.
+// `bioma` fuerza la forma del mapa (uno de BIOMAS en src/mapa.js); sin el, sale del seed del mapa y de la cantidad de reinos (biomaDeSeed). Si viene `mapa` ya creado, manda ese y se ignora el bioma.
 // `nombres`: el nombre de reino de cada asiento (nombres.js); si no sirven (otra cantidad, repetidos, desconocidos) valen los de siempre, uno por asiento.
 export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } = {}) {
   const k = Math.max(2, Math.min(5, Math.round(jugadores)));
   const nombreDe = (s) => (nombresValidos(nombres, k) ? nombres[s] : NOMBRES_REINOS[s]);
   if (mapa && mapa.k !== k) throw new Error(`el mapa es de ${mapa.k} reinos y se pidieron ${k}`);
   const seedMapa = Math.floor(rng() * 4294967296) >>> 0; // siempre se consume, venga o no el mapa dado
-  const m = mapa ?? crearMapa(seedMapa, k, { bioma: bioma ?? biomaDeSeed(seedMapa) });
+  const m = mapa ?? crearMapa(seedMapa, k, { bioma: bioma ?? biomaDeSeed(seedMapa, k) });
   const NR = m.regs.length;
   const dueno = Int8Array.from(m.inicio.dueno), uni = new Int16Array(NR * k * N_TIPOS), fort = new Int8Array(NR);
   m.inicio.capitales.forEach((c) => { fort[c] = 1; });

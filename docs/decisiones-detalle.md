@@ -192,6 +192,21 @@ destacadas por IA, en ese orden de prioridad; todo sale de lo guardado, sin llam
 en el orden del ranking (beat `rasgos`: pantalla con las cinco filas y las notables resaltadas, y la voz dice las destacadas, precedida de «Así jugó cada una.»), y el video cierra con el ranking (`final`). Una partida
 cortada no tiene fichas. Las escenas de los otros juegos todavia no muestran su evaluacion.
 
+### Guerra de territorios 2.0.0 (22 de octubre de 2026, rama `guerra-2.0.0`, sin fusionar a `main`)
+
+Se construyo con el usuario dormido y las decisiones delegadas («toma las decisiones que creas necesarias»); cada una vive en una constante o una regla y se puede revertir. Reglas completas, huecos cerrados y
+mediciones: `privado/spec/guerra-2.0.0-diseno.md` y `-medicion.md`; plan y registro por etapas: `privado/planes/plan-guerra-2.0.0.md` y `-ledger.md`. Version de reglas `conquista-2.0.0` (las partidas 1.x quedan como ensayo).
+(Este apartado se completa en la etapa 10; aqui van por ahora los mapas.)
+
+**Mapas: ocho biomas** (etapa 9). A `continente`, `arido`, `mares` e `interior` se suman cuatro con una `forma` propia (`FORMAS` en `src/mapa.js`; cada una sube o baja la elevacion segun el centro del mapa y donde estan las
+capitales, asi que se reparte igual entre los reinos): **cordillera** (cadenas de montana del centro a la costa entre cada par de capitales vecinas, cortadas por un paso a media distancia; el doble o mas de montana que el
+continente y concentrada en el centro), **istmo** (dos masas de tierra unidas por un cuello de 4 a 13 celdas), **golfo** (una bahia grande que entra por un borde) y **peninsulas** (un cuerpo central con un brazo de tierra hacia
+cada capital). Cada capital tiene su «comarca» (alrededor de su salida la tierra nunca es mar ni montana). El continente sigue siendo bit a bit el de siempre (la huella de 12 mapas no cambio). `biomaDeSeed(seed, k)` sortea
+entre los ocho; **el istmo no sale por sorteo con 3 o 5 reinos** (medido con bots: con 3 reinos el solitario de la masa norte ganaba 74 % y con 5, 2 %) pero se puede forzar con `--bioma=istmo`. Balance con 4 bots
+adaptativos iguales (400 partidas por bioma, `node herramientas/medir-conquista.mjs --bioma=X`; imprime las victorias por asiento): ningun asiento sale de 18-32 % en ningun bioma (los cuatro viejos tambien: arido 18-32),
+y el que va arriba en el turno 10/15/20 gana 40-56 / 49-60 / 62-68 %. Con ellos el peor caso del prompt de 5 reinos mide 6,171-6,249 tokens sobre 100 seeds (tope 6,500). La escena pinta cada uno con su paleta
+(`web/casino/conquista-datos.js`). Los mapas por seed cambian (el sorteo es entre ocho): las partidas guardadas no se ven afectadas porque traen su mapa.
+
 ### Prioridad de desarrollo: juegos de concurso de eliminacion (decidido el 11 de octubre de 2026)
 
 Despues de La Fuga, la prioridad de desarrollo son juegos de estrategia por rondas con la estructura de los concursos de eliminacion

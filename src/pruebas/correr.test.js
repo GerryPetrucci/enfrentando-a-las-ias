@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { biomaDeSeed } from '../mapa.js';
+import { biomaDeSeed, BIOMAS } from '../mapa.js';
 import { crearRng } from '../rng.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
@@ -64,16 +64,16 @@ test('--bioma=arido fuerza el bioma en toda la serie, queda guardado en cada par
 test('sin --bioma, cada partida de conquista guarda el que le toca por seed y la consola lo dice', () => {
   const { r, datos } = correrYLeer('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', '--seed=7');
   const b = datos.partidas[0].mapa.bioma;
-  assert.ok(['continente', 'arido', 'mares', 'interior'].includes(b), b);
+  assert.ok(BIOMAS.includes(b), b);
   assert.ok(datos.partidas.every((p) => p.mapa.bioma === b), 'la serie cambio de bioma');
   assert.match(r.stdout, new RegExp(`bioma ${b}`));
 });
 
-test('--bioma con un valor que no es uno de los cuatro, vacio o sin valor da un error que los lista; con otro juego, tambien', () => {
+test('--bioma con un valor que no es uno de los biomas, vacio o sin valor da un error que los lista; con otro juego, tambien', () => {
   for (const malo of ['--bioma=raro', '--bioma=ARIDO', '--bioma=', '--bioma']) {
     const r = cli('--juego=conquista', `--jugadores=${BOTS}`, '--partidas=2', '--destino=pruebas', malo);
     assert.equal(r.status, 1, malo);
-    assert.match(r.stderr, /--bioma debe ser uno de: continente, arido, mares, interior/, `${malo}: el error debe salir de la consola, antes de correr nada`);
+    assert.match(r.stderr, new RegExp('--bioma debe ser uno de: ' + BIOMAS.join(', ')), `${malo}: el error debe salir de la consola, antes de correr nada`);
   }
   // con otro juego el duelo seria real y se guardaria en data/ (el destino oficial): --partidas=1 --destino=pruebas acota el dano si la comprobacion faltara algun dia
   const r = cli('--a=tomaydaca', '--b=siempre-t', '--partidas=1', '--destino=pruebas', '--bioma=arido');

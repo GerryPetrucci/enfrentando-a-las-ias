@@ -1,17 +1,21 @@
 // Mide el balance de la Guerra de territorios con bots de control (sin API ni dinero): partidas con los asientos rotados y las metricas de privado/spec/guerra-2.0.0-diseno.md (seccion 9).
 //   node herramientas/medir-conquista.mjs [--partidas=200] [--jugadores=4] [--mezcla=tipos|clasicos|diplomacia|todos|a,b,c,d] [--semilla=1] [--sin=hegemon,eventos,tierra]
-//        [--tierra=0.85] [--hegemon=entra,sale,bono] [--maravilla=turnos,factorDeCosto] [--json]
+//        [--tierra=0.85] [--hegemon=entra,sale,bono] [--maravilla=turnos,factorDeCosto] [--bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas] [--json]
 //
 // Metricas (definiciones de la linea base de 1.1.0: el que va arriba = unico con mas regiones; "gana" = el ganador de la partida):
 //   lider T10/T15/T20 gana · cambios de lider por partida · victorias por bot · % que termina por Maravilla · turnos por partida · unidades reclutadas por tipo y bot · % de ordenes validas por bot.
 // Objetivos 2.0.0: lider T10 <= 65 %, T15 <= 75 %, T20 <= 85 %; cambios de lider >= 1.5; mejor bot <= 40 %; peor bot no aleatorio >= 12 %; Maravilla <= 25 %.
 // `--sin=` apaga una pieza del paquete de equilibrio para medir cuanto aporta (ablacion); `--tierra=` cambia el factor de tierra ajena.
+// `--bioma=` fuerza la forma del mapa (sin el, sale del seed de cada partida) y se imprime ademas el porcentaje de victorias por ASIENTO: con los bots rotados lo que sobra de 100 / jugadores es del mapa.
 import { crearRng } from '../src/rng.js';
 import conquista from '../src/juegos/conquista.js';
 import { regionesDe, clasificar } from '../src/juegos/conquista/estado.js';
 import { HEGEMON, EVENTOS, TIERRA, MARAVILLA, PUNTOS_POSICION } from '../src/juegos/conquista/constantes.js';
+import { BIOMAS } from '../src/mapa.js';
 
 const arg = (nombre, defecto) => { const a = process.argv.find((x) => x.startsWith(`--${nombre}=`)); return a ? a.split('=')[1] : defecto; };
+const bioma = arg('bioma', undefined);
+if (bioma !== undefined && !BIOMAS.includes(bioma)) { console.error(`bioma desconocido: ${bioma}. Biomas: ${BIOMAS.join(', ')}`); process.exit(2); }
 const partidas = Number(arg('partidas', 200)), jugadores = Number(arg('jugadores', 4)), semilla = Number(arg('semilla', 1)), json = process.argv.includes('--json');
 const MEZCLAS = {
   tipos: ['lancero-masa', 'arquero-defensivo', 'jinete-relampago', 'mixto-adaptativo', 'agresivo'],
@@ -35,6 +39,7 @@ const cuenta = (ids) => Object.fromEntries(ids.map((i) => [i, 0]));
 const ids = [...new Set(mezcla)];
 const R = {
   partidas: 0, turnos: 0, maravilla: 0, hastaT30: 0, cambiosLider: 0, lideres: { 10: [0, 0], 15: [0, 0], 20: [0, 0] }, // [gana el lider, partidas con lider unico]
+  porAsiento: Array(jugadores).fill(0), // victorias por asiento del mapa (el bot de cada asiento rota)
   gana: cuenta(ids), asientos: cuenta(ids), puntos: cuenta(ids), reclutadas: Object.fromEntries(ids.map((i) => [i, [0, 0, 0, 0]])), ordenes: Object.fromEntries(ids.map((i) => [i, [0, 0]])),
   rupturas: cuenta(ids), pactos: cuenta(ids), eventos: 0, hegemones: 0, caidas: 0, caidasAntesT10: 0, turnoPrimeraCaida: 0, conCaida: 0,
 };
@@ -42,7 +47,7 @@ const R = {
 for (let g = 0; g < partidas; g++) {
   const seed = semilla + g, rot = g % mezcla.length;
   const asientos = Array.from({ length: jugadores }, (_, s) => mezcla[(s + rot) % mezcla.length]);
-  const E = conquista.crear(crearRng(seed * 7919 + 13), { jugadores });
+  const E = conquista.crear(crearRng(seed * 7919 + 13), { jugadores, bioma });
   const rngs = asientos.map((_, i) => crearRng((seed * 31 + i * 977) >>> 0));
   const lideres = {};
   let previo = -1, cambios = 0;
@@ -66,7 +71,7 @@ for (let g = 0; g < partidas; g++) {
   if (caidos.length) { R.conCaida++; const primera = Math.min(...caidos.map((r) => r.cayoEn)); R.turnoPrimeraCaida += primera; if (primera < 10) R.caidasAntesT10++; }
   if (E.ganoPorMaravilla) R.maravilla++;
   if (E.turno >= 30) R.hastaT30++;
-  R.gana[asientos[E.ganador]]++;
+  R.gana[asientos[E.ganador]]++; R.porAsiento[E.ganador]++;
   asientos.forEach((a) => { R.asientos[a]++; });
   clasificar(E).forEach((fila, pos) => { R.puntos[asientos[fila.s]] += PUNTOS_POSICION[pos] ?? 0; });
   asientos.forEach((a, s) => { R.rupturas[a] += E.stats[s].rupturas; R.pactos[a] += E.stats[s].pactos; });
@@ -75,7 +80,7 @@ for (let g = 0; g < partidas; g++) {
 
 const pc = (a, b) => (b ? Math.round((100 * a) / b) : null);
 const salida = {
-  reglas: conquista.versionReglas, partidas: R.partidas, jugadores, mezcla, ablacion: [...sin], tierra: TIERRA.factor,
+  reglas: conquista.versionReglas, partidas: R.partidas, jugadores, mezcla, ablacion: [...sin], tierra: TIERRA.factor, bioma: bioma ?? 'del seed', victoriasPorAsiento: R.porAsiento.map((n) => pc(n, R.partidas)),
   liderGana: Object.fromEntries([10, 15, 20].map((t) => [`T${t}`, { porciento: pc(...R.lideres[t]), de: R.lideres[t][1] }])),
   cambiosDeLider: +(R.cambiosLider / R.partidas).toFixed(2), turnosPorPartida: +(R.turnos / R.partidas).toFixed(1), terminanAntesDelTurno30: pc(R.partidas - R.hastaT30, R.partidas), maravilla: pc(R.maravilla, R.partidas),
   porBot: Object.fromEntries(ids.map((i) => {
@@ -92,7 +97,8 @@ const salida = {
 if (json) console.log(JSON.stringify(salida, null, 1));
 else {
   const f = (x) => (x === null ? 'n/d' : `${x}%`);
-  console.log(`Guerra ${salida.reglas}: ${salida.partidas} partidas de ${jugadores} bots (${mezcla.join(', ')}; asientos rotados)${sin.size ? `  SIN: ${[...sin].join(', ')}` : ''}${TIERRA.factor !== 0.85 ? `  tierra ajena x${TIERRA.factor}` : ''}`);
+  console.log(`Guerra ${salida.reglas}: ${salida.partidas} partidas de ${jugadores} bots (${mezcla.join(', ')}; asientos rotados)${bioma ? `  mapa: ${bioma}` : ''}${sin.size ? `  SIN: ${[...sin].join(', ')}` : ''}${TIERRA.factor !== 0.85 ? `  tierra ajena x${TIERRA.factor}` : ''}`);
+  console.log(`  victorias por asiento del mapa: ${salida.victoriasPorAsiento.map((n, s) => `${s + 1}: ${f(n)}`).join('  ')}   [parejo = ${Math.round(100 / jugadores)}% cada uno]`);
   console.log(`  el que va arriba en regiones gana: T10 ${f(salida.liderGana.T10.porciento)} (de ${salida.liderGana.T10.de})  T15 ${f(salida.liderGana.T15.porciento)} (de ${salida.liderGana.T15.de})  T20 ${f(salida.liderGana.T20.porciento)} (de ${salida.liderGana.T20.de})   [objetivo <= 65 / 75 / 85]`);
   console.log(`  cambios de lider por partida: ${salida.cambiosDeLider} [objetivo >= 1.5]   turnos por partida: ${salida.turnosPorPartida}   terminan antes del turno 30: ${f(salida.terminanAntesDelTurno30)}   Maravilla decide: ${f(salida.maravilla)} [objetivo <= 25]`);
   console.log(`  eventos del mundo por partida: ${salida.eventosPorPartida}   cambios de Hegemon por partida: ${salida.hegemonesPorPartida}   reinos caidos por partida: ${salida.caidasPorPartida}   con alguna caida antes del turno 10: ${f(salida.conCaidaAntesDelT10)}   turno medio de la primera caida: ${salida.turnoMedioDeLaPrimeraCaida ?? 'n/d'}`);

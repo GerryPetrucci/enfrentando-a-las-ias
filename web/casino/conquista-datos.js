@@ -25,13 +25,17 @@ export const multiplicadorDeArmas = (nivel) => 1 + BONO_ARMAS * (Number(nivel) |
 export const multiplicadorDeFortaleza = (nivel) => 1 + BONO_FORTALEZA * (Number(nivel) || 0);
 
 // ---- biomas: como se llaman en pantalla y de que color es su terreno [mar hondo, agua, arena, llano, bosque, montana] ----
-export const NOMBRES_BIOMA = { continente: 'Continente', arido: 'Árido', mares: 'Mucho mar', interior: 'Mar interior' };
+export const NOMBRES_BIOMA = { continente: 'Continente', arido: 'Árido', mares: 'Mucho mar', interior: 'Mar interior', cordillera: 'Cordillera', istmo: 'Istmo', golfo: 'Golfo', peninsulas: 'Penínsulas' };
 const PALETA_VERDE = ['#17304f', '#21507d', '#cdb67f', '#528f42', '#2e6a37', '#80828c'];
 const PALETAS = {
   continente: PALETA_VERDE,
   arido: ['#17304f', '#21507d', '#e0c88f', '#c29a58', '#8a8a45', '#8b7a68'],
   mares: PALETA_VERDE,
   interior: PALETA_VERDE,
+  cordillera: ['#17304f', '#21507d', '#cdb67f', '#5c9647', '#2e6a37', '#b3b7c4'], // montanas claras (nieve): se leen aun con el tinte de los reinos
+  istmo: ['#12363f', '#1b6275', '#e6d3a0', '#6cab4f', '#357a3f', '#8a8d96'],
+  golfo: ['#13294f', '#2c6fb5', '#d8c185', '#5f9a3f', '#2f6431', '#7f7f88'],
+  peninsulas: ['#16304a', '#2a6f8f', '#e8d9a8', '#58a65a', '#2c7a48', '#75808c'],
 };
 export const paletaDe = (bioma) => [...(Object.hasOwn(PALETAS, bioma) ? PALETAS[bioma] : PALETA_VERDE)];
 export const TINTE_DE_REINO = 0.35; // cuanto cubre el color del reino al terreno: lo bastante para leer quien manda y lo bastante poco para leer el bioma
