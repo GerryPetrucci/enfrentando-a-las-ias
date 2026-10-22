@@ -196,7 +196,33 @@ cortada no tiene fichas. Las escenas de los otros juegos todavia no muestran su 
 
 Se construyo con el usuario dormido y las decisiones delegadas («toma las decisiones que creas necesarias»); cada una vive en una constante o una regla y se puede revertir. Reglas completas, huecos cerrados y
 mediciones: `privado/spec/guerra-2.0.0-diseno.md` y `-medicion.md`; plan y registro por etapas: `privado/planes/plan-guerra-2.0.0.md` y `-ledger.md`. Version de reglas `conquista-2.0.0` (las partidas 1.x quedan como ensayo).
-(Este apartado se completa en la etapa 10; aqui van por ahora los mapas.)
+
+**Que cambia** (el motor vive en `src/juegos/conquista/`; cada pieza con su prueba que fallaba antes y una mutacion):
+- **Unidades por region y por reino** (`E.uni`): cuatro tipos, Lancero (fuerza 1), Arquero (2), Jinete (3; el unico que llega a 2 regiones, y solo por regiones propias, libres o aliadas) e Ingenio (3.5 atacando y 1
+  defendiendo; solo se recluta en una region con cuartel; si 1/4 de los atacantes son Ingenios la fortaleza cuenta la mitad y con 1/2 no cuenta). **Dominio x2** de un solo lado: Lancero > Jinete, Arquero > Lancero,
+  Jinete > Arquero e Ingenio; contra una mezcla cuenta en proporcion a las unidades de cada tipo. `mejorar TIPO` (+25 % por nivel, 2 niveles, hace falta un cuartel) reemplaza a `armar`. `batalla.js` es un resolutor
+  puro de bandos (coaliciones); las ordenes aceptan `L4 A2`, `todo` y el prompt dice que debe quedar 1 unidad en la region de origen (el 78 % de las ordenes descartadas de la serie del 18 de octubre eran esa regla).
+- **Alianzas** (las reglas que dicto el usuario): con pacto vigente entras de visita al territorio de tu aliado (no a su capital) y lo cruzas; tus tropas visitantes defienden con las del dueno (con su fortaleza y su
+  terreno) y quien es aliado de los dos bandos no participa; dos aliados que atacan la misma region pelean juntos. Al terminar o romper un pacto las tropas de visita pasan a hostiles: pueden irse, **atacar donde estan**
+  (`atacar REGION`: la «traicion desde dentro») o quedarse sin pelear; el dueno tambien puede atacarlas. **Tierra ajena:** quien pelea en la region de un reino sin pacto con el rinde x0.85 (decision del usuario:
+  «siempre»). Los turnos 29 y 30 no hay pactos.
+- **Suministro:** una region sin camino a su capital (por regiones propias, libres o aliadas) queda **aislada**: no produce ni cuenta para la cosecha base y ahi no se recluta, fortifica ni construye (el «incomunicado»
+  del usuario).
+- **Equilibrio** (medido con bots, `privado/spec/guerra-2.0.0-medicion.md`): el **Hegemon** (el reino con mas regiones desde 35 % de las regiones con dueno hasta que baje de 30 %) recibe el ataque de los demas con
+  +50 %; **6 eventos del mundo** (turnos 5, 9, 13, 17, 21 y 25; Sequia, Peste, Cosecha y Caravana; el calendario sale del seed del mapa y se anuncia un turno antes: Presagio); la **Maravilla** cuesta 21 Roca + 17 Madera
+  + 13 Hierro + 13 Oro y se cuenta 9 turnos (antes decidia 28-39 % de las partidas entre bots, ahora 16-27 %). La Reconquista y la Patria se probaron y se quitaron: la ablacion no las justificaba. Resultado con bots de
+  estrategia: el reino que va arriba en regiones en el turno 10/15/20 gana 41-61 / 50-70 / 53-77 % de las partidas (en 1.1.0, 90 / 95 / 98 %) y hay 1.96-3.2 cambios de lider por partida (antes 0.59).
+- **Vista y prompt:** el MAPA (fijo) va primero (prefijo cacheable por los proveedores) y despues lo que cambia; la vista trae composicion por tipo, tropas de visita, regiones aisladas, Hegemon, Presagio, **CAPACIDAD**
+  (cuanto puedes reclutar de cada tipo) y **FRENTES** (tu ataque con lo que puedes mover contra la defensa visible, calculado con la misma formula que el motor y solo con datos publicos: las mejoras ajenas cuentan 0). Tope
+  de entrada **6,500 tokens** (era 4,450; decision delegada por el usuario, que propuso subir tokens para sostener la complejidad): peor caso de 5 reinos medido 6,229 y 6,171-6,249 en los 8 biomas x 100 seeds; costo
+  por partida de 4 IAs **$1.50 blando / $2.00 duro**. Una llamada por reino por turno, 30 turnos.
+- **Evaluacion y publicacion:** siguen las cinco caracteristicas aprobadas; dos frases se enriquecen con lo que guardan las partidas 2.0.0 (`estado.uni`): `palabra` dice cuantas rupturas fueron «atacando desde
+  dentro» y `conquista`, con que ejercito peleo (los tipos con al menos 5 unidades en algun turno; notable con 3 tipos o mas). Una partida de formato anterior se ve como siempre. La rejugada que reconstruye los
+  prompts para el sitio (`replay.js`) compara tambien las unidades de cada reino por region antes de dar un prompt por fiel (60 partidas de bots de todos los tipos y los 8 biomas, 30 con tropas de visita: 0 no fieles).
+- **Bots de control** (`src/juegos/conquista-bots-v2.js`): `lancero-masa`, `arquero-defensivo`, `jinete-relampago`, `mixto-adaptativo`, `traidor` y `leal` (se suman a los 4 de siempre) y la herramienta
+  `node herramientas/medir-conquista.mjs` (asientos rotados, ablacion con `--sin=`, `--bioma=`, victorias por asiento).
+- **Pendiente:** la escena (video) todavia dibuja la guarnicion y no la composicion por tipo, las tropas de visita, las regiones aisladas ni el Hegemon (etapa 11); la serie con modelos reales (AL FINAL, con orden y
+  tope), `cache_control` para Claude y la fusion a `main` esperan orden del usuario.
 
 **Mapas: ocho biomas** (etapa 9). A `continente`, `arido`, `mares` e `interior` se suman cuatro con una `forma` propia (`FORMAS` en `src/mapa.js`; cada una sube o baja la elevacion segun el centro del mapa y donde estan las
 capitales, asi que se reparte igual entre los reinos): **cordillera** (cadenas de montana del centro a la costa entre cada par de capitales vecinas, cortadas por un paso a media distancia; el doble o mas de montana que el

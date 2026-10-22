@@ -109,6 +109,74 @@ test('contarPartida lee de lo guardado: conquistas, batallas propias ganadas, Ma
   assert.equal(contarPartida(partida({ ganador: 1 }), 1).ganoPorTerritorio, 1, 'ganar sin Maravilla es ganar por territorio');
 });
 
+// ---- Guerra 2.0.0: el ejercito (tipos de unidad que uso) y las rupturas «desde dentro» (con tropas suyas en tierra de la victima) ----
+const foto = (turno, dueno, uni) => ({ turno, eventos: [], combates: [], estado: { dueno, uni } });
+
+test('contarPartida (2.0.0): el pico de unidades de cada tipo que tuvo en algun turno, tambien las de visita, y las rupturas hechas con tropas suyas dentro del territorio de la victima', () => {
+  const p = partida();
+  // region 0 de 0, region 1 de 1, region 2 de 2; en el turno 3 el 0 rompe con el 1 y con el 2, y el 1 rompe con el 0
+  p.rondas = [
+    foto(1, [0, 1, 2], [[0, 0, 8, 0, 0, 0], [1, 1, 8, 0, 0, 0], [2, 2, 8, 0, 0, 0]]),
+    foto(2, [0, 1, 2], [[0, 0, 6, 4, 0, 0], [1, 0, 3, 0, 2, 0], [1, 1, 8, 0, 0, 0], [2, 2, 8, 0, 0, 0]]), // el 0 tiene 3 Lanceros y 2 Jinetes de visita en la region del 1
+    { ...foto(3, [0, 1, 2], [[0, 0, 5, 1, 0, 0]]), eventos: [{ tipo: 'ruptura', k: 0, contra: 1, t: 3 }, { tipo: 'ruptura', k: 0, contra: 2, t: 3 }, { tipo: 'ruptura', k: 1, contra: 0, t: 3 }] },
+  ];
+  const cero = contarPartida(p, 0);
+  assert.deepEqual(cero.pico, [9, 4, 2, 0], 'el maximo por tipo en cualquier turno: 6 + 3 Lanceros juntos, 4 Arqueros, 2 Jinetes');
+  assert.equal(cero.desdeDentro, 1, 'rompio con el 1 con tropas dentro de su region (si) y con el 2 sin tropas ahi (no)');
+  assert.equal(contarPartida(p, 1).desdeDentro, 0, 'el 1 rompio con el 0 pero no tenia tropas en region del 0');
+  assert.deepEqual(contarPartida(p, 2).pico, [8, 0, 0, 0]);
+});
+
+test('contarPartida (2.0.0): una partida de formato anterior, sin `uni`, no inventa nada: pico nulo y ninguna ruptura desde dentro', () => {
+  const c = contarPartida(partida({ eventos: [{ tipo: 'ruptura', k: 0, contra: 1, t: 3 }] }), 0);
+  assert.equal(c.pico, null);
+  assert.equal(c.desdeDentro, 0);
+});
+
+test('palabra (2.0.0): si rompio pactos con tropas dentro del territorio del otro lo dice', () => {
+  assert.equal(frasePalabra({ ...c0, traiciones: 2, honor: 1, desdeDentro: 1 }).frase, 'rompió 2 pactos (1 atacando desde dentro) y terminó con 1 de honor');
+  assert.equal(frasePalabra({ ...c0, traiciones: 1, honor: 2, desdeDentro: 1 }).frase, 'rompió 1 pacto (1 atacando desde dentro) y terminó con 2 de honor');
+  assert.equal(frasePalabra({ ...c0, traiciones: 2, honor: 2, desdeDentro: 0 }).frase, 'rompió 2 pactos y terminó con 2 de honor');
+  assert.equal(frasePalabra({ ...c0, traiciones: 2, honor: null, desdeDentro: 2 }).frase, 'rompió 2 pactos (2 atacando desde dentro)');
+});
+
+test('conquista (2.0.0): dice con que ejercito peleo (tipos con al menos 5 unidades en algun turno) y es notable con 3 tipos o mas', () => {
+  assert.equal(UMBRALES.unidadesParaUsarTipo, 5);
+  assert.equal(UMBRALES.tiposVariados, 3);
+  const base = { ...c0, conquistas: 1, ataques: 2, ganados: 1, regiones: 6 };
+  assert.equal(fraseConquista({ ...base, pico: [12, 0, 0, 0] }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas; ejército: solo Lanceros); termina con 6 regiones');
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 0, 0] }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas; ejército: Lanceros y Arqueros); termina con 6 regiones');
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 5, 0] }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas; ejército: Lanceros, Arqueros y Jinetes); termina con 6 regiones');
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 5, 7] }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas; ejército: los cuatro tipos de unidad); termina con 6 regiones');
+  assert.equal(fraseConquista({ ...base, pico: [12, 4, 0, 4] }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas; ejército: solo Lanceros); termina con 6 regiones', '4 unidades no bastan para contar un tipo');
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 0, 0] }).notable, false);
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 5, 0] }).notable, true, 'con 3 tipos');
+  assert.equal(fraseConquista({ ...base, pico: [12, 6, 5, 7] }).notable, true);
+  assert.equal(fraseConquista({ ...base, pico: null }).frase, 'conquistó 1 región a otros reinos (ganó 1 de 2 batallas); termina con 6 regiones', 'sin datos de unidades la frase de siempre');
+  assert.equal(fraseConquista({ ...base, conquistas: 4, ataques: 6, ganados: 5, pico: [20, 8, 0, 0] }).frase, 'conquistó 4 regiones a otros reinos (ganó 5 de 6 batallas; ejército: Lanceros y Arqueros)');
+  assert.equal(fraseConquista({ ...c0, caidas: 1, cayoEn: 11, pico: [9, 0, 0, 0] }).frase, 'cayó en el turno 11', 'si cayo no se habla del ejercito');
+  assert.equal(fraseConquista({ ...c0, ataques: 0, turnos: 10, regiones: 15, pico: [9, 0, 0, 0] }).frase, 'no atacó a nadie: termina con 15 regiones', 'sin batallas no hay ejercito que contar');
+});
+
+test('sumar (2.0.0): en una serie el pico es el mayor de cada tipo entre las partidas y las rupturas desde dentro se suman', () => {
+  const s = sumar([{ ...c0, pico: [10, 2, 0, 0], desdeDentro: 1 }, { ...c0, pico: [4, 7, 5, 0], desdeDentro: 2 }, { ...c0, pico: null, desdeDentro: 0 }]);
+  assert.deepEqual(s.pico, [10, 7, 5, 0]);
+  assert.equal(s.desdeDentro, 3);
+  assert.equal(sumar([{ ...c0, pico: null }, { ...c0, pico: null }]).pico, null);
+});
+
+test('evaluarPartida (2.0.0) con una partida real de bots: la ficha de conquista habla del ejercito de quien ataco', async () => {
+  const frases = [];
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    const p = await jugarConqBots(seed, ['mixto-adaptativo', 'lancero-masa', 'arquero-defensivo', 'jinete-relampago']);
+    for (const j of evaluarPartida(p).jugadores) {
+      frases.push(j.caracteristicas.conquista.frase);
+      assert.ok(contarPartida(p, j.asiento).pico.some((n) => n > 0), `seed ${seed}: el asiento ${j.asiento} tuvo unidades`);
+    }
+  }
+  assert.ok(frases.some((f) => /\(ganó \d+ de \d+ batallas?; ejército: /.test(f)), frases.join(' | '));
+});
+
 test('evaluarPartida: una entrada por asiento en su orden; una partida cortada, rota o vacia no se evalua', () => {
   const e = evaluarPartida(partida({ metricas: [{ puntos: 5 }, { puntos: 3 }, { puntos: 1 }] }));
   assert.deepEqual(e.jugadores.map((j) => [j.asiento, j.id, j.nombre, j.puntos]), [[0, 'claude', 'Claude', 5], [1, 'gpt', 'GPT', 3], [2, 'gemini', 'Gemini', 1]]);
@@ -165,5 +233,5 @@ test('el juego usa esta evaluacion al final de la serie, con partidas reales del
 test('el modulo es de la web: no importa nada de src/ ni de herramientas/ (el sitio publica solo web/ y data/)', () => {
   const fuente = readFileSync(new URL('../../../web/casino/evaluacion-conquista.js', import.meta.url), 'utf8');
   for (const m of fuente.matchAll(/^import .* from '([^']+)'/gm)) assert.ok(m[1].startsWith('./'), `importa ${m[1]}`);
-  assert.deepEqual(UMBRALES, { obedienciaBaja: 0.75, obedienciaAlta: 0.9, negociaMucho: 0.8, negociaPoco: 0.2, conquistador: 3, turnosParaPasivo: 8 });
+  assert.deepEqual(UMBRALES, { obedienciaBaja: 0.75, obedienciaAlta: 0.9, negociaMucho: 0.8, negociaPoco: 0.2, conquistador: 3, turnosParaPasivo: 8, unidadesParaUsarTipo: 5, tiposVariados: 3 });
 });
