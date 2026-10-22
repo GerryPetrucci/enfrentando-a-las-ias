@@ -7,7 +7,8 @@
 // Los participantes con pacto entre si forman un bando (coalicion). El dueno y los suyos defienden con la fortaleza y el terreno de la region; quien lucha en tierra ajena sin pacto con el dueno rinde TIERRA_AJENA.
 
 import { aliado, contarEdificios, regionesDe, pila as pilaDe, ponerPila, sumarPila, sumarUni, presentes, totalPila } from '../estado.js';
-import { RECURSOS, MAX_EDIFICIOS_POR_TIPO, N_TIPOS, TIERRA_AJENA, HEGEMON, RECONQUISTA, PATRIA } from '../constantes.js';
+import { RECURSOS, MAX_EDIFICIOS_POR_TIPO, N_TIPOS } from '../constantes.js';
+import { modificadorDeReino, bonoDePatria } from '../equilibrio.js';
 import { resolverBatalla } from '../batalla.js';
 import { sumaPila, sumarPilas, dejarUna, pilaVacia } from '../unidades.js';
 
@@ -135,16 +136,8 @@ function resolverRegion(ctx, d, llegadas, ataques) {
   for (const a of part) for (const b of part) if (a < b && aliado(E, a, b, t) && buscar(a) !== buscar(b)) raiz.set(buscar(b), buscar(a));
   const grupos = new Map();
   for (const m of miembros) anotar(grupos, buscar(m.k), m);
-  // Modificadores de quien pelea en la region de un dueno con quien no tiene pacto: tierra ajena; si el dueno es el Hegemon, +25 %; si la region era suya y la perdio hace poco, Reconquista.
-  const perdida = E.perdidas[d];
-  const modDe = (k) => {
-    if (!(O >= 0 && k !== O && !aliado(E, k, O, t))) return 1;
-    let m = TIERRA_AJENA;
-    if (HEGEMON.activo && E.hegemon === O) m *= HEGEMON.bonoAtaque;
-    if (RECONQUISTA.activo && perdida && perdida.k === k && t - perdida.t <= RECONQUISTA.turnos) m *= RECONQUISTA.bonoAtaque;
-    return m;
-  };
-  const patria = O >= 0 && PATRIA.activo && ctx.regionesIniciales[O] <= PATRIA.maxRegiones ? PATRIA.bonoDefensa : 1; // Patria: con pocas regiones al empezar el turno, las del reino defienden con bono
+  // Modificadores de quien pelea (tierra ajena, Hegemon, Reconquista: equilibrio.js) y Patria del dueno (con pocas regiones al empezar el turno, las del reino defienden con bono).
+  const modDe = (k) => modificadorDeReino(E, k, d, t), patria = bonoDePatria(O, ctx.regionesIniciales[O]);
   const bandos = [...grupos.values()].map((ms) => ({
     miembros: ms.map((m) => ({ k: m.k, pila: m.pila, mejoras: R[m.k].mejoras, mod: modDe(m.k) })),
     defensor: O >= 0 && ms.some((m) => m.k === O),

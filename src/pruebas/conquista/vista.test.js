@@ -8,7 +8,8 @@ import { resumenPublico } from '../../juegos/conquista/texto.js';
 
 test('la vista trae lo tuyo y lo publico', () => {
   const E = nuevoEstado(4), v = vistaTexto(E, 0);
-  assert.match(v, /^Turno 1 de 30\. Eres Azur\./);
+  assert.match(v, /^MAPA \(terreno/, 'lo fijo de la partida va primero (prefijo cacheable)');
+  assert.match(v, /\nTurno 1 de 30\. Eres Azur\./);
   assert.match(v, /Capitales: Azur R\d\d/);
   assert.ok(v.includes('Honor: Azur 5 | Ambar 5 | Violeta 5 | Rosa 5'));
   assert.match(v, /Maravilla: ninguna/);
@@ -19,6 +20,15 @@ test('la vista trae lo tuyo y lo publico', () => {
   assert.match(v, /\nR01 (ll|bo|mo)(\+\w+)?: \d+( \d+)*\n/, 'las vecinas van como numeros de region');
   assert.match(v, /OCUPACION[^\n]*\nAzur \(tu\): R\d\d\(/);
   assert.match(v, /Sucedio el turno anterior: nada notable\./);
+});
+
+test('lo fijo de la partida (el mapa) va primero y es identico para todos los reinos y en todos los turnos: es el prefijo del prompt que los proveedores pueden guardar en cache', () => {
+  const E = nuevoEstado(4), fijo = (v) => v.slice(0, v.indexOf('\n\nTurno '));
+  const base = fijo(vistaTexto(E, 0));
+  assert.ok(base.startsWith('MAPA (terreno') && base.split('\n').length === E.mapa.regs.length + 1);
+  for (const i of [1, 2, 3]) assert.equal(fijo(vistaTexto(E, i)), base, `el reino ${i} ve otro comienzo`);
+  E.turno = 7; E.reinos[0].stock.Comida = 99; E.hegemon = 2; E.mensajesPrevios = [{ k: 1, texto: 'hola' }];
+  assert.equal(fijo(vistaTexto(E, 0)), base, 'el comienzo no cambia con el turno ni con lo que pasa en la partida');
 });
 
 test('la ocupacion muestra las unidades por tipo, la fortaleza y el edificio, y marca el danado', () => {
@@ -120,10 +130,11 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // visitarse. Huellas anteriores: c405e106..., 69a040b4..., 27fe1742...
 // 22 de octubre de 2026 (etapa 6, equilibrio): vuelven a cambiar A PROPOSITO: las vecinas del MAPA van como numeros, hay lineas de Hegemon, Evento, Presagio, Reconquista y Patria, y los eventos del
 // mundo, el Hegemon y la Reconquista cambian las partidas. Huellas anteriores: 1df82098..., 0d3c2c44..., d0e8e968...
+// 22 de octubre de 2026 (etapa 7): el mapa pasa al principio de la vista (prefijo cacheable) y se agregan CAPACIDAD y FRENTES. Huellas anteriores: 8296b274..., cf5a43e7..., 171ab1f2...
 const HUELLAS_DE_LAS_VISTAS = {
-  1: '8296b27404a11e5af882fc487b1e4d6da133ad14',
-  2: 'cf5a43e7ebc13d616f89ea9ca4e0055125cc5bc7',
-  3: '171ab1f200bf53444aa6167b6e6bb568ce2264c0',
+  1: 'a6bbe609303fb611eff07fed89dc148dd389dc78',
+  2: '02564353b366a6850cfeb14ad66e11c1c730785f',
+  3: 'd5a4c3a2ede428d90a895d42a1395dff189785c7',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

@@ -5,6 +5,7 @@
 import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES, HEGEMON, RECONQUISTA, PATRIA } from './constantes.js';
 import { nombreRegion, pila as pilaDe, presentes, regionesDe } from './estado.js';
 import { eventoDe, NOMBRE_EVENTO } from './equilibrio.js';
+import { lineasDeFrentes, lineasDeCapacidad } from './frentes.js';
 import { sumaPila } from './unidades.js';
 import { regionesAisladas } from './suministro.js';
 
@@ -35,11 +36,14 @@ function ocupacion(E) {
 
 export function vistaTexto(E, i) {
   const R = E.reinos, yo = R[i], t = E.turno + 1, L = [];
+  // Lo fijo de la partida va primero: el mapa no cambia en toda la partida ni de un reino a otro, asi que el comienzo del prompt es identico en todas las llamadas y los proveedores que lo guardan en cache lo reutilizan.
+  L.push('MAPA (terreno, recurso y vecinas por numero: 5 = R05):', mapaFijo(E), '');
   L.push(`Turno ${t} de ${TURNOS}. Eres ${yo.nombre}. Hay ${E.k} reinos y ${E.mapa.regs.length} regiones. Reinos vivos: ${R.filter((r) => r.vivo).map((r) => r.nombre).join(', ')}.`);
   L.push('Capitales: ' + R.map((r) => `${r.nombre} ${nombreRegion(r.capital)}`).join(SEP));
   L.push('Honor: ' + R.map((r) => `${r.nombre} ${r.honor}`).join(SEP));
   L.push(E.maravilla ? `Maravilla de ${R[E.maravilla.k].nombre} en ${nombreRegion(E.maravilla.r)} (faltan ${Math.max(0, MARAVILLA.turnos - E.maravilla.n)} turnos)` : 'Maravilla: ninguna');
   L.push(`Tu almacen: ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}mejoras ${UNIDADES.map((u, t) => u.id + yo.mejoras[t]).join(' ')}`);
+  L.push(...lineasDeCapacidad(E, i));
   const pactos = R.filter((r) => r.s !== i && yo.pactos[r.s] >= t).map((r) => `${r.nombre} (hasta el turno ${yo.pactos[r.s]})`);
   const abierta = yo.propuestaPrevia !== null && !(yo.pactos[yo.propuestaPrevia] >= t) ? ` Tu propuesta abierta: ${R[yo.propuestaPrevia].nombre}.` : '';
   L.push(`Pactos vigentes: ${pactos.length ? pactos.join(', ') : 'ninguno'}.${abierta}`);
@@ -69,7 +73,9 @@ export function vistaTexto(E, i) {
   if (yo.privIn.length) L.push('Privados recibidos: ' + yo.privIn.map((p) => `${R[p.de].nombre}: "${p.texto}"`).join(SEP));
   if (E.mensajesPrevios.length) L.push('Mensajes publicos: ' + E.mensajesPrevios.map((m) => `${R[m.k].nombre}: "${m.texto}"`).join(SEP));
   if (E.regalosPrevios[i].length) L.push('Regalos recibidos: ' + E.regalosPrevios[i].map((g) => `${R[g.de].nombre} te regalo ${g.n} ${g.recurso}`).join(SEP));
-  L.push('', 'MAPA (terreno, recurso y vecinas por numero: 5 = R05):', mapaFijo(E), '', 'OCUPACION (region(unidades, fN, edificio; - = danado); +Reino L2 = tropas de visita):', ...ocupacion(E).map((l, s) => (s === i ? l.replace(':', ' (tu):') : l)), 'Sin dueno: el resto.', '');
+  L.push('', 'OCUPACION (region(unidades, fN, edificio; - = danado); +Reino L2 = tropas de visita):', ...ocupacion(E).map((l, s) => (s === i ? l.replace(':', ' (tu):') : l)), 'Sin dueno: el resto.', '');
+  const frentes = lineasDeFrentes(E, i);
+  if (frentes.length) L.push('FRENTES (tu ataque con lo que puedes mover contra la defensa visible, sin mejoras ajenas):', ...frentes, '');
   L.push('Sucedio el turno anterior: ' + (E.resumenPrevio.length ? E.resumenPrevio.join('. ') + '.' : 'nada notable.'));
   return L.join('\n');
 }

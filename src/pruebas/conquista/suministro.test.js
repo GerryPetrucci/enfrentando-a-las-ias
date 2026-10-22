@@ -6,6 +6,7 @@ import { nuevoEstado, contexto, R, capital, fijarTropas } from './ayudas.js';
 import { regionesDe, instantanea, limpiarRegion } from '../../juegos/conquista/estado.js';
 import { regionesAisladas } from '../../juegos/conquista/suministro.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
+import { lineasDeCapacidad } from '../../juegos/conquista/frentes.js';
 import { recoleccion, hambre, ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
 import { eventosDelMundo } from '../../juegos/conquista/turno/mundo.js';
 
@@ -139,6 +140,14 @@ test('mejorar exige un cuartel propio que no este aislado', () => {
   ordenesEconomicas(ctx);
   assert.deepEqual(ctx.descartes[0], []);
   assert.equal(E.reinos[0].mejoras[0], 1);
+});
+
+test('CAPACIDAD no cuenta un cuartel aislado: la linea «En tu cuartel» solo sale si el cuartel esta conectado', () => {
+  const E = mapaAbierto(), { x } = rodeada(E);
+  E.edif[x] = 'cuartel'; vaciar(E, 0, { Comida: 10, Madera: 4, Roca: 3, Hierro: 2 });
+  assert.equal(lineasDeCapacidad(E, 0).length, 1, 'el unico cuartel esta aislado');
+  pacto(E, 0, 1);
+  assert.equal(lineasDeCapacidad(E, 0).length, 2, 'con el camino abierto el cuartel vuelve a contar');
 });
 
 test('las tropas de una region aislada siguen comiendo', () => {
