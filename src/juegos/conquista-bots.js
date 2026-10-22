@@ -1,7 +1,7 @@
 // Estrategias de control de la Guerra de territorios. No son IAs: son bots simples que sirven para probar el motor
 // y para calibrar. Leen el estado completo y NUNCA lo modifican; devuelven una respuesta como la de una IA.
 
-import { nombreRegion as nr, regionesDe, totalTropas } from './conquista/estado.js';
+import { nombreRegion as nr, regionesDe, totalTropas, tropasDe } from './conquista/estado.js';
 import { RECURSOS, MARAVILLA } from './conquista/constantes.js';
 import { nombresDeLaPartida } from './conquista/ordenes.js';
 
@@ -14,7 +14,7 @@ function reclutarSobrante(E, s, o) {
 }
 function expandir(E, s, o, usado, n = 2) {
   for (const r of regionesDe(E, s)) {
-    const disp = E.tropas[r] - 1 - (usado.get(r) ?? 0);
+    const disp = tropasDe(E, r) - 1 - (usado.get(r) ?? 0);
     if (disp < n) continue;
     const v = vecinas(E, r).find((x) => E.dueno[x] === -1);
     if (v !== undefined) { o.push(`mover ${nr(r)} ${nr(v)} ${n}`); usado.set(r, (usado.get(r) ?? 0) + n); }
@@ -27,9 +27,9 @@ export function agresivo(E, s) {
   reclutarSobrante(E, s, o);
   if (E.reinos[s].stock.Oro >= 6) o.push(`mercenarios ${nr(E.reinos[s].capital)} 3`);
   for (const r of regionesDe(E, s)) {
-    const disp = E.tropas[r] - 1 - (usado.get(r) ?? 0);
+    const disp = tropasDe(E, r) - 1 - (usado.get(r) ?? 0);
     if (disp < 3) continue;
-    const enemigos = vecinas(E, r).filter((v) => E.dueno[v] >= 0 && E.dueno[v] !== s).sort((a, b) => E.tropas[a] - E.tropas[b]);
+    const enemigos = vecinas(E, r).filter((v) => E.dueno[v] >= 0 && E.dueno[v] !== s).sort((a, b) => tropasDe(E, a) - tropasDe(E, b));
     const objetivo = enemigos[0] ?? vecinas(E, r).find((v) => E.dueno[v] === -1);
     if (objetivo === undefined) continue;
     o.push(`mover ${nr(r)} ${nr(objetivo)} ${disp}`);

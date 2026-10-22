@@ -1,6 +1,7 @@
 // Contexto de un turno: lo que comparten todas las fases (estado, turno, registros del turno y ayudas chicas).
 
 import { TERRENO, ARMAS } from '../constantes.js';
+import { tropasDe } from '../estado.js';
 
 export function nuevoContexto(E, jugadas = []) {
   const k = E.k;
@@ -20,7 +21,7 @@ export function nuevoContexto(E, jugadas = []) {
   ctx.pagar = (s, costo) => { for (const [r, v] of Object.entries(costo)) ctx.R[s].stock[r] -= v; };
   ctx.propia = (s, r) => Number.isInteger(r) && r >= 0 && r < ctx.NR && E.dueno[r] === s;
   ctx.activa = (s) => ctx.R[s]?.vivo === true;
-  ctx.defensa = (r) => E.tropas[r] * (1 + 0.5 * E.fort[r]) * TERRENO[ctx.regs[r].terr];
+  ctx.defensa = (r) => tropasDe(E, r) * (1 + 0.5 * E.fort[r]) * TERRENO[ctx.regs[r].terr];
   ctx.ataque = (s, n) => n * (1 + ARMAS.bono * ctx.R[s].armas);
   return ctx;
 }

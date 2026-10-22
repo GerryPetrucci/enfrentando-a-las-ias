@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nuevoEstado, contexto, R, frontera } from './ayudas.js';
+import { nuevoEstado, contexto, R, frontera, fijarTropas } from './ayudas.js';
 import { ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
 import { movimientos } from '../../juegos/conquista/turno/movimiento.js';
 import { rupturas, pactosNuevos, mensajesYNotas } from '../../juegos/conquista/turno/diplomacia.js';
@@ -29,7 +29,7 @@ test('romper sin pacto vigente se descarta', () => {
 
 test('romper y atacar al aliado en el mismo turno es valido', () => {
   const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
-  E.dueno[d] = 1; E.tropas[d] = 1; E.fort[d] = 0; E.tropas[a] = 10;
+  E.dueno[d] = 1; fijarTropas(E, d, 1); E.fort[d] = 0; fijarTropas(E, a, 10);
   E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 1;
   const ctx = contexto(E, { 0: { ordenes: ['romper Ambar', `mover ${R(a)} ${R(d)} 8`] } });
   ordenesEconomicas(ctx); rupturas(ctx); movimientos(ctx);

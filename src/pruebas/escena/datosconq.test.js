@@ -10,7 +10,7 @@ import * as motor from '../../juegos/conquista/constantes.js';
 import { crearMapa, serializarMapa, restaurarMapa, BIOMAS } from '../../mapa.js';
 import { crearEstado, instantanea } from '../../juegos/conquista/estado.js';
 import { crearRng } from '../../rng.js';
-import { nuevoEstado, contexto } from '../conquista/ayudas.js';
+import { nuevoEstado, contexto, fijarTropas } from '../conquista/ayudas.js';
 
 test('las partidas de ejemplo son reales del motor y entre todas cubren los escenarios que necesita la escena', async () => {
   const partidas = await partidasDeEjemplo();
@@ -76,7 +76,7 @@ test('las constantes que usa la escena son las del motor (la web no puede import
 test('los multiplicadores que muestra la tarjeta son los de las formulas del combate del motor (armas, fortaleza y terreno)', () => {
   const E = nuevoEstado(4), ctx = contexto(E);
   const r = E.mapa.regs.find((x) => x.terr === 'mo')?.id ?? 0;
-  E.mapa.regs[r].terr = 'mo'; E.tropas[r] = 8; E.fort[r] = 2;
+  E.mapa.regs[r].terr = 'mo'; E.dueno[r] = 0; fijarTropas(E, r, 8); E.fort[r] = 2;
   assert.equal(ctx.defensa(r), 8 * web.multiplicadorDeFortaleza(2) * web.TERRENO.mo);
   E.reinos[0].armas = 2;
   assert.equal(ctx.ataque(0, 10), 10 * web.multiplicadorDeArmas(2));

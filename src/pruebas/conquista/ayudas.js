@@ -1,7 +1,7 @@
 // Ayudas compartidas por las pruebas de la Guerra de territorios. No es un archivo de pruebas.
 import { crearRng } from '../../rng.js';
 import { crearMapa } from '../../mapa.js';
-import { crearEstado, nombreRegion, regionesDe, contarEdificios } from '../../juegos/conquista/estado.js';
+import { crearEstado, nombreRegion, regionesDe, contarEdificios, tropasDe, ponerTropas, limpiarRegion, totalPila, N_TIPOS } from '../../juegos/conquista/estado.js';
 import { normalizarRespuesta } from '../../juegos/conquista/ordenes.js';
 import { nuevoContexto } from '../../juegos/conquista/turno/contexto.js';
 import assert from 'node:assert/strict';
@@ -25,6 +25,10 @@ export function nuevoEstado(k = 4, seed = 7, bioma = 'continente') {
   return crearEstado(crearRng(seed), { jugadores: k, mapa: copia });
 }
 export const R = nombreRegion; // R(0) === 'R01'
+// Semantica de la antigua asignacion E.tropas[r] = n (antes del modelo de unidades): deja en la region EXACTAMENTE n Lanceros de su dueno y nada mas (borra cualquier otra pila).
+// Con n > 0 la region ya debe tener dueno (si no, ponerTropas lanza: asi una prueba mal ordenada falla fuerte en vez de dejar unidades huerfanas).
+export function fijarTropas(E, r, n) { limpiarRegion(E, r); if (n > 0) ponerTropas(E, r, n); }
+export { tropasDe };
 export const capital = (E, s) => E.reinos[s].capital;
 export const resp = (extra = {}) => ({ ordenes: [], pacto_con: null, mensaje: '', privados: [], razon: '', ...extra });
 // jugadas normalizadas: porReino = { 0: { ordenes: [...] }, 2: {...} }; los reinos sin entrada no dan ordenes; los caidos son null
@@ -57,10 +61,11 @@ export function verificarInvariantes(E) {
   for (let r = 0; r < NR; r++) {
     const d = E.dueno[r];
     assert.ok(d >= -1 && d < E.k, `dueno invalido en R${r + 1}`);
-    assert.ok(Number.isInteger(E.tropas[r]) && E.tropas[r] >= 0, `tropas invalidas en R${r + 1}`);
-    if (d === -1) { assert.equal(E.tropas[r], 0, `region sin dueno con tropas R${r + 1}`); assert.equal(E.edif[r], null, `edificio sin dueno R${r + 1}`); }
-    else assert.ok(E.tropas[r] >= 1, `region del reino ${d} sin tropas R${r + 1}`);
+    assert.ok(Number.isInteger(tropasDe(E, r)) && tropasDe(E, r) >= 0, `tropas invalidas en R${r + 1}`);
+    if (d === -1) { assert.equal(tropasDe(E, r), 0, `region sin dueno con tropas R${r + 1}`); assert.equal(E.edif[r], null, `edificio sin dueno R${r + 1}`); }
+    else assert.ok(tropasDe(E, r) >= 1, `region del reino ${d} sin tropas R${r + 1}`);
     assert.ok(E.fort[r] >= 0 && E.fort[r] <= 3);
+    for (let k = 0; k < E.k; k++) if (k !== d) assert.equal(totalPila(E, r, k), 0, `unidades del reino ${k} en R${r + 1}, que es de ${d} (todavia no hay invitados)`);
   }
   E.reinos.forEach((r, s) => {
     assert.ok(r.honor >= 0 && r.honor <= 10, `honor fuera de rango en ${r.nombre}`);
@@ -115,7 +120,7 @@ export const tokensDelPrompt = (E, i = 0) =>
 export function estadoPeorCaso(seed = 7, bioma = 'continente') {
   const E = nuevoEstado(5, seed, bioma);
   E.turno = 13;
-  for (let r = 0; r < E.dueno.length; r++) { E.dueno[r] = r % 5; E.tropas[r] = 12; E.fort[r] = 1; if (r % 3 === 0) { E.edif[r] = 'granja'; E.dan[r] = r % 2; } }
+  for (let r = 0; r < E.dueno.length; r++) { E.dueno[r] = r % 5; fijarTropas(E, r, 12); E.fort[r] = 1; if (r % 3 === 0) { E.edif[r] = 'granja'; E.dan[r] = r % 2; } }
   E.reinos[0].nota = 'n'.repeat(250);
   E.reinos[0].privIn = [1, 2, 3, 4].map((de) => ({ de, texto: 'p'.repeat(140) }));
   E.reinos[0].ofertasIn = [{ de: 1, doy: 'Hierro', dc: 10, pido: 'Madera', pc: 10 }, { de: 2, doy: 'Hierro', dc: 10, pido: 'Madera', pc: 10 }];

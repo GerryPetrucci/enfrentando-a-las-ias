@@ -5,7 +5,7 @@
 import { crearRng } from '../../rng.js';
 import { restaurarMapa } from '../../mapa.js';
 import { construirUsuario } from '../../prompt.js';
-import { crearEstado } from './estado.js';
+import { crearEstado, tropasDe } from './estado.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { aplicarTurno } from './turno/index.js';
 import { vistaTexto } from './vista.js';
@@ -36,7 +36,7 @@ export function reconstruirPrompts(partida, hastaTurno = Infinity) {
         }, E);
       });
       aplicarTurno(E, jugadas);
-      if (!igual(E.dueno, r.estado?.dueno) || !igual(E.tropas, r.estado?.tropas)) fiel = false;
+      if (!igual(E.dueno, r.estado?.dueno) || !igual(Array.from({ length: E.dueno.length }, (_, x) => tropasDe(E, x)), r.estado?.tropas)) fiel = false;
     }
     return { fiel, turnos };
   } catch {

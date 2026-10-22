@@ -1,6 +1,6 @@
 // Fases economicas del turno: recoleccion, honor, hambre, ordenes de gasto, regalos y comercio.
 
-import { regionesDe, totalTropas, contarEdificios } from '../estado.js';
+import { regionesDe, totalTropas, contarEdificios, tropasDe, sumarUni } from '../estado.js';
 import { COMIDA, HONOR, TURNOS, FORTALEZA, ARMAS, MERCENARIOS, MAX_EDIFICIOS_POR_TIPO, MARAVILLA, EDIFICIOS } from '../constantes.js';
 
 // 1. Recoleccion: nodos de recurso, cosecha base, granjas y mercados (la mitad si estan danados).
@@ -44,9 +44,9 @@ export function hambre(ctx) {
     reino.stock.Comida = 0;
     let perdidas = 0;
     for (let r = 0; r < NR; r++) {
-      if (E.dueno[r] !== reino.s || E.tropas[r] <= 1) continue;
-      const d = Math.min(E.tropas[r] - 1, Math.max(1, Math.round(E.tropas[r] * COMIDA.deserta)));
-      E.tropas[r] -= d; perdidas += d;
+      if (E.dueno[r] !== reino.s || tropasDe(E, r) <= 1) continue;
+      const d = Math.min(tropasDe(E, r) - 1, Math.max(1, Math.round(tropasDe(E, r) * COMIDA.deserta)));
+      sumarUni(E, r, reino.s, 0, -d); perdidas += d;
     }
     if (perdidas) ctx.evt({ tipo: 'hambre', k: reino.s, n: perdidas });
   }
@@ -57,7 +57,7 @@ function reclutar(ctx, s, o) {
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
   const f = E.edif[o.region] === 'cuartel' ? (E.dan[o.region] ? 0.75 : 0.5) : 1, costo = Math.ceil(o.n * f);
   if (R[s].stock.Comida < costo) return 'Comida insuficiente';
-  R[s].stock.Comida -= costo; E.tropas[o.region] += o.n;
+  R[s].stock.Comida -= costo; sumarUni(E, o.region, s, 0, o.n);
   return null;
 }
 function contratar(ctx, s, o, usados) {
@@ -66,7 +66,7 @@ function contratar(ctx, s, o, usados) {
   if (usados + o.n > MERCENARIOS.maximoPorTurno) return `maximo ${MERCENARIOS.maximoPorTurno} mercenarios por turno`;
   const costo = (R[s].honor <= HONOR.deshonrado ? MERCENARIOS.costoDeshonrado : MERCENARIOS.costo) * o.n;
   if (R[s].stock.Oro < costo) return 'Oro insuficiente';
-  R[s].stock.Oro -= costo; E.tropas[o.region] += o.n;
+  R[s].stock.Oro -= costo; sumarUni(E, o.region, s, 0, o.n);
   return null;
 }
 function fortificar(ctx, s, o) {

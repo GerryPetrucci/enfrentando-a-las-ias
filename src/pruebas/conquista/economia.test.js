@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nuevoEstado, contexto, R, capital } from './ayudas.js';
+import { nuevoEstado, contexto, R, capital, fijarTropas, tropasDe } from './ayudas.js';
 import { regionesDe } from '../../juegos/conquista/estado.js';
 import { recoleccion, honorYPactos, hambre, ordenesEconomicas, entregas } from '../../juegos/conquista/turno/economia.js';
 
@@ -67,8 +67,8 @@ test('muerte subita: desde el turno 29 se acaban todos los pactos', () => {
 
 test('hambre: cada 4 tropas comen 1 Comida; sin Comida desertan el 10% sin tocar la ultima tropa', () => {
   const E = nuevoEstado(4), mias = regionesDe(E, 0);
-  [8, 5, 3].forEach((n, i) => { E.tropas[mias[i]] = n; });
-  mias.slice(3).forEach((r) => { E.tropas[r] = 1; });
+  [8, 5, 3].forEach((n, i) => { fijarTropas(E, mias[i], n); });
+  mias.slice(3).forEach((r) => { fijarTropas(E, r, 1); });
   const total = 16 + (mias.length - 3);
   vaciar(E, 0, { Comida: 10 });
   hambre(contexto(E));
@@ -76,8 +76,8 @@ test('hambre: cada 4 tropas comen 1 Comida; sin Comida desertan el 10% sin tocar
   vaciar(E, 0);
   const ctx = contexto(E);
   hambre(ctx);
-  assert.deepEqual([E.tropas[mias[0]], E.tropas[mias[1]], E.tropas[mias[2]]], [7, 4, 2]);
-  mias.slice(3).forEach((r) => assert.equal(E.tropas[r], 1));
+  assert.deepEqual([tropasDe(E, mias[0]), tropasDe(E, mias[1]), tropasDe(E, mias[2])], [7, 4, 2]);
+  mias.slice(3).forEach((r) => assert.equal(tropasDe(E, r), 1));
   assert.equal(ctx.eventos.find((e) => e.tipo === 'hambre' && e.k === 0).n, 3);
 });
 
@@ -85,7 +85,7 @@ test('reclutar paga 1 Comida por tropa y falla sin Comida o en una region ajena'
   const E = nuevoEstado(4), c = capital(E, 0), ajena = capital(E, 1);
   vaciar(E, 0, { Comida: 5 });
   const ctx = correr(E, { 0: { ordenes: [`reclutar ${R(c)} 4`, `reclutar ${R(c)} 4`, `reclutar ${R(ajena)} 1`] } });
-  assert.equal(E.tropas[c], 14);
+  assert.equal(tropasDe(E, c), 14);
   assert.equal(E.reinos[0].stock.Comida, 1);
   assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['Comida insuficiente', 'la region no es tuya']);
   assert.deepEqual(ctx.obed[0], { validas: 1, total: 3 });

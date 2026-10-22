@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nuevoEstado, contexto, jugadasDe, R, capital } from './ayudas.js';
+import { nuevoEstado, contexto, jugadasDe, R, capital, fijarTropas, tropasDe } from './ayudas.js';
 import { clasificar } from '../../juegos/conquista/estado.js';
 import { aplicarTurno } from '../../juegos/conquista/turno/index.js';
 import { maravillaYVictoria } from '../../juegos/conquista/turno/cierre.js';
@@ -29,8 +29,8 @@ test('la Maravilla recien construida no cuenta ese mismo turno', () => {
 test('tomar la capital con Maravilla en el turno en que se cumplia la cuenta: no gana quien acaba de perderla', () => {
   const E = nuevoEstado(4), cap0 = capital(E, 0), n = E.mapa.regs[cap0].vecinos[0];
   E.maravilla = { r: cap0, k: 0, n: 7, t0: 0 };
-  E.dueno[n] = 1; E.tropas[n] = 30;
-  E.tropas[cap0] = 1; E.fort[cap0] = 0; E.mapa.regs[cap0].terr = 'll';
+  E.dueno[n] = 1; fijarTropas(E, n, 30);
+  fijarTropas(E, cap0, 1); E.fort[cap0] = 0; E.mapa.regs[cap0].terr = 'll';
   E.reinos[1].stock.Comida = 99; // el hambre va antes de las ordenes: sin Comida desertarian tropas y el movimiento de 29 ya no valdria
   const reg = aplicarTurno(E, jugadasDe(E, { 1: { ordenes: [`mover ${R(n)} ${R(cap0)} 29`] } }));
   assert.equal(E.ganador, null);
@@ -91,7 +91,7 @@ test('resultadoDe: 5, 3, 1 y 0 puntos por posicion; los caidos se ordenan por qu
   E.reinos[3].vivo = false; E.reinos[3].cayoEn = 5;
   E.reinos[2].vivo = false; E.reinos[2].cayoEn = 9;
   E.dueno.forEach((d, r) => { if (d === -1 && E.dueno.filter((x) => x === 1).length < 6) E.dueno[r] = 1; }); // el reino 1 tiene mas regiones que el 0
-  for (let r = 0; r < E.dueno.length; r++) if (E.dueno[r] === 1) E.tropas[r] = Math.max(1, E.tropas[r]);
+  for (let r = 0; r < E.dueno.length; r++) if (E.dueno[r] === 1) fijarTropas(E, r, Math.max(1, tropasDe(E, r)));
   E.ganador = 1;
   const r = resultadoDe(E);
   assert.deepEqual(r.puntos, [3, 5, 1, 0]);

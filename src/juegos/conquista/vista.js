@@ -3,7 +3,7 @@
 // armas, notas, privados ni ofertas de otros reinos.
 
 import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS } from './constantes.js';
-import { nombreRegion } from './estado.js';
+import { nombreRegion, tropasDe } from './estado.js';
 
 const SEP = ' | ';
 
@@ -18,7 +18,7 @@ function ocupacion(E) {
     for (let i = 0; i < E.dueno.length; i++) {
       if (E.dueno[i] !== reino.s) continue;
       const ed = E.edif[i] ? ',' + EDIFICIOS[E.edif[i]].letra + (E.dan[i] ? '-' : '') : '';
-      lista.push(`${nombreRegion(i)}(${E.tropas[i]}${E.fort[i] ? ',f' + E.fort[i] : ''}${ed})`);
+      lista.push(`${nombreRegion(i)}(${tropasDe(E, i)}${E.fort[i] ? ',f' + E.fort[i] : ''}${ed})`);
     }
     return `${reino.nombre}${reino.vivo ? '' : ' (cayo)'}: ${lista.join(' ')}`;
   });

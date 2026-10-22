@@ -1,6 +1,6 @@
 // Movimientos simultaneos, combate, herencia de edificios, traspaso de la Maravilla y caida de reinos.
 
-import { aliado, contarEdificios, regionesDe } from '../estado.js';
+import { aliado, contarEdificios, regionesDe, tropasDe, ponerTropas, sumarUni, limpiarRegion } from '../estado.js';
 import { RECURSOS, MAX_EDIFICIOS_POR_TIPO } from '../constantes.js';
 
 // Devuelve un texto (motivo) si el movimiento no vale, o { caballos, n } si vale (`n` ya resuelve la palabra `todo`).
@@ -9,9 +9,9 @@ function validar(ctx, s, o) {
   if (!ctx.propia(s, o.de)) return 'la region de origen no es tuya';
   if (o.a >= NR) return 'la region de destino no existe';
   if (o.de === o.a) return 'origen y destino son la misma region';
-  const n = o.todo ? E.tropas[o.de] - 1 : o.n;
+  const n = o.todo ? tropasDe(E, o.de) - 1 : o.n;
   if (n < 1) return 'no hay tropas de sobra: debe quedar al menos 1 en la region de origen';
-  if (E.tropas[o.de] - n < 1) return 'debe quedar al menos 1 tropa en la region de origen';
+  if (tropasDe(E, o.de) - n < 1) return 'debe quedar al menos 1 tropa en la region de origen';
   let caballos = 0;
   if (!regs[o.de].vecinos.includes(o.a)) {
     // A 2 regiones: la del medio (vecina de las dos) debe ser tuya, libre o de un aliado con pacto vigente; nunca de otro reino (22 de octubre de 2026).
@@ -36,7 +36,7 @@ function heredarEdificio(ctx, d, nuevo) {
 
 function capturar(ctx, d, nuevo, n, viejo, huboCombate) {
   const { E, R } = ctx;
-  E.dueno[d] = nuevo; E.tropas[d] = n;
+  limpiarRegion(E, d); E.dueno[d] = nuevo; ponerTropas(E, d, n, nuevo);
   if (huboCombate) E.fort[d] = Math.max(0, E.fort[d] - 1);
   heredarEdificio(ctx, d, nuevo);
   if (viejo < 0) return;
@@ -50,12 +50,12 @@ function capturar(ctx, d, nuevo, n, viejo, huboCombate) {
 
 function resolverRegion(ctx, d, grupos) {
   const { E } = ctx, duenoViejo = E.dueno[d];
-  for (const g of grupos) if (g.k === duenoViejo) E.tropas[d] += g.n; // refuerzo propio
+  for (const g of grupos) if (g.k === duenoViejo) sumarUni(E, d, duenoViejo, 0, g.n); // refuerzo propio
   const atacantes = new Map();
   for (const g of grupos) if (g.k !== duenoViejo) atacantes.set(g.k, (atacantes.get(g.k) ?? 0) + g.n);
   if (!atacantes.size) return;
   const bandos = [];
-  if (duenoViejo >= 0 && E.tropas[d] > 0) bandos.push({ k: duenoViejo, n: E.tropas[d], f: ctx.defensa(d), defensor: true });
+  if (duenoViejo >= 0 && tropasDe(E, d) > 0) bandos.push({ k: duenoViejo, n: tropasDe(E, d), f: ctx.defensa(d), defensor: true });
   for (const [k, n] of atacantes) bandos.push({ k, n, f: ctx.ataque(k, n), defensor: false });
   bandos.sort((a, b) => b.f - a.f || Number(b.defensor) - Number(a.defensor) || a.k - b.k);
   if (bandos.length === 1) { capturar(ctx, d, bandos[0].k, bandos[0].n, duenoViejo, false); return; }
@@ -65,13 +65,13 @@ function resolverRegion(ctx, d, grupos) {
   const datos = { terr: ctx.regs[d].terr, fort: E.fort[d], bandos: bandos.map((x) => ({ ...x, armas: ctx.R[x.k].armas })) };
   if (a.f === b.f) { // empate: el defensor resiste con 1 tropa; sin defensor, la region queda sin dueno
     const def = bandos.find((x) => x.defensor);
-    if (def) { E.tropas[d] = 1; ctx.combates.push({ d, k: def.k, perdidas: todos - 1, ...datos, resultado: 'empate', quedan: 1 }); ctx.evt({ tipo: 'repelido', k: b.k, contra: def.k, r: d }); }
-    else { E.dueno[d] = -1; E.tropas[d] = 0; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; ctx.combates.push({ d, k: -1, perdidas: todos, ...datos, resultado: 'empate', quedan: 0 }); }
+    if (def) { ponerTropas(E, d, 1); ctx.combates.push({ d, k: def.k, perdidas: todos - 1, ...datos, resultado: 'empate', quedan: 1 }); ctx.evt({ tipo: 'repelido', k: b.k, contra: def.k, r: d }); }
+    else { limpiarRegion(E, d); E.dueno[d] = -1; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; ctx.combates.push({ d, k: -1, perdidas: todos, ...datos, resultado: 'empate', quedan: 0 }); }
     return;
   }
   const quedan = Math.max(1, Math.floor(a.n * (1 - b.f / a.f)));
   ctx.combates.push({ d, k: a.k, perdidas: a.n - quedan + b.n, ...datos, resultado: a.defensor ? 'repelido' : 'captura', quedan });
-  if (a.defensor) { E.tropas[d] = quedan; ctx.evt({ tipo: 'repelido', k: b.k, contra: a.k, r: d }); }
+  if (a.defensor) { ponerTropas(E, d, quedan); ctx.evt({ tipo: 'repelido', k: b.k, contra: a.k, r: d }); }
   else capturar(ctx, d, a.k, quedan, duenoViejo, true);
 }
 
@@ -82,7 +82,7 @@ function procesarCaidas(ctx) {
     if (!reino.vivo) continue;
     reino.regsAlCaer = regionesDe(E, c.k).length; reino.vivo = false; reino.cayoEn = ctx.t;
     for (const rec of RECURSOS) { R[c.por].stock[rec] += reino.stock[rec]; reino.stock[rec] = 0; }
-    for (let i = 0; i < NR; i++) if (E.dueno[i] === c.k) { E.dueno[i] = -1; E.tropas[i] = 0; E.fort[i] = 0; E.edif[i] = null; E.dan[i] = 0; }
+    for (let i = 0; i < NR; i++) if (E.dueno[i] === c.k) { limpiarRegion(E, i); E.dueno[i] = -1; E.fort[i] = 0; E.edif[i] = null; E.dan[i] = 0; }
     for (const o of R) { o.pactos[c.k] = 0; o.pactoOk[c.k] = false; }
     reino.pactos.fill(0); reino.pactoOk.fill(false); reino.ofertasIn = []; reino.privIn = [];
     ctx.evt({ tipo: 'caida', k: c.k, por: c.por });
@@ -96,7 +96,7 @@ export function movimientos(ctx) {
   for (const { s, o } of ctx.pend.movimientos) {
     const v = validar(ctx, s, o);
     if (typeof v === 'string') { ctx.mal(s, o.texto, v); continue; }
-    E.tropas[o.de] -= v.n; R[s].stock.Caballos -= v.caballos;
+    sumarUni(E, o.de, s, 0, -v.n); R[s].stock.Caballos -= v.caballos;
     ctx.movs.push({ f: o.de, d: o.a, n: v.n, k: s });
     if (!llegan.has(o.a)) llegan.set(o.a, []);
     llegan.get(o.a).push({ k: s, n: v.n });
