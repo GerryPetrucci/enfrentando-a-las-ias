@@ -4,18 +4,18 @@ import { regionesDe, contarEdificios, sumarUni, uniDe, pila as pilaDe, totalPila
 import { COMIDA, HONOR, TURNOS, FORTALEZA, MEJORAS, MERCENARIOS, MAX_EDIFICIOS_POR_TIPO, MARAVILLA, EDIFICIOS, CUARTEL, N_TIPOS } from '../constantes.js';
 import { costoDePila, racionesDe } from '../unidades.js';
 
-// 1. Recoleccion: nodos de recurso, cosecha base, granjas y mercados (la mitad si estan danados).
+// 1. Recoleccion: nodos de recurso, cosecha base, granjas y mercados (la mitad si estan danados). Las regiones aisladas (sin camino a la capital) no producen ni cuentan para la cosecha base.
 export function recoleccion(ctx) {
   const { E, R, regs, NR } = ctx;
   for (let r = 0; r < NR; r++) {
     const s = E.dueno[r];
-    if (s < 0) continue;
+    if (s < 0 || ctx.aisladas[r]) continue;
     if (regs[r].rec) R[s].stock[regs[r].rec] += 2;
     const ed = E.edif[r];
     if (ed === 'granja') R[s].stock.Comida += E.dan[r] ? 1 : 2;
     else if (ed === 'mercado') R[s].stock.Oro += E.dan[r] ? 1 : 2;
   }
-  for (const reino of R) if (reino.vivo) reino.stock.Comida += Math.floor(regionesDe(E, reino.s).length / COMIDA.regionesPorCosecha);
+  for (const reino of R) if (reino.vivo) reino.stock.Comida += Math.floor(regionesDe(E, reino.s).filter((r) => !ctx.aisladas[r]).length / COMIDA.regionesPorCosecha);
 }
 
 // 2. Honor (+1 cada 3 turnos, +1 a cada parte de un pacto cumplido) y fin de los pactos en la muerte subita.
@@ -58,9 +58,12 @@ export function hambre(ctx) {
 }
 
 // Reclutar una pila de unidades en una region propia: se paga lo que suman sus tipos (cuartel: la mitad; danado: tres cuartos). Los Ingenios solo se reclutan donde hay cuartel.
+const AISLADA = 'la region esta aislada de tu capital';
+
 function reclutar(ctx, s, o) {
   const { E, R } = ctx;
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
+  if (ctx.aisladas[o.region]) return AISLADA;
   const cuartel = E.edif[o.region] === 'cuartel';
   if (o.pila[3] > 0 && !cuartel) return 'los Ingenios solo se reclutan en una region con cuartel';
   const costo = costoDePila(o.pila, cuartel ? (E.dan[o.region] ? CUARTEL.danado : CUARTEL.entero) : 1);
@@ -73,6 +76,7 @@ function reclutar(ctx, s, o) {
 function contratar(ctx, s, o, usados) {
   const { E, R } = ctx;
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
+  if (ctx.aisladas[o.region]) return AISLADA;
   if (usados + o.n > MERCENARIOS.maximoPorTurno) return `maximo ${MERCENARIOS.maximoPorTurno} mercenarios por turno`;
   const costo = (R[s].honor <= HONOR.deshonrado ? MERCENARIOS.costoDeshonrado : MERCENARIOS.costo) * o.n;
   if (R[s].stock.Oro < costo) return 'Oro insuficiente';
@@ -82,6 +86,7 @@ function contratar(ctx, s, o, usados) {
 function fortificar(ctx, s, o) {
   const { E } = ctx;
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
+  if (ctx.aisladas[o.region]) return AISLADA;
   const nivel = E.fort[o.region];
   if (nivel >= 3) return 'la fortaleza ya esta al maximo';
   const costo = FORTALEZA[nivel + 1];
@@ -93,7 +98,7 @@ function fortificar(ctx, s, o) {
 function mejorar(ctx, s, o) {
   const { E, R } = ctx, nivel = R[s].mejoras[o.unidad];
   if (nivel >= MEJORAS.maximo) return 'esa mejora ya esta al maximo';
-  if (contarEdificios(E, s, 'cuartel') < 1) return 'hace falta un cuartel para mejorar';
+  if (!regionesDe(E, s).some((r) => E.edif[r] === 'cuartel' && !ctx.aisladas[r])) return 'hace falta un cuartel para mejorar'; // un cuartel aislado no sirve
   const costo = MEJORAS.costo[nivel];
   if (!ctx.puede(s, costo)) return 'recursos insuficientes para mejorar';
   ctx.pagar(s, costo); R[s].mejoras[o.unidad] = nivel + 1;
@@ -111,6 +116,7 @@ function construir(ctx, s, o) {
     return null;
   }
   if (!ctx.propia(s, o.region)) return 'la region no es tuya';
+  if (ctx.aisladas[o.region]) return AISLADA;
   if (E.edif[o.region]) return 'ya hay un edificio en esa region';
   if (contarEdificios(E, s, o.edificio) >= MAX_EDIFICIOS_POR_TIPO) return `maximo ${MAX_EDIFICIOS_POR_TIPO} edificios de ese tipo`;
   const costo = EDIFICIOS[o.edificio].costo;

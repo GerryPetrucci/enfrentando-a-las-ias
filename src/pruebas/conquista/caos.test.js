@@ -53,7 +53,7 @@ function caos(E, s, rng) {
 }
 
 function jugar(k, seed) {
-  const E = crearEstado(crearRng(seed), { jugadores: k, mapa: mapaDe(seed, k) }), rng = crearRng((seed ^ 0xca05) >>> 0), cuenta = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0 };
+  const E = crearEstado(crearRng(seed), { jugadores: k, mapa: mapaDe(seed, k) }), rng = crearRng((seed ^ 0xca05) >>> 0), cuenta = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0 };
   while (E.ganador === null) {
     const jugadas = E.reinos.map((r, s) => (r.vivo ? normalizarRespuesta(caos(E, s, rng), E) : null));
     const reg = aplicarTurno(E, jugadas);
@@ -62,13 +62,14 @@ function jugar(k, seed) {
     for (const c of reg.combates) { if (c.bandos.some((b) => b.miembros.length > 1)) cuenta.coaliciones++; if (c.resultado === 'duelo') cuenta.duelos++; if (c.bandos.length >= 3) cuenta.tresBandos++; }
     cuenta.conquistas += reg.eventos.filter((e) => e.tipo === 'conquista').length;
     cuenta.caidas += reg.eventos.filter((e) => e.tipo === 'caida').length;
+    if (reg.estado.aisladas.length) cuenta.aisladas++;
     if (E.turno > 31) throw new Error('la partida no termina');
   }
   return { E, cuenta };
 }
 
-test('partidas al azar de 2 a 5 reinos con ordenes de todo tipo: los invariantes se cumplen en todos los turnos y hay visitas, coaliciones, tres bandos, conquistas y caidas', () => {
-  const total = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0 };
+test('partidas al azar de 2 a 5 reinos con ordenes de todo tipo: los invariantes se cumplen en todos los turnos y hay visitas, coaliciones, tres bandos, conquistas, caidas y regiones aisladas', () => {
+  const total = { visitas: 0, coaliciones: 0, duelos: 0, conquistas: 0, caidas: 0, tresBandos: 0, aisladas: 0 };
   for (const k of [2, 3, 4, 5]) for (let seed = 1; seed <= 25; seed++) {
     const { cuenta } = jugar(k, seed);
     for (const c of Object.keys(total)) total[c] += cuenta[c];

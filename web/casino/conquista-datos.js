@@ -77,6 +77,7 @@ export function estadoInicial(partida) {
       mejoras: Array.from({ length: k }, () => [0, 0, 0, 0]),
       // unidades por region y reino ([region, reino, L, A, J, I], solo las pilas que existen): al empezar, solo Lanceros del dueno
       uni: dueno.flatMap((d, r) => (d < 0 ? [] : [[r, d, r === capitales[d] ? TROPAS_CAPITAL : TROPAS_VECINA, 0, 0, 0]])),
+      aisladas: [], // al empezar, cada region toca la capital de su dueno
       honor: Array(k).fill(HONOR_INICIAL),
       vivo: Array(k).fill(true),
       pactos: Array.from({ length: k }, () => Array(k).fill(0)),

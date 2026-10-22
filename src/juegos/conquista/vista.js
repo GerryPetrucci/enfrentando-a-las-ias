@@ -5,6 +5,7 @@
 import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES } from './constantes.js';
 import { nombreRegion, pila as pilaDe, presentes } from './estado.js';
 import { sumaPila } from './unidades.js';
+import { regionesAisladas } from './suministro.js';
 
 const SEP = ' | ';
 
@@ -47,6 +48,8 @@ export function vistaTexto(E, i) {
     if (dueno >= 0 && dueno !== i && sumaPila(pilaDe(E, r, i)) > 0) visitas.push(`${nombreRegion(r)} de ${R[dueno].nombre} (${pilaTexto(pilaDe(E, r, i))}${yo.pactos[dueno] >= t ? '' : ', hostiles'})`);
   }
   if (visitas.length) L.push('Tus tropas de visita: ' + visitas.join(SEP));
+  const aisladas = regionesAisladas(E, i, t);
+  if (aisladas.length) L.push(`Tus regiones aisladas (sin camino a tu capital: no producen y ahi no se recluta, fortifica ni construye): ${aisladas.map(nombreRegion).join(' ')}`);
   L.push(`Tu nota del turno anterior: ${yo.nota ? `"${yo.nota}"` : '(ninguna)'}`);
   if (yo.ofertasIn.length) L.push('Ofertas recibidas: ' + yo.ofertasIn.map((o) => `${R[o.de].nombre} te da ${o.dc} ${o.doy} por ${o.pc} ${o.pido}`).join(SEP));
   if (yo.privIn.length) L.push('Privados recibidos: ' + yo.privIn.map((p) => `${R[p.de].nombre}: "${p.texto}"`).join(SEP));

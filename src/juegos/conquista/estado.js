@@ -3,6 +3,7 @@
 import { crearMapa, biomaDeSeed } from '../../mapa.js';
 import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS, N_TIPOS } from './constantes.js';
 import { nombresValidos } from './nombres.js';
+import { listaDeAisladas } from './suministro.js';
 
 export const nombreRegion = (id) => 'R' + String(id + 1).padStart(2, '0');
 
@@ -100,6 +101,8 @@ export function instantanea(E) {
     maravilla: E.maravilla ? { ...E.maravilla } : null, notas: E.reinos.map((r) => r.nota),
     // `uni`: las pilas no vacias como [region, reino, L, A, J, I] (incluye a los invitados; `tropas` es solo la guarnicion del dueno)
     uni: pilasNoVacias(E),
+    // `aisladas`: las regiones sin camino a la capital de su dueno al empezar el turno siguiente (no producen ni se recluta ahi)
+    aisladas: listaDeAisladas(E, E.turno + 1),
   };
 }
 

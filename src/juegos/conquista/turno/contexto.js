@@ -3,6 +3,7 @@
 import { TERRENO, MEJORAS } from '../constantes.js';
 import { pila as pilaDe } from '../estado.js';
 import { fuerzaDeMiembro } from '../unidades.js';
+import { marcarAisladas } from '../suministro.js';
 
 export function nuevoContexto(E, jugadas = []) {
   const k = E.k;
@@ -14,6 +15,7 @@ export function nuevoContexto(E, jugadas = []) {
     obed: Array.from({ length: k }, () => ({ validas: 0, total: 0 })),
     pend: { regalos: [], aceptaciones: [], rupturas: [], movimientos: [], ataques: [], ofertas: {} },
     caidas: [],
+    aisladas: marcarAisladas(E, E.turno + 1), // 1 en las regiones sin camino a la capital de su dueno al empezar este turno (no producen ni se recluta, fortifica o construye ahi)
   };
   ctx.evt = (e) => { ctx.eventos.push({ ...e, t: ctx.t }); };
   ctx.bien = (s) => { ctx.obed[s].validas++; };

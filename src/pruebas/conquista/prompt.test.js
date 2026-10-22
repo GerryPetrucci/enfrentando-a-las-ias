@@ -54,6 +54,13 @@ test('el prompt escribe las reglas de alianzas que el motor aplica (etapa 4): vi
   assert.match(r, /En los ultimos 2 turnos no hay alianzas \(tus tropas de visita pasan a hostiles\)/);
 });
 
+test('el prompt escribe la regla de suministro que el motor aplica (etapa 5): regiones aisladas', () => {
+  const r = conquista.reglas;
+  assert.match(r, /AISLAMIENTO: una region tuya sin camino hasta tu capital \(por regiones tuyas, libres o de un aliado con pacto\) esta aislada/);
+  assert.match(r, /no produce, no cuenta para la cosecha base y ahi no se recluta, fortifica ni construye; sus unidades siguen comiendo/);
+  assert.match(r, /La capital nunca esta aislada/);
+});
+
 test('construirUsuario no cambia para el Dilema (vista como objeto) y acepta una vista en texto', () => {
   const vista = { ronda: 1, rondasTotales: 10 };
   assert.equal(construirUsuario(vista), `Estado actual de la partida:\n\n${JSON.stringify(vista, null, 2)}\n\nTu turno. Responde solo con el JSON.`);
