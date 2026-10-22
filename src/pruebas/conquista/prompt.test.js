@@ -32,6 +32,13 @@ test('el peor caso de 5 reinos cabe en el tope con los cuatro biomas y 100 seeds
   }
 });
 
+test('el prompt escribe las reglas de movimiento que el motor aplica: quedar 1 tropa, la palabra todo y no cruzar territorio de otro reino', () => {
+  // 22 de octubre de 2026: el 78 % de las ordenes descartadas de la partida publicada (112 de 144) eran "debe quedar al menos 1 tropa", una regla que el motor aplicaba y el prompt no decia.
+  assert.match(conquista.reglas, /Siempre debe quedar 1 tropa en la region de origen/);
+  assert.match(conquista.reglas, /"todo"/);
+  assert.match(conquista.reglas, /nunca de otro reino/);
+});
+
 test('construirUsuario no cambia para el Dilema (vista como objeto) y acepta una vista en texto', () => {
   const vista = { ronda: 1, rondasTotales: 10 };
   assert.equal(construirUsuario(vista), `Estado actual de la partida:\n\n${JSON.stringify(vista, null, 2)}\n\nTu turno. Responde solo con el JSON.`);

@@ -12,7 +12,7 @@ RECURSOS: Comida, Madera, Roca, Hierro, Oro y Caballos. Cada region tuya con rec
 
 ORDENES (maximo 12 por turno):
 - reclutar REGION N: N tropas en region tuya (1 Comida c/u).
-- mover DESDE HASTA N: N tropas a region vecina (si es enemiga, atacas). Con Caballos (1 por 3 tropas) llegas a 2 regiones.
+- mover DESDE HASTA N (o "todo", que lleva todas menos 1): N tropas a region vecina (si es enemiga, atacas). Siempre debe quedar 1 tropa en la region de origen. Con Caballos (1 por 3 tropas) llegas a 2 regiones, pero la del medio debe ser tuya, libre o de un aliado: nunca de otro reino.
 - fortificar REGION: nivel 1: 3 Madera + 2 Roca; 2: 4 Roca + 3 Madera; 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa.
 - armar: +25% de ataque (4 Hierro + 2 Madera; maximo 2 veces).
 - mercenarios REGION N: N tropas a 2 Oro c/u (maximo 3 por turno).

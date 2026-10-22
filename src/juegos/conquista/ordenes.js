@@ -42,10 +42,12 @@ export function parsearOrden(texto, reinos = REINOS) {
       return ok({ tipo: verbo, region: r, n });
     }
     case 'mover': {
-      if (t.length !== 4) return uso('mover DESDE HASTA N');
-      const de = region(t[1]), a = region(t[2]), n = entero(t[3]);
+      if (t.length !== 4) return uso('mover DESDE HASTA N (o todo)');
+      const de = region(t[1]), a = region(t[2]);
       if (de === null) return campo('region de origen', t[1]);
       if (a === null) return campo('region de destino', t[2]);
+      if (t[3] === 'todo') return ok({ tipo: 'mover', de, a, todo: true }); // todas las tropas menos 1 (la que debe quedar)
+      const n = entero(t[3]);
       if (n === null) return campo('cantidad', t[3]);
       return ok({ tipo: 'mover', de, a, n });
     }

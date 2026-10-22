@@ -10,6 +10,8 @@ test('limpiar quita acentos, mayusculas y espacios de mas', () => {
 const CASOS = [
   ['reclutar R03 4', { tipo: 'reclutar', region: 2, n: 4 }],
   ['  Mover r7   R12 5 ', { tipo: 'mover', de: 6, a: 11, n: 5 }],
+  ['mover R07 R12 todo', { tipo: 'mover', de: 6, a: 11, todo: true }],
+  ['  MOVER r7 r12 Todo ', { tipo: 'mover', de: 6, a: 11, todo: true }],
   ['fortificar R01', { tipo: 'fortificar', region: 0 }],
   ['ARMAR', { tipo: 'armar' }],
   ['mercenarios R10 3', { tipo: 'mercenarios', region: 9, n: 3 }],
@@ -28,7 +30,7 @@ for (const [texto, esperado] of CASOS) {
   });
 }
 
-const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar 3', 'aceptar'];
+const MALAS = ['', 'dormir', 'reclutar', 'reclutar R03', 'reclutar R03 -4', 'reclutar R03 2.5', 'reclutar R00 3', 'mover R01 R02', 'mover R01 R02 todos', 'mover R01 R02 todo 3', 'regalar plata 5 Azur', 'ofrecer Narnia Oro 1 Roca 1', 'construir R05 castillo', 'armar 3', 'aceptar'];
 for (const texto of MALAS) {
   test(`descarta "${texto}" con un motivo`, () => {
     const r = parsearOrden(texto);

@@ -28,7 +28,7 @@ export default {
   // Bots de control que la consola acepta por nombre: { id: { nombre, color, fn(estado, asiento, rng) } }
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   rondas: TURNOS,
-  versionReglas: 'conquista-1.1.0', // 1.1.0: Maravilla x1.5 de costo y 8 turnos de cuenta (18 de octubre de 2026)
+  versionReglas: 'conquista-2.0.0', // 2.0.0 (en construccion, rama guerra-2.0.0): paso, unidades, alianzas, suministro, equilibrio. 1.1.0: Maravilla x1.5 de costo y 8 turnos de cuenta (18 de octubre de 2026)
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 

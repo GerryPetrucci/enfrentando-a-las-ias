@@ -3,23 +3,27 @@
 import { aliado, contarEdificios, regionesDe } from '../estado.js';
 import { RECURSOS, MAX_EDIFICIOS_POR_TIPO } from '../constantes.js';
 
-// Devuelve un texto (motivo) si el movimiento no vale, o { caballos } si vale.
+// Devuelve un texto (motivo) si el movimiento no vale, o { caballos, n } si vale (`n` ya resuelve la palabra `todo`).
 function validar(ctx, s, o) {
   const { E, R, regs, NR } = ctx;
   if (!ctx.propia(s, o.de)) return 'la region de origen no es tuya';
   if (o.a >= NR) return 'la region de destino no existe';
   if (o.de === o.a) return 'origen y destino son la misma region';
-  if (E.tropas[o.de] - o.n < 1) return 'debe quedar al menos 1 tropa en la region de origen';
+  const n = o.todo ? E.tropas[o.de] - 1 : o.n;
+  if (n < 1) return 'no hay tropas de sobra: debe quedar al menos 1 en la region de origen';
+  if (E.tropas[o.de] - n < 1) return 'debe quedar al menos 1 tropa en la region de origen';
   let caballos = 0;
   if (!regs[o.de].vecinos.includes(o.a)) {
-    const dosPasos = regs[o.de].vecinos.some((w) => regs[w].vecinos.includes(o.a));
-    if (!dosPasos) return 'la region de destino no es vecina';
-    caballos = Math.ceil(o.n / 3);
+    // A 2 regiones: la del medio (vecina de las dos) debe ser tuya, libre o de un aliado con pacto vigente; nunca de otro reino (22 de octubre de 2026).
+    const medios = regs[o.de].vecinos.filter((w) => regs[w].vecinos.includes(o.a));
+    if (!medios.length) return 'la region de destino no es vecina';
+    if (!medios.some((w) => E.dueno[w] < 0 || E.dueno[w] === s || aliado(E, s, E.dueno[w], ctx.t))) return 'no puedes cruzar territorio de otro reino';
+    caballos = Math.ceil(n / 3);
     if (R[s].stock.Caballos < caballos) return 'faltan Caballos para mover a 2 regiones';
   }
   const duenoDestino = E.dueno[o.a];
   if (duenoDestino >= 0 && duenoDestino !== s && aliado(E, s, duenoDestino, ctx.t)) return 'esa region es de un aliado (usa romper antes)';
-  return { caballos };
+  return { caballos, n };
 }
 
 // El edificio pasa al conquistador danado (50% de su efecto); si ya tiene 3 de ese tipo, se destruye.
@@ -92,10 +96,10 @@ export function movimientos(ctx) {
   for (const { s, o } of ctx.pend.movimientos) {
     const v = validar(ctx, s, o);
     if (typeof v === 'string') { ctx.mal(s, o.texto, v); continue; }
-    E.tropas[o.de] -= o.n; R[s].stock.Caballos -= v.caballos;
-    ctx.movs.push({ f: o.de, d: o.a, n: o.n, k: s });
+    E.tropas[o.de] -= v.n; R[s].stock.Caballos -= v.caballos;
+    ctx.movs.push({ f: o.de, d: o.a, n: v.n, k: s });
     if (!llegan.has(o.a)) llegan.set(o.a, []);
-    llegan.get(o.a).push({ k: s, n: o.n });
+    llegan.get(o.a).push({ k: s, n: v.n });
     ctx.bien(s);
   }
   for (const d of [...llegan.keys()].sort((a, b) => a - b)) resolverRegion(ctx, d, llegan.get(d));

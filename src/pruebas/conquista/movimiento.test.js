@@ -236,3 +236,57 @@ test('una conquista sin lucha (region con dueno pero sin tropas) no registra com
   assert.equal(ctx.combates.length, 0);
   assert.ok(ctx.eventos.some((e) => e.tipo === 'conquista' && e.k === 0 && e.contra === 1 && e.r === d));
 });
+
+// ---- Guerra 2.0.0, etapa 1: el paso de 2 regiones no cruza territorio de otro reino ----
+
+// Un salto a 2 regiones a -> c con TODAS sus regiones intermedias puestas por la prueba: `medio` recibe el dueno de cada una (-1 = libre).
+function saltoCon(medio, pacto = false) {
+  const E = nuevoEstado(4), [a, , c] = dosPasos(E), regs = E.mapa.regs;
+  const comunes = regs[a].vecinos.filter((v) => regs[c].vecinos.includes(v));
+  E.dueno[a] = 0; E.tropas[a] = 10; E.dueno[c] = -1; E.tropas[c] = 0; E.fort[c] = 0; E.edif[c] = null;
+  for (const w of comunes) { E.dueno[w] = medio; E.tropas[w] = medio < 0 ? 0 : 3; E.edif[w] = null; }
+  if (pacto) E.reinos[0].pactos[1] = E.reinos[1].pactos[0] = 1; // vigente en el turno 1
+  E.reinos[0].stock.Caballos = 9;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 3`] } });
+  return { E, ctx, c };
+}
+
+test('con Caballos no se cruza territorio de otro reino: la orden se descarta y la region de destino no se toca', () => {
+  const { E, ctx, c } = saltoCon(1);
+  assert.equal(ctx.descartes[0][0].motivo, 'no puedes cruzar territorio de otro reino');
+  assert.equal(E.dueno[c], -1);
+  assert.equal(E.reinos[0].stock.Caballos, 9, 'no se gastan Caballos en una orden descartada');
+});
+
+test('con Caballos se cruza una region propia, una libre o una de un aliado con pacto vigente', () => {
+  for (const [nombre, medio, pacto] of [['propia', 0, false], ['libre', -1, false], ['de un aliado', 1, true]]) {
+    const { E, ctx, c } = saltoCon(medio, pacto);
+    assert.deepEqual(ctx.descartes[0], [], `medio ${nombre}: la orden debia valer`);
+    assert.equal(E.dueno[c], 0, `medio ${nombre}: la region de destino debia ser tomada`);
+  }
+});
+
+test('el salto vale si AL MENOS UNA region intermedia se puede cruzar', () => {
+  const E = nuevoEstado(4), [a, , c] = dosPasos(E), regs = E.mapa.regs;
+  const comunes = regs[a].vecinos.filter((v) => regs[c].vecinos.includes(v));
+  E.dueno[a] = 0; E.tropas[a] = 10; E.dueno[c] = -1; E.tropas[c] = 0; E.fort[c] = 0; E.edif[c] = null;
+  comunes.forEach((w, i) => { E.dueno[w] = i === 0 ? -1 : 1; E.tropas[w] = i === 0 ? 0 : 3; E.edif[w] = null; });
+  E.reinos[0].stock.Caballos = 9;
+  const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(c)} 3`] } });
+  assert.deepEqual(ctx.descartes[0], []);
+  assert.equal(E.dueno[c], 0);
+});
+
+test('mover ... todo lleva todas las tropas menos 1; con 1 sola tropa no hay nada que mover', () => {
+  const E = nuevoEstado(4), [a, d] = frontera(E, 0, -1);
+  E.tropas[a] = 10;
+  mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} todo`] } });
+  assert.equal(E.dueno[d], 0);
+  assert.equal(E.tropas[d], 9);
+  assert.equal(E.tropas[a], 1);
+  const E2 = nuevoEstado(4), [a2, d2] = frontera(E2, 0, -1);
+  E2.tropas[a2] = 1;
+  const ctx = mover(E2, { 0: { ordenes: [`mover ${R(a2)} ${R(d2)} todo`] } });
+  assert.equal(ctx.descartes[0][0].motivo, 'no hay tropas de sobra: debe quedar al menos 1 en la region de origen');
+  assert.equal(E2.dueno[d2], -1);
+});
