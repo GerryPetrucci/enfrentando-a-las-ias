@@ -2,7 +2,7 @@
 // aqui se decide que sabe cada reino. Solo entran los datos propios del reino i y los publicos. Nunca almacenes,
 // armas, notas, privados ni ofertas de otros reinos.
 
-import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES, HEGEMON, RECONQUISTA, PATRIA } from './constantes.js';
+import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES, HEGEMON } from './constantes.js';
 import { nombreRegion, pila as pilaDe, presentes, regionesDe } from './estado.js';
 import { eventoDe, NOMBRE_EVENTO } from './equilibrio.js';
 import { lineasDeFrentes, lineasDeCapacidad } from './frentes.js';
@@ -56,18 +56,11 @@ export function vistaTexto(E, i) {
   if (visitas.length) L.push('Tus tropas de visita: ' + visitas.join(SEP));
   const aisladas = regionesAisladas(E, i, t);
   if (aisladas.length) L.push(`Tus regiones aisladas (sin camino a tu capital: no producen y ahi no se recluta, fortifica ni construye): ${aisladas.map(nombreRegion).join(' ')}`);
-  // Paquete de equilibrio: el Hegemon, el evento de este turno y el Presagio del siguiente, y lo que le toca a este reino (Reconquista y Patria).
+  // Paquete de equilibrio: el Hegemon, el evento de este turno y el Presagio del siguiente.
   if (E.hegemon >= 0) L.push(`Hegemon: ${R[E.hegemon].nombre} (${regionesDe(E, E.hegemon).length} de ${E.dueno.filter((d) => d >= 0).length} regiones con dueno): los demas lo atacan con +${Math.round((HEGEMON.bonoAtaque - 1) * 100)}%`);
   const hoy = eventoDe(E, t), manana = eventoDe(E, t + 1);
   if (hoy) L.push(`Evento de este turno: ${NOMBRE_EVENTO[hoy.tipo]}.`);
   if (manana) L.push(`Presagio: en el turno ${t + 1} habra ${NOMBRE_EVENTO[manana.tipo]}.`);
-  const reconquista = [];
-  for (let r = 0; r < E.dueno.length; r++) {
-    const p = E.perdidas[r];
-    if (RECONQUISTA.activo && p && p.k === i && E.dueno[r] !== i && t - p.t <= RECONQUISTA.turnos) reconquista.push(`${nombreRegion(r)} (hasta el turno ${p.t + RECONQUISTA.turnos})`);
-  }
-  if (reconquista.length) L.push(`Reconquista (+${Math.round((RECONQUISTA.bonoAtaque - 1) * 100)}% si atacas): ${reconquista.join(SEP)}`);
-  if (PATRIA.activo && yo.vivo && regionesDe(E, i).length <= PATRIA.maxRegiones) L.push(`Patria: tus regiones defienden con +${Math.round((PATRIA.bonoDefensa - 1) * 100)}%`);
   L.push(`Tu nota del turno anterior: ${yo.nota ? `"${yo.nota}"` : '(ninguna)'}`);
   if (yo.ofertasIn.length) L.push('Ofertas recibidas: ' + yo.ofertasIn.map((o) => `${R[o.de].nombre} te da ${o.dc} ${o.doy} por ${o.pc} ${o.pido}`).join(SEP));
   if (yo.privIn.length) L.push('Privados recibidos: ' + yo.privIn.map((p) => `${R[p.de].nombre}: "${p.texto}"`).join(SEP));

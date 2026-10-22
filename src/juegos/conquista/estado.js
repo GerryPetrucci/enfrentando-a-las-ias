@@ -53,8 +53,8 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } 
   const E = {
     turno: 0, k, mapa: m, dueno, uni, fort, edif: Array(NR).fill(null), dan: new Uint8Array(NR), reinos,
     maravilla: null, ganador: null, ganoPorMaravilla: false,
-    // Paquete de equilibrio (2.0.0): el Hegemon (-1 = ninguno), quien perdio cada region y cuando (Reconquista), el calendario de eventos (del seed del mapa) y hasta que turno dura la sequia
-    hegemon: -1, perdidas: Array(NR).fill(null), calendario: sortearCalendario(seedMapa), sequiaHasta: 0,
+    // Paquete de equilibrio (2.0.0): el Hegemon (-1 = ninguno), el calendario de eventos (del seed del mapa) y hasta que turno dura la sequia
+    hegemon: -1, calendario: sortearCalendario(seedMapa), sequiaHasta: 0,
     desempate: Array.from({ length: k }, () => rng()),
     stats: Array.from({ length: k }, () => ({ rupturas: 0, pactos: 0, cumplidos: 0, comercios: 0, edificios: 0, validas: 0, total: 0, invalidas: 0 })),
     resumenPrevio: [], mensajesPrevios: [], regalosPrevios: Array.from({ length: k }, () => []), historial: [],

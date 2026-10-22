@@ -61,11 +61,10 @@ test('el prompt escribe la regla de suministro que el motor aplica (etapa 5): re
   assert.match(r, /no produce, no cuenta para la cosecha base y ahi no se recluta, fortifica ni construye; sus unidades siguen comiendo/);
 });
 
-test('el prompt escribe las reglas del paquete de equilibrio (etapa 6): Hegemon, Reconquista, Patria y eventos, con los numeros de constantes.js', () => {
+test('el prompt escribe las reglas del paquete de equilibrio (etapas 6 y 8): Hegemon y eventos, con los numeros de constantes.js; ya no hay Reconquista ni Patria', () => {
   const r = conquista.reglas;
-  assert.match(r, /EQUILIBRIO: el Hegemon \(el reino con mas regiones, desde el 35% de las regiones con dueno hasta que baje del 30%\) recibe el ataque de los demas con \+25%/);
-  assert.match(r, /Reconquista: durante 3 turnos, quien perdio una region la ataca con \+25%/);
-  assert.match(r, /Patria: con 2 regiones o menos, tus regiones defienden con \+25%/);
+  assert.match(r, /EQUILIBRIO: el Hegemon \(el reino con mas regiones, desde el 35% de las regiones con dueno hasta que baje del 30%\) recibe el ataque de los demas con \+50%\. EVENTOS/);
+  assert.ok(!/Reconquista|Patria/.test(r), 'se midieron y se quitaron');
   assert.match(r, /EVENTOS para todos en los turnos 5, 9, 13, 17, 21 y 25, anunciados un turno antes \(Presagio\): Sequia \(cosecha base a la mitad 2 turnos\), Peste \(el reino con mas unidades pierde 15%\), Cosecha \(\+1 Comida por region\) o Caravana \(el reino con menos regiones recibe 6 Oro \+ 3 Caballos\)/);
 });
 

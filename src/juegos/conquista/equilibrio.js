@@ -1,7 +1,7 @@
-// Paquete de equilibrio de la Guerra de territorios (2.0.0): funciones puras sobre el estado. Las reglas de cada pieza estan en constantes.js (HEGEMON, RECONQUISTA, PATRIA, EVENTOS).
+// Paquete de equilibrio de la Guerra de territorios (2.0.0): funciones puras sobre el estado. Las reglas de cada pieza estan en constantes.js (HEGEMON, EVENTOS).
 
 import { crearRng } from '../../rng.js';
-import { HEGEMON, RECONQUISTA, PATRIA, EVENTOS, TIERRA_AJENA } from './constantes.js';
+import { HEGEMON, EVENTOS, TIERRA } from './constantes.js';
 
 // Hegemon: el reino con mas regiones desde `entra` de las regiones con dueno; lo conserva mientras siga entre los de mas regiones y no baje de `sale` (histeresis, para que no parpadee).
 // Para entrar debe ser el unico de la punta. Devuelve el Hegemon (-1 si no hay) y lo deja en E.hegemon.
@@ -40,16 +40,9 @@ export const eventoDe = (E, t) => (EVENTOS.activo ? E.calendario?.find((e) => e.
 export const NOMBRE_EVENTO = { sequia: 'Sequia', peste: 'Peste', cosecha: 'Cosecha', caravana: 'Caravana' };
 
 // Modificador de fuerza del reino k cuando pelea en la region d en el turno t (lo usan el motor y los FRENTES de la vista, para que digan lo mismo): sin pacto con el dueno de la region rinde TIERRA_AJENA;
-// si ese dueno es el Hegemon, x bonoAtaque; si la region era suya y la perdio hace poco, Reconquista. En una region libre, propia o de un aliado vale 1.
+// si ese dueno es el Hegemon, x bonoAtaque. En una region libre, propia o de un aliado vale 1.
 export function modificadorDeReino(E, k, d, t) {
   const O = E.dueno[d];
   if (!(O >= 0 && k !== O && !(E.reinos[k].pactos[O] >= t))) return 1;
-  let m = TIERRA_AJENA;
-  if (HEGEMON.activo && E.hegemon === O) m *= HEGEMON.bonoAtaque;
-  const perdida = E.perdidas[d];
-  if (RECONQUISTA.activo && perdida && perdida.k === k && t - perdida.t <= RECONQUISTA.turnos) m *= RECONQUISTA.bonoAtaque;
-  return m;
+  return HEGEMON.activo && E.hegemon === O ? TIERRA.factor * HEGEMON.bonoAtaque : TIERRA.factor;
 }
-
-// Bono de defensa de las regiones de un dueno con `regiones` regiones (Patria).
-export const bonoDePatria = (dueno, regiones) => (dueno >= 0 && PATRIA.activo && regiones <= PATRIA.maxRegiones ? PATRIA.bonoDefensa : 1);

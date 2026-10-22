@@ -23,7 +23,7 @@ export function multiplicadorDominio(tipo, mezcla) {
   return 1 + (DOMINIO - 1) * dominadas / total;
 }
 
-// Fuerza de la pila de UN reino contra la mezcla rival. `ataca` elige la fuerza de ataque o de defensa de cada tipo; `mod` es el modificador del reino (tierra ajena, Reconquista...).
+// Fuerza de la pila de UN reino contra la mezcla rival. `ataca` elige la fuerza de ataque o de defensa de cada tipo; `mod` es el modificador del reino (tierra ajena, Hegemon).
 export function fuerzaDeMiembro(pila, mejoras, mezcla, ataca, mod = 1) {
   let f = 0;
   for (let t = 0; t < N_TIPOS; t++) {

@@ -4,6 +4,7 @@
 import { nombreRegion as nr, regionesDe, totalTropas, tropasDe } from './conquista/estado.js';
 import { RECURSOS, MARAVILLA } from './conquista/constantes.js';
 import { nombresDeLaPartida } from './conquista/ordenes.js';
+import { BOTS_V2, INFO_BOTS_V2 } from './conquista-bots-v2.js';
 
 const vecinas = (E, r) => E.mapa.regs[r].vecinos;
 const base = (extra) => ({ pacto_con: null, mensaje: '', privados: [], nota: '', razon: 'bot de control', ...extra });
@@ -86,7 +87,8 @@ export function azar(E, s, rng) {
   });
 }
 
-export const BOTS = { agresivo, pacifico, economico, azar };
+// Los cuatro de siempre (solo Lanceros) y los seis de la 2.0.0, que usan todas las unidades, los pactos y los FRENTES (conquista-bots-v2.js).
+export const BOTS = { agresivo, pacifico, economico, azar, ...BOTS_V2 };
 
 // Como se muestran en el marcador y el video (texto publico: lleva acentos). Los colores son de control, no de una IA.
 export const INFO_BOTS = {
@@ -94,4 +96,5 @@ export const INFO_BOTS = {
   pacifico: { nombre: 'Pacífico', color: '#6FA86F' },
   economico: { nombre: 'Económico', color: '#C9A24B' },
   azar: { nombre: 'Al azar', color: '#9C8FB8' },
+  ...INFO_BOTS_V2,
 };

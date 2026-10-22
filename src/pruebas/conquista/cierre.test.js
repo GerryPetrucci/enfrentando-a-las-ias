@@ -6,12 +6,13 @@ import { aplicarTurno } from '../../juegos/conquista/turno/index.js';
 import { maravillaYVictoria } from '../../juegos/conquista/turno/cierre.js';
 import { resultadoDe } from '../../juegos/conquista/resultado.js';
 import { resumenPublico } from '../../juegos/conquista/texto.js';
+import { MARAVILLA } from '../../juegos/conquista/constantes.js';
 
-test('la Maravilla gana al cumplirse 8 turnos seguidos, contados desde el turno siguiente al de su construccion', () => {
+test('la Maravilla gana al cumplirse MARAVILLA.turnos turnos seguidos, contados desde el turno siguiente al de su construccion', () => {
   const E = nuevoEstado(4), c = capital(E, 0);
   E.maravilla = { r: c, k: 0, n: 0, t0: 0 };
-  for (let i = 1; i <= 7; i++) { maravillaYVictoria(contexto(E)); assert.equal(E.ganador, null, `turno ${i}`); }
-  assert.equal(E.maravilla.n, 7);
+  for (let i = 1; i < MARAVILLA.turnos; i++) { maravillaYVictoria(contexto(E)); assert.equal(E.ganador, null, `turno ${i}`); }
+  assert.equal(E.maravilla.n, MARAVILLA.turnos - 1);
   const ctx = contexto(E);
   maravillaYVictoria(ctx);
   assert.equal(E.ganador, 0);

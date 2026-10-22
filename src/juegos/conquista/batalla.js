@@ -1,7 +1,7 @@
 // Resolutor de batallas de la Guerra de territorios: PURO (no toca el estado de la partida). movimiento.js junta quien pelea en una region y aplica lo que sale de aqui.
 //
 // Un BANDO es un grupo de reinos que pelean juntos: { miembros: [{ k, pila, mejoras, mod }], defensor, ataca }.
-//   pila: [Lanceros, Arqueros, Jinetes, Ingenios] que ese reino mete en la pelea · mejoras: sus niveles por tipo · mod: su modificador (tierra ajena, Reconquista...)
+//   pila: [Lanceros, Arqueros, Jinetes, Ingenios] que ese reino mete en la pelea · mejoras: sus niveles por tipo · mod: su modificador (tierra ajena, Hegemon: equilibrio.js)
 //   defensor: el bando del dueno de la region (recibe fortaleza y terreno) · ataca: si usa la fuerza de ataque de sus unidades (el Ingenio ataca con 3.5 y defiende con 1)
 // El contexto { terr, fort, dueno } es de la region (`dueno`: el reino dueno, si lo hay; en su bando es el lider y siempre conserva al menos 1 unidad si el bando gana).
 
@@ -21,7 +21,7 @@ export function fuerzasDeBandos(bandos, { terr, fort }) {
     const otros = sumarPilas(bandos.filter((_, j) => j !== i).flatMap((x) => x.miembros.map((m) => m.pila)));
     let f = 0;
     for (const m of b.miembros) f += fuerzaDeMiembro(m.pila, m.mejoras, otros, b.ataca, m.mod ?? 1);
-    if (b.defensor) f *= (1 + 0.5 * fortalezaEfectiva(fort, otros)) * TERRENO[terr] * (b.defensaMod ?? 1);
+    if (b.defensor) f *= (1 + 0.5 * fortalezaEfectiva(fort, otros)) * TERRENO[terr];
     return f;
   });
 }

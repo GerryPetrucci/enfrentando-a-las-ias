@@ -3,7 +3,7 @@
 
 import { UNIDADES, CUARTEL, N_TIPOS } from './constantes.js';
 import { fuerzasDeBandos } from './batalla.js';
-import { modificadorDeReino, bonoDePatria } from './equilibrio.js';
+import { modificadorDeReino } from './equilibrio.js';
 import { aliado, pila as pilaDe, presentes, regionesDe, nombreRegion } from './estado.js';
 import { sumaPila, sumarPilas } from './unidades.js';
 import { regionesAisladas } from './suministro.js';
@@ -12,7 +12,7 @@ const SIN_MEJORAS = [0, 0, 0, 0];
 const MAX_ATAQUES = 5, MAX_AMENAZAS = 3;
 
 // La pila que sale de una region propia con `todo`: todas las unidades menos una, la mas barata (la de menor indice).
-function pilaQueSale(pila) {
+export function pilaQueSale(pila) {
   const sale = [...pila];
   for (let t = 0; t < N_TIPOS; t++) if (sale[t] > 0) { sale[t]--; break; }
   return sale;
@@ -23,14 +23,14 @@ function pilaQueSale(pila) {
 function bandoDefensor(E, d, contra, yo, t) {
   const O = E.dueno[d], miembros = [];
   for (const k of presentes(E, d)) {
-    if (k !== O && !(aliado(E, k, O, t) && !aliado(E, k, contra, t))) continue;
+    if (k === contra || (k !== O && !(aliado(E, k, O, t) && !aliado(E, k, contra, t)))) continue; // el atacante nunca defiende (importa cuando un aliado estima una traicion)
     miembros.push({ k, pila: pilaDe(E, d, k), mejoras: k === yo ? E.reinos[k].mejoras : SIN_MEJORAS, mod: 1 });
   }
-  return { miembros, defensor: true, ataca: false, defensaMod: bonoDePatria(O, regionesDe(E, O).length) };
+  return { miembros, defensor: true, ataca: false };
 }
 
-// Fuerza del ataque de `atacante` con la pila `pila` sobre la region d, y defensa de la region contra esa mezcla.
-function enfrentar(E, atacante, pila, d, yo, t) {
+// Fuerza del ataque de `atacante` con la pila `pila` sobre la region d, y defensa de la region contra esa mezcla (solo datos publicos salvo las mejoras del reino `yo`).
+export function enfrentar(E, atacante, pila, d, yo, t) {
   const bandos = [
     { miembros: [{ k: atacante, pila, mejoras: atacante === yo ? E.reinos[atacante].mejoras : SIN_MEJORAS, mod: modificadorDeReino(E, atacante, d, t) }], defensor: false, ataca: true },
     bandoDefensor(E, d, atacante, yo, t),

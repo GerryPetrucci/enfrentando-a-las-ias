@@ -5,6 +5,7 @@ import { nuevoEstado, R, vistasDePartida } from './ayudas.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
 import { sumarUni, regionesDe } from '../../juegos/conquista/estado.js';
 import { resumenPublico } from '../../juegos/conquista/texto.js';
+import { MARAVILLA } from '../../juegos/conquista/constantes.js';
 
 test('la vista trae lo tuyo y lo publico', () => {
   const E = nuevoEstado(4), v = vistaTexto(E, 0);
@@ -89,7 +90,7 @@ test('lo publico lo ve todo el mundo: mensajes, resumen y estado de la Maravilla
     const v = vistaTexto(E, i);
     assert.ok(v.includes('Ambar: "Paz a todos"'));
     assert.ok(v.includes('Sucedio el turno anterior: Azur conquisto R05 de Ambar.'));
-    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (faltan 6 turnos)`)); // cuenta de 8 turnos, lleva 2
+    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (faltan ${MARAVILLA.turnos - 2} turnos)`)); // lleva 2 de la cuenta
   }
   assert.ok(vistaTexto(E, 0).includes('Ambar te regalo 3 Madera'));
   assert.ok(!vistaTexto(E, 2).includes('te regalo'));
@@ -131,10 +132,12 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // 22 de octubre de 2026 (etapa 6, equilibrio): vuelven a cambiar A PROPOSITO: las vecinas del MAPA van como numeros, hay lineas de Hegemon, Evento, Presagio, Reconquista y Patria, y los eventos del
 // mundo, el Hegemon y la Reconquista cambian las partidas. Huellas anteriores: 1df82098..., 0d3c2c44..., d0e8e968...
 // 22 de octubre de 2026 (etapa 7): el mapa pasa al principio de la vista (prefijo cacheable) y se agregan CAPACIDAD y FRENTES. Huellas anteriores: 8296b274..., cf5a43e7..., 171ab1f2...
+// 22 de octubre de 2026 (etapa 8, calibracion con bots): Maravilla 21/17/13/13 y 9 turnos, Hegemon +50 %, y se quitan la Reconquista y la Patria (ya no hay sus lineas). Huellas anteriores: a6bbe609..., 02564353..., d5a4c3a2...
+// (la 2 y la 3 no cambiaron con la poda de la Reconquista y la Patria: en esas partidas las vistas nunca llevaron esas lineas).
 const HUELLAS_DE_LAS_VISTAS = {
-  1: 'a6bbe609303fb611eff07fed89dc148dd389dc78',
-  2: '02564353b366a6850cfeb14ad66e11c1c730785f',
-  3: 'd5a4c3a2ede428d90a895d42a1395dff189785c7',
+  1: '48593316e5fe995d7fafacd835f74146c323e808',
+  2: '595d4ce454a0ad3a4ad16742afa254a0959a7e13',
+  3: 'fc152e4d7d11692f7869e9fc1b7b1149d8bfc23a',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

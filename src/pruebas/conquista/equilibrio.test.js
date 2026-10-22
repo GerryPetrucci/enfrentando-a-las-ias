@@ -1,11 +1,11 @@
-// Guerra 2.0.0, etapa 6: paquete de equilibrio. Hegemon (el que va muy arriba recibe +25 % de los demas), Reconquista (3 turnos de +25 % para recuperar una region perdida), Patria (+25 % de defensa con
-// 3 regiones o menos) y eventos del mundo (Sequia, Peste, Cosecha, Caravana) sorteados con el seed del mapa y anunciados un turno antes. Cada pieza se apaga con su constante `activo`.
+// Guerra 2.0.0, etapas 6 y 8: paquete de equilibrio. Hegemon (el que va muy arriba recibe un bono de ataque de los demas) y eventos del mundo (Sequia, Peste, Cosecha, Caravana) sorteados con el seed del mapa
+// y anunciados un turno antes. Cada pieza se apaga con su constante `activo`. La Reconquista y la Patria se midieron en la etapa 8 y se quitaron.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearRng } from '../../rng.js';
 import { crearEstado, regionesDe, pila as pilaDe, totalUnidades, sumarUni, limpiarRegion, instantanea } from '../../juegos/conquista/estado.js';
 import { nuevoEstado, contexto, R, frontera, fijarTropas, tropasDe, mapaDe } from './ayudas.js';
-import { HEGEMON, RECONQUISTA, PATRIA, EVENTOS } from '../../juegos/conquista/constantes.js';
+import { HEGEMON, EVENTOS } from '../../juegos/conquista/constantes.js';
 import { actualizarHegemon, sortearCalendario } from '../../juegos/conquista/equilibrio.js';
 import { eventosDelMundo } from '../../juegos/conquista/turno/mundo.js';
 import { recoleccion, ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
@@ -61,8 +61,6 @@ test('el estado nace con su calendario, que no depende de lo que jueguen los rei
   assert.deepEqual(a.calendario, b.calendario);
   assert.equal(a.calendario.length, EVENTOS.turnos.length);
   assert.deepEqual([a.hegemon, a.sequiaHasta], [-1, 0]);
-  assert.equal(a.perdidas.length, a.mapa.regs.length);
-  assert.ok(a.perdidas.every((p) => p === null));
   const c = crearEstado(crearRng(8), { jugadores: 4, mapa: mapaDe(7, 4) });
   assert.notDeepEqual(c.calendario, a.calendario, 'el calendario sale del seed de la partida (el que sortea el mapa), no del mapa dado');
 });
@@ -107,10 +105,10 @@ test('Hegemon: un reino caido no puede serlo, sin regiones con dueno no hay Hege
   assert.equal(sin(HEGEMON, () => actualizarHegemon(G)), -1);
 });
 
-test('Hegemon: los demas reinos lo atacan con +25 % (se acumula con la tierra ajena); apagado o sin Hegemon, no', () => {
+test('Hegemon: los demas reinos lo atacan con bono (se acumula con la tierra ajena); apagado o sin Hegemon, no', () => {
   const { E, a, d } = escenario({ tropasD: 8 }); E.hegemon = 1;
   let ctx = turno(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
-  assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, redondea(b.f)]), [[0, 10.625], [1, 8]], '10 x 0.85 x 1.25');
+  assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, redondea(b.f)]), [[0, redondea(10 * 0.85 * HEGEMON.bonoAtaque)], [1, 8]], '10 x 0.85 x bono');
   const F = escenario({ tropasD: 8 });
   ctx = turno(F.E, { 0: { ordenes: [`mover ${R(F.a)} ${R(F.d)} L10`] } });
   assert.deepEqual(ctx.combates[0].bandos.map((b) => [b.k, redondea(b.f)]), [[0, 8.5], [1, 8]], 'sin Hegemon: solo la tierra ajena');
@@ -125,63 +123,17 @@ test('Hegemon: el bono es de quien ataca a su region, no del Hegemon cuando atac
   assert.equal(redondea(ctx.combates[0].bandos.find((b) => b.k === 1).f), 8.5);
 });
 
-// ---- Reconquista ----
+// ---- Lo que NO hay (medido el 22 de octubre de 2026 y quitado: no movia el balance) ----
 
-test('Reconquista: al conquistar una region se anota quien la perdio y en que turno', () => {
-  const { E, a, d } = escenario({ tropasD: 3 });
-  turno(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
-  assert.deepEqual(E.perdidas[d], { k: 1, t: 1 });
-});
-
-test('Reconquista: la victima ataca con +25 % los 3 turnos siguientes (t+1, t+2 y t+3) y el cuarto ya no', () => {
-  for (const [t, bono] of [[2, 1.25], [3, 1.25], [4, 1.25], [5, 1]]) {
-    const { E, a, d } = escenario({ atacante: 1, duenoD: 0, tropasD: 8 });
-    E.turno = t - 1; E.perdidas[d] = { k: 1, t: 1 };
-    const ctx = turno(E, { 1: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
-    assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), redondea(10 * 0.85 * bono), `turno ${t}`);
-  }
-});
-
-test('Reconquista: solo la victima la usa; al recuperar la region el bono pasa a quien la acaba de perder; apagada no hay bono', () => {
-  const { E, a, d } = escenario({ tropasD: 8 });
-  E.perdidas[d] = { k: 2, t: 0 }; // la perdio el reino 2, no el 0
-  let ctx = turno(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 0).f), 8.5, 'el reino 0 no la perdio: sin bono');
-  const F = escenario({ tropasD: 8 }); F.E.perdidas[F.d] = { k: 0, t: 0 }; F.E.turno = 1;
-  ctx = sin(RECONQUISTA, () => turno(F.E, { 0: { ordenes: [`mover ${R(F.a)} ${R(F.d)} L10`] } }));
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 0).f), 8.5, 'apagada');
-  const G = escenario({ tropasD: 3 }); G.E.perdidas[G.d] = { k: 0, t: 0 }; G.E.turno = 1;
-  turno(G.E, { 0: { ordenes: [`mover ${R(G.a)} ${R(G.d)} L10`] } });
-  assert.equal(G.E.dueno[G.d], 0);
-  assert.deepEqual(G.E.perdidas[G.d], { k: 1, t: 2 }, 'el reino 0 la recupero: ahora quien tiene el bono es el reino 1, que la acaba de perder');
-});
-
-// ---- Patria ----
-
-test('Patria: con 2 regiones o menos (todos empiezan con 3) las regiones del reino defienden con +25 %; con 3 no; apagada no', () => {
-  const { E, a, d } = escenario({ tropasD: 8 });
-  dejarRegiones(E, 1, 2, [d]);
-  assert.equal(regionesDe(E, 1).length, 2);
-  let ctx = turno(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 10, '8 x 1.25');
-  const F = escenario({ tropasD: 8 }); dejarRegiones(F.E, 1, 3, [F.d]);
-  assert.equal(regionesDe(F.E, 1).length, 3);
+test('no hay bono por reconquistar una region recien perdida ni por defender con pocas regiones: solo cuentan la tierra ajena y el Hegemon', () => {
+  const { E, a, d } = escenario({ atacante: 1, duenoD: 0, tropasD: 8 }); // el reino 1 ataca una region que acaba de perder
+  E.turno = 3; E.hegemon = -1;
+  let ctx = turno(E, { 1: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } });
+  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 8.5, '10 x 0.85, sin bono de reconquista');
+  const F = escenario({ tropasD: 8 }); dejarRegiones(F.E, 1, 2, [F.d]); // el defensor se queda con 2 regiones: su capital y la atacada
+  assert.equal(regionesDe(F.E, 1).length, 2);
   ctx = turno(F.E, { 0: { ordenes: [`mover ${R(F.a)} ${R(F.d)} L10`] } });
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 8, 'con 3 regiones (las del inicio) no hay bono');
-  const G = escenario({ tropasD: 8 }); dejarRegiones(G.E, 1, 2, [G.d]);
-  ctx = sin(PATRIA, () => turno(G.E, { 0: { ordenes: [`mover ${R(G.a)} ${R(G.d)} L10`] } }));
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 8, 'apagada');
-});
-
-test('Patria cuenta las regiones que se tenian al empezar el turno: si el reino baja a 2 durante el turno, el bono no vale en las batallas de ese mismo turno', () => {
-  const { E, a, d } = escenario({ tropasD: 8 });
-  dejarRegiones(E, 1, 3, [d]);
-  const ctx = contexto(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} L10`] } }); // el contexto anota las 3 regiones del inicio del turno
-  const otra = regionesDe(E, 1).find((r) => r !== d && r !== E.reinos[1].capital);
-  limpiarRegion(E, otra); E.dueno[otra] = -1; // a mitad del turno el reino 1 se queda con 2
-  ordenesEconomicas(ctx); rupturas(ctx); movimientos(ctx);
-  assert.equal(regionesDe(E, 1).length === 2 || E.dueno[d] === 0, true);
-  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 8);
+  assert.equal(redondea(ctx.combates[0].bandos.find((x) => x.k === 1).f), 8, '8 sin bono de patria');
 });
 
 // ---- Eventos del mundo ----
@@ -311,16 +263,6 @@ test('la vista anuncia el Hegemon, el evento de este turno y el Presagio del sig
   const F = nuevoEstado(4); F.calendario = [{ t: 5, tipo: 'sequia' }];
   F.turno = 2; assert.ok(!vistaTexto(F, 0).includes('Presagio'), 'en el turno 3 el siguiente evento queda lejos');
   F.turno = 3; assert.ok(vistaTexto(F, 0).includes('Presagio: en el turno 5 habra Sequia.'));
-});
-
-test('la vista le dice a cada reino su Reconquista y su Patria, solo a el', () => {
-  const G = nuevoEstado(4), d = regionesDe(G, 1)[1];
-  G.turno = 2; G.perdidas[d] = { k: 0, t: 1 }; dejarRegiones(G, 0, 2);
-  const v0 = vistaTexto(G, 0), v1 = vistaTexto(G, 1);
-  assert.ok(v0.includes(`Reconquista (+25% si atacas): ${R(d)} (hasta el turno 4)`), v0.split('\n').find((l) => l.startsWith('Reconquista')));
-  assert.ok(v0.includes('Patria: tus regiones defienden con +25%'));
-  assert.ok(!v1.includes('Reconquista') && !v1.includes('Patria'));
-  G.turno = 4; assert.ok(!vistaTexto(G, 0).includes('Reconquista'), 'pasados los 3 turnos ya no se anuncia');
 });
 
 test('el resumen publico cuenta los eventos del mundo y los cambios de Hegemon', () => {

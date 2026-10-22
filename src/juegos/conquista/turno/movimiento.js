@@ -8,7 +8,7 @@
 
 import { aliado, contarEdificios, regionesDe, pila as pilaDe, ponerPila, sumarPila, sumarUni, presentes, totalPila } from '../estado.js';
 import { RECURSOS, MAX_EDIFICIOS_POR_TIPO, N_TIPOS } from '../constantes.js';
-import { modificadorDeReino, bonoDePatria } from '../equilibrio.js';
+import { modificadorDeReino } from '../equilibrio.js';
 import { resolverBatalla } from '../batalla.js';
 import { sumaPila, sumarPilas, dejarUna, pilaVacia } from '../unidades.js';
 
@@ -74,7 +74,6 @@ function capturar(ctx, d, nuevo, viejo, huboCombate) {
   if (huboCombate) E.fort[d] = Math.max(0, E.fort[d] - 1);
   heredarEdificio(ctx, d, nuevo);
   if (viejo < 0) return;
-  E.perdidas[d] = { k: viejo, t: ctx.t }; // Reconquista: quien la perdio la ataca con bono los proximos turnos
   ctx.evt({ tipo: 'conquista', k: nuevo, contra: viejo, r: d });
   if (E.maravilla && E.maravilla.r === d) { // la Maravilla pasa intacta y su cuenta de turnos empieza de cero
     E.maravilla.k = nuevo; E.maravilla.n = 0; E.maravilla.t0 = ctx.t;
@@ -136,12 +135,10 @@ function resolverRegion(ctx, d, llegadas, ataques) {
   for (const a of part) for (const b of part) if (a < b && aliado(E, a, b, t) && buscar(a) !== buscar(b)) raiz.set(buscar(b), buscar(a));
   const grupos = new Map();
   for (const m of miembros) anotar(grupos, buscar(m.k), m);
-  // Modificadores de quien pelea (tierra ajena, Hegemon, Reconquista: equilibrio.js) y Patria del dueno (con pocas regiones al empezar el turno, las del reino defienden con bono).
-  const modDe = (k) => modificadorDeReino(E, k, d, t), patria = bonoDePatria(O, ctx.regionesIniciales[O]);
+  // Modificadores de quien pelea (tierra ajena y Hegemon: equilibrio.js).
   const bandos = [...grupos.values()].map((ms) => ({
-    miembros: ms.map((m) => ({ k: m.k, pila: m.pila, mejoras: R[m.k].mejoras, mod: modDe(m.k) })),
+    miembros: ms.map((m) => ({ k: m.k, pila: m.pila, mejoras: R[m.k].mejoras, mod: modificadorDeReino(E, m.k, d, t) })),
     defensor: O >= 0 && ms.some((m) => m.k === O),
-    defensaMod: patria,
     ataca: ms.some((m) => ini.has(m.k)),
   }));
 
@@ -168,7 +165,7 @@ function resolverRegion(ctx, d, llegadas, ataques) {
       ctx.combates.push({ d, k: O, perdidas: res.todos - 1, ...datos, resultado: 'empate', quedan: 1 });
       ctx.evt({ tipo: 'repelido', k: segundo.k, contra: O, r: d });
     } else {
-      if (O >= 0 && !duenoPasivo) { E.dueno[d] = -1; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; E.perdidas[d] = null; }
+      if (O >= 0 && !duenoPasivo) { E.dueno[d] = -1; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; }
       ctx.combates.push({ d, k: duenoPasivo ? O : -1, perdidas: res.todos, ...datos, resultado: 'empate', quedan: 0 });
     }
     asegurarDueno(ctx, d);
@@ -202,7 +199,7 @@ function procesarCaidas(ctx) {
     for (let i = 0; i < NR; i++) {
       if (totalPila(E, i, c.k)) ponerPila(E, i, c.k, pilaVacia());
       if (E.dueno[i] !== c.k) continue;
-      E.fort[i] = 0; E.edif[i] = null; E.dan[i] = 0; E.perdidas[i] = null;
+      E.fort[i] = 0; E.edif[i] = null; E.dan[i] = 0;
       const herederos = presentes(E, i).filter((k) => R[k].vivo).map((k) => ({ k, pila: pilaDe(E, i, k) }));
       E.dueno[i] = herederos.length ? jefe(herederos) : -1;
     }

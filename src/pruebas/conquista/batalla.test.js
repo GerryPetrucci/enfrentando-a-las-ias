@@ -125,7 +125,7 @@ test('el dueno que gana conserva al menos 1 unidad aunque la cuenta le deje 0 (c
   assert.deepEqual(r.supervivientes, [{ k: 1, pila: [1, 0, 0, 0] }, { k: 0, pila: [1, 0, 0, 0] }], 'floor(3 x 0.27) = 0 pero el dueno conserva 1; floor(4 x 0.27) = 1');
 });
 
-test('los modificadores del reino (tierra ajena, Reconquista...) multiplican la fuerza de ese reino', () => {
+test('los modificadores del reino (tierra ajena, Hegemon) multiplican la fuerza de ese reino', () => {
   const r = abierto(miembro(0, [10, 0, 0, 0], SIN, 0.85), miembro(1, [9, 0, 0, 0]));
   assert.deepEqual(r.fichas.map((f) => [f.k, f.f]), [[1, 9], [0, 8.5]]);
 });

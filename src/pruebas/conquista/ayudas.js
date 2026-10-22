@@ -133,8 +133,7 @@ export function estadoPeorCaso(seed = 7, bioma = 'continente') {
   E.resumenPrevio = Array.from({ length: 8 }, (_, i) => `Azur conquisto R${i + 10} de Ambar`);
   E.regalosPrevios[0] = [{ de: 1, a: 0, recurso: 'Madera', n: 3 }];
   E.maravilla = { r: E.reinos[1].capital, k: 1, n: 2, t0: 3 };
-  // Paquete de equilibrio (etapa 6): un Hegemon, un evento este turno y otro anunciado, y tres regiones del reino 0 que acaba de perder (Reconquista).
+  // Paquete de equilibrio (etapa 6): un Hegemon, un evento este turno y otro anunciado.
   E.hegemon = 1; E.calendario = [{ t: 14, tipo: 'caravana' }, { t: 15, tipo: 'cosecha' }];
-  [1, 2, 4].forEach((r, i) => { E.perdidas[E.dueno.indexOf(i + 1, r + 7)] = { k: 0, t: 12 }; });
   return E;
 }

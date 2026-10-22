@@ -1,10 +1,9 @@
 {
  "reglas": "conquista-2.0.0",
  "escenarios": [
-  {"id":"guerra-28","seed":28,"bots":["agresivo","agresivo","agresivo","azar","azar"],"cubre":["dos bandos con defensor","repelido","pacto formado","pacto cumplido","decisiva por diferencia","maximo 4 combates en un turno","caida de capital"]},
-  {"id":"guerra-284","seed":284,"bots":["azar","azar","agresivo","economico","pacifico"],"cubre":["empate","dos bandos con defensor","pacto formado","repelido","ruptura con privado previo","pacto cumplido","decisiva por diferencia"]},
+  {"id":"guerra-284","seed":284,"bots":["azar","azar","agresivo","economico","pacifico"],"cubre":["empate","dos bandos con defensor","pacto formado","repelido","ruptura con privado previo","pacto cumplido","caida de capital"]},
   {"id":"guerra-139","seed":139,"bots":["azar","azar","agresivo","economico","pacifico"],"cubre":["empate","dos bandos con defensor","repelido","pacto formado","pacto cumplido","maravilla"]},
-  {"id":"guerra-317","seed":317,"bots":["agresivo","agresivo","agresivo","agresivo","agresivo"],"cubre":["dos bandos con defensor","tres bandos","empate","decisiva por diferencia","caida de capital","repelido"]},
-  {"id":"guerra-439","seed":439,"bots":["agresivo","agresivo","agresivo","agresivo","azar"],"cubre":["dos bandos con defensor","repelido","caida de capital","dos turnos con movimientos dobles"]}
+  {"id":"guerra-380","seed":380,"bots":["agresivo","agresivo","agresivo","agresivo","agresivo"],"cubre":["dos bandos con defensor","maximo 4 combates en un turno","caida de capital","tres bandos","repelido","decisiva por diferencia"]},
+  {"id":"guerra-64","seed":64,"bots":["agresivo","agresivo","agresivo","agresivo","agresivo"],"cubre":["dos bandos con defensor","repelido","decisiva por diferencia","maximo 4 combates en un turno","dos turnos con movimientos dobles"]}
  ]
 }

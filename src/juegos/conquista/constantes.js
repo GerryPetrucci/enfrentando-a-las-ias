@@ -36,14 +36,14 @@ export const MEJORAS = { maximo: 2, bono: 0.25, costo: [{ Hierro: 3, Oro: 2 }, {
 export const FORT_INGENIO = { mitad: 0.25, anula: 0.5 };
 // Tierra ajena (2.0.0): las unidades que luchan en una region cuyo dueno es otro reino SIN pacto con ellas rinden esta fraccion. Aplica siempre (al que entra a una region enemiga y al traidor
 // que se queda en tierra de su ex aliado); no en regiones libres ni de un aliado. Se calibra con bots (privado/spec/guerra-2.0.0-medicion.md).
-export const TIERRA_AJENA = 0.85;
+export const TIERRA = { factor: 0.85 }; // el motor lee `TIERRA.factor` al pelear: la herramienta de medicion (medir-conquista.mjs) puede cambiarlo para probar otros valores
+export const TIERRA_AJENA = TIERRA.factor; // el valor por omision, para el texto de las reglas y las pruebas
 // ---- Paquete de equilibrio (2.0.0): ayudas para que el que va abajo siga en la partida y el que va arriba no sea intocable. Cada pieza se apaga con `activo: false` para medirla (herramientas/medir-conquista.mjs). ----
+// Calibrado el 22 de octubre de 2026 con bots de control (privado/spec/guerra-2.0.0-medicion.md): con estos valores el que va arriba en regiones en el turno 10/15/20 gana ~55-67 / 61-74 / 72-78 %
+// (en 1.1.0, 90 / 95 / 98 %) y hay ~1.7-3 cambios de lider por partida. La Reconquista (bono de ataque a la region recien perdida) y la Patria (bono de defensa al ultimo reducto) se midieron y se quitaron:
+// no movian esos numeros (la Patria, nada; la Reconquista, un poco en contra), asi que no valia la pena que el prompt las explicara.
 // Hegemon: el reino con mas regiones, desde `entra` de las regiones con dueno hasta que baje de `sale` (histeresis), recibe el ataque de los demas con x bonoAtaque.
-export const HEGEMON = { activo: true, entra: 0.35, sale: 0.30, bonoAtaque: 1.25 };
-// Reconquista: durante `turnos` turnos despues de perder una region, su antiguo dueno la ataca con x bonoAtaque.
-export const RECONQUISTA = { activo: true, turnos: 3, bonoAtaque: 1.25 };
-// Patria: con `maxRegiones` regiones o menos, las regiones del reino defienden con x bonoDefensa. Todos empiezan con 3 regiones, asi que 2 es «menos de las que empezaste»: el ultimo reducto.
-export const PATRIA = { activo: true, maxRegiones: 2, bonoDefensa: 1.25 };
+export const HEGEMON = { activo: true, entra: 0.35, sale: 0.30, bonoAtaque: 1.5 };
 // Eventos del mundo: en `turnos` ocurre uno para todos, sorteado con un rng derivado del seed del mapa (no depende de lo que hagan los reinos) y anunciado un turno antes (Presagio).
 //   sequia: la cosecha base baja a la mitad `sequiaTurnos` turnos · peste: el reino con mas unidades pierde `peste` de ellas (empate: todos los empatados) · cosecha: +1 Comida por region no aislada
 //   caravana: el reino con menos regiones recibe estos recursos (empate: todos los empatados). Nunca el mismo tipo dos veces seguidas.
@@ -62,7 +62,7 @@ export const EDIFICIOS = {
 export const MAX_EDIFICIOS_POR_TIPO = 3;
 // Decidido el 18 de octubre de 2026 (antes 10/8/6/6 y 5 turnos): con modelos reales la Maravilla decidio 2 de 2 partidas (turnos 10 y 16 de 30), porque se paga hacia el turno 4 y 5 turnos casi no dan
 // tiempo a una coalicion. Costo x1.5 y 8 turnos de cuenta: se construye mas tarde y los demas reinos tienen tiempo de frenarla.
-export const MARAVILLA = { costo: { Roca: 15, Madera: 12, Hierro: 9, Oro: 9 }, turnos: 8 };
+export const MARAVILLA = { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9 };
 export const HONOR = { inicial: 5, maximo: 10, rotura: 3, cumplido: 1, cadaTurnos: 3, deshonrado: 2 };
 export const PACTO_TURNOS = 2;
 export const COMIDA = { tropasPorRacion: 4, regionesPorCosecha: 2, deserta: 0.1 };

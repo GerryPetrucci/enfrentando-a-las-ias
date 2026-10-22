@@ -192,7 +192,9 @@ test('un pacto cumplido trae los privados que se cruzaron la pareja durante el p
 
 test('el pacto cumplido muestra de verdad los 2 privados mas recientes de la pareja DURANTE el pacto (no los del turno del cumplimiento ni los de antes) y los marca como revelados', () => {
   const q = structuredClone(ejemplos[IDX.PACTO]);
-  q.rondas.forEach((r) => { r.privados = []; }); // la prueba pone todos los privados de la pareja: los que mandaron los bots de la partida de ejemplo no cuentan
+  // La prueba pone todos los privados de la pareja: los que mandaron los bots de la partida de ejemplo no cuentan. Tampoco las rupturas: una ruptura revela por su cuenta el ultimo privado de quien rompe
+  // (si el ejemplo rompio y volvio a pactar en el mismo turno, se llevaria uno de los de la prueba).
+  q.rondas.forEach((r) => { r.privados = []; r.eventos = r.eventos.filter((e) => e.tipo !== 'ruptura'); });
   const rc = q.rondas.find((r) => r.eventos.some((e) => e.tipo === 'pacto_cumplido')), cumplido = rc.eventos.find((e) => e.tipo === 'pacto_cumplido');
   const mismaPareja = (e) => [e.k, e.con].sort().join() === [cumplido.k, cumplido.con].sort().join();
   const firma = q.rondas.filter((r) => r.turno < rc.turno && r.eventos.some((e) => e.tipo === 'pacto' && mismaPareja(e))).at(-1);
@@ -263,7 +265,7 @@ test('con 2 reinos no hay pactos; una partida cortada no inventa final; un reino
   assert.equal(bc.at(-1).tipo, 'resolucion');
   assert.equal(bc.at(-1).mano, 10);
 
-  const p = ejemplos[IDX.PACTO], beats = construirLineaDeTiempo(p);
+  const p = ejemplos[idx('caida de capital')], beats = construirLineaDeTiempo(p);
   const caida = p.rondas.flatMap((r) => r.eventos.filter((e) => e.tipo === 'caida').map((e) => ({ ...e, turno: r.turno })))[0];
   assert.ok(caida, 'la partida de ejemplo tiene una caida');
   for (const b of beats.filter((x) => x.tipo === 'ordenes' && x.mano > caida.turno)) {

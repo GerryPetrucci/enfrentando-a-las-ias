@@ -2,12 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { nuevoEstado, contexto, R, frontera, fijarTropas } from './ayudas.js';
-import { sumarUni, regionesDe, limpiarRegion } from '../../juegos/conquista/estado.js';
+import { sumarUni, limpiarRegion } from '../../juegos/conquista/estado.js';
 import { calcularFrentes, lineasDeFrentes, lineasDeCapacidad } from '../../juegos/conquista/frentes.js';
 import { ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
 import { rupturas } from '../../juegos/conquista/turno/diplomacia.js';
 import { movimientos } from '../../juegos/conquista/turno/movimiento.js';
 import { vistaTexto } from '../../juegos/conquista/vista.js';
+import { HEGEMON } from '../../juegos/conquista/constantes.js';
 
 const turno = (E, porReino) => { const ctx = contexto(E, porReino); ordenesEconomicas(ctx); rupturas(ctx); movimientos(ctx); return ctx; };
 const f1 = (x) => x.toFixed(1);
@@ -60,18 +61,14 @@ test('el dominio, el terreno y la fortaleza cuentan en los frentes igual que en 
   assert.deepEqual(real.combates[0].bandos.map((b) => +b.f.toFixed(4)), [ataque.f, ataque.def].map((x) => +x.toFixed(4)));
 });
 
-test('los frentes usan el Hegemon, la Reconquista y la Patria como el combate', () => {
+test('los frentes usan el bono del Hegemon como el combate', () => {
   const { E, a, d } = escenario({ tropasA: 14, tropasD: 8 });
   soloDos(E);
-  E.hegemon = 1; // x1.25
-  assert.equal(+calcularFrentes(E, 0).ataques[0].f.toFixed(4), +(13 * 0.85 * 1.25).toFixed(4));
-  E.hegemon = -1; E.perdidas[d] = { k: 0, t: 0 }; E.turno = 1; // Reconquista x1.25 (t = 2, perdida en el 0: dentro de los 3 turnos)
-  assert.equal(+calcularFrentes(E, 0).ataques[0].f.toFixed(4), +(13 * 0.85 * 1.25).toFixed(4));
-  E.perdidas[d] = null;
-  for (const r of regionesDe(E, 1)) if (r !== d && r !== E.reinos[1].capital) { limpiarRegion(E, r); E.dueno[r] = -1; } // el reino 1 baja a 2 regiones (su capital y d): Patria x1.25
-  assert.equal(regionesDe(E, 1).length, 2);
-  assert.equal(+calcularFrentes(E, 0).ataques[0].def.toFixed(4), 10);
-  assert.ok(a >= 0);
+  E.hegemon = 1;
+  const ataque = calcularFrentes(E, 0).ataques[0];
+  assert.equal(+ataque.f.toFixed(4), +(13 * 0.85 * HEGEMON.bonoAtaque).toFixed(4));
+  const real = turno(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} todo`] } });
+  assert.deepEqual(real.combates[0].bandos.map((b) => +b.f.toFixed(4)), [ataque.f, ataque.def].map((x) => +x.toFixed(4)));
 });
 
 test('los frentes no usan nada secreto: las mejoras de los rivales no se ven, las propias si', () => {
