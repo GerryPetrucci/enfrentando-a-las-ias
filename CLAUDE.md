@@ -6,6 +6,15 @@
 >
 > Origen: conversacion en la app de Claude, 8 de octubre de 2026.
 
+## RETOMAR AQUI (sesion en la nube del 22 de octubre de 2026)
+
+Se esta construyendo **Guerra de territorios 2.0.0** en la rama **`guerra-2.0.0`** (nunca en `main`; sin PR ni fusion hasta que el usuario lo ordene). Para seguir en la computadora:
+
+1. `git fetch origin && git checkout guerra-2.0.0 && git pull`; `git -C privado pull` (el respaldo privado trae el plan y las specs); `npm test` (verde en cada commit de la rama).
+2. Leer `privado/planes/plan-guerra-2.0.0-ledger.md` (ultima etapa terminada y siguiente tarea) y `privado/planes/plan-guerra-2.0.0.md` (etapas 0 a 12 con checklist). Reglas completas: `privado/spec/guerra-2.0.0-diseno.md`. Hallazgos y mediciones: `privado/spec/guerra-2.0.0-propuesta.md`. Juego nuevo de civilizaciones: `privado/spec/civilizaciones-propuesta.md`.
+3. El usuario dejo trabajando a Claude mientras dormia y delego las decisiones: las que se tomaron estan en la seccion 10 del diseno (tope de entrada 6,000 tokens y costo $1.50/$2.00 por partida, capital cerrada a aliados, tierra ajena x0.85, suministro por regiones aisladas, paquete de equilibrio, mejoras en vez de armas). Son revisables: cada una vive en una constante o una regla.
+4. Espera orden expresa del usuario: pruebas con modelos reales (AL FINAL, con tope), `cache_control` para Claude (medir `cached_tokens`), PR y fusion, grabar y publicar la serie 2.0.0.
+
 ## Donde vive que
 
 - **Publico (este repo):** codigo, `CLAUDE.md`, `README.md`, `docs/` (metodologia, como agregar un juego), `marca/` y
