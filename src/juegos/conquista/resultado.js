@@ -20,5 +20,5 @@ export function resultadoDe(E) {
   });
   // `mapa`: el mapa completo y su bioma, para que la escena de la web (que no puede importar de src/) dibuje la partida desde lo guardado.
   // `reinos`: el nombre de reino de cada asiento (el que usan las IAs en sus mensajes), para que la escena lo muestre junto al nombre del modelo.
-  return { puntos, ganador: E.ganador, empate: false, metricas, orden: orden.map((f) => f.s), ganoPorMaravilla: E.ganoPorMaravilla, turnos: E.turno, mapa: serializarMapa(E.mapa), reinos: E.reinos.map((r) => r.nombre) };
+  return { puntos, ganador: E.ganador, empate: false, metricas, orden: orden.map((f) => f.s), ganoPorMaravilla: E.ganoPorMaravilla, extincionMutua: E.extincionMutua === true, cercoMaravilla: E.cercoMaravilla, turnos: E.turno, mapa: serializarMapa(E.mapa), reinos: E.reinos.map((r) => r.nombre) };
 }

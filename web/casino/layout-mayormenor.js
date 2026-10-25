@@ -12,22 +12,23 @@ import { FORMATOS_ESCENA } from './layout.js';
 const r = (x, y, ancho, alto) => ({ x, y, ancho, alto });
 
 function dibujar9x16() {
-  const forma = { columnas: 11, filas: 1, ancho: 74, alto: 66 };
+  const { x, ancho } = FORMATOS_ESCENA['9x16'].zona;
+  const forma = { columnas: 11, filas: 1, ancho: 68, alto: 66 };
   return {
-    etiqueta: r(60, 285, 890, 36),
-    cabecera: r(60, 330, 890, 64),
-    subtitulos: r(60, 1262, 890, 238),
+    etiqueta: r(x, 285, ancho, 36),
+    cabecera: r(x, 330, ancho, 64),
+    subtitulos: r(x, 1262, ancho, 238),
     asientos: [
-      { placa: r(60, 406, 890, 64), tira: r(60, 478, 890, 66), tiraForma: forma },
-      { placa: r(60, 1182, 890, 64), tira: r(60, 1108, 890, 66), tiraForma: forma },
+      { placa: r(x, 406, ancho, 64), tira: r(x, 478, ancho, 66), tiraForma: forma },
+      { placa: r(x, 1182, ancho, 64), tira: r(x, 1108, ancho, 66), tiraForma: forma },
     ],
-    escenario: r(60, 556, 890, 540),
+    escenario: r(x, 556, ancho, 540),
     carta: { ancho: 150, alto: 210 },
     centro: {
       rotuloCrupier: r(265, 568, 200, 30), rotuloJugada: r(615, 568, 200, 30),
       cartaCrupier: r(290, 604, 150, 210), indicador: r(440, 604, 200, 210), cartaJugada: r(640, 604, 150, 210),
       pastilla: r(662, 820, 110, 28), apuesta: r(130, 850, 820, 112), sello: r(390, 990, 300, 80),
-      banca: r(60, 650, 200, 150), mazo: r(800, 650, 150, 170),
+      banca: r(x, 650, 140, 150), mazo: r(800, 650, 150, 170),
     },
   };
 }

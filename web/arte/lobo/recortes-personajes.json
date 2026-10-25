@@ -1,0 +1,343 @@
+{
+  "origen": "Hoja de sprites de fantasía pixel art.png",
+  "hoja": {
+    "ancho": 1254,
+    "alto": 1254,
+    "filas": [
+      "lobo",
+      "aldeano",
+      "bruja",
+      "cazador",
+      "vidente",
+      "cupido"
+    ],
+    "columnas": 6
+  },
+  "umbralAlfa": 16,
+  "personajes": [
+    {
+      "rol": "lobo",
+      "fila": {
+        "y0": 50,
+        "y1": 209
+      },
+      "cuadros": 6,
+      "ancho": 201,
+      "alto": 164,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": -6,
+          "y": 48,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 203,
+          "y": 48,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 412,
+          "y": 48,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 621,
+          "y": 48,
+          "corteX0": 627,
+          "corteX1": 836
+        },
+        {
+          "n": 5,
+          "x": 830,
+          "y": 48,
+          "corteX0": 836,
+          "corteX1": 1041
+        },
+        {
+          "n": 6,
+          "x": 1039,
+          "y": 48,
+          "corteX0": 1041,
+          "corteX1": 1254
+        }
+      ]
+    },
+    {
+      "rol": "aldeano",
+      "fila": {
+        "y0": 231,
+        "y1": 414
+      },
+      "cuadros": 6,
+      "ancho": 128,
+      "alto": 188,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": 33,
+          "y": 229,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 242,
+          "y": 229,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 451,
+          "y": 229,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 660,
+          "y": 229,
+          "corteX0": 627,
+          "corteX1": 836
+        },
+        {
+          "n": 5,
+          "x": 869,
+          "y": 229,
+          "corteX0": 836,
+          "corteX1": 1045
+        },
+        {
+          "n": 6,
+          "x": 1078,
+          "y": 229,
+          "corteX0": 1045,
+          "corteX1": 1254
+        }
+      ]
+    },
+    {
+      "rol": "bruja",
+      "fila": {
+        "y0": 436,
+        "y1": 630
+      },
+      "cuadros": 6,
+      "ancho": 213,
+      "alto": 199,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": -14,
+          "y": 434,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 195,
+          "y": 434,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 404,
+          "y": 434,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 613,
+          "y": 434,
+          "corteX0": 627,
+          "corteX1": 824
+        },
+        {
+          "n": 5,
+          "x": 822,
+          "y": 434,
+          "corteX0": 824,
+          "corteX1": 1045
+        },
+        {
+          "n": 6,
+          "x": 1031,
+          "y": 434,
+          "corteX0": 1045,
+          "corteX1": 1254
+        }
+      ]
+    },
+    {
+      "rol": "cazador",
+      "fila": {
+        "y0": 660,
+        "y1": 842
+      },
+      "cuadros": 6,
+      "ancho": 213,
+      "alto": 187,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": 8,
+          "y": 658,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 217,
+          "y": 658,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 426,
+          "y": 658,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 635,
+          "y": 658,
+          "corteX0": 627,
+          "corteX1": 846
+        },
+        {
+          "n": 5,
+          "x": 844,
+          "y": 658,
+          "corteX0": 846,
+          "corteX1": 1045
+        },
+        {
+          "n": 6,
+          "x": 1053,
+          "y": 658,
+          "corteX0": 1045,
+          "corteX1": 1254
+        }
+      ]
+    },
+    {
+      "rol": "vidente",
+      "fila": {
+        "y0": 869,
+        "y1": 1043
+      },
+      "cuadros": 6,
+      "ancho": 182,
+      "alto": 179,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": 18,
+          "y": 867,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 227,
+          "y": 867,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 436,
+          "y": 867,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 645,
+          "y": 867,
+          "corteX0": 627,
+          "corteX1": 836
+        },
+        {
+          "n": 5,
+          "x": 854,
+          "y": 867,
+          "corteX0": 836,
+          "corteX1": 1045
+        },
+        {
+          "n": 6,
+          "x": 1063,
+          "y": 867,
+          "corteX0": 1045,
+          "corteX1": 1254
+        }
+      ]
+    },
+    {
+      "rol": "cupido",
+      "fila": {
+        "y0": 1060,
+        "y1": 1224
+      },
+      "cuadros": 6,
+      "ancho": 197,
+      "alto": 169,
+      "cuadrosOrigen": [
+        {
+          "n": 1,
+          "x": 13,
+          "y": 1058,
+          "corteX0": 0,
+          "corteX1": 209
+        },
+        {
+          "n": 2,
+          "x": 222,
+          "y": 1058,
+          "corteX0": 209,
+          "corteX1": 418
+        },
+        {
+          "n": 3,
+          "x": 431,
+          "y": 1058,
+          "corteX0": 418,
+          "corteX1": 627
+        },
+        {
+          "n": 4,
+          "x": 640,
+          "y": 1058,
+          "corteX0": 627,
+          "corteX1": 836
+        },
+        {
+          "n": 5,
+          "x": 849,
+          "y": 1058,
+          "corteX0": 836,
+          "corteX1": 1045
+        },
+        {
+          "n": 6,
+          "x": 1058,
+          "y": 1058,
+          "corteX0": 1045,
+          "corteX1": 1254
+        }
+      ]
+    }
+  ]
+}

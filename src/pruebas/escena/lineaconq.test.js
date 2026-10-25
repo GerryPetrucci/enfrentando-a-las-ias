@@ -3,6 +3,7 @@
 //
 //   npm test
 
+import { extenderMinMs } from '../../../web/casino/feed-conquista.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TURNOS } from '../../juegos/conquista/constantes.js';
@@ -47,13 +48,13 @@ test('cada turno cuenta su historia en orden (ordenes, traiciones, batallas, res
   }
 });
 
-test('el ritmo de un turno: tranquilo 2.5 s, con actividad 5 s, con una batalla normal 5 s y con una decisiva 7.5 s (a velocidad 1, sin voz)', () => {
+test('el ritmo reserva un zoom y tiempo de lectura por cada batalla sin acelerar los turnos tranquilos', () => {
   const suma = (r, batallas) => r.ordenes + r.resolucion + batallas;
   assert.equal(suma(ritmoDeTurno({}), 0), 2500);
   assert.equal(suma(ritmoDeTurno({ actividad: true }), 0), 5000);
-  assert.equal(suma(ritmoDeTurno({ batallas: 1 }), MIN_MS.batalla), 5000);
-  assert.equal(suma(ritmoDeTurno({ batallas: 1, decisivas: 1 }), MIN_MS.vs), 7500);
-  assert.ok(MIN_MS.vs > MIN_MS.batalla);
+  assert.ok(suma(ritmoDeTurno({ batallas: 1 }), MIN_MS.batalla) >= 14000);
+  assert.ok(suma(ritmoDeTurno({ batallas: 1, decisivas: 1 }), MIN_MS.vs) >= 14000);
+  assert.ok(MIN_MS.vs >= MIN_MS.batalla);
 });
 
 test('ninguna linea de hecho se pierde ni se repite: cada evento sale una sola vez, en una linea o dentro de la tarjeta de su batalla', () => {
@@ -104,23 +105,12 @@ test('esDecisiva: solo por las cuatro reglas (capital que cae, diferencia menor 
   assert.equal(esDecisiva({}).decisiva, false);
 });
 
-test('maximo 3 tarjetas por turno, de mayor a menor importancia; las demas batallas siguen diciendose en la resolucion', () => {
-  const p = ejemplos[IDX.CUATRO], beats = construirLineaDeTiempo(p);
-  const turnoCon4 = p.rondas.find((r) => r.combates.length >= 4);
-  assert.ok(turnoCon4, 'la partida de ejemplo debe tener un turno con 4 combates');
-  const delTurno = por(beats).get(turnoCon4.turno);
-  const tarjetas = delTurno.filter((b) => b.tipo === 'batalla');
-  assert.equal(tarjetas.length, 3);
-  const nivel = (t) => (t.decisiva ? 2 : t.resultado === 'captura' ? 1 : 0);
-  const niveles = tarjetas.map((b) => nivel(paso(b, 'tarjeta')));
-  assert.deepEqual(niveles, [...niveles].sort((a, b) => b - a), 'de mayor a menor importancia');
-  const sinTarjeta = turnoCon4.combates.filter((c) => !tarjetas.some((b) => paso(b, 'tarjeta').d === c.d));
-  assert.equal(sinTarjeta.length, turnoCon4.combates.length - 3);
-  const resolucion = delTurno.at(-1);
-  for (const c of sinTarjeta) {
-    const eventos = turnoCon4.eventos.filter((e) => (e.tipo === 'conquista' || e.tipo === 'repelido') && e.r === c.d);
-    for (const e of eventos) assert.ok(resolucion.lineas.some((l) => l.clave?.startsWith(`ev:${e.tipo}:${e.t}:${e.k}:`) && l.clave.endsWith(`:${e.r}`)), `el combate de la region ${c.d} sin tarjeta debe decirse en la resolucion`);
-  }
+test('todos los combates de una ronda tienen tarjeta y conservan el orden registrado',()=>{
+ const p=ejemplos[IDX.CUATRO],beats=construirLineaDeTiempo(p);
+ const r=p.rondas.find(r=>r.combates.length>=4);assert.ok(r);
+ const tarjetas=por(beats).get(r.turno).filter(b=>b.tipo==='batalla').map(b=>paso(b,'tarjeta'));
+ assert.deepEqual(tarjetas.map(t=>t.d),r.combates.map(c=>c.d));
+ assert.deepEqual(tarjetas.map(t=>t.resultado),r.combates.map(c=>c.resultado));
 });
 
 // ---- el privado de una traicion: se revela en la ruptura, nunca antes ----
@@ -343,6 +333,17 @@ test('el final trae el ranking, quien cayo y cuando, los momentos clave y la mar
   }
 });
 
+test('una extincion mutua (2.1.1) se cuenta en el final: los ultimos reinos cayeron a la vez y gana el que mas regiones tenia; una partida normal no lo dice', () => {
+  const normal = ejemplos[0];
+  assert.doesNotMatch(construirLineaDeTiempo(normal).at(-1).lineas[0].texto, /cayeron a la vez/, 'una partida normal no lo menciona');
+  const extincion = { ...normal, extincionMutua: true };
+  const final = construirLineaDeTiempo(extincion).at(-1);
+  assert.equal(final.tipo, 'final');
+  assert.match(final.lineas[0].texto, /gana la partida: los últimos reinos cayeron a la vez y era el que más regiones tenía\.$/);
+  assert.equal(final.lineas[0].clave, 'final:ganador', 'misma clave: la voz y los subtitulos siguen enlazados');
+  assert.equal(paso(final, 'final').ganoPorMaravilla, normal.ganoPorMaravilla === true, 'la marca de la Maravilla no cambia');
+});
+
 // ---- la narracion con interpretacion (narracion-conquista.js): lo que se dice y se subtitula es `dicho`; los hechos completos siguen en `lineas` ----
 import { estadoInicial } from '../../../web/casino/conquista-datos.js';
 const CON_DICHO = ['ordenes', 'resolucion'];
@@ -451,7 +452,7 @@ test('un turno cuya racha de expansion ya se dijo no dice nada de las ordenes y 
     }
     for (const b of construirLineaDeTiempo(p).filter((x) => x.dicho && x.texto === '')) {
       assert.equal(duracionDeBeat(b, null, 1), b.minMs, `${b.id}: un momento mudo dura su minimo, sin voz que lo alargue`);
-      assert.ok(b.minMs >= 1000 && b.minMs <= 3000, `${b.id}: ${b.minMs} ms (el ritmo de un turno sin nada que decir)`);
+      assert.ok(b.minMs >= extenderMinMs(1000, b.pasos.find(p=>p.tipo==='feed')?.lista), `${b.id}: ${b.minMs} ms (el ritmo de un turno sin nada que decir)`);
     }
     for (const b of construirLineaDeTiempo(p).filter((x) => x.tipo === 'ordenes')) {
       for (const l of b.lineas.filter((x) => x.clave.startsWith('priv:'))) assert.ok(b.dicho.some((d) => d.clave === l.clave && d.texto === l.texto), `${b.id}: el privado se dice tal cual`);

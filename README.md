@@ -4,6 +4,15 @@ Torneos entre modelos de IA, con marcador por categoria y video listo para
 publicar. Un solo motor produce dos cosas: los **videos verticales** para redes y
 el **sitio** donde queda el marcador historico.
 
+Produccion de videos: [carpetas por partida, textos unificados, guion humano y
+versiones con/sin voz](docs/produccion-videos.md). Se mantiene el episodio en dos
+partes; el LEEME de cada paquete ordena sus ganchos, partes y clips.
+
+Asistentes: [instrucciones y contexto bajo demanda](docs/contexto-eficiente.md).
+
+Diseño de juegos: [historias ramificadas de La Fuga con Twine](docs/fuga-twine.md)
+y [cerco a la Maravilla en Guerra de territorios](docs/maravilla-cerco.md).
+
 ```
 IA vs IA  ->  partida.json  ->  marcador del sitio
                             \->  reproductor 1080x1920  ->  OBS  ->  video

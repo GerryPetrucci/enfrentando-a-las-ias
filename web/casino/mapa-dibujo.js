@@ -1,3 +1,5 @@
+import { pintarRecursoPixel } from './recursos-pixel-conquista.js';
+import { pintarArte } from './arte-conquista.js';
 // El dibujo del mapa de la Guerra de territorios en canvas: terreno de pixel art, tinte y bordes de cada reino, fichas por region (recurso, tropas, fortaleza, capital, edificio,
 // Maravilla), flechas de ordenes y el estallido de una batalla. La web no puede importar de src/, asi que el mapa llega ya leido de la partida (conquista-datos.js: leerMapa).
 // El aspecto es el del prototipo aprobado (privado/prototipos/mundo-regiones.html); las funciones puras (geometria, centros, bordes) se prueban en Node y el dibujo se verifica con
@@ -7,6 +9,7 @@
 // Guerra 2.0.0 (etapa 11): cada ficha muestra ademas la composicion del ejercito por tipo (una barra de colores bajo la ficha), un pip por cada reino de visita, un anillo punteado si la region esta aislada
 // y una corona en la capital del Hegemon. Todo sale de la foto del turno (`estado.uni`, `estado.aisladas`, `estado.hegemon`): una partida de formato anterior no trae esos datos y se ve como siempre.
 
+import { ARTE_CONQUISTA as A } from '../paleta.js';
 import { TINTE_DE_REINO, LETRA_DE_EDIFICIO, MARAVILLA_TURNOS } from './conquista-datos.js';
 
 const FUENTE = 'ui-sans-serif, system-ui, "Segoe UI", sans-serif';
@@ -129,14 +132,16 @@ export function pintarContorno(ctx, mapa, g, id, color, grosor = 4) {
 }
 
 // ---- fichas por region ----
-export function pintarIcono(ctx, tipo, x, y, r) {
-  ctx.save(); ctx.translate(x, y); ctx.lineWidth = Math.max(1.5, r / 7); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  if (tipo === 'Comida') { ctx.strokeStyle = '#e8c547'; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(i * r * 0.5, r * 0.9); ctx.lineTo(i * r * 0.5, -r * 0.6); ctx.stroke(); ctx.fillStyle = '#e8c547'; ctx.beginPath(); ctx.ellipse(i * r * 0.5, -r * 0.7, r * 0.22, r * 0.4, 0, 0, 7); ctx.fill(); } }
-  if (tipo === 'Madera') { ctx.fillStyle = '#9a6b3f'; ctx.strokeStyle = '#4a2f18'; ctx.beginPath(); ctx.roundRect(-r, -r * 0.45, r * 2, r * 0.9, r * 0.3); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#d2a56b'; ctx.beginPath(); ctx.ellipse(r * 0.75, 0, r * 0.28, r * 0.42, 0, 0, 7); ctx.fill(); ctx.stroke(); }
-  if (tipo === 'Roca') { ctx.fillStyle = '#a9adb8'; ctx.strokeStyle = '#5b5e68'; ctx.beginPath(); ctx.moveTo(-r, r * 0.6); ctx.lineTo(-r * 0.6, -r * 0.5); ctx.lineTo(0, -r * 0.9); ctx.lineTo(r * 0.8, -r * 0.2); ctx.lineTo(r, r * 0.6); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  if (tipo === 'Hierro') { ctx.fillStyle = '#8fb3d9'; ctx.strokeStyle = '#3d5a7a'; ctx.beginPath(); ctx.moveTo(-r * 0.6, -r * 0.5); ctx.lineTo(r * 0.6, -r * 0.5); ctx.lineTo(r, r * 0.5); ctx.lineTo(-r, r * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  if (tipo === 'Oro') { ctx.fillStyle = '#f1c84b'; ctx.strokeStyle = '#9a7412'; ctx.beginPath(); ctx.arc(0, 0, r * 0.95, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.stroke(); }
-  if (tipo === 'Caballos') { ctx.strokeStyle = '#d9d2c2'; ctx.lineWidth = Math.max(2.5, r / 4); ctx.beginPath(); ctx.arc(0, r * 0.1, r * 0.8, Math.PI * 0.15, Math.PI * 0.85, true); ctx.stroke(); }
+// PNG reales para leña y maza; el resto usa bloques pixel art, incluida la herradura.
+export function pintarIcono(ctx,tipo,x,y,r) {
+  if(pintarArte(ctx,tipo,x,y,r*2.2,r*2.2)) return;
+  pintarRecursoPixel(ctx,tipo,x,y,r);
+}
+// El rotulo chico del recurso, debajo de su ilustracion (alto contraste): el sexto recurso (Caballos) es el que mas lo necesita, pero se rotulan los seis igual.
+export function pintarRotuloRecurso(ctx, nombre, x, y, tam) {
+  ctx.save(); ctx.font = `800 ${tam}px ${FUENTE}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = Math.max(2, tam / 5); ctx.strokeStyle = '#0b0b0e'; ctx.strokeText(nombre, x, y);
+  ctx.fillStyle = '#f2f0ed'; ctx.fillText(nombre, x, y);
   ctx.restore();
 }
 function torre(ctx, x, y, nivel, color, s) {
@@ -169,6 +174,31 @@ function pipDeVisita(ctx, x, y, r, color, total) {
 function anilloAislado(ctx, x, y, r) {
   ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = '#d8584e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
 }
+// El numero de la casilla, siempre visible y de alto contraste, en una esquina libre (no se cruza con tropas, recursos ni edificio): lo pide el usuario para poder
+// identificar cada region aunque tenga dueno y fichas encima.
+function pintarNumeroCasilla(ctx, x, y, rad, nombre) {
+  const w = Math.max(30, rad * 1.5), h = Math.max(20, rad * 0.95), cx = x + rad * 1.35, cy = y + rad * 1.35;
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,8,12,.92)'; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h * 0.3); ctx.fill(); ctx.stroke();
+  texto(ctx, nombre, cx, cy + 1, h * 0.72, 800, '#fff3c4');
+  ctx.restore();
+}
+// La Maravilla: grande e identificable (un monumento con pedestal, mas alto que cualquier otra ficha), siempre encima de la region sin tapar la casilla ni las tropas.
+function pintarMaravilla(ctx,x,y,rad,n,tope) {
+  const u=rad/12, base=y-rad*1.7;
+  ctx.save();ctx.translate(x,base);ctx.scale(u,u);
+  ctx.fillStyle='#0b0b0e';ctx.fillRect(-23,-44,46,49);
+  ctx.fillStyle=A.oroOscuro;ctx.fillRect(-22,0,44,4);ctx.fillRect(-20,-4,40,4);
+  ctx.fillStyle=A.oro;ctx.fillRect(-18,-8,36,4);ctx.fillRect(-17,-31,34,5);
+  ctx.fillStyle=A.marfil;for(const cx of[-14,-5,4,13]){ctx.fillRect(cx-2,-26,4,18);ctx.fillStyle=A.caballo;ctx.fillRect(cx+1,-26,1,18);ctx.fillStyle=A.marfil;}
+  ctx.fillStyle=A.oroOscuro;ctx.beginPath();ctx.moveTo(-21,-32);ctx.lineTo(0,-46);ctx.lineTo(21,-32);ctx.closePath();ctx.fill();
+  ctx.fillStyle=A.oro;ctx.beginPath();ctx.moveTo(-17,-34);ctx.lineTo(0,-44);ctx.lineTo(17,-34);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff3c4';ctx.fillRect(-1,-51,2,8);ctx.fillRect(-4,-48,8,2);
+  ctx.fillStyle=A.acero;ctx.fillRect(-3,-39,6,5);
+  ctx.fillStyle='#0b0b0e';ctx.fillRect(-14,5,28,11);texto(ctx,(n??0)+'/'+tope,0,11,9,800,'#fff3c4');ctx.restore();
+}
+
 // La leyenda de los colores de la barra: cuatro cuadros con la letra de cada tipo, en la esquina del mapa que se le indique.
 export function pintarLeyendaUnidades(ctx, x, y, tam) {
   const paso = tam * 1.7, ancho = paso * 4 - tam * 0.7 + 10;
@@ -183,52 +213,61 @@ function texto(ctx, s, x, y, tam, peso = 800, color = '#f2f0ed', alineacion = 'c
 // `estado` es la foto del mapa (registro.estado o estadoInicial): duenos, tropas, fortaleza, edificios (letra) y si estan danados, y la Maravilla.
 export function pintarFichas(ctx, mapa, g, estado, colores) {
   const T = g.T, rad = Math.max(13, T * 0.62), capitales = mapa.inicio.capitales, aisladas = new Set((Array.isArray(estado?.aisladas) ? estado.aisladas : []).filter(Number.isInteger));
+  // Distancias pensadas para que los circulos de tropas, recursos, visitas y la insignia de edificio no se encimen entre si (separadas a pedido del usuario).
+  const OFF_RECURSO = 1.95, OFF_EDIFICIO = 1.8, OFF_PIP_X = 1.32, OFF_PIP_Y = 0.95;
   for (const reg of mapa.regs) {
     const c = centroDeRegion(mapa, reg.id, g), x = c.x, y = c.y, k = estado?.dueno?.[reg.id] ?? -1;
-    if (reg.rec) { ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(x, y - rad * 1.15, rad * 0.72, 0, 7); ctx.fill(); pintarIcono(ctx, reg.rec, x, y - rad * 1.15, rad * 0.5); }
+    if (reg.rec) {
+      const ry = y - rad * OFF_RECURSO;
+      const rx = x;
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.arc(rx, ry, rad * 0.72, 0, 7); ctx.fill(); pintarIcono(ctx, reg.rec, rx, ry, rad * 0.5);
+      pintarRotuloRecurso(ctx, reg.rec, rx, ry + rad * 0.95, Math.max(9, rad * 0.32));
+    }
     if (k >= 0) {
       const col = colorSolido(colores, k);
       ctx.fillStyle = 'rgba(8,8,12,.9)'; ctx.beginPath(); ctx.arc(x, y + rad * 0.3, rad, 0, 7); ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.stroke();
       texto(ctx, estado.tropas?.[reg.id] ?? 0, x, y + rad * 0.34, rad * 1.15);
       const pilas = pilasDeRegion(estado, reg.id), mia = pilas.find((p) => p.k === k);
       if (mia && mia.pila.some((n, t) => t > 0 && n > 0)) barraDeComposicion(ctx, x, y + rad * 1.42, rad * 1.7, Math.max(3, rad * 0.24), mia.pila); // solo Lanceros: sin barra (es lo normal)
-      pilas.filter((p) => p.k !== k).slice(0, 2).forEach((v, i) => pipDeVisita(ctx, x + (i ? -1 : 1) * rad * 0.98, y - rad * 0.5, rad * 0.48, colorSolido(colores, v.k), v.total));
+      pilas.filter((p) => p.k !== k).slice(0, 2).forEach((v, i) => pipDeVisita(ctx, x + (i ? -1 : 1) * rad * OFF_PIP_X, y - rad * OFF_PIP_Y, rad * 0.48, colorSolido(colores, v.k), v.total));
       if (aisladas.has(reg.id)) anilloAislado(ctx, x, y + rad * 0.3, rad * 1.22);
       const fort = estado.fort?.[reg.id] ?? 0;
-      if (fort > 0) torre(ctx, x - rad * 1.25, y + rad * 0.3, fort, col, rad / 24);
+      if (fort > 0) torre(ctx, x - rad * OFF_EDIFICIO, y + rad * 0.3, fort, col, rad / 24);
       if (capitales.includes(reg.id)) {
-        if (estado.hegemon === k) pintarCorona(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
-        else estrella(ctx, x, y - rad * (reg.rec ? 2.3 : 1.55), rad / 20);
+        const cy = y - rad * (reg.rec ? OFF_RECURSO + 1.05 : 1.55);
+        if (estado.hegemon === k) pintarCorona(ctx, x, cy, rad / 20);
+        else estrella(ctx, x, cy, rad / 20);
       }
       const letra = estado.edif?.[reg.id];
       if (letra) {
-        const ex = x + rad * 1.25, ey = y + rad * 0.3;
+        const ex = x + rad * OFF_EDIFICIO, ey = y + rad * 0.3;
         ctx.fillStyle = '#0b0b0e'; ctx.fillRect(ex - rad * 0.45, ey - rad * 0.45, rad * 0.9, rad * 0.9); texto(ctx, (LETRA_DE_EDIFICIO[letra] ?? letra)[0].toUpperCase(), ex, ey + 1, rad * 0.75, 800, '#fff3c4');
         if (estado.dan?.[reg.id]) { ctx.strokeStyle = '#d8584e'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(ex - rad * 0.5, ey + rad * 0.5); ctx.lineTo(ex + rad * 0.5, ey - rad * 0.5); ctx.stroke(); }
       }
     } else if (!reg.rec) {
-      ctx.globalAlpha = 0.55; texto(ctx, reg.nombre, x, y, Math.max(11, T * 0.5), 600, '#ffffff'); ctx.globalAlpha = 1;
+      // El identificador se pinta una sola vez, en su insignia de alto contraste.
     }
     const m = estado?.maravilla;
-    if (m && m.r === reg.id) {
-      ctx.fillStyle = '#f1c84b'; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - rad * 3.1); ctx.lineTo(x + rad * 0.8, y - rad * 2.3); ctx.lineTo(x, y - rad * 1.5); ctx.lineTo(x - rad * 0.8, y - rad * 2.3); ctx.closePath(); ctx.fill(); ctx.stroke();
-      texto(ctx, `${m.n ?? 0}/${MARAVILLA_TURNOS}`, x, y - rad * 2.3, rad * 0.6, 800, '#0b0b0e');
-    }
+    if (m && m.r === reg.id) pintarMaravilla(ctx, x, y, rad, m.n, MARAVILLA_TURNOS);
+    pintarNumeroCasilla(ctx, x, y, rad, reg.nombre); // siempre, con dueno o sin el: alto contraste y nunca se cruza con tropas/recursos/edificio
   }
 }
 
 // ---- ordenes y batalla ----
+// Una flecha fina y curva (no una recta rigida): se arquea levemente hacia un lado, perpendicular al trazo, para verse mas estetica sobre el mapa.
 export function pintarFlecha(ctx, desde, hasta, color, n, rad = 13) {
   const dx = hasta.x - desde.x, dy = hasta.y - desde.y, L = Math.hypot(dx, dy);
   if (!(L > 0)) return;
   const ux = dx / L, uy = dy / L, sx = desde.x + ux * rad * 1.5, sy = desde.y + uy * rad * 1.5, ex = hasta.x - ux * rad * 1.7, ey = hasta.y - uy * rad * 1.7;
+  const px = -uy, py = ux, curva = Math.min(L * 0.12, 46);
+  const mx = (sx + ex) / 2 + px * curva, my = (sy + ey) / 2 + py * curva;
   ctx.save(); ctx.lineCap = 'round';
-  ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-  ctx.strokeStyle = color; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-  ctx.fillStyle = color; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex + ux * 22, ey + uy * 22); ctx.lineTo(ex - uy * 14, ey + ux * 14); ctx.lineTo(ex + uy * 14, ey - ux * 14); ctx.closePath(); ctx.fill(); ctx.stroke();
-  const mx = (sx + ex) / 2, my = (sy + ey) / 2;
-  ctx.fillStyle = 'rgba(8,8,12,.92)'; ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(mx - 19, my - 14, 38, 28, 14); ctx.fill(); ctx.stroke();
-  texto(ctx, n, mx, my + 1, 19);
+  ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+  ctx.strokeStyle = color; ctx.lineWidth = 2.8; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(mx, my, ex, ey); ctx.stroke();
+  ctx.fillStyle = color; ctx.strokeStyle = '#0b0b0e'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(ex + ux * 12, ey + uy * 12); ctx.lineTo(ex - uy * 8, ey + ux * 8); ctx.lineTo(ex + uy * 8, ey - ux * 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  const bx = (sx + ex) / 2 + px * curva * 0.5, by = (sy + ey) / 2 + py * curva * 0.5; // la etiqueta del numero va en el punto medio de la curva, no de la recta
+  ctx.fillStyle = 'rgba(8,8,12,.92)'; ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(bx - 19, by - 14, 38, 28, 14); ctx.fill(); ctx.stroke();
+  texto(ctx, n, bx, by + 1, 19);
   ctx.restore();
 }
 

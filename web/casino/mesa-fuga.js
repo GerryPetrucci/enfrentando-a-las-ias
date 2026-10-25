@@ -12,7 +12,9 @@ import { RONDAS_TOPE, ALARMA_MAX, COHESION_MAX, nivelDeAlerta, textoDeSello, hor
 import { MesaBase, el, poner } from './mesa-base.js';
 import { PIEZAS, escenaDe } from './escenarios-fuga.js';
 import { ACCIONES, accionDeResultado } from './siluetas.js';
-import { colorDe } from '../paleta.js';
+import { colorDe, FUGA_AMBIENTE } from '../paleta.js';
+import { rotuloAmbiente } from './ambiente-fuga.js';
+import { fondoPixel, PERSONA_PIXEL, BOTIN_PIXEL } from './pixel-fuga.js';
 
 const SIL = '<svg class="sil-svg" viewBox="0 0 60 120"><circle cx="30" cy="16" r="13"/><path d="M12 40 q0-9 10-9 h16 q10 0 10 9 v34 h-36z"/><path class="brazo" d="M46 36 l10 20 h-7 l-9 -15z"/><path class="pierna pi" d="M15 74 h14 v42 h-10z"/><path class="pierna pd" d="M31 74 h14 v42 h-10z"/></svg>';
 const pips = (n) => Array.from({ length: n }, () => '<i></i>').join('');
@@ -33,6 +35,7 @@ export class Mesa extends MesaBase {
     const { L } = this;
     this.armarBase('La Fuga');
     this.raiz.classList.add('mesa-vigilancia');
+    for (const [nombre, color] of Object.entries(FUGA_AMBIENTE)) this.raiz.style.setProperty(`--fa-${nombre}`, color);
     this.medidores = el('fijo medidores-fuga'); poner(this.medidores, L.panel.marco);
     this.alarma = { rotulo: el('fijo rotulo-med'), barra: el('fijo barra-med alarma', pips(ALARMA_MAX)), previa: 0 };
     poner(this.alarma.rotulo, L.panel.alarma.rotulo); poner(this.alarma.barra, L.panel.alarma.barra);
@@ -69,6 +72,7 @@ export class Mesa extends MesaBase {
     c.rec.className = `fijo rec-cam${caido ? ' sin-senal' : st.salio ? ' salida' : ''}`;
     c.rec.textContent = caido ? 'Sin señal' : st.salio ? 'Salida' : '● REC';
     c.sil?.classList.toggle('oculta', !st.libre);
+    c.sil?.classList.toggle('herido', st.heridas > 0);
   }
   ponerMedidores(alarma, cohesion) {
     this.alarma.rotulo.innerHTML = `Alarma · <b>${esc(nivelDeAlerta(alarma))}</b>`;
@@ -82,12 +86,43 @@ export class Mesa extends MesaBase {
   aplicarEstado(e) {
     this.camaras.forEach((c, s) => { Object.assign(c.st, { libre: e.libres[s], salio: e.salieron[s], heridas: e.heridas[s], puntos: e.puntos[s] }); this.pintarCamara(s); });
     this.ponerMedidores(e.alarma, e.cohesion);
+    this.pintarAmbiente(e.ambiente ?? null);
+  }
+  pintarAmbiente(a) {
+    for (const [asiento, c] of this.camaras.entries()) {
+      c.escena.classList.toggle('ambiente-causal', !!a);
+      c.escena.classList.toggle('puerta-forzada', !!a?.puerta);
+      c.escena.classList.toggle('rastro-borrado', !!a?.borrado);
+      c.escena.classList.toggle('patrulla-activa', !!a?.patrulla);
+      c.escena.dataset.zona = a?.familia ?? '';
+      if (!a) {
+        c.escena.querySelectorAll('.fondo-arquitectura, .ubicacion-fuga, .huella-fuga').forEach((n) => n.remove());
+        if (c.sil?.classList.contains('personaje-pixel')) { c.sil.innerHTML = SIL; c.sil.classList.remove('personaje-pixel'); }
+        continue;
+      }
+      if (!c.escena.querySelector('.fondo-arquitectura')) {
+        c.escena.insertAdjacentHTML('afterbegin', fondoPixel(a.familia, c.situacion));
+        c.sil.innerHTML = PERSONA_PIXEL;
+        c.sil.classList.add('personaje-pixel');
+        c.escena.insertAdjacentHTML('beforeend', '<div class="ubicacion-fuga"></div><div class="huella-fuga"></div>');
+      }
+      const equipo = a.equipo?.[asiento];
+      c.sil.classList.toggle('tiene-credencial', c.st.libre && !!equipo?.credencial);
+      c.sil.classList.toggle('credencial-invalida', equipo?.credencial && equipo.credencial !== 'vigente');
+      c.sil.classList.toggle('tiene-cuerda', c.st.libre && equipo?.cuerda === 'disponible');
+      const estado = rotuloAmbiente(a, c.st.libre ? asiento : null);
+      c.escena.querySelector('.ubicacion-fuga').innerHTML = `<small>Tramo ${String(a.ronda).padStart(2, '0')} · ${a.fase === 'perimetro' ? 'Perímetro' : a.fase === 'patio' ? 'Patio' : 'Interior'}</small><strong>${esc(a.lugar)}</strong>`;
+      const huella = c.escena.querySelector('.huella-fuga');
+      huella.dataset.estado = estado.clase;
+      huella.innerHTML = `<strong>${esc(estado.texto)}</strong><small>${esc(estado.detalle)}</small>`;
+    }
   }
   // La imagen de la camara: el suelo, la mini escena de la situacion (sus piezas, detras) y la silueta del prisionero. Una situacion sin dibujar muestra su titulo sobre el cuadro.
   dibujarEscena(s, armar) {
     const c = this.camaras[s], { ancho, alto } = this.L.camaras[s].escena;
     const e = escenaDe(armar?.situacion);
-    const piezas = e.piezas.map((p) => { const h = p.alto * alto, w = h * PIEZAS[p.pieza].ratio; return `<div class="pieza-fuga" style="left:${p.x * ancho - w / 2}px;top:${p.y * alto - h}px;width:${w}px;height:${h}px">${PIEZAS[p.pieza].svg()}</div>`; }).join('');
+    c.situacion = armar?.situacion;
+    const piezas = e.piezas.map((p) => { const h = p.alto * alto, w = h * PIEZAS[p.pieza].ratio; return `<div class="pieza-fuga" data-pieza="${esc(p.pieza)}" style="left:${p.x * ancho - w / 2}px;top:${p.y * alto - h}px;width:${w}px;height:${h}px">${PIEZAS[p.pieza].svg()}</div>`; }).join('');
     const titulo = e.generica ? `<div class="obstaculo"><b>${esc(armar?.titulo ?? '')}</b><small>${esc(armar?.fase ?? '')}</small></div>` : '';
     c.escena.innerHTML = `<div class="suelo"></div>${titulo}${piezas}<div class="sil-fuga">${SIL}</div>`;
     c.sil = c.escena.querySelector('.sil-fuga');
@@ -100,7 +135,8 @@ export class Mesa extends MesaBase {
     const c = this.camaras[s], { ancho, alto } = this.L.camaras[s].escena;
     c.x = r.x;
     Object.assign(c.sil.style, { left: `${r.x * ancho - alto * 0.125}px`, transform: `translateY(${r.y * alto}px) rotate(${r.pose.rot}deg) scaleY(${1 - 0.15 * r.pose.agacha})` });
-    c.sil.style.setProperty('--sw', Math.sin(r.pose.paso * 2 * Math.PI).toFixed(3));
+    const paso = c.sil.classList.contains('personaje-pixel') ? Math.floor(r.pose.paso * 4) / 4 : r.pose.paso;
+    c.sil.style.setProperty('--sw', Math.sin(paso * 2 * Math.PI).toFixed(3));
     c.sil.style.setProperty('--br', r.pose.brazo.toFixed(3));
     c.sil.style.setProperty('--sc', r.color);
   }
@@ -191,6 +227,7 @@ export class Mesa extends MesaBase {
       if (!j) return; // un prisionero capturado ya no decide
       const c = this.camaras[s];
       const texto = textoDeSello(j, { reemplazada: d.reemplazadas[s], ilegibles: d.ilegibles[s] });
+      c.sil?.classList.toggle('apoyando', ['ayudar', 'sacrificarse'].includes(j.postura));
       c.sello.innerHTML = `<span>${esc(texto)}</span>${d.promesasRotas[s] ? '<span class="rota-cam">Promesa rota</span>' : ''}`;
       c.sello.classList.toggle('juego', d.reemplazadas[s]);
       c.sello.classList.add('on');
@@ -270,7 +307,7 @@ export class Mesa extends MesaBase {
       for (const [s, c] of this.camaras.entries()) {
         if (!c.st.libre) continue; // una camara sin prisionero (SIN SEÑAL o SALIDA) no muestra el botin
         const { ancho, alto } = this.L.camaras[s].escena, h = 0.16 * alto;
-        c.escena.insertAdjacentHTML('afterbegin', `<div class="pieza-fuga botin" style="left:${0.55 * ancho - h / 2}px;top:${0.8 * alto - h}px;width:${h}px;height:${h}px">${PIEZAS.botin.svg()}</div>`);
+        c.escena.insertAdjacentHTML('afterbegin', `<div class="pieza-fuga botin" style="left:${0.55 * ancho - h / 2}px;top:${0.8 * alto - h}px;width:${h}px;height:${h}px">${c.escena.classList.contains('ambiente-causal') ? BOTIN_PIXEL : PIEZAS.botin.svg()}</div>`);
       }
       if (Number.isInteger(t.tomo)) this.correrAccion(t.tomo, 'toma', 1300, { objeto: 0.55 });
     } else if (t.clase === 'oferta') {

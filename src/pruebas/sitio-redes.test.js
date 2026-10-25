@@ -41,8 +41,9 @@ test('la landing pinta las redes desde web/redes.js (no las copia a mano)', () =
   assert.doesNotMatch(h, /tiktok\.com|instagram\.com|facebook\.com/, 'los enlaces viven solo en redes.js');
 });
 
-test('la documentacion tiene al dia los enlaces: marca/perfiles.md y CLAUDE.md', () => {
+test('la documentacion tiene al dia los enlaces y Claude importa la fuente comun de redes', () => {
   const perfiles = leer('marca/perfiles.md');
   for (const r of REDES) assert.ok(perfiles.includes(r.url.replace(/^https:\/\/(www\.)?/, '')), `marca/perfiles.md no trae el enlace de ${r.nombre}: ${r.url}`);
-  assert.match(leer('CLAUDE.md'), /web\/redes\.js/, 'CLAUDE.md dice donde viven las redes del sitio');
+  assert.match(leer('CLAUDE.md'), /^@AGENTS\.md$/m, 'Claude importa el contrato comun sin duplicarlo');
+  assert.match(leer('AGENTS.md'), /web\/redes\.js/, 'la fuente compartida dice donde viven las redes del sitio');
 });

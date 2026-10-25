@@ -21,13 +21,21 @@ export const esRutaRelativa = (texto) => typeof texto === 'string' && /^[\w.-]+(
 
 // El audio de la voz que esta sonando: una sola a la vez. Sonar otra, o abrir otra partida, corta la anterior (si no, la voz de la partida vieja seguiria sonando sobre la nueva).
 // `fabrica` crea el audio (en la pagina, new Audio); un audio que no se puede crear o reproducir (el navegador lo bloquea) no tumba la reproduccion: se queda sin voz.
-export function crearReproductorDeVoz(fabrica = (src) => new Audio(src)) {
+export function crearReproductorDeVoz(fabrica = (src) => new Audio(src), { separado = false } = {}) {
   let actual = null;
-  const detener = () => { try { actual?.pause(); } catch { /* ya estaba parado */ } actual = null; };
+  let contexto = null, fuente = null, canal = null;
+  const detener = () => { try { actual?.pause(); fuente?.disconnect(); } catch { /* ya estaba parado */ } actual = null; fuente = null; };
   const sonar = (src, vel = 1) => {
     detener();
     try {
       actual = fabrica(src);
+      if (separado) {
+        const AC = globalThis.AudioContext ?? globalThis.webkitAudioContext;
+        contexto ??= new AC();
+        if (!canal) { canal = contexto.createStereoPanner(); canal.pan.value = -1; canal.connect(contexto.destination); }
+        fuente = contexto.createMediaElementSource(actual); fuente.connect(canal);
+        contexto.resume()?.catch?.(() => {});
+      }
       actual.playbackRate = vel;
       actual.play()?.catch?.(() => {});
     } catch { actual = null; }
@@ -84,6 +92,7 @@ export function leerParametros(search) {
     formato: FORMATOS_PAGINA.includes(q.get('formato')) ? q.get('formato') : '9x16',
     camara: camara !== null && camara >= 0 && camara <= 9 ? camara : null, // null = el valor por defecto del juego (lineas.js)
     sonido: q.get('sonido') !== '0' && q.get('sonido') !== 'false',
+    audioSeparado: q.get('audio') === 'separado', // voz izquierda, efectos derecha; solo para la maestra de OBS
     vel: Number.isFinite(vel) && vel > 0 ? Math.min(8, Math.max(0.25, vel)) : 1,
     razon: bandera(q.get('razon')),
     auto,
@@ -171,7 +180,7 @@ export function marcarTiempos(beats, voz, vel = 1) {
 
 // Cada juego se publica en DOS partes (decidido el 17 de octubre de 2026): dos clips de rondas contiguos (`ronda=A&hasta=B` y `ronda=C&hasta=D`) con la duracion mas pareja que permiten las
 // rondas enteras. El final de la partida cae en la segunda. Con una sola ronda no hay como partir (null). Con voz (voz.json) usa lo que dura cada audio.
-export function dividirEnDos(beats, voz = null) {
+export function dividirEnDos(beats, voz = null, corteTras = null) {
   if (!Array.isArray(beats) || !beats.length) return null;
   const manos = [...new Set(beats.map((b) => b.mano))];
   if (manos.length < 2) return null;
@@ -183,6 +192,11 @@ export function dividirEnDos(beats, voz = null) {
     acumulado += ms.get(manos[k - 1]);
     const dif = Math.abs(acumulado - (total - acumulado));
     if (dif < mejor.dif) mejor = { k, dif };
+  }
+  if (corteTras !== null) {
+    const indice = manos.indexOf(corteTras);
+    if (!Number.isInteger(corteTras) || indice < 0 || indice === manos.length - 1) throw new Error('El corte editorial debe ser una unidad existente anterior a la última.');
+    mejor.k = indice + 1;
   }
   const suma = (desde, hasta) => manos.slice(desde, hasta).reduce((s, m) => s + ms.get(m), 0);
   return {

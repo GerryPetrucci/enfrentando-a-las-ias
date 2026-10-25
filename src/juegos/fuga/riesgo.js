@@ -2,6 +2,7 @@
 // nada (los dados ya estan en el estado) y no modifica el estado. Los multiplicadores viven en constantes.js (K).
 
 import { K } from './constantes.js';
+import { modificadoresTrama } from './trama.js';
 
 // Metodos que se complementan bajan el fallo de los dos; repetir el mismo estorba; esperar no combina con nada.
 function combo(a, b) {
@@ -29,5 +30,6 @@ export function probFallo(sit, jugadas, i, E) {
   f *= 1 - K.cohesion * E.cohesion;
   if ((E.objeto[i]?.restan ?? 0) > 0) f *= K.objeto;
   f += K.herida * E.heridas[i];
+  f += modificadoresTrama(E, i, yo).reduce((s, m) => s + m.delta, 0);
   return Math.min(K.maxFallo, Math.max(K.minFallo, f));
 }

@@ -16,6 +16,7 @@
 // Sin DOM ni `window`: lo importan la mesa (navegador), el generador de voz y las pruebas (Node).
 
 import { nombrar, duracion } from './linea-comun.js';
+import { ambientesDePartida } from './ambiente-fuga.js';
 
 export const RONDAS_TOPE = 9; // el tope de situaciones del motor (RONDAS en src/juegos/fuga/constantes.js): una prueba los compara
 export const JUGADORES_TOPE = 2;
@@ -40,6 +41,7 @@ export function construirLineaDeTiempo(partida) {
   const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
   if (!rondas.length) return [];
   const beats = [];
+  const ambientes = ambientesDePartida(partida);
   let puntos = [0, 0], heridas = [0, 0], salieron = [false, false]; // lo de antes de la situacion en curso
 
   rondas.forEach((r, i) => {
@@ -65,6 +67,8 @@ export function construirLineaDeTiempo(partida) {
     const estadoAntes = { tipo: 'estado', alarma: r.oculto?.alarmaAntes ?? 0, cohesion: r.oculto?.cohesionAntes ?? 0, puntos: [...puntos], libres: libresAntes, heridas: [...heridas], salieron: [...salieron] };
     const estadoDespues = { tipo: 'estado', alarma: r.oculto?.alarma ?? 0, cohesion: r.oculto?.cohesion ?? 0, puntos: puntosDespues, libres: SEATS.map((s) => libresAntes[s] && resultados[s] !== 'cayo' && !salen[s]), heridas: heridasDespues, salieron: salieronDespues };
     const medidor = { tipo: 'medidor', alarma: estadoDespues.alarma, cohesion: estadoDespues.cohesion };
+    if (ambientes[i]?.antes) estadoAntes.ambiente = ambientes[i].antes;
+    if (ambientes[i]?.despues) estadoDespues.ambiente = ambientes[i].despues;
     const razones = { tipo: 'razones', razones: SEATS.map((s) => r.razones?.[s] ?? null) };
 
     crear('apertura', { lineas: lineasDe('apertura'), pasos: [{ tipo: 'armar', situacion: r.situacion?.id ?? null, fase: r.situacion?.fase ?? null, titulo: r.situacion?.titulo ?? '', corto: r.situacion?.corto ?? '' }, estadoAntes] });

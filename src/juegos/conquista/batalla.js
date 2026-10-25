@@ -37,7 +37,8 @@ function lider(b, dueno) {
 
 const masNumeroso = (pila) => { let t = 0; for (let u = 1; u < pila.length; u++) if (pila[u] > pila[t]) t = u; return t; };
 
-// -> { fichas (de mayor a menor fuerza: { i, k, n, f, defensor, ataca, miembros, uni }), empate, ganador (ficha o null), fraccion, supervivientes ([{ k, pila }] del ganador), perdidas, todos }
+// -> { fichas (de mayor a menor fuerza: { i, k, n, f, defensor, ataca, miembros, uni }), empate, ganador (ficha o null), fraccion, supervivientes ([{ k, pila }] del ganador), perdidas, bajas, todos }
+// `perdidas` son las del duelo de los dos mas fuertes (un tercer bando eliminado sin pelear no cuenta); `bajas` son TODAS las unidades que desaparecen (todos - supervivientes).
 // Gana el bando de mayor fuerza y conserva `unidades x (1 - fuerza del segundo / la suya)` de cada pila (al menos 1 unidad en total, y 1 del dueno si el bando es el suyo); los demas bandos se eliminan.
 // Si llegan 3 o mas pelean los dos mas fuertes. Un empate de los dos primeros no tiene ganador: lo resuelve quien llama (el defensor resiste con 1 unidad o la region queda libre).
 export function resolverBatalla(bandos, contexto) {
@@ -46,7 +47,7 @@ export function resolverBatalla(bandos, contexto) {
   fichas.sort((a, c) => c.f - a.f || Number(c.defensor) - Number(a.defensor) || a.k - c.k);
   const todos = fichas.reduce((s, x) => s + x.n, 0);
   const [a, b] = fichas;
-  if (!b || a.f === b.f) return { fichas, empate: true, ganador: null, fraccion: 0, supervivientes: [], perdidas: todos, todos };
+  if (!b || a.f === b.f) return { fichas, empate: true, ganador: null, fraccion: 0, supervivientes: [], perdidas: todos, bajas: todos, todos };
   const fraccion = 1 - b.f / a.f;
   // El 1e-9 evita perder una unidad por el redondeo de los decimales (12 x (1 - 4.25 / 10.2) da 6.999999999999999 en vez de 7).
   const supervivientes = a.miembros.map((m) => ({ k: m.k, pila: m.pila.map((n) => Math.floor(n * fraccion + 1e-9)) }));
@@ -58,5 +59,5 @@ export function resolverBatalla(bandos, contexto) {
   const dueno = a.defensor ? a.miembros.find((m) => m.k === contexto.dueno) : null;
   if (dueno && sumaPila(dueno.pila) > 0 && sumaPila(supervivientes.find((x) => x.k === dueno.k).pila) === 0) dejaUna(dueno); // el dueno que gana no se queda sin guarnicion
   const quedan = supervivientes.reduce((s, x) => s + sumaPila(x.pila), 0);
-  return { fichas, empate: false, ganador: a, fraccion, supervivientes, perdidas: a.n - quedan + b.n, todos };
+  return { fichas, empate: false, ganador: a, fraccion, supervivientes, perdidas: a.n - quedan + b.n, bajas: todos - quedan, todos };
 }

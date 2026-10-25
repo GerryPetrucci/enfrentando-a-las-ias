@@ -17,6 +17,9 @@ import { jugarTD } from './ayudas-td.js';
 import { jugarSub } from './ayudas-sub.js';
 import { jugarFuga } from './ayudas-fuga.js';
 import { jugarConqBots, partidasDeEjemplo, ESCENARIOS } from './ayudas-conq.js';
+import { jugarLobo } from './ayudas-lobo.js';
+import { leemeDe } from '../../../herramientas/paquete.mjs';
+import { fechaDe } from '../../../herramientas/nombres.mjs';
 
 const ENLACE = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const PARTIDAS = {
@@ -30,6 +33,7 @@ async function paqueteDe(id, partida, extra = {}) {
 }
 const textosPlanos = (pieza) => [pieza.textos.tiktok, pieza.textos.instagram, pieza.textos.facebook, pieza.textos.x, pieza.textos.youtube.titulo, pieza.textos.youtube.descripcion, pieza.comentarioFijado ?? ''];
 const params = (url) => Object.fromEntries(new URL(url, 'http://x/').searchParams);
+const sinGancho = (p) => p.tipo !== 'gancho' && p.tipo !== 'gancho-imagen'; // las partes y los clips; el gancho (de video o de imagen) tiene sus propias pruebas
 
 test('destacadasDe da, para cada uno de los 7 juegos, las unidades de sus mejores momentos (las mismas que usan sus beats)', async () => {
   for (const [id, partida] of Object.entries(PARTIDAS)) {
@@ -91,7 +95,7 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
       for (const [a, z] of ocupadas) assert.ok(c.grabar.hasta < a || c.grabar.desde > z, `${id}: ${c.id} se encima con otro clip`);
       ocupadas.push([c.grabar.desde, c.grabar.hasta]);
     }
-    for (const pieza of paquete.piezas.filter((p) => p.tipo !== 'gancho')) { // el gancho tiene su propia direccion (gancho=1&cortes=...): su prueba esta mas abajo
+    for (const pieza of paquete.piezas.filter(sinGancho)) { // el gancho tiene su propia direccion (gancho=1&cortes=...; el de imagen, la de su pagina): su prueba esta mas abajo
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
       assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar, q.cierre], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1', '1'], `${id}: ${pieza.id} termina con el cierre`);
@@ -125,13 +129,13 @@ test('un formato que no es la hoja se avisa: el LEEME y el recorte suponen la ho
 test('la direccion de cada pieza lleva el numero de partida del archivo (una serie trae varias) y el formato que se pida', async () => {
   const { paquete } = await paqueteDe('conquista', PARTIDAS.conquista, { partidaNumero: 2, totalPartidas: 3, formato: '16x9' });
   assert.ok(paquete.piezas.length >= 2);
-  for (const p of paquete.piezas) assert.deepEqual([params(p.grabar.url).partida, params(p.grabar.url).formato], ['2', '16x9'], p.id);
+  for (const p of paquete.piezas.filter((x) => x.tipo !== 'gancho-imagen')) assert.deepEqual([params(p.grabar.url).partida, params(p.grabar.url).formato], ['2', '16x9'], p.id); // una imagen no se graba: no lleva partida ni hoja
 });
 
 test('cada pieza trae lo que dura todo lo grabado: margen de negro + fundido + la pieza + fundido + cola, que es lo que se espera ante OBS', async () => {
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida);
-    for (const p of paquete.piezas) {
+    for (const p of paquete.piezas.filter((x) => x.tipo !== 'gancho-imagen')) { // una imagen no se graba: no tiene plan
       assert.deepEqual(p.grabar.plan, planDeGrabacion(p.grabar.ms), `${id} ${p.id}: el plan de grabacion de la pieza`);
       assert.equal(p.grabar.plan.totalMs - p.grabar.ms, 5000, `${id} ${p.id}: 2 s + 0.5 s + 0.5 s + 2 s de margenes y fundidos`);
       assert.equal(p.grabar.plan.contenidoMs, p.grabar.ms, `${id} ${p.id}: el contenido es la pieza`);
@@ -152,7 +156,7 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida);
     assert.ok(paquete.piezas.length >= 2, id); // las dos partes (una partida muy corta puede no tener clips: el final no se puede adelantar)
-    for (const p of paquete.piezas.filter((x) => x.tipo !== 'gancho')) { // los ganchos tienen sus propios textos: su prueba esta mas abajo
+    for (const p of paquete.piezas.filter(sinGancho)) { // los ganchos tienen sus propios textos: su prueba esta mas abajo
       const t = p.textos;
       for (const red of ['tiktok', 'instagram', 'facebook', 'x']) assert.ok(typeof t[red] === 'string' && t[red].length > 0, `${id} ${p.id} ${red}`);
       assert.ok(t.facebook.includes(ENLACE), `${id} ${p.id}: el texto de Facebook lleva el enlace al marcador (una pagina si puede ponerlo)`);
@@ -238,7 +242,10 @@ test('una parte que pasa de 3 minutos (el limite de los Shorts y de los Reels re
   assert.match(largo.advertencias.join(' '), /parte 1 dura \d+:\d\d: pasa de 3 minutos/);
   // La partida de ejemplo mas corta (una de 30 turnos con mucha actividad dura cerca de 3 minutos por parte; una que termina antes, menos).
   const corta = (await partidasDeEjemplo()).reduce((m, p) => (p.rondas.length < m.rondas.length ? p : m));
-  const corto = (await paqueteDe('conquista', corta)).paquete;
+  // Este caso verifica el umbral del paquete, no la longitud de una estrategia
+  // de bots (puede cambiar al incorporar eventos y reglas nuevas).
+  const beatsCortos = (await armarLinea('conquista', corta)).map((b) => ({ ...b, minMs: 500 }));
+  const corto = construirPaquete({ partida: corta, beats: beatsCortos, archivo: 'pruebas/corta.json' });
   assert.ok(corto.piezas.every((p) => p.grabar.ms <= 180000), corto.piezas.map((p) => `${p.id} ${Math.round(p.grabar.ms / 1000)}s`).join(' '));
   assert.doesNotMatch(corto.advertencias.join(' '), /3 minutos/);
 });
@@ -328,10 +335,63 @@ test('el texto de un gancho, en cada red: «Próximamente», la parte que anunci
   }
 });
 
-test('un juego del que no se pueden sacar al menos 2 cortes buenos para una parte no inventa su gancho y lo advierte', async () => {
+test('un juego del que no se pueden sacar al menos 2 cortes buenos para una parte no inventa cortes: su gancho en video no existe, se advierte y el gancho es una IMAGEN', async () => {
   const { paquete, beats } = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: [] });
   assert.equal(paquete.piezas.filter((p) => p.tipo === 'gancho').length, 0);
-  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 1/i);
-  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 2/i);
+  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 1.*IMAGEN/i);
+  assert.match(paquete.advertencias.join('\n'), /gancho de la parte 2.*IMAGEN/i);
   assert.ok(paquete.piezas.length >= 2 && beats.length > 0, 'las partes siguen saliendo');
+  assert.deepEqual(paquete.piezas.filter((p) => p.tipo === 'gancho-imagen').map((p) => p.id), ['gancho-1', 'gancho-2'], 'regla: ninguna parte sale sin gancho');
+});
+
+// ---- el gancho en IMAGEN (gancho-imagen.js): regla del 25 de octubre de 2026, ninguna parte se queda sin gancho ----
+test('Lobo no tiene momentos con puntos para cortes: cada parte lleva un gancho en imagen con el numero de juego, el de parte y su arte, ordenado antes de su parte y sin plan de grabacion', async () => {
+  const partida = jugarLobo(3, 8);
+  const beats = await armarLinea('lobo', partida), destacadas = await destacadasDe('lobo', partida, 10);
+  const paquete = construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 7, enlace: ENLACE });
+  assert.equal(paquete.piezas.filter((p) => p.tipo === 'gancho').length, 0, 'Lobo no puede tener gancho en video');
+  const imagenes = paquete.piezas.filter((p) => p.tipo === 'gancho-imagen');
+  assert.deepEqual(imagenes.map((p) => [p.id, p.parte]), [['gancho-1', 1], ['gancho-2', 2]]);
+  for (const g of imagenes) {
+    assert.equal(g.grabar.plan, null, 'una imagen no se graba');
+    assert.deepEqual([g.grabar.ms, g.grabar.desde, g.grabar.hasta], [0, null, null]);
+    assert.deepEqual(params(g.grabar.url), { juego: 'lobo', numero: '7', parte: String(g.parte), de: '2', formato: '9x16' }, 'la direccion de su pagina lleva el jN');
+    assert.match(g.grabar.url, /^gancho-imagen\.html\?/);
+    assert.match(g.grabar.nota, new RegExp(`Juego 7 · Parte ${g.parte} de 2.*con el arte del juego`));
+    assert.equal(g.comentarioFijado, null);
+    assert.match(g.publicacion.titulo, new RegExp(`Próximamente · Parte ${g.parte}`));
+    assert.match(g.publicacion.titulo, /8 IAs frente a frente/, 'con ocho nombres se dice cuantos son, no se corta la lista');
+    for (const [red, texto] of [['tiktok', g.textos.tiktok], ['instagram', g.textos.instagram], ['facebook', g.textos.facebook], ['x', g.textos.x], ['titulo de YouTube', g.textos.youtube.titulo]]) {
+      assert.match(texto, /\[GANCHO: .+\]/, `${red}: va marcado`);
+      assert.match(texto.replace(/\[GANCHO: .+?\]/, ''), /Próximamente/i, red);
+    }
+    assert.ok(g.textos.tiktok.includes(`Lobo en la aldea · Juego 7 · Parte ${g.parte} de 2`), 'el texto dice «Juego 7», no «Partida»');
+    assert.ok(g.textos.x.length <= LIMITES.x && g.textos.youtube.titulo.length <= LIMITES.youtubeTitulo);
+    assert.doesNotMatch(textosPlanos(g).join('\n'), /Puntos:|Orden final:|En esta partida|ganó|terminó en empate|privad/i, 'un gancho nunca adelanta el resultado');
+  }
+  const orden = paquete.ordenPublicacion;
+  assert.ok(orden.indexOf('gancho-1') < orden.indexOf('parte-1') && orden.indexOf('gancho-2') < orden.indexOf('parte-2'), `cada gancho va antes de su parte: ${orden}`);
+  assert.equal(orden.indexOf('gancho-1'), 0);
+  assert.equal(paquete.advertencias.filter((a) => /IMAGEN/.test(a)).length, 2);
+  assert.equal(construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 3 }).piezas.find((p) => p.id === 'gancho-1').textos.tiktok.includes('Juego 3'), true, 'sin jN se usa el numero de partida');
+});
+
+test('el LEEME de un paquete con ganchos en imagen los lista como imagenes ya generadas (nombres, comando para regenerar, vista previa) y no los cuenta entre lo que se graba', async () => {
+  const partida = jugarLobo(3, 8);
+  const beats = await armarLinea('lobo', partida), destacadas = await destacadasDe('lobo', partida, 10);
+  const paquete = construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 7, enlace: ENLACE });
+  const piezasGrabables = paquete.piezas.filter((p) => p.tipo !== 'gancho-imagen').length;
+  const leeme = leemeDe(paquete, { archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 7, enlace: ENLACE, fecha: fechaDe('2026-10-25-lobo.json'), carpetaSerie: 'grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-1' });
+  assert.match(leeme, new RegExp(`## Paso 1 · Grabar las ${piezasGrabables} piezas \\(y subir las 2 imágenes de gancho, que no se graban\\)`));
+  assert.match(leeme, /### gancho-1 · Lobo en la aldea · Gancho de la parte 1 \(imagen\)/);
+  assert.match(leeme, /imagen fija\*\*: no se graba con OBS/);
+  assert.ok(leeme.includes('j7_hk1_9x16_fb-ig-tk-yt.png → Facebook, Instagram, TikTok, YouTube') && leeme.includes('j7_hk2_16x9_fb-x-yt.png → Facebook, X, YouTube'));
+  assert.ok(leeme.includes('node herramientas/gancho-imagen.mjs --juego=lobo --numero=7 --parte=2 --de=2 "--salida=grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-1/por-subir/j7"'));
+  assert.ok(leeme.includes('http://localhost:4321/gancho-imagen.html?juego=lobo&numero=7&parte=1&de=2&formato=9x16'));
+  assert.match(leeme, /Cada imagen de gancho se ve completa/);
+  assert.ok(leeme.indexOf('### gancho-1') < leeme.indexOf('### parte-1') && leeme.indexOf('### gancho-2') < leeme.indexOf('### parte-2'));
+  assert.ok(!/gancho-1[^\n]*\n- Dirección para abrir y grabar/.test(leeme), 'una imagen no tiene direccion de OBS');
+  // un paquete sin imagenes no cambia
+  const normal = (await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40) })).paquete;
+  if (!normal.piezas.some((p) => p.tipo === 'gancho-imagen')) assert.doesNotMatch(leemeDe(normal, { archivo: 'x', juegoNumero: 1, carpetaSerie: 's' }), /imagen/i);
 });

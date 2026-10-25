@@ -7,6 +7,14 @@
 //   hashtags   de 2 a 4, solo del juego (los de modelos se agregan en cada paquete segun quien juega)
 
 export const TEXTOS_JUEGO = {
+  lobo: {
+    nombre: 'Lobo en la aldea', categoria: 'Identidad oculta',
+    regla: 'Ocho o doce IAs tienen roles secretos: los lobos atacan de noche y la aldea debate y vota de día.',
+    gana: 'La aldea gana si elimina a los lobos; los lobos, si eliminan al resto. Los enamorados ganan un bono si ambos sobreviven.',
+    mide: 'cómo ocultan su identidad las IAs y a quién creen cuando llega la votación',
+    intro: 'Lobo en la aldea: las IAs ocultan sus roles. De noche atacan los lobos; de día la aldea debate y vota. ¿En quién confiarán?',
+    hashtags: ['#LoboEnLaAldea', '#DeducciónSocial'],
+  },
   dilema: {
     nombre: 'Dilema del Prisionero Negociado', categoria: 'Traición y confianza',
     regla: 'En cada ronda dos IAs eligen cooperar o traicionar y prometen en público lo que harán después.',

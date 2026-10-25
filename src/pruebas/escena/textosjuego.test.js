@@ -16,8 +16,9 @@ import tripledado from '../../juegos/tripledado.js';
 import subasta from '../../juegos/subasta.js';
 import fuga from '../../juegos/fuga.js';
 import conquista from '../../juegos/conquista.js';
+import lobo from '../../juegos/lobo.js';
 
-const MOTORES = { dilema, dudaapuesta, mayormenor, solitario, tripledado, subasta, fuga, conquista };
+const MOTORES = { dilema, dudaapuesta, mayormenor, solitario, tripledado, subasta, fuga, conquista, lobo };
 const sinAcentos = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
 const CAMPOS = ['nombre', 'categoria', 'regla', 'gana', 'mide', 'intro'];
 

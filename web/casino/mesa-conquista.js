@@ -1,3 +1,4 @@
+import { arteListo } from './arte-conquista.js';
 // La mesa de la escena de la Guerra de territorios (navegador): dibuja y anima los beats de linea-de-tiempo-conquista.js sobre el mapa de pixel art. Aqui no se decide nada del juego:
 // cada beat trae lo que hay que mostrar (fuerzas de las tarjetas, flechas, privados que se revelan...) y el mapa sale de lo guardado en la partida. Lo comun de las mesas vive en
 // mesa-base.js; el dibujo del mapa en mapa-dibujo.js. Se verifica mirando (herramientas/capturar-escena.mjs).
@@ -8,15 +9,16 @@
 
 import { colocarConquista } from './layout-conquista.js';
 import { leerMapa, paletaDe, NOMBRES_BIOMA, TURNOS_TOPE, TERRENO, RECURSOS, multiplicadorDeArmas, multiplicadorDeFortaleza, tropasDeReino, LETRAS_DE_UNIDAD } from './conquista-datos.js';
-import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarEstallido, pintarContorno, pintarIcono, pintarCorona, pintarLeyendaUnidades, colorSolido, COLOR_DE_TIPO } from './mapa-dibujo.js';
+import { geometriaDelMapa, centroDeRegion, pintarTerreno, pintarReinos, pintarFichas, pintarFlecha, pintarContorno, pintarIcono, pintarCorona, pintarLeyendaUnidades, colorSolido, COLOR_DE_TIPO } from './mapa-dibujo.js';
 import { f2, tropas } from './linea-de-tiempo-conquista.js';
 import { nombreDeReino } from './reinos-conquista.js';
-import { FEED, msVisibleDelFeed } from './feed-conquista.js';
+import { FEED, msVisibleDelFeed, colaDeFeed } from './feed-conquista.js';
 import { estiloJugador, esc } from './kit.js';
 import { colorDe, franjasDe } from '../paleta.js';
 import { MesaBase, el, poner } from './mesa-base.js';
 
 const MAX_FEED = 7;
+const ZOOM_BATALLA = 3.4, ZOOM_MARAVILLA = 3.8; // cuanto se acerca el mapa al territorio disputado o a la region de la Maravilla (prefers-reduced-motion: no se anima)
 const SVG = (cuerpo) => `<svg class="ico" viewBox="0 0 24 24">${cuerpo}</svg>`;
 const ICONOS = {
   espada: SVG('<path d="M5 19L19 5M19 19L5 5"/>'),
@@ -44,6 +46,7 @@ export class Mesa extends MesaBase {
     this.colores = (partida.jugadores ?? []).map((j) => franjasDe(j.id) ?? colorDe(j.id, j.color));
     this.turno = 1; this.flechasPintadas = 0;
     this.armar();
+    arteListo.then(()=>{if(this.raiz.isConnected && this.estadoMapa)this.pintarMapa(this.estadoMapa);});
   }
 
   armar() {
@@ -52,6 +55,9 @@ export class Mesa extends MesaBase {
     this.raiz.classList.add('mesa-conquista');
     const lienzo = (clase) => { const c = Object.assign(document.createElement('canvas'), { width: L.ancho, height: L.alto, className: `lienzo ${clase}` }); return c; };
     this.cTerreno = lienzo('l-terreno'); this.cReinos = lienzo('l-reinos'); this.cFlechas = lienzo('l-flechas');
+    // El mapa (los 3 lienzos) va dentro de un envoltorio: el zoom de una batalla o de la Maravilla escala ESTE envoltorio (aplicarZoom/quitarZoomMapa), nunca el resto de la pantalla.
+    this.mapaZoom = el('fijo mapa-zoom'); poner(this.mapaZoom, { x: 0, y: 0, ancho: L.ancho, alto: L.alto }); this.mapaZoom.append(this.cTerreno, this.cReinos, this.cFlechas);
+    this.mapaMarco = el('fijo mapa-marco'); poner(this.mapaMarco, { x:0, y:0, ancho:L.ancho, alto:L.alto }); this.mapaMarco.append(this.mapaZoom);
     this.cMarcador = Object.assign(document.createElement('canvas'), { width: L.marcador.ancho, height: L.marcador.alto, className: 'lienzo l-marcador' });
     poner(this.cMarcador, L.marcador); this.cMarcador.style.width = `${L.marcador.ancho}px`; this.cMarcador.style.height = `${L.marcador.alto}px`;
     pintarTerreno(this.cTerreno.getContext('2d'), this.mapa, this.geom, paletaDe(this.mapa.bioma));
@@ -59,10 +65,10 @@ export class Mesa extends MesaBase {
     this.feedEl = el('fijo feed-conq'); poner(this.feedEl, L.feed);
     this.cartelEl = el('fijo cartel-conq'); poner(this.cartelEl, L.cartel);
     this.flashEl = el('fijo flash-conq'); poner(this.flashEl, L.flashback);
-    this.tarjetaEl = el('fijo tarjeta-conq'); poner(this.tarjetaEl, L.tarjeta);
-    this.vsEl = el('fijo tarjeta-conq tarjeta-vs'); poner(this.vsEl, L.vs);
+    this.tarjetaEl = el('fijo tarjeta-conq zoom-tarjeta'); poner(this.tarjetaEl, L.tarjeta);
+    this.vsEl = el('fijo tarjeta-conq tarjeta-vs zoom-tarjeta'); poner(this.vsEl, L.vs);
     this.finalEl = el('fijo panel-conq'); poner(this.finalEl, L.panelFinal);
-    this.raiz.append(this.cTerreno, this.cReinos, this.cFlechas, this.vela, this.cMarcador, this.feedEl, this.cabecera, this.etiqueta, this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.subtitulos, this.capa);
+    this.raiz.append(this.mapaMarco, this.vela, this.cMarcador, this.feedEl, this.cabecera, this.etiqueta, this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.subtitulos, this.capa);
   }
 
   // ---- ayudas ----
@@ -74,6 +80,56 @@ export class Mesa extends MesaBase {
   opacidad(nodo) { return Number(getComputedStyle(nodo).opacity); }
   mostrar(nodo, ms = 350, frames = [{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'translateY(0)' }]) { nodo.getAnimations().forEach((x) => x.cancel()); nodo.style.opacity = 1; this.anim(nodo, frames, { duration: ms, easing: 'ease-out' }); }
   ocultar(nodo, ms = 250) { nodo.getAnimations().forEach((x) => x.cancel()); if (this.opacidad(nodo) < 0.01) { nodo.style.opacity = 0; return; } const a = this.anim(nodo, [{ opacity: 1 }, { opacity: 0 }], { duration: ms, fill: 'forwards' }); a.onfinish = () => { nodo.style.opacity = 0; a.cancel(); }; if (this.rapido) nodo.style.opacity = 0; }
+
+  // ---- zoom al mapa (batalla o Maravilla): acerca solo el envoltorio del mapa (mapaZoom) y lo recorta dentro de la ventana grande de L.zoomVentana (nunca el resto de piezas).
+  // `destino` queda centrado en esa ventana (translate+scale con origen 0 0, nunca scale(origin=destino): asi no se sale del marco). Respeta prefers-reduced-motion (sin animar). ----
+  reducido() { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  transformDeZoom(destino, factor) {
+    const L = this.L, v = L.zoomVentana ?? { x: 0, y: 0, ancho: L.ancho, alto: L.alto };
+    const cx = v.x + v.ancho / 2, cy = v.y + v.alto / 2;
+    const tx = cx - factor * destino.x, ty = cy - factor * destino.y;
+    return `translate(${tx}px, ${ty}px) scale(${factor})`;
+  }
+  clipDeVentana() {
+    const L = this.L, v = L.zoomVentana ?? { x: 0, y: 0, ancho: L.ancho, alto: L.alto };
+    return `inset(${v.y}px ${Math.max(0, L.ancho - v.x - v.ancho)}px ${Math.max(0, L.alto - v.y - v.alto)}px ${v.x}px)`;
+  }
+  aplicarZoom(destino, factor) {
+    if (!destino || !this.mapaZoom) return;
+    this.mapaZoom.getAnimations().forEach((a) => a.cancel());
+    this.mapaZoom.style.transformOrigin = '0 0';
+    this.mapaMarco.style.clipPath = this.clipDeVentana();
+    const desde = this.zoomTransform ?? 'scale(1)', destinoT = this.transformDeZoom(destino, factor);
+    this.zoomTransform = destinoT;
+    if (this.reducido() || this.rapido) { this.mapaZoom.style.transform = destinoT; return; }
+    this.anim(this.mapaZoom, [{ transform: desde }, { transform: destinoT }], { duration: 650, easing: 'ease-out', fill: 'forwards' });
+  }
+  quitarZoomMapa() {
+    this.destelloEl?.getAnimations().forEach(a=>a.cancel()); if(this.destelloEl) this.destelloEl.style.opacity=0;
+    if (!this.mapaZoom) return;
+    this.mapaZoom.getAnimations().forEach((a) => a.cancel());
+    const desde = this.zoomTransform ?? 'scale(1)';
+    this.zoomTransform = 'none';
+    if (this.reducido() || this.rapido || desde === 'none') { this.mapaZoom.style.transform = 'none'; this.mapaMarco.style.clipPath = 'none'; return; }
+    const a = this.anim(this.mapaZoom, [{ transform: desde }, { transform: 'scale(1)' }], { duration: 450, easing: 'ease-in', fill: 'forwards' });
+    a.onfinish = () => { this.mapaZoom.style.transform = 'none'; this.mapaMarco.style.clipPath = 'none'; a.cancel(); };
+  }
+  // Al pausar, reanudar o cambiar de beat no debe quedar nada del zoom anterior: se limpia al instante, sin animar (igual que el resto de limpiarTurno).
+  restablecerZoomInstante() { if (!this.mapaZoom) return; this.mapaZoom.getAnimations().forEach((a) => a.cancel()); this.mapaZoom.style.transform = 'none'; this.mapaMarco.style.clipPath = 'none'; this.zoomTransform = 'none'; }
+  // Cabecera, aviso, marcador, feed y subtitulos se ocultan mientras dura el zoom de una batalla o la Maravilla: solo quedan el zoom y la tarjeta, sobre fondo oscuro (clase cinematica-conq).
+  ocultarUIDeMapa() {
+    this.enCinematica = true; clearTimeout(this.feedTimer); this.cancelarFeedCola();
+    this.ocultar(this.flashEl, 0);
+    this.raiz.classList.add('cinematica-conq');
+    for (const n of [this.cabecera, this.etiqueta, this.cMarcador, this.feedEl, this.subtitulos]) { n.getAnimations().forEach((a) => a.cancel()); this.anim(n, [{ opacity: Number(getComputedStyle(n).opacity) || 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' }); }
+  }
+  restaurarUIDeMapa() {
+    this.enCinematica=false;
+    this.raiz.classList.remove('cinematica-conq');
+    if(this.feedPendiente){const lista=this.feedPendiente;this.feedPendiente=null;this.agregarFeed(lista);}
+    for (const n of [this.cabecera, this.etiqueta, this.cMarcador]) { n.getAnimations().forEach((a) => a.cancel()); this.anim(n, [{ opacity: 0 }, { opacity: 1 }], { duration: 250, fill: 'forwards' }); n.style.opacity = 1; }
+  }
+  restaurarUIDeMapaInstante() { this.enCinematica=false; this.raiz.classList.remove('cinematica-conq'); for (const n of [this.cabecera, this.etiqueta, this.cMarcador]) { n.getAnimations().forEach((a) => a.cancel()); n.style.opacity = 1; } }
 
   // ---- marcador: una fila por reino con sus recursos, regiones, tropas y honor ----
   pintarMarcador(estado) {
@@ -105,12 +161,18 @@ export class Mesa extends MesaBase {
       g.textAlign = 'right'; g.fillStyle = '#f2f0ed'; g.font = `700 ${Math.round(tam * 0.92)}px ${fam}`;
       g.fillText(`${regiones} reg.`, ancho - 14, y - (compacto ? 0 : fila * 0.14));
       if (vivo && estado.hegemon === s) pintarCorona(g, ancho - 14 - g.measureText(`${regiones} reg.`).width - 22, y - (compacto ? 0 : fila * 0.14) + 1, tam / 30); // el Hegemon: los demas lo atacan con +50 %
-      if (!compacto) { g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = '#9a9aa6'; g.fillText(`${tr} tropas · honor ${estado.honor?.[s] ?? 0}`, ancho - 14, y + fila * 0.26); }
+      // Total de tropas: maza + número; no cambia las letras de composición de unidades.
+      g.font = `600 ${Math.round(tam * 0.62)}px ${fam}`; g.fillStyle = '#9a9aa6';
+      const total = `${tr} · honor ${estado.honor?.[s] ?? 0}`, ty = y + fila * (compacto ? .34 : .26);
+      const tx = ancho - 14 - g.measureText(total).width;
+      pintarIcono(g,'Tropas',tx-tam*.8,ty,tam*.55);
+      g.textAlign='right'; g.fillStyle='#9a9aa6'; g.fillText(total,ancho-14,ty);
       g.globalAlpha = 1;
     }
   }
 
   pintarMapa(estado) {
+    this.estadoMapa=structuredClone(estado);
     this.limpiarLienzo(this.cReinos);
     const g = this.cReinos.getContext('2d');
     pintarReinos(g, this.mapa, this.geom, estado.dueno, this.colores);
@@ -119,49 +181,84 @@ export class Mesa extends MesaBase {
     this.pintarMarcador(estado);
   }
 
-  // ---- feed tipo lobby: maximo 7 avisos, el mas nuevo abajo, los viejos se apagan ----
-  agregarFeed(lista) {
-    for (const e of lista ?? []) {
-      const quien = e.partes.find((p) => typeof p !== 'string');
-      const nodo = el(`it${e.alerta ? ' alerta' : ''}`, `<span class="barra"></span>${ICONOS[e.icono] ?? ICONOS.espada}<span class="txt">${this.partesHTML(e.partes)}</span>`);
-      if (quien) nodo.style.cssText = estiloJugador(this.partida.jugadores[quien.k]);
-      this.feedEl.append(nodo);
-      this.anim(nodo, [{ opacity: 0, transform: 'translateX(-30px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 320, easing: 'ease-out' });
-    }
+  // ---- feed tipo lobby: maximo 7 avisos, el mas nuevo abajo, los viejos se apagan. Se encolan uno detras de otro (colaDeFeed) para que de tiempo a leerlos y para que el
+  // narrador (mostrarSubtitulos) no los adelante antes de que el feed los muestre. ----
+  cancelarFeedCola() { (this.feedCola ?? []).forEach((id) => clearTimeout(id)); this.feedCola = []; }
+  pintarAvisoFeed(e) {
+    const quien = e.partes.find((p) => typeof p !== 'string');
+    const nodo = el(`it${e.alerta ? ' alerta' : ''}`, `<span class="barra"></span>${ICONOS[e.icono] ?? ICONOS.espada}<span class="txt">${this.partesHTML(e.partes)}</span>`);
+    if (quien) nodo.style.cssText = estiloJugador(this.partida.jugadores[quien.k]);
+    this.feedEl.append(nodo);
+    this.anim(nodo, [{ opacity: 0, transform: 'translateX(-30px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 320, easing: 'ease-out' });
     while (this.feedEl.children.length > MAX_FEED) this.feedEl.firstElementChild.remove();
     [...this.feedEl.children].forEach((n, i, todos) => { n.style.opacity = Math.max(0.55, 1 - (todos.length - 1 - i) * 0.07); });
-    if (lista?.length) this.mostrarFeed(lista.length);
+  }
+  agregarFeed(lista) {
+    if (this.enCinematica) { this.feedPendiente=lista; return; }
+    this.cancelarFeedCola();
+    const cola = colaDeFeed(lista);
+    if (!cola.length) return;
+    cola.forEach(({ aviso, demora }, i) => {
+      const mostrar = () => { this.pintarAvisoFeed(aviso); this.mostrarFeed(1); };
+      if (this.rapido || demora <= 0) mostrar();
+      else this.feedCola.push(setTimeout(mostrar, demora / this.vel));
+    });
   }
 
   // El feed no se queda tapando el mapa: aparece con lo nuevo, se apaga solo a los pocos segundos (feed-conquista.js) y con lo siguiente vuelve a entrar sin lo viejo. En las capturas (`rapido`) no se apaga.
   mostrarFeed(nuevos) {
     clearTimeout(this.feedTimer);
-    const f = this.feedEl;
-    if (f.dataset.feed !== 'visible') { f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 1; this.anim(f, [{ opacity: 0 }, { opacity: 1 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-out' }); }
-    f.dataset.feed = 'visible';
+    if (this.enCinematica) return;
+    this.feedEl.dataset.feed = 'visible';
+    for (const n of [this.feedEl, this.subtitulos]) {
+      n.getAnimations().forEach(a => a.cancel());
+      n.style.opacity = n === this.subtitulos && !n.textContent.trim() ? 0 : 1;
+    }
     if (!this.rapido) this.feedTimer = setTimeout(() => this.apagarFeed(), msVisibleDelFeed(nuevos) / this.vel);
   }
   apagarFeed() {
-    const f = this.feedEl;
-    f.dataset.feed = 'oculto';
-    const a = this.anim(f, [{ opacity: 1 }, { opacity: 0 }], { duration: FEED.FUNDIDO_MS, easing: 'ease-in', fill: 'forwards' });
-    // al terminar el fundido (y por si el navegador no avisa, un poco despues) queda apagado y vacio, salvo que mientras tanto hayan llegado avisos nuevos
-    const fin = () => { if (f.dataset.feed !== 'oculto') return; f.getAnimations().forEach((x) => x.cancel()); f.style.opacity = 0; f.innerHTML = ''; };
-    a.onfinish = fin;
-    if (!this.rapido) setTimeout(fin, (FEED.FUNDIDO_MS + 80) / this.vel);
+    this.feedEl.dataset.feed = 'oculto';
+    for (const n of [this.feedEl, this.subtitulos]) {
+      n.getAnimations().forEach(a => a.cancel());
+      const a = this.anim(n, [{opacity:Number(getComputedStyle(n).opacity)}, {opacity:0}], {duration:FEED.FUNDIDO_MS, fill:'forwards'});
+      a.onfinish = () => { n.style.opacity = 0; a.cancel(); };
+      if (this.rapido) n.style.opacity = 0;
+    }
+  }
+
+  // Todos los callbacks transitorios pertenecen a un beat: no pueden alterar el siguiente.
+  programar(ms, fn) {
+    if (this.rapido) return fn();
+    const id = setTimeout(() => { this.temporizadores?.delete(id); fn(); }, Math.max(0, ms) / this.vel);
+    (this.temporizadores ??= new Set()).add(id);
+  }
+  async ejecutar(beat, ms) {
+    for (const id of this.temporizadores ?? []) clearTimeout(id);
+    this.temporizadores = new Set();
+    this.cancelarFeedCola(); clearTimeout(this.feedTimer); clearTimeout(this.subTimer);
+    this.feedPendiente = null;
+    this.feedEl.innerHTML = ''; this.feedEl.dataset.feed = 'oculto';
+    for (const n of [this.feedEl,this.subtitulos]) { n.getAnimations().forEach(a=>a.cancel()); n.style.opacity=0; }
+    this.destelloEl?.getAnimations().forEach(a=>a.cancel()); if(this.destelloEl) this.destelloEl.style.opacity=0;
+    this.restablecerZoomInstante(); this.restaurarUIDeMapaInstante();
+    await super.ejecutar(beat, ms);
   }
 
   // Quita lo transitorio de la batalla, la traicion o el final (no el feed ni el mapa).
-  ocultarTransitorios() { for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.vela]) this.ocultar(n); }
+  ocultarTransitorios() { for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.vela]) this.ocultar(n); this.restablecerZoomInstante(); this.restaurarUIDeMapaInstante(); }
   limpiarTurno() {
+    this.cancelarFeedCola();
+    clearTimeout(this.subTimer);
     for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.vela, this.cFlechas]) { n.getAnimations().forEach((x) => x.cancel()); }
     for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.finalEl, this.vela]) n.style.opacity = 0;
     this.limpiarLienzo(this.cFlechas); this.cFlechas.style.opacity = 1; this.flechasPintadas = 0;
+    this.restablecerZoomInstante(); this.restaurarUIDeMapaInstante(); // nada de un zoom o una UI oculta de la batalla/Maravilla anterior sigue al cambiar de beat
   }
 
   mostrarEstadoInicial(beat) {
     this.limpiarTurno();
     this.turno = beat.mano;
+    this.cancelarFeedCola();
     clearTimeout(this.feedTimer);
     this.feedEl.getAnimations().forEach((x) => x.cancel());
     this.feedEl.style.opacity = 1; this.feedEl.dataset.feed = ''; this.feedEl.innerHTML = '';
@@ -224,6 +321,7 @@ export class Mesa extends MesaBase {
 
   async mostrarTraicion(beat, ms) {
     this.ocultarTransitorios();
+    this.cartelEl.classList.remove('dorado'); // por si quedo del cartel de la Maravilla (resolver)
     const cartel = beat.pasos.find((p) => p.tipo === 'cartel'), flash = beat.pasos.find((p) => p.tipo === 'flashback');
     this.cartelEl.innerHTML = `<div>${this.nombreHTML(cartel.k)} rompió su pacto con ${this.nombreHTML(cartel.contra)}</div>`;
     this.mostrar(this.cartelEl, 400, [{ opacity: 0, transform: 'scale(.8)' }, { opacity: 1, transform: 'scale(1)' }]);
@@ -266,18 +364,18 @@ export class Mesa extends MesaBase {
     this.ocultarTransitorios();
     const t = beat.pasos.find((p) => p.tipo === 'tarjeta');
     const movs = this.partida.rondas[beat.registro]?.movs ?? [];
-    // el mapa se atenua y se resaltan las dos regiones, con las flechas de quienes atacan y el estallido
+    // zoom suave al territorio disputado y se oculta el resto de la UI fija (cabecera, aviso, marcador): se resaltan las dos regiones, con las flechas de quienes atacan y el estallido
     this.limpiarLienzo(this.cFlechas);
     const g = this.cFlechas.getContext('2d'), destino = this.centro(t.d);
-    this.mostrar(this.vela, 350, [{ opacity: 0 }, { opacity: 1 }]);
+    this.ocultarUIDeMapa();
+    this.aplicarZoom(destino, ZOOM_BATALLA);
     pintarContorno(g, this.mapa, this.geom, t.d, '#ffffff', 5);
     for (const m of movs.filter((x) => x.d === t.d)) { pintarContorno(g, this.mapa, this.geom, m.f, '#e0b25c', 3); const a = this.centro(m.f); if (a && destino) pintarFlecha(g, a, destino, colorSolido(this.colores, m.k), m.n, this.radioFicha()); }
-    if (destino) pintarEstallido(g, destino.x, destino.y, 34);
+    if (destino) this.destelloBatalla(destino);
     this.flechasPintadas = movs.filter((x) => x.d === t.d).length;
-    // la tarjeta va en la mitad del mapa donde NO esta la batalla
-    const abajo = destino ? destino.y < this.L.mapa.y + this.L.mapa.alto / 2 : false;
+    // con la ventana de zoom fija, la tarjeta siempre va en su banda compacta debajo (L.zoomTarjeta): nunca se sale de la zona segura
     const vs = t.variante === 'C', nodo = vs ? this.vsEl : this.tarjetaEl;
-    poner(nodo, vs ? (abajo ? this.L.vsAbajo : this.L.vs) : (abajo ? this.L.tarjetaAbajo : this.L.tarjeta));
+    poner(nodo, this.L.zoomTarjeta);
     const tipo = vs ? 'vs' : 'a', veredicto = `<div class="tc-veredicto${t.resultado === 'captura' ? '' : ' mal'}">${this.htmlVeredicto(t)}</div>`;
     const barra = `<div class="tc-barra">${t.bandos.map((b) => `<i style="${estiloJugador(this.partida.jugadores[b.k])}"></i>`).join('')}</div>`;
     const titulo = `${vs ? 'vs-titulo' : 'tc-titulo'}`;
@@ -292,9 +390,36 @@ export class Mesa extends MesaBase {
     segmentos.forEach((s) => { s.style.flexGrow = 1; });
     this.programar(500, () => segmentos.forEach((s, i) => { s.style.flexGrow = Math.max(0.05, t.bandos[i].f); }));
     const v = nodo.querySelector('.tc-veredicto');
-    this.programar(ms * 0.55, () => { v.style.opacity = 1; if (t.resultado === 'captura') this.sfx.gana(); else this.sfx.pierde(); });
+    const cineMs = Math.min(6500, Math.max(4000, ms - 4500));
+    this.programar(cineMs - 2200, () => { v.style.opacity = 1; if (t.resultado === 'captura') this.sfx.gana(); else this.sfx.pierde(); });
     this.agregarFeed(beat.pasos.find((p) => p.tipo === 'feed')?.lista);
-    await this.esperar(ms * 0.7);
+    // antes de que termine el beat, se deja ver el veredicto con el zoom puesto y luego se vuelve al mapa completo (nunca se queda zoom de una batalla encima de la siguiente); en
+    // capturas (`rapido`) el beat se detiene con el zoom a la vista, para poder revisarlo, y el beat siguiente lo limpia (ocultarTransitorios/limpiarTurno)
+    if (!this.rapido) this.programar(cineMs - 500, () => { this.ocultar(nodo); this.quitarZoomMapa(); this.programar(500, () => { this.actualizarTerritorioDeBatalla(t); this.restaurarUIDeMapa(); }); });
+    await this.esperar(cineMs);
+  }
+
+  actualizarTerritorioDeBatalla(t) {
+    if (!this.estadoMapa || !Number.isInteger(t.d)) return;
+    const e=structuredClone(this.estadoMapa);
+    if(t.resultado==='captura') e.dueno[t.d]=t.ganador;
+    if(e.tropas) e.tropas[t.d]=t.quedan;
+    // La composición completa se actualiza con el cierre guardado; no se adivinan bajas por tipo.
+    delete e.uni;
+    this.pintarMapa(e);
+  }
+
+  // Un destello breve (WebAnimations) en el punto de la batalla, dentro del mapa acercado: se mueve y escala con el zoom porque vive dentro de mapaZoom.
+  destelloBatalla(destino) {
+    if (!this.mapaZoom) return;
+    if (!this.destelloEl) { this.destelloEl = el('destello-conq'); this.mapaZoom.append(this.destelloEl); }
+    const d = this.destelloEl;
+    d.style.left = destino.x+'px'; d.style.top = (destino.y-28)+'px';
+    d.style.opacity=1;
+    d.innerHTML='<svg viewBox="0 0 80 80" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><path d="M14 65L61 14L66 14L66 20L20 68M15 49L32 64M64 65L17 14L12 14L12 20L58 68M63 49L46 64"/></g></svg>';
+    if(this.reducido()){d.style.transform='translate(-50%,-50%)';return;}
+    this.anim(d,[{transform:'translate(-50%,-50%) rotate(-12deg) scale(.8)',opacity:.8},{transform:'translate(-50%,-50%) rotate(10deg) scale(1.1)',opacity:1},{transform:'translate(-50%,-50%) rotate(-12deg) scale(.8)',opacity:.8}],{duration:650,iterations:4,easing:'ease-in-out'});
+    this.programar(2700,()=>{d.style.opacity=0;});
   }
 
   async resolver(beat, ms) {
@@ -317,6 +442,24 @@ export class Mesa extends MesaBase {
         this.mostrar(this.flashEl, 450);
       }
     }
+    // zoom tambien al construir la Maravilla: un cartel dorado sobre la region, con el resto de la UI oculta igual que en una batalla
+    // 2.0.0: resolver puede traer mas de un paso 'maravilla' en el mismo turno (dos reinos la completan en el mismo cierre); se muestran en orden, cada uno con su propio zoom.
+    const maravillas = beat.pasos.filter((p) => p.tipo === 'maravilla');
+    if (maravillas.length) {
+      poner(this.cartelEl, this.L.zoomTarjeta);
+      this.ocultar(this.flashEl, 0);
+      for (const maravilla of maravillas) {
+        this.ocultarUIDeMapa();
+        const centro=this.centro(maravilla.r); this.aplicarZoom({x:centro.x,y:centro.y-this.radioFicha()*2.3}, ZOOM_MARAVILLA);
+        this.cartelEl.classList.add('dorado');
+        this.cartelEl.innerHTML = '<div>' + this.nombreHTML(maravilla.k) + ' construye la Maravilla</div>';
+        this.mostrar(this.cartelEl,400); this.sfx.gana();
+        await this.esperar(4800);
+        this.ocultar(this.cartelEl); this.quitarZoomMapa();
+        await this.esperar(600);
+        this.cartelEl.classList.remove('dorado'); this.restaurarUIDeMapa();
+      }
+    }
     this.agregarFeed(beat.pasos.find((p) => p.tipo === 'feed')?.lista);
     await this.esperar(ms * 0.6);
   }
@@ -324,6 +467,7 @@ export class Mesa extends MesaBase {
   // La ficha de una IA antes del ranking: su nombre, su puesto y sus cinco caracteristicas (las notables resaltadas), en la pantalla del final; cada ficha reemplaza a la anterior.
   async mostrarRasgos(beat, ms) {
     for (const n of [this.cartelEl, this.flashEl, this.tarjetaEl, this.vsEl, this.vela]) this.ocultar(n); // el panel del final lo ocupa la ficha: nada de batalla, traicion ni flashback encima
+    this.restablecerZoomInstante(); this.restaurarUIDeMapaInstante(); this.cartelEl.classList.remove('dorado');
     const r = beat.pasos.find((p) => p.tipo === 'rasgos');
     const reino = nombreDeReino(r.k, this.partida.reinos);
     const filas = r.filas.map((f) => `<div class="rg-fila${f.notable ? ' nota' : ''}"><b>${esc(f.etiqueta)}</b><span>${esc(f.frase)}</span></div>`).join('');
@@ -343,6 +487,15 @@ export class Mesa extends MesaBase {
     if (this.finalEl.scrollHeight > this.finalEl.clientHeight + 1) this.finalEl.classList.add('apretado'); // en vertical la zona segura deja menos alto: el panel se aprieta (letra y espacios mas chicos) antes de cortar los privados
     this.mostrar(this.finalEl, 600);
     await this.esperar(ms * 0.5);
+  }
+
+  // El narrador no puede adelantar lo que el feed todavia no mostro: en vertical los subtitulos entran y se apagan con el mismo fundido y el mismo ciclo que el feed (FEED.FUNDIDO_MS),
+  // en vez del timer propio de MesaBase (msVisibleDeSubtitulo), que no sabe de la cola de avisos encolados.
+  mostrarSubtitulos(beat, ms) {
+    this.pintarSubtitulos(beat);
+    this.subtitulos.style.opacity = 0;
+    const cine = beat.tipo === 'batalla' || beat.pasos?.some(p=>p.tipo==='maravilla');
+    if (!cine && !beat.pasos?.some(p=>p.tipo==='feed' && p.lista?.length)) this.mostrarFeed(1);
   }
 
   // Los subtitulos son lo que se dice del beat (`dicho`: hechos tal cual y frases de contexto en cursiva); con razon=1 la resolucion agrega lo que pensaba cada IA (junto a la consecuencia, nunca antes).

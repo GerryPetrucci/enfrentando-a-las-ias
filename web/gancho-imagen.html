@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gancho en imagen</title>
+<!-- La imagen de «Próximamente» de una parte sin gancho en video (web/casino/gancho-imagen.js). La captura herramientas/gancho-imagen.mjs. Marca del sitio: sitio.css (Barlow Condensed e Inter locales). -->
+<link rel="stylesheet" href="sitio.css">
+<link rel="stylesheet" href="gancho-imagen.css">
+</head>
+<body class="gi-cuerpo">
+<main id="gi" class="gi" aria-label="Próximamente"></main>
+<script type="module">
+  import { modeloDeGanchoImagen, htmlDeGanchoImagen } from './casino/gancho-imagen.js';
+  const q = new URLSearchParams(location.search), entero = (k, defecto) => (q.has(k) ? Number(q.get(k)) : defecto);
+  try {
+    const m = modeloDeGanchoImagen({ juegoId: q.get('juego') || null, juegoNumero: entero('numero', 1), parte: entero('parte', 1), de: entero('de', 2), formato: q.get('formato') || '9x16' });
+    const raiz = document.getElementById('gi');
+    raiz.className = `gi gi-${m.formato}${m.arte ? '' : ' gi-sin-arte'}`;
+    raiz.dataset.formato = m.formato;
+    raiz.dataset.juego = m.juegoId ?? '';
+    raiz.style.cssText = `--ancho-lienzo:${m.ancho}px;--alto-lienzo:${m.alto}px;--zx:${m.zona.x}px;--zy:${m.zona.y}px;--zw:${m.zona.ancho}px;--zh:${m.zona.alto}px;`
+      + (m.arte ? `--gi-fondo:${m.arte.ambiente.fondo};--gi-luz:${m.arte.ambiente.luz};--gi-panel:${m.arte.ambiente.panel};` : '');
+    raiz.innerHTML = htmlDeGanchoImagen(m);
+    await document.fonts.ready;
+    await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+    // Autocomprobacion de la zona segura: cuantos elementos se salen de ella o tienen mas contenido que su caja (texto que desborda). Debe ser 0.
+    const zona = raiz.querySelector('.gi-zona').getBoundingClientRect();
+    raiz.dataset.fuera = String([...raiz.querySelectorAll('.gi-zona *')].filter((e) => {
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && (r.left < zona.left - 1 || r.right > zona.right + 1 || r.top < zona.top - 1 || r.bottom > zona.bottom + 1 || e.scrollWidth > e.clientWidth + 1);
+    }).length);
+    raiz.dataset.lista = '1'; // la herramienta y las pruebas esperan esta marca
+  } catch (err) {
+    document.body.textContent = `No se pudo dibujar: ${err.message}`;
+    document.body.dataset.error = '1';
+  }
+</script>
+</body>
+</html>

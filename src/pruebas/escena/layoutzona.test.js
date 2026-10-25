@@ -1,5 +1,5 @@
 // La zona segura del 9:16 vale para TODOS los juegos: arriba y abajo las redes ponen su propia interfaz (descripcion, comentarios, botones, titulo), asi que nada de lo que dibuja una escena
-// vertical puede salirse de la zona (herramientas/formatos.mjs: arriba 285, abajo 420, izquierda 60, derecha 130). Decidido el 20 de octubre de 2026 al ver que Guerra de territorios ocupaba
+// vertical puede salirse de la zona (herramientas/formatos.mjs: arriba 285, abajo 420, izquierda y derecha 130). Centrado el 23 de octubre de 2026; antes reservaba 60 px a la izquierda. Guerra de territorios ocupaba
 // el lienzo entero. Solo las bandas VS de Guerra van de lado a lado (a lo alto cabe en la zona) y las tarjetas de arranque ya usan la zona.
 //
 //   npm test
@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { colocar } from '../../../web/casino/layout.js';
 import { colocarConquista } from '../../../web/casino/layout-conquista.js';
 import { colocarFuga } from '../../../web/casino/layout-fuga.js';
+import { colocarLobo } from '../../../web/casino/layout-lobo.js';
 import { colocarMayorMenor } from '../../../web/casino/layout-mayormenor.js';
 import { colocarSolitario } from '../../../web/casino/layout-solitario.js';
 import { colocarSubasta } from '../../../web/casino/layout-subasta.js';
@@ -18,6 +19,7 @@ import { CONFIG } from '../../mapa.js';
 
 const MAPAS = Object.values(CONFIG).map((c) => ({ ancho: c.W, alto: c.H, tile: c.T }));
 const JUEGOS = {
+  'lobo': () => [8, 12].map((n) => colocarLobo('9x16', n)),
   'dudaapuesta': () => [colocar('9x16')],
   'conquista': () => MAPAS.map((m) => colocarConquista('9x16', m)),
   'fuga': () => [colocarFuga('9x16')],

@@ -2,7 +2,7 @@
 // (mesa-conquista.js) los ejecuta; aqui no se decide ni se recalcula nada que el motor no haya registrado: las fuerzas de cada tarjeta son las de `registro.combates[].bandos`.
 //
 // Un beat: { id, mano, tipo, registro, asiento, camara, texto, lineas, dicho?, mudas?, minMs, reemplazo, pasos }   (mano es el numero de turno: asi se llama la unidad de un clip en todas las escenas)
-//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (0 a 3, la de mayor importancia primero) | resolucion | rasgos (una ficha por IA, en el orden del
+//   tipo      apertura (solo el turno 1) | ordenes | traicion (una por ruptura del turno) | batalla (todas, en el orden registrado) | resolucion | rasgos (una ficha por IA, en el orden del
 //             ranking: sus cinco caracteristicas, evaluacion-conquista.js) | final (el ranking; los dos solo si la partida termino)
 //   camara    siempre vacia: no hay camara oculta (el publico lo ve todo); lo secreto (los mensajes privados) se RETRASA: se revela con la traicion, el pacto cumplido o el final
 //   lineas    [{ tipo: 'hecho', texto, clave }]: los hechos los escribe el codigo y son siempre verdaderos; `clave` identifica el hecho (las pruebas cuentan que ninguno se pierda ni se repita)
@@ -24,14 +24,15 @@ import { duracion, objetos } from './linea-comun.js';
 import { TURNOS_TOPE, HONOR_ROTURA, NOMBRES_BIOMA, SEQUIA_TURNOS, CARAVANA, HEGEMON_BONO, estadoInicial, leerMapa } from './conquista-datos.js';
 import { crearNarrador } from './narracion-conquista.js';
 import { evaluarPartida, ETIQUETAS } from './evaluacion-conquista.js';
+import { extenderMinMs } from './feed-conquista.js';
 
 export { TURNOS_TOPE };
 export const JUGADORES_TOPE = 5;
 export const CAMARA_POR_DEFECTO = 0;
 // Tiempos minimos a velocidad 1 (sin voz): el turno tranquilo dura 2.5 s, el normal 5 s y el que tiene una batalla decisiva 7.5 s; la voz o la lectura lo alargan si hace falta.
-export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 2000, vs: 4500, resolucion: 1500, rasgos: 3500, final: 8000 };
+export const MIN_MS = { apertura: 4000, ordenes: 1500, traicion: 4000, batalla: 11000, vs: 11000, resolucion: 1500, rasgos: 3500, final: 8000 };
 export const MOTIVOS = { diferencia: 'diferencia menor al 10 %', tres: 'tres bandos', capital: 'cae una capital', ruptura: 'ataque tras romper un pacto' };
-const MAX_TARJETAS = 3, MAX_FLECHAS = 10, MAX_FLECHAS_QUE_NO_ATACAN = 5, MAX_SIN_REVELAR = 3, MOMENTOS_MAX = 6;
+const MAX_FLECHAS = 10, MAX_FLECHAS_QUE_NO_ATACAN = 5, MAX_SIN_REVELAR = 3, MOMENTOS_MAX = 6;
 
 export const f2 = (n) => String(Math.round(Number(n) * 100) / 100);
 export const tropas = (n) => `${n} ${n === 1 ? 'tropa' : 'tropas'}`;
@@ -153,7 +154,7 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     const actividad = eventos.length > 0 || ataques.length > 0 || mensajes.length > 0 || privados.length > 0 || ilegibles.length > 0;
     const ritmo = ritmoDeTurno({ batallas: combates.length, actividad });
     crear(turno, 'ordenes', i, {
-      lineas: [...lineasOrdenes, ...narrado.extras], dicho: narrado.dicho, mudas: narrado.mudas, reemplazo: ilegibles.length > 0, minMs: ritmo.ordenes,
+      lineas: [...lineasOrdenes, ...narrado.extras], dicho: narrado.dicho, mudas: narrado.mudas, reemplazo: ilegibles.length > 0, minMs: extenderMinMs(ritmo.ordenes, feedOrdenes),
       pasos: [
         { tipo: 'estado', ...(antes ?? {}) }, { tipo: 'flechas', lista: flechas }, { tipo: 'mensajes', lista: mensajes.map((m) => ({ k: m.k, texto: m.texto })) },
         { tipo: 'privados', pares: privados.map((m) => ({ k: m.k, a: m.a })) }, { tipo: 'feed', lista: feedOrdenes },
@@ -174,10 +175,9 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       crear(turno, 'traicion', i, { lineas, pasos: pasosT, asiento: e.k });
     }
 
-    // ---- batallas: las 3 de mayor importancia (decisiva, luego con conquista, luego con mas tropas en juego, luego la de menor numero de region) ----
+    // Todas las batallas conservan el orden del registro, sin límite editorial arbitrario.
     const analisis = combates.map((c) => ({ c, ...esDecisiva(c, { eventos, capitales }) }));
-    const importancia = (a) => [a.decisiva ? 1 : 0, a.c.resultado === 'captura' ? 1 : 0, a.c.bandos.reduce((s, b) => s + b.n, 0), -a.c.d];
-    const mostradas = [...analisis].sort((a, b) => { const x = importancia(a), y = importancia(b); for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return y[n] - x[n]; return 0; }).slice(0, MAX_TARJETAS);
+    const mostradas = analisis;
     const cubiertas = new Set();
     for (const a of mostradas) {
       const { c } = a;
@@ -218,9 +218,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       } else if (e.tipo === 'hambre') empujar(e, { clave, texto: `${nombre(e.k)} pasa hambre: -${tropas(e.n)}.`, feed: { icono: 'hambre', partes: [{ k: e.k }, ` pasa hambre: -${tropas(e.n)}`] } });
       else if (e.tipo === 'comercio') empujar(e, { clave, texto: `${nombre(e.k)} y ${nombre(e.con)} comercian.`, feed: { icono: 'regalo', partes: [{ k: e.k }, ' y ', { k: e.con }, ' comerciaron'] } });
       else if (e.tipo === 'caida') empujar(e, { clave, texto: `${nombre(e.k)} cae: su capital fue tomada por ${nombre(e.por)}.`, feed: { icono: 'caida', partes: [{ k: e.k }, ' cayó: su capital fue tomada por ', { k: e.por }], alerta: true } });
-      else if (e.tipo === 'maravilla') empujar(e, { clave, texto: `${nombre(e.k)} construye la Maravilla en ${region(e.r)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` construyó la Maravilla en ${region(e.r)}`] } });
+      else if (e.tipo === 'maravilla') empujar(e, { clave, texto: `${nombre(e.k)} construye la Maravilla en ${region(e.r)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ` construyó la Maravilla en ${region(e.r)}`] }, construida: { k: e.k, r: e.r } });
       else if (e.tipo === 'maravilla_cae') empujar(e, { clave, texto: `${nombre(e.k)} conquista la Maravilla de ${nombre(e.de)}.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' conquistó la Maravilla de ', { k: e.de }], alerta: true } });
       else if (e.tipo === 'maravilla_gana') empujar(e, { clave, texto: `${nombre(e.k)} completa la Maravilla y gana la partida.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' completó la Maravilla y ganó'], alerta: true } });
+      else if (e.tipo === 'maravilla_cerco') empujar(e, { clave, texto: `La Maravilla de ${nombre(e.k)} queda cercada: su cuenta se pausa.`, feed: { icono: 'bandera', partes: ['Cerco: se pausa la Maravilla de ', { k: e.k }], alerta: true } });
+      else if (e.tipo === 'maravilla_libre') empujar(e, { clave, texto: `${nombre(e.k)} despeja el cerco y su Maravilla vuelve a avanzar.`, feed: { icono: 'bandera', partes: [{ k: e.k }, ' despejó el cerco de su Maravilla'] } });
       else if (e.tipo === 'deshonra') empujar(e, { clave, texto: `${nombre(e.k)} queda deshonrado.`, feed: { icono: 'ruptura', partes: [{ k: e.k }, ' quedó deshonrado'] } });
       // Guerra 2.0.0: el Hegemon, un duelo entre dos reinos de visita y los eventos del mundo (lo que el motor registra en `eventos`, contado igual que se lo cuenta a las IAs)
       else if (e.tipo === 'hegemon' && reino(e.k)) empujar(e, { clave, texto: `${nombre(e.k)} es ahora el Hegemón: los demás lo atacan con +${HEGEMON_BONO} %.`, feed: { icono: 'corona', partes: [{ k: e.k }, ' es ahora el Hegemón'] } });
@@ -241,13 +243,15 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
     // lo que se dice de la resolucion: las tomas sin lucha, el hambre repetida y los comercios se cuentan; lo demas (pactos, caidas, conquistas, Maravilla...) tal cual; y cada 5 turnos un panorama
     // `despues` solo si el registro trae un estado legible (si no, `despues` es el del turno anterior: el narrador no puede dar por cierto que el mapa no cambio); `ultimo`: el turno que cierra una partida terminada (viene el final)
     const narradoResolucion = narrador.resolucion({ turno, hechos, combates: combates.length, despues: estadoLegible(r.estado) ? r.estado : null, ultimo: terminada && i === rondas.length - 1 });
+    const feedResolucion = hechos.map((h) => ({ ...h.feed, alerta: h.feed.alerta === true }));
     crear(turno, 'resolucion', i, {
-      lineas: hechos.map((h) => ({ texto: h.texto, clave: h.clave })), dicho: narradoResolucion.dicho, mudas: narradoResolucion.mudas, minMs: ritmo.resolucion,
+      lineas: hechos.map((h) => ({ texto: h.texto, clave: h.clave })), dicho: narradoResolucion.dicho, mudas: narradoResolucion.mudas, minMs: extenderMinMs(ritmo.resolucion, feedResolucion) + hechos.filter(h=>h.construida).length * 5400,
       pasos: [
         { tipo: 'conquistas', lista: hechos.filter((h) => h.conquista).map((h) => h.conquista) },
         ...hechos.filter((h) => h.pacto).map((h) => ({ tipo: 'pacto', ...h.pacto })),
         ...hechos.filter((h) => h.cumplido).map((h) => ({ tipo: 'cumplido', ...h.cumplido })),
-        { tipo: 'feed', lista: hechos.map((h) => ({ ...h.feed, alerta: h.feed.alerta === true })) },
+        ...hechos.filter((h) => h.construida).map((h) => ({ tipo: 'maravilla', ...h.construida })), // zoom a la region al completarse la construccion (no cuando cae ni cuando gana: eso ya lo cuenta la tarjeta/el final)
+        { tipo: 'feed', lista: feedResolucion },
         { tipo: 'estado', ...(despues ?? {}) },
         { tipo: 'razones', lista: razones },
       ],
@@ -289,7 +293,11 @@ export function construirLineaDeTiempo(partida, { camara } = {}) {
       });
     });
     const ganador = partida.ganador ?? partida.orden[0];
-    const lineas = [{ texto: `${nombre(ganador)} gana la partida${partida.ganoPorMaravilla === true ? ' por la Maravilla' : ''}.`, clave: 'final:ganador' }];
+    // Extincion mutua (reglas 2.1.1): los ultimos reinos cayeron en el mismo turno y la partida acabo ahi; gana el que mas regiones tenia al caer (el ganador de la tabla ya esta caido).
+    const texto = partida.extincionMutua === true
+      ? `${nombre(ganador)} gana la partida: los últimos reinos cayeron a la vez y era el que más regiones tenía.`
+      : `${nombre(ganador)} gana la partida${partida.ganoPorMaravilla === true ? ' por la Maravilla' : ''}.`;
+    const lineas = [{ texto, clave: 'final:ganador' }];
     crear(ultimo.turno ?? rondas.length, 'final', rondas.length - 1, {
       lineas, asiento: Number.isInteger(ganador) ? ganador : null,
       pasos: [{ tipo: 'final', ranking, momentos, sinRevelar, ganoPorMaravilla: partida.ganoPorMaravilla === true, bioma: mapa.bioma }],

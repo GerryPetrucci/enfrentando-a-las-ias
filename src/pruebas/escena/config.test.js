@@ -15,13 +15,13 @@ import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
-  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null, cierre: false });
+  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, audioSeparado: false, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null, cierre: false });
   assert.deepEqual(leerParametros(undefined), leerParametros(''));
 });
 
 test('los parametros se leen y se validan: lo ilegible vuelve al valor por defecto, nada lanza', () => {
   const p = leerParametros('?archivo=duda-1.json&partida=3&mano=4&hasta=9&formato=16x9&camara=4&sonido=0&vel=2.5&razon=1&auto=1&limpio=1&voz=voz.json&escala=1');
-  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1, gancho: null, cierre: false });
+  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, audioSeparado: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1, gancho: null, cierre: false });
   assert.equal(leerParametros('?cierre=1').cierre, true);
   assert.equal(leerParametros('?cierre=0').cierre, false);
   assert.equal(leerParametros('formato=hoja').formato, 'hoja');

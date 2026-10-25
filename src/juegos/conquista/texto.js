@@ -27,6 +27,8 @@ export function resumenPublico(eventos, nombres = NOMBRES_REINOS) {
     else if (e.tipo === 'comercio') l.push(`${N(e.k)} y ${N(e.con)} comerciaron`);
     else if (e.tipo === 'maravilla') l.push(`${N(e.k)} construyo la Maravilla en ${nombreRegion(e.r)}`);
     else if (e.tipo === 'maravilla_cae') l.push(`${N(e.k)} conquisto la Maravilla de ${N(e.de)}`);
+    else if (e.tipo === 'maravilla_cerco') l.push(`La Maravilla de ${N(e.k)} queda cercada: su cuenta se pausa`);
+    else if (e.tipo === 'maravilla_libre') l.push(`${N(e.k)} despejo el cerco: la Maravilla vuelve a avanzar`);
     else if (e.tipo === 'deshonra') l.push(`${N(e.k)} quedo deshonrado`);
     else if (e.tipo === 'hegemon') l.push(`${N(e.k)} es ahora el Hegemon`);
     else if (e.tipo === 'hegemon_fin') l.push(`${N(e.k)} deja de ser el Hegemon`);

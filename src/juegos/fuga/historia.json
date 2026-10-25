@@ -1,0 +1,906 @@
+{
+  "nombre": "La Fuga - decisiones y consecuencias",
+  "version": "fuga-2.1.0",
+  "ifid": "75B93F65-74CB-41CB-A972-958925566F40",
+  "inicio": "r1-celda",
+  "nodos": [
+    {
+      "id": "r1-celda",
+      "ronda": 1,
+      "fase": "interior",
+      "lugar": "Bloque de celdas",
+      "escenas": [
+        "celda",
+        "panel",
+        "camara"
+      ],
+      "contexto": [
+        "La salida del bloque conduce a accesos diferentes según cómo consigan superar el cierre."
+      ],
+      "objetivo": "Fuerza con éxito abre mantenimiento y deja rastro. Engaño con éxito lleva al control. Si ambos accesos se abren, seguirán por mantenimiento. En otro caso seguirán por la galería.",
+      "salidas": [
+        {
+          "a": "r2-mantenimiento",
+          "si": {
+            "metodo": "fuerza",
+            "exito": true
+          },
+          "prioridad": 2,
+          "peso": 1
+        },
+        {
+          "a": "r2-control",
+          "si": {
+            "metodo": "engano",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r2-galeria",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "abrir",
+          "si": {
+            "metodo": "fuerza",
+            "resultado": "limpio"
+          },
+          "efecto": "puerta_forzada",
+          "texto": "La puerta forzada abre mantenimiento, pero deja un rastro que pueden descubrir los guardias.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r2-mantenimiento",
+      "ronda": 2,
+      "fase": "interior",
+      "lugar": "Acceso de mantenimiento",
+      "escenas": [
+        "lavanderia",
+        "panel",
+        "escalera"
+      ],
+      "contexto": [
+        "La puerta abierta les da acceso al área de mantenimiento."
+      ],
+      "objetivo": "Sigilo con éxito permite entrar en los ductos; en otro caso deberán cruzar el taller.",
+      "salidas": [
+        {
+          "a": "r3-ductos",
+          "si": {
+            "metodo": "sigilo",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r3-taller",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": []
+    },
+    {
+      "id": "r2-control",
+      "ronda": 2,
+      "fase": "interior",
+      "lugar": "Control del personal",
+      "escenas": [
+        "ronda",
+        "cocina",
+        "enfermeria"
+      ],
+      "contexto": [
+        "El engaño del bloque les permitió acercarse al control del personal."
+      ],
+      "objetivo": "Engaño con éxito consigue una credencial y abre el archivo. Si falla, queda el pasillo de vigilancia.",
+      "salidas": [
+        {
+          "a": "r3-archivo",
+          "si": {
+            "hecho": "credencial"
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r3-pasillo",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "credencial",
+          "si": {
+            "metodo": "engano",
+            "resultado": "limpio"
+          },
+          "efecto": "credencial",
+          "texto": "Consigue una credencial: facilita controles hasta la situación 6, mientras no la descubran.",
+          "duracion": 4
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r2-galeria",
+      "ronda": 2,
+      "fase": "interior",
+      "lugar": "Galería interior",
+      "escenas": [
+        "camara",
+        "escalera",
+        "ronda"
+      ],
+      "contexto": [
+        "La galería conserva un acceso discreto hacia los ductos."
+      ],
+      "objetivo": "Sigilo con éxito abre los ductos; en otro caso seguirán por el pasillo.",
+      "salidas": [
+        {
+          "a": "r3-ductos",
+          "si": {
+            "metodo": "sigilo",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r3-pasillo",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": []
+    },
+    {
+      "id": "r3-ductos",
+      "ronda": 3,
+      "fase": "interior",
+      "lugar": "Ductos de servicio",
+      "escenas": [
+        "escalera",
+        "camara",
+        "lavanderia"
+      ],
+      "contexto": [
+        "Los ductos desembocan en el patio de servicio."
+      ],
+      "objetivo": "Si dejaron la puerta forzada, sigilo con éxito borra su rastro antes de llegar al patio.",
+      "salidas": [
+        {
+          "a": "r4-servicio",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "borrar-rastro",
+          "si": {
+            "metodo": "sigilo",
+            "resultado": "limpio",
+            "hecho": "puerta_forzada"
+          },
+          "efecto": "rastro_borrado",
+          "texto": "Borra el rastro de la puerta forzada: la patrulla pierde esa pista.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r3-taller",
+      "ronda": 3,
+      "fase": "interior",
+      "lugar": "Taller interior",
+      "escenas": [
+        "panel",
+        "lavanderia",
+        "cocina"
+      ],
+      "contexto": [
+        "El taller comunica con el patio de servicio."
+      ],
+      "objetivo": "Sigilo con éxito permite borrar el rastro de una puerta forzada.",
+      "salidas": [
+        {
+          "a": "r4-servicio",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "borrar-rastro",
+          "si": {
+            "metodo": "sigilo",
+            "resultado": "limpio",
+            "hecho": "puerta_forzada"
+          },
+          "efecto": "rastro_borrado",
+          "texto": "Borra el rastro de la puerta forzada: la patrulla pierde esa pista.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r3-archivo",
+      "ronda": 3,
+      "fase": "interior",
+      "lugar": "Archivo del personal",
+      "escenas": [
+        "ronda",
+        "enfermeria",
+        "cocina"
+      ],
+      "contexto": [
+        "El archivo ofrece un paso hacia el patio principal."
+      ],
+      "objetivo": "Engaño aprovecha la credencial. Si falla al usarla, el control la detectará y dejará de servir.",
+      "salidas": [
+        {
+          "a": "r4-patio",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "detectar",
+          "si": {
+            "metodo": "engano",
+            "resultado": "fallo",
+            "hecho": "credencial"
+          },
+          "efecto": "credencial_detectada",
+          "texto": "El control descubre la credencial: ya no servirá en otro puesto.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": [
+        {
+          "id": "pase",
+          "si": {
+            "hecho": "credencial"
+          },
+          "alcance": "actor",
+          "delta": -0.07,
+          "metodos": [
+            "engano"
+          ],
+          "texto": "La credencial obtenida antes facilita pasar el control."
+        }
+      ]
+    },
+    {
+      "id": "r3-pasillo",
+      "ronda": 3,
+      "fase": "interior",
+      "lugar": "Pasillo de vigilancia",
+      "escenas": [
+        "ronda",
+        "camara",
+        "escalera"
+      ],
+      "contexto": [
+        "El pasillo vigilado termina en el patio principal."
+      ],
+      "objetivo": "Sigilo con éxito borra el rastro de una puerta forzada, si lo dejaron.",
+      "salidas": [
+        {
+          "a": "r4-patio",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "borrar-rastro",
+          "si": {
+            "metodo": "sigilo",
+            "resultado": "limpio",
+            "hecho": "puerta_forzada"
+          },
+          "efecto": "rastro_borrado",
+          "texto": "Borra el rastro de la puerta forzada: la patrulla pierde esa pista.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r4-servicio",
+      "ronda": 4,
+      "fase": "patio",
+      "lugar": "Patio de servicio",
+      "escenas": [
+        "taller",
+        "reja",
+        "zanja"
+      ],
+      "contexto": [
+        "Desde servicio pueden abrir el almacén o atravesar la zona de patrulla."
+      ],
+      "objetivo": "Fuerza con éxito abre el almacén. Si queda rastro de la puerta del bloque, la patrulla hace este cruce más peligroso.",
+      "salidas": [
+        {
+          "a": "r5-almacen",
+          "si": {
+            "metodo": "fuerza",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r5-patrulla",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "patrulla",
+          "si": {
+            "hecho": "puerta_forzada",
+            "sinHecho": "rastro_borrado"
+          },
+          "alcance": "grupo",
+          "delta": 0.06,
+          "texto": "Los guardias encontraron la puerta forzada: cruzar este tramo resulta más peligroso."
+        }
+      ]
+    },
+    {
+      "id": "r4-patio",
+      "ronda": 4,
+      "fase": "patio",
+      "lugar": "Patio principal",
+      "escenas": [
+        "patio",
+        "foco",
+        "turno"
+      ],
+      "contexto": [
+        "El patio conduce al control de carga o a la zona de patrulla."
+      ],
+      "objetivo": "Una credencial vigente en manos de alguien que siga dentro abre el control de carga; sin ella queda la patrulla.",
+      "salidas": [
+        {
+          "a": "r5-control",
+          "si": {
+            "hecho": "credencial"
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r5-patrulla",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "patrulla",
+          "si": {
+            "hecho": "puerta_forzada",
+            "sinHecho": "rastro_borrado"
+          },
+          "alcance": "grupo",
+          "delta": 0.06,
+          "texto": "Los guardias encontraron la puerta forzada: cruzar este tramo resulta más peligroso."
+        }
+      ]
+    },
+    {
+      "id": "r5-almacen",
+      "ronda": 5,
+      "fase": "patio",
+      "lugar": "Almacén de carga",
+      "escenas": [
+        "taller",
+        "basura",
+        "reja"
+      ],
+      "contexto": [
+        "El almacén contiene material para superar los últimos obstáculos."
+      ],
+      "objetivo": "Cubrir al compañero y pasar sin tropiezos permite recuperar una cuerda. Sigilo con éxito abre el desagüe; en otro caso queda la reja.",
+      "salidas": [
+        {
+          "a": "r6-desague",
+          "si": {
+            "metodo": "sigilo",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r6-reja",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "cuerda",
+          "si": {
+            "postura": "ayudar",
+            "resultado": "limpio"
+          },
+          "efecto": "cuerda",
+          "texto": "Al cubrir al compañero recupera una cuerda: facilitará un paso difícil y después quedará atrás.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r5-control",
+      "ronda": 5,
+      "fase": "patio",
+      "lugar": "Control de carga",
+      "escenas": [
+        "patio",
+        "perros",
+        "basura"
+      ],
+      "contexto": [
+        "Llegaron al control gracias a la credencial obtenida dentro."
+      ],
+      "objetivo": "La credencial facilita engaño, pero si falla la detectarán y deberán pasar por la reja.",
+      "salidas": [
+        {
+          "a": "r6-porton",
+          "si": {
+            "hecho": "credencial"
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r6-reja",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "detectar",
+          "si": {
+            "metodo": "engano",
+            "resultado": "fallo",
+            "hecho": "credencial"
+          },
+          "efecto": "credencial_detectada",
+          "texto": "El control descubre la credencial: ya no servirá en otro puesto.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": [
+        {
+          "id": "pase",
+          "si": {
+            "hecho": "credencial"
+          },
+          "alcance": "actor",
+          "delta": -0.07,
+          "metodos": [
+            "engano"
+          ],
+          "texto": "La credencial obtenida antes facilita pasar el control."
+        }
+      ]
+    },
+    {
+      "id": "r5-patrulla",
+      "ronda": 5,
+      "fase": "patio",
+      "lugar": "Zona de patrulla",
+      "escenas": [
+        "perros",
+        "foco",
+        "turno"
+      ],
+      "contexto": [
+        "La patrulla ocupa el paso hacia el perímetro."
+      ],
+      "objetivo": "Sigilo con éxito abre el desagüe y permite borrar un rastro pendiente. Si falla queda la reja.",
+      "salidas": [
+        {
+          "a": "r6-desague",
+          "si": {
+            "metodo": "sigilo",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r6-reja",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [
+        {
+          "id": "borrar-rastro",
+          "si": {
+            "metodo": "sigilo",
+            "resultado": "limpio",
+            "hecho": "puerta_forzada"
+          },
+          "efecto": "rastro_borrado",
+          "texto": "Borra el rastro de la puerta forzada: la patrulla pierde esa pista.",
+          "duracion": 9
+        }
+      ],
+      "modificadores": []
+    },
+    {
+      "id": "r6-desague",
+      "ronda": 6,
+      "fase": "patio",
+      "lugar": "Desagüe del patio",
+      "escenas": [
+        "zanja",
+        "reja",
+        "basura"
+      ],
+      "contexto": [
+        "El desagüe permite alcanzar el foso exterior."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r7-foso",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    },
+    {
+      "id": "r6-reja",
+      "ronda": 6,
+      "fase": "patio",
+      "lugar": "Reja del perímetro",
+      "escenas": [
+        "reja",
+        "zanja",
+        "taller"
+      ],
+      "contexto": [
+        "Tras la reja todavía queda atravesar el foso."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r7-foso",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    },
+    {
+      "id": "r6-porton",
+      "ronda": 6,
+      "fase": "patio",
+      "lugar": "Portón de carga",
+      "escenas": [
+        "patio",
+        "basura",
+        "turno"
+      ],
+      "contexto": [
+        "El portón conecta con el acceso de vehículos del perímetro."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r7-puerta",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "pase",
+          "si": {
+            "hecho": "credencial"
+          },
+          "alcance": "actor",
+          "delta": -0.07,
+          "metodos": [
+            "engano"
+          ],
+          "texto": "La credencial obtenida antes facilita pasar el control."
+        }
+      ]
+    },
+    {
+      "id": "r7-foso",
+      "ronda": 7,
+      "fase": "perimetro",
+      "lugar": "Foso exterior",
+      "escenas": [
+        "foso",
+        "alambre",
+        "alcantarilla"
+      ],
+      "contexto": [
+        "Al otro lado del foso pueden buscar una alcantarilla o escalar el muro."
+      ],
+      "objetivo": "Sigilo con éxito abre la alcantarilla. En otro caso deberán superar el muro.",
+      "salidas": [
+        {
+          "a": "r8-alcantarilla",
+          "si": {
+            "metodo": "sigilo",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r8-muro",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    },
+    {
+      "id": "r7-puerta",
+      "ronda": 7,
+      "fase": "perimetro",
+      "lugar": "Acceso exterior de vehículos",
+      "escenas": [
+        "vehiculos",
+        "final",
+        "camioneta"
+      ],
+      "contexto": [
+        "La credencial interior ya caducó: este control requiere un engaño nuevo."
+      ],
+      "objetivo": "Engaño con éxito abre el paso de vehículos; en otro caso deberán superar el muro.",
+      "salidas": [
+        {
+          "a": "r8-vehiculos",
+          "si": {
+            "metodo": "engano",
+            "exito": true
+          },
+          "prioridad": 1,
+          "peso": 1
+        },
+        {
+          "a": "r8-muro",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": []
+    },
+    {
+      "id": "r8-alcantarilla",
+      "ronda": 8,
+      "fase": "perimetro",
+      "lugar": "Alcantarilla exterior",
+      "escenas": [
+        "alcantarilla",
+        "foso",
+        "reflectores"
+      ],
+      "contexto": [
+        "El túnel desemboca fuera del recinto."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r9-exterior",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    },
+    {
+      "id": "r8-muro",
+      "ronda": 8,
+      "fase": "perimetro",
+      "lugar": "Muro exterior",
+      "escenas": [
+        "muro",
+        "alambre",
+        "reflectores"
+      ],
+      "contexto": [
+        "La última barrera separa el muro del exterior."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r9-exterior",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    },
+    {
+      "id": "r8-vehiculos",
+      "ronda": 8,
+      "fase": "perimetro",
+      "lugar": "Paso de vehículos",
+      "escenas": [
+        "vehiculos",
+        "camioneta",
+        "final"
+      ],
+      "contexto": [
+        "Superado el control, queda alcanzar el exterior."
+      ],
+      "objetivo": "",
+      "salidas": [
+        {
+          "a": "r9-exterior",
+          "si": {},
+          "prioridad": 0,
+          "peso": 1
+        }
+      ],
+      "reglas": [],
+      "modificadores": []
+    },
+    {
+      "id": "r9-exterior",
+      "ronda": 9,
+      "fase": "perimetro",
+      "lugar": "Último tramo",
+      "escenas": [
+        "final",
+        "foso",
+        "camioneta"
+      ],
+      "contexto": [
+        "Los accesos vuelven a encontrarse en el último tramo de la fuga."
+      ],
+      "objetivo": "",
+      "salidas": [],
+      "reglas": [],
+      "modificadores": [
+        {
+          "id": "cuerda",
+          "si": {
+            "hecho": "cuerda"
+          },
+          "alcance": "actor",
+          "delta": -0.06,
+          "metodos": [
+            "sigilo",
+            "fuerza"
+          ],
+          "texto": "Usa la cuerda recuperada al cooperar: facilita este paso y después se pierde."
+        }
+      ]
+    }
+  ]
+}

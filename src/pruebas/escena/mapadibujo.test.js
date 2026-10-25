@@ -93,7 +93,9 @@ test('pintarFichas dibuja las fichas de una partida real sin lanzar y solo pone 
   assert.doesNotThrow(() => pintarFichas(ctx, m, g, estado, colores));
   assert.ok(llamadas.some(([n]) => n === 'fillText'), 'escribe las tropas');
   const sinFort = { ...estado, fort: estado.fort.map(() => 0), edif: estado.edif.map(() => null) }, a = ctxFalso(), b = ctxFalso();
-  pintarFichas(a.ctx, m, g, sinFort, colores); pintarFichas(b.ctx, m, g, estado, colores);
+  // Aislar torres/capitales: los recursos también usan escalas para su pixel-grid.
+  const sinRecursos = { ...m, regs: m.regs.map(r => ({ ...r, rec: null })) };
+  pintarFichas(a.ctx, sinRecursos, g, sinFort, colores); pintarFichas(b.ctx, sinRecursos, g, estado, colores);
   assert.ok(b.llamadas.length > a.llamadas.length, 'las torres de las capitales agregan dibujo');
   // torres y estrellas se dibujan con `scale`: sin fortaleza solo quedan las estrellas de las capitales, con fortaleza se suma una torre por capital (la unica region que empieza fortificada)
   const escalas = (l) => l.filter(([n]) => n === 'scale').length, capitalesN = m.inicio.capitales.length;
@@ -197,6 +199,22 @@ test('pintarFichas (2.0.0): la capital del Hegemon lleva una corona y solo ella'
   assert.equal(coronas(dibujar({ ...base, hegemon: 3 })), 1);
   const traslados = (f) => f.llamadas.filter(([n]) => n === 'translate').map(([, x, y]) => `${x},${y}`).sort();
   assert.deepEqual(traslados(dibujar({ ...base, hegemon: 0 })), traslados(dibujar(base)), 'la corona ocupa el lugar de la estrella de la capital, encima de la ficha (no debajo, donde tapa la barra)');
+});
+
+test('pintarFichas (2.0.0): el numero de cada casilla se dibuja siempre, con dueno o sin el, y con los recursos sale ademas su nombre rotulado', async () => {
+  const { base, dibujar, m, capital } = await fichasDe();
+  for (const estado of [base, { ...base, dueno: base.dueno.map(() => -1) }]) {
+    const f = dibujar(estado);
+    const textos = f.llamadas.filter(([n]) => n === 'fillText').map(([, t]) => t);
+    for (const reg of m.regs) assert.ok(textos.includes(reg.nombre), `falta el numero de ${reg.nombre}`);
+  }
+  const conRecurso = m.regs.find((r) => r.rec);
+  if (conRecurso) {
+    const f = dibujar(base);
+    const textos = f.llamadas.filter(([n]) => n === 'fillText').map(([, t]) => t);
+    assert.ok(textos.includes(conRecurso.rec), `falta el rotulo del recurso ${conRecurso.rec}`);
+  }
+  assert.doesNotThrow(() => dibujar({ ...base, maravilla: { r: capital, k: 0, n: 3 } }), 'la Maravilla no tapa ni lanza sobre una capital');
 });
 
 test('pintarLeyendaUnidades dibuja los cuatro tipos con su letra y su color', () => {

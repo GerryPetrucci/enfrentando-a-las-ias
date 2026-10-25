@@ -1,0 +1,44 @@
+/* El gancho en imagen (web/gancho-imagen.html). Tokens de marca de sitio.css: --oro, --noche, --panel, --hueso, --borde, --suave, --titulos, --texto.
+   Todo lo que se lee va dentro de .gi-zona (la zona segura del formato: --zx, --zy, --zw, --zh); el fondo si sangra hasta el borde. */
+.gi-cuerpo { margin:0; background:var(--noche); overflow:hidden; }
+.gi { position:relative; box-sizing:border-box; width:var(--ancho-lienzo, 1080px); height:var(--alto-lienzo, 1920px); overflow:hidden; background:var(--gi-fondo, var(--noche)); color:var(--hueso); }
+.gi-fondo { position:absolute; inset:0; background:
+  radial-gradient(ellipse 70% 38% at 50% 8%, color-mix(in srgb, var(--gi-luz, var(--oro)) 26%, transparent), transparent 70%),
+  radial-gradient(ellipse 90% 45% at 50% 108%, color-mix(in srgb, var(--gi-panel, var(--panel)) 90%, transparent), transparent 75%); }
+.gi-fondo::after { content:""; position:absolute; inset:34px; border:3px solid color-mix(in srgb, var(--gi-luz, var(--oro)) 45%, transparent); border-radius:6px; }
+.gi-zona { position:absolute; left:var(--zx); top:var(--zy); width:var(--zw); height:var(--zh); box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:space-between; text-align:center; }
+
+.gi-marca { display:flex; align-items:center; gap:14px; font:800 26px/1 var(--titulos); letter-spacing:.1em; text-transform:uppercase; color:var(--hueso); }
+.gi-texto { display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; }
+.gi-kicker { font:800 58px/1 var(--titulos); letter-spacing:.32em; padding-left:.32em; color:var(--oro); text-transform:uppercase; }
+.gi-nombre { margin:0; font:800 112px/.95 var(--titulos); letter-spacing:.02em; text-transform:uppercase; text-wrap:balance; color:var(--hueso); text-shadow:0 6px 28px #000a; }
+.gi-detalle { font:700 54px/1.1 var(--titulos); letter-spacing:.1em; text-transform:uppercase; color:#dcdce2; }
+.gi-panel { margin:0; width:100%; border:3px solid var(--gi-luz, var(--oro)); border-radius:10px; overflow:hidden; box-shadow:0 14px 40px #000a; background:#000; line-height:0; }
+.gi-panel img { width:100%; height:auto; display:block; }
+.gi-plantel { display:flex; align-items:flex-end; justify-content:center; gap:6px; width:100%; }
+/* Cada figura muestra UN cuadro de la tira de animacion (arte/lobo/animacion-<rol>.png): la escala sale de --esc */
+.gi-figura { --esc:.66; flex:none; display:block; width:calc(var(--ancho) * var(--esc) * 1px); height:calc(var(--alto) * var(--esc) * 1px); background-image:var(--archivo); background-repeat:no-repeat;
+  background-size:calc(var(--ancho) * var(--cuadros) * var(--esc) * 1px) 100%; background-position:calc(var(--ancho) * var(--cuadro) * var(--esc) * -1px) 0; filter:drop-shadow(0 8px 10px #0009); }
+.gi-cta { font:600 44px/1.2 var(--texto); color:var(--hueso); }
+.gi-pie { font:600 24px/1.2 var(--texto); letter-spacing:.04em; color:var(--suave); }
+
+/* Sin arte del juego: solo la marca, centrada en la zona */
+.gi-sin-arte .gi-zona { justify-content:center; gap:72px; }
+
+/* Horizontal: texto a la izquierda; panorama y personajes a la derecha */
+.gi-16x9 .gi-zona { display:grid; grid-template-columns:minmax(0, 0.95fr) minmax(0, 1.05fr); grid-template-rows:auto 1fr auto auto auto; column-gap:64px; row-gap:0; justify-items:stretch; align-items:center; text-align:left; }
+.gi-16x9 .gi-marca { grid-column:1; grid-row:1; justify-content:flex-start; justify-self:start; }
+.gi-16x9 .gi-texto { grid-column:1; grid-row:2; align-items:flex-start; align-self:center; }
+.gi-16x9 .gi-kicker { font-size:50px; padding-left:0; }
+.gi-16x9 .gi-nombre { font-size:132px; text-wrap:balance; }
+.gi-16x9 .gi-detalle { font-size:56px; }
+.gi-16x9 .gi-panel { grid-column:2; grid-row:1 / span 3; align-self:end; }
+.gi-16x9 .gi-plantel { grid-column:2; grid-row:4; align-self:start; padding-top:18px; }
+.gi-16x9 .gi-figura { --esc:.7; }
+.gi-16x9 .gi-cta { grid-column:1; grid-row:4; align-self:end; font-size:42px; }
+.gi-16x9 .gi-pie { grid-column:1 / span 2; grid-row:5; text-align:left; padding-top:14px; }
+/* Horizontal sin arte: una sola columna centrada */
+.gi-16x9.gi-sin-arte .gi-zona { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:44px; }
+.gi-16x9.gi-sin-arte .gi-texto { align-items:center; }
+.gi-16x9.gi-sin-arte .gi-kicker { padding-left:.32em; }
+.gi-16x9.gi-sin-arte .gi-pie { text-align:center; padding-top:0; }

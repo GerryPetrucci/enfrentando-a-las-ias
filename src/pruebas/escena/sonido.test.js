@@ -181,7 +181,7 @@ test('los pasos de La Fuga suenan con los efectos que ya existen (vocabulario fi
 });
 
 test('Guerra de territorios: cada paso de la animacion suena o es mudo a proposito, y todos los pasos de su linea de tiempo estan en el vocabulario', async () => {
-  const VOCABULARIO = ['estado', 'mapa', 'flechas', 'mensajes', 'privados', 'cartel', 'flashback', 'tarjeta', 'conquistas', 'pacto', 'cumplido', 'feed', 'razones', 'rasgos', 'final'];
+  const VOCABULARIO = ['estado', 'mapa', 'flechas', 'mensajes', 'privados', 'cartel', 'flashback', 'tarjeta', 'conquistas', 'pacto', 'cumplido', 'feed', 'razones', 'rasgos', 'final', 'maravilla'];
   const casos = [
     [{ tipo: 'flechas', lista: [{ n: 3 }] }, ['carta']], [{ tipo: 'flechas', lista: [] }, []],
     [{ tipo: 'tarjeta', variante: 'A' }, ['anuncio']], [{ tipo: 'tarjeta', variante: 'C' }, ['anuncio']],
@@ -190,7 +190,7 @@ test('Guerra de territorios: cada paso de la animacion suena o es mudo a proposi
     [{ tipo: 'pacto' }, ['ficha']], [{ tipo: 'cumplido' }, ['ficha']],
   ];
   for (const [paso, esperado] of casos) assert.deepEqual(eventosDePaso(paso), esperado, JSON.stringify(paso));
-  for (const mudo of ['estado', 'mapa', 'mensajes', 'privados', 'feed', 'razones', 'rasgos', 'final', 'intro']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
+  for (const mudo of ['estado', 'mapa', 'mensajes', 'privados', 'feed', 'razones', 'rasgos', 'final', 'intro', 'maravilla']) assert.deepEqual(eventosDePaso({ tipo: mudo }), [], `${mudo} es mudo a proposito`);
   const { partidasDeEjemplo } = await import('./ayudas-conq.js');
   const { construirLineaDeTiempo: lineaConq } = await import('../../../web/casino/linea-de-tiempo-conquista.js');
   for (const p of await partidasDeEjemplo()) for (const b of lineaConq(p)) for (const paso of b.pasos) assert.ok(VOCABULARIO.includes(paso.tipo), `${b.id}: paso fuera del vocabulario: ${paso.tipo}`);

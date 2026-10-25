@@ -16,6 +16,7 @@ import { claveDeCierre, conCierre, vozSoloCierre } from './cierre.js';
 import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
 import { crearAzar, seedDeTexto } from './azar.js';
+import { instalarRevision, reconstruirHasta } from './revision-escena.js';
 
 export async function iniciar() {
   const params = leerParametros(location.search);
@@ -33,9 +34,9 @@ export async function iniciar() {
   // las fuentes se cargan al usarse: se piden antes de montar nada, porque los subtitulos se miden (y se achican si no caben) con la fuente ya puesta
   await Promise.all(['600 20px "Barlow Condensed"', '700 20px "Barlow Condensed"', '800 20px "Barlow Condensed"', '500 20px Inter', '600 20px Inter', '700 20px Inter'].map((f) => document.fonts.load(f).catch(() => [])));
   let azarSonido = crearAzar(1); // se cambia al montar cada partida: asi el mismo archivo suena siempre igual
-  const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido() });
+  const sfx = crearSonido({ activo: params.sonido, azar: () => azarSonido(), separado: params.audioSeparado });
   const mudo = crearSonido({ activo: false });
-  const reproductorDeVoz = crearReproductorDeVoz();
+  const reproductorDeVoz = crearReproductorDeVoz(undefined, { separado: params.audioSeparado });
   let voz = null;
   let vozDePieza = null; // la voz que usa la pieza montada: toda, o solo la del cierre en un gancho
   let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
@@ -45,6 +46,7 @@ export async function iniciar() {
   let actual = null; // la partida montada: { entrada, partida, beats, marcas, mesas, ancho, alto }
   let generacion = 0; // cada vez que se monta otra partida sube: una reproduccion vieja se da cuenta y se retira
   let corriendo = false;
+  let indiceRevision = 0, avisarRevision = () => {};
 
   const ajustar = () => {
     if (!actual) return;
@@ -112,7 +114,7 @@ export async function iniciar() {
   const montarSeguro = (entrada) => montar(entrada).catch((e) => { console.error('escena: no se pudo armar', e); document.body.dataset.error = String(e); aviso(`No pude armar la escena: ${e.message}`); });
 
   // Reproduce la partida montada; devuelve true si llego al final (false si ya corria, se detuvo en un beat, se abrio otra partida o fallo).
-  async function reproducir() {
+  async function reproducir(desde = 0) {
     if (corriendo || !actual) return false;
     const { beats, marcas, mesas } = actual;
     const miGeneracion = generacion;
@@ -121,7 +123,9 @@ export async function iniciar() {
     const inicio = performance.now();
     let completa = false;
     try {
-      for (const [i, beat] of beats.entries()) {
+      for (let i = desde; i < beats.length; i++) {
+        const beat = beats[i];
+        indiceRevision = i; avisarRevision();
         const rapido = params.detener !== null && i <= params.detener;
         mesas.forEach((m) => { m.rapido = rapido; m.vel = params.vel * (beat.vel ?? 1); }); // los cortes del gancho llevan su propia velocidad
         const audio = entradaDeVoz(vozDePieza, beat)?.archivo;
@@ -143,7 +147,7 @@ export async function iniciar() {
       console.error('escena: la reproduccion se detuvo', e);
       document.body.dataset.error = String(e);
     }
-    if (miGeneracion === generacion) corriendo = false;
+    if (miGeneracion === generacion) { corriendo = false; avisarRevision(); }
     return completa;
   }
 
@@ -230,6 +234,29 @@ export async function iniciar() {
     } catch { return { nombre, datos: null, error: `no pude leer data/${nombre}` }; }
   }));
   await abrir(cargados, { archivo: nombres[0], numero: params.partida });
+  avisarRevision = instalarRevision({
+    estado: () => {
+      const marcas = actual ? marcarTiempos(actual.beats, vozDePieza, 1) : [];
+      return { indice:indiceRevision, total:marcas.length, tiempoMs:marcas[indiceRevision]?.inicioMs ?? 0,
+        duracionMs:marcas.at(-1)?.finMs ?? 0, reproduciendo:corriendo, velocidad:params.vel };
+    },
+    comando: async (accion, valor) => {
+      if (!actual) throw new Error('La escena aún no está disponible.');
+      if (accion === 'estado') return;
+      if (accion === 'reproducir') { await sfx.preparar(); void reproducir(indiceRevision); return; }
+      if (!['buscar','pausar','velocidad'].includes(accion)) throw new Error('Control de revisión desconocido.');
+      const entrada = actual.entrada;
+      const indice = accion === 'buscar' ? valor : indiceRevision;
+      const continuar = accion === 'velocidad' && corriendo;
+      if (accion === 'velocidad') params.vel = Math.max(.25, Math.min(8, Number(valor) || 1));
+      // Nueva mesa y voz detenida: ninguna animación ni identidad futura
+      // sobrevive al retroceso. El prefijo público reconstruye cada juego.
+      await montarSeguro(entrada);
+      if (!actual || document.body.dataset.error) throw new Error('No se pudo reconstruir la escena.');
+      indiceRevision = await reconstruirHasta(actual.mesas, actual.beats, indice, mudo);
+      if (continuar) { await sfx.preparar(); void reproducir(indiceRevision); }
+    },
+  });
   if (params.auto && actual && params.grabar) {
     // sin un clic el navegador puede negarse a abrir el audio (el de OBS no): si en 3 s no esta, se sigue sin sonido en vez de quedarse en negro para siempre
     await Promise.race([sfx.preparar(), pausa(3000)]);
