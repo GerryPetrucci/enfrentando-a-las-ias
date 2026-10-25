@@ -1,7 +1,7 @@
 // Estado de una partida de Guerra de territorios y funciones para consultarlo. Aqui no hay reglas de turno.
 
 import { crearMapa, biomaDeSeed } from '../../mapa.js';
-import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS, N_TIPOS } from './constantes.js';
+import { ALMACEN_INICIAL, NOMBRES_REINOS, TROPAS_CAPITAL, TROPAS_VECINA, HONOR, EDIFICIOS, N_TIPOS, MARAVILLA } from './constantes.js';
 import { nombresValidos } from './nombres.js';
 import { listaDeAisladas } from './suministro.js';
 import { sortearCalendario } from './equilibrio.js';
@@ -36,7 +36,8 @@ export const totalTropas = totalUnidades;
 
 // `bioma` fuerza la forma del mapa (uno de BIOMAS en src/mapa.js); sin el, sale del seed del mapa y de la cantidad de reinos (biomaDeSeed). Si viene `mapa` ya creado, manda ese y se ignora el bioma.
 // `nombres`: el nombre de reino de cada asiento (nombres.js); si no sirven (otra cantidad, repetidos, desconocidos) valen los de siempre, uno por asiento.
-export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } = {}) {
+export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres, cercoMaravilla = MARAVILLA.cerco } = {}) {
+  if (!Number.isInteger(cercoMaravilla) || cercoMaravilla < 0) throw new Error('Umbral de cerco invalido.');
   const k = Math.max(2, Math.min(5, Math.round(jugadores)));
   const nombreDe = (s) => (nombresValidos(nombres, k) ? nombres[s] : NOMBRES_REINOS[s]);
   if (mapa && mapa.k !== k) throw new Error(`el mapa es de ${mapa.k} reinos y se pidieron ${k}`);
@@ -52,7 +53,7 @@ export function crearEstado(rng, { jugadores = 4, mapa = null, bioma, nombres } 
   }));
   const E = {
     turno: 0, k, mapa: m, dueno, uni, fort, edif: Array(NR).fill(null), dan: new Uint8Array(NR), reinos,
-    maravilla: null, ganador: null, ganoPorMaravilla: false,
+    maravilla: null, ganador: null, ganoPorMaravilla: false, extincionMutua: false, cercoMaravilla,
     // Paquete de equilibrio (2.0.0): el Hegemon (-1 = ninguno), el calendario de eventos (del seed del mapa) y hasta que turno dura la sequia
     hegemon: -1, calendario: sortearCalendario(seedMapa), sequiaHasta: 0,
     desempate: Array.from({ length: k }, () => rng()),

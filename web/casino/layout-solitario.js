@@ -11,18 +11,19 @@ import { FORMATOS_ESCENA } from './layout.js';
 const r = (x, y, ancho, alto) => ({ x, y, ancho, alto });
 
 function dibujar9x16() {
+  const { x, ancho } = FORMATOS_ESCENA['9x16'].zona;
   const filas = Array.from({ length: 5 }, (_, s) => {
     const y = 466 + 156 * s;
-    return { fila: r(60, y, 890, 150), placa: r(76, y + 8, 330, 134), cartas: [r(430, y + 12, 90, 126), r(530, y + 12, 90, 126)], estado: r(640, y + 10, 294, 130) };
+    return { fila: r(x, y, ancho, 150), placa: r(x + 16, y + 8, 300, 134), cartas: [r(x + 340, y + 12, 90, 126), r(x + 440, y + 12, 90, 126)], estado: r(x + 550, y + 10, 254, 130) };
   });
   return {
-    etiqueta: r(60, 285, 890, 36),
-    cabecera: r(60, 330, 890, 64),
-    banner: r(60, 402, 890, 56),
-    subtitulos: r(60, 1252, 890, 248),
+    etiqueta: r(x, 285, ancho, 36),
+    cabecera: r(x, 330, ancho, 64),
+    banner: r(x, 402, ancho, 56),
+    subtitulos: r(x, 1252, ancho, 248),
     carta: { ancho: 90, alto: 126 },
     filas,
-    panel: r(90, 520, 830, 680),
+    panel: r(x + 30, 520, ancho - 60, 680),
   };
 }
 

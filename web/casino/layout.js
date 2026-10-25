@@ -7,9 +7,9 @@
 // Sin DOM ni `window`: lo importan la escena (navegador) y las pruebas (Node).
 
 // zona = donde tiene que caber todo lo que el espectador debe leer. En 9:16 es la zona segura de las redes (arriba 285, abajo 420,
-// izquierda 60, derecha 130); en 16:9 es un margen del 5 %.
+// izquierda y derecha 130); en 16:9 es un margen del 5 %.
 export const FORMATOS_ESCENA = {
-  '9x16': { ancho: 1080, alto: 1920, zona: { x: 60, y: 285, ancho: 890, alto: 1215 } },
+  '9x16': { ancho: 1080, alto: 1920, zona: { x: 130, y: 285, ancho: 820, alto: 1215 } },
   '16x9': { ancho: 1920, alto: 1080, zona: { x: 96, y: 54, ancho: 1728, alto: 972 } },
 };
 
@@ -33,17 +33,18 @@ function asiento(x, y, ancho, alturaPlaca, alturaCartas, carta) {
 // 3 abajo izquierda.
 function dibujar9x16() {
   const carta = { ancho: 100, alto: 140 };
-  const [izq, der, ancho] = [60, 515, 435];
+  const { x: izq, ancho: total } = FORMATOS_ESCENA['9x16'].zona;
+  const ancho = (total - 20) / 2, der = izq + ancho + 20;
   const [arriba, abajo] = [406, 1016];
   const a = (x, y) => asiento(x, y, ancho, 64, 144, carta);
   return {
-    etiqueta: r(60, 285, 890, 36),
-    cabecera: r(60, 330, 890, 64),
+    etiqueta: r(izq, 285, total, 36),
+    cabecera: r(izq, 330, total, 64),
     asientos: [a(izq, arriba), a(der, arriba), a(der, abajo), a(izq, abajo)],
-    anuncio: r(60, 640, 890, 240),
-    pozo: r(60, 892, 430, 112),
-    mazo: r(520, 892, 430, 112),
-    subtitulos: r(60, 1252, 890, 248),
+    anuncio: r(izq, 640, total, 240),
+    pozo: r(izq, 892, ancho, 112),
+    mazo: r(der, 892, ancho, 112),
+    subtitulos: r(izq, 1252, total, 248),
   };
 }
 

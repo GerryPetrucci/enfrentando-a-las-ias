@@ -227,8 +227,9 @@ test('maravilla: solo en la propia capital, una sola, y se paga con MARAVILLA.co
 
 test('maravilla: los valores de la regla (21 Roca + 17 Madera + 13 Hierro + 13 Oro y cuenta de 9 turnos, calibrados con bots el 22 de octubre de 2026; 15/12/9/9 y 8 turnos desde el 18) y el prompt los dicen igual', async () => {
   const { REGLAS } = await import('../../juegos/conquista/reglas-texto.js');
-  assert.deepEqual(MARAVILLA, { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9 });
-  assert.ok(REGLAS.includes('21 Roca + 17 Madera + 13 Hierro + 13 Oro. Quien la conserve 9 turnos seguidos gana.'), 'el prompt dice el costo y la cuenta');
+  assert.deepEqual(MARAVILLA, { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9, cerco: 3 });
+  assert.ok(REGLAS.includes('21 Roca + 17 Madera + 13 Hierro + 13 Oro. Completar 9 turnos de avance gana.'), 'el prompt dice el costo y la cuenta');
+  assert.ok(REGLAS.includes('al menos 3 unidades') && REGLAS.includes('se pausa sin perder el progreso'), 'explica el contrajuego sin cambiar costo/plazo');
 });
 
 test('regalar descuenta ya y entrega al final de la fase; a un reino que no existe se descarta', () => {

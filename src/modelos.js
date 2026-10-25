@@ -18,8 +18,8 @@ cargarEnv();
 // Los colores NO se definen aqui: viven en web/paleta.js, la fuente unica para todos los juegos y paginas.
 //
 // Dos campos que salen del catalogo de OpenRouter y se comprueban con `node herramientas/verificar-modelos.mjs`:
-//   razonamiento  "medium" si el modelo admite ese nivel (se manda siempre, nunca un nivel mayor); null si no tiene niveles
-//                 (se usa su valor por defecto). Ver src/parametros.js.
+//   razonamiento  "medium" si el modelo admite ese nivel (se manda siempre, nunca un nivel mayor); "low" si no lo admite y su defecto esta por
+//                 encima (GLM y Kimi arrancan en "max"); null si no tiene niveles (se usa su valor por defecto). Ver src/parametros.js.
 //   lote          true si el modelo tiene variante ":batch" (mitad de precio por la Batch API); false si no.
 export const CONTENDIENTES = {
   claude: {
@@ -81,6 +81,25 @@ export const CONTENDIENTES = {
   haiku: { nombre: 'Claude Haiku', modelo: 'anthropic/claude-haiku-5.5', color: PALETA.haiku.color, inicial: 'H', razonamiento: 'medium', lote: true, practica: true },
   luna: { nombre: 'GPT Luna', modelo: 'openai/gpt-6-luna', color: PALETA.luna.color, inicial: 'N', razonamiento: 'medium', lote: true, practica: true },
   'flash-lite': { nombre: 'Gemini Flash-Lite', modelo: 'google/gemini-3.5-flash-lite', color: PALETA['flash-lite'].color, inicial: 'F', razonamiento: 'medium', lote: true, practica: true },
+
+  // --- Sumados el 25 de octubre de 2026: superaron la prueba de humo de formato (herramientas/prueba-de-humo-modelos.mjs, 3 llamadas cada uno: Dilema,
+  // Lobo de noche y de dia; plan en privado/planes/plan-probar-modelos-nuevos.md). Confirma que contestan el formato, NO que jueguen bien: antes de
+  // grabar con uno hace falta una partida completa de prueba. Ninguno tiene variante de lote en el catalogo. Cohere (Command A+) quedo fuera: su
+  // razonamiento solo se enciende o apaga y se comio los 4000 tokens sin escribir respuesta.
+  // `razonamiento`: "medium" si lo ofrecen (Grok, Qwen); "low" en GLM y Kimi, que no ofrecen "medium" y arrancan en "max" (con "max" se les iba el
+  // max_tokens entero en pensar); null en los que no tienen niveles utiles, que usan su defecto (ver razonamientoDe en la herramienta).
+  mistral: { nombre: 'Mistral', modelo: 'mistralai/mistral-medium-3-5', color: PALETA.mistral.color, inicial: 'T', razonamiento: null, lote: false },
+  grok: { nombre: 'Grok', modelo: 'x-ai/grok-4.3', color: PALETA.grok.color, inicial: 'X', razonamiento: 'medium', lote: false },
+  qwen: { nombre: 'Qwen', modelo: 'qwen/qwen3.8-max-0902', color: PALETA.qwen.color, inicial: 'Q', razonamiento: 'medium', lote: false },
+  minimax: { nombre: 'MiniMax', modelo: 'minimax/minimax-m3', color: PALETA.minimax.color, inicial: 'B', razonamiento: null, lote: false },
+  glm: { nombre: 'GLM', modelo: 'z-ai/glm-5.3', color: PALETA.glm.color, inicial: 'Z', razonamiento: 'low', lote: false },
+  kimi: { nombre: 'Kimi', modelo: 'moonshotai/kimi-k3.1-pro', color: PALETA.kimi.color, inicial: 'K', razonamiento: 'low', lote: false },
+  // Economicos de practica (misma regla que Haiku, Luna y Flash-Lite): color de la familia de su proveedor; Phi-4 no tiene familia y lleva el suyo.
+  // Phi-4 tiene contexto de solo 16K: puede cortarse con el historial de una partida larga.
+  ministral: { nombre: 'Ministral 8B', modelo: 'mistralai/ministral-8b-2512', color: PALETA.ministral.color, inicial: 'E', razonamiento: null, lote: false, practica: true },
+  'qwen-flash': { nombre: 'Qwen Flash', modelo: 'qwen/qwen3.7-flash', color: PALETA['qwen-flash'].color, inicial: 'W', razonamiento: null, lote: false, practica: true },
+  'glm-flash': { nombre: 'GLM Flash', modelo: 'z-ai/glm-5.3-flash', color: PALETA['glm-flash'].color, inicial: 'J', razonamiento: 'low', lote: false, practica: true },
+  phi4: { nombre: 'Phi-4', modelo: 'microsoft/phi-4', color: PALETA.phi4.color, inicial: 'P', razonamiento: null, lote: false, practica: true },
 };
 
 // ---------- modo de la ejecucion: gratis o pago ----------

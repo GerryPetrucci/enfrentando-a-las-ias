@@ -7,6 +7,13 @@ import { leerMapa } from './conquista-datos.js';
 import { conIntro } from './intro.js';
 
 const ESCENAS = {
+  lobo: {
+    nombre: 'Lobo en la aldea', jugadores: 12, camaraPorDefecto: 0, unidad: 'ronda',
+    comprobar: (partida) => [8, 12].includes(partida?.jugadores?.length) && partida.rondas.every((r) => Array.isArray(r?.publico?.eventos))
+      ? null : 'formato anterior o incompleto: Lobo necesita 8 o 12 asientos y los eventos públicos del motor',
+    linea: () => import('./linea-de-tiempo-lobo.js'),
+    mesa: () => import('./mesa-lobo.js'),
+  },
   dudaapuesta: {
     nombre: 'Duda y apuesta',
     jugadores: 4,

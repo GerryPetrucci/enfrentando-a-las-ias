@@ -25,5 +25,6 @@ export function resultadoDe(E) {
     };
   });
   const [a, b] = E.puntos;
-  return { puntos: [...E.puntos], ganador: a === b ? null : a > b ? 0 : 1, empate: a === b, metricas, epilogo: narrarEpilogo(E) };
+  return { puntos: [...E.puntos], ganador: a === b ? null : a > b ? 0 : 1, empate: a === b, metricas, epilogo: narrarEpilogo(E),
+    ...(E.historia ? { historia: { version: E.historia.version, huella: E.historia.huella, recorrido: E.historial.map((r) => r.situacion.rama), hechos: structuredClone(E.historia.memoria ?? []) } } : {}) };
 }

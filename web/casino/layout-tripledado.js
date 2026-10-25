@@ -12,22 +12,23 @@ import { FORMATOS_ESCENA } from './layout.js';
 const r = (x, y, ancho, alto) => ({ x, y, ancho, alto });
 
 function dibujar9x16() {
+  const { x, ancho } = FORMATOS_ESCENA['9x16'].zona;
   const filas = Array.from({ length: 4 }, (_, s) => {
-    const y = 466 + 196 * s, x = 60;
+    const y = 466 + 196 * s;
     return {
-      fila: r(x, y, 890, 188),
-      placa: r(x + 8, y + 8, 430, 52),
-      tarjetas: r(x + 446, y + 8, 436, 52),
+      fila: r(x, y, ancho, 188),
+      placa: r(x + 8, y + 8, 350, 52),
+      tarjetas: r(x + 376, y + 8, 436, 52),
       dados: [0, 1, 2].map((i) => r(x + 16 + i * 108, y + 76, 96, 96)),
-      combinacion: r(x + 340, y + 76, 170, 44),
-      puntos: r(x + 340, y + 128, 170, 44),
-      bandeja: r(x + 518, y + 76, 364, 34),
-      barra: r(x + 518, y + 128, 364, 18),
+      combinacion: r(x + 340, y + 76, 154, 44),
+      puntos: r(x + 340, y + 128, 154, 44),
+      bandeja: r(x + 502, y + 76, 310, 34),
+      barra: r(x + 502, y + 128, 310, 18),
     };
   });
   return {
-    etiqueta: r(60, 285, 890, 36), cabecera: r(60, 330, 890, 64), banner: r(60, 402, 890, 56), subtitulos: r(60, 1252, 890, 248),
-    dado: { lado: 96 }, bandejaLado: 28, filas, panel: r(90, 520, 830, 680),
+    etiqueta: r(x, 285, ancho, 36), cabecera: r(x, 330, ancho, 64), banner: r(x, 402, ancho, 56), subtitulos: r(x, 1252, ancho, 248),
+    dado: { lado: 96 }, bandejaLado: 24, filas, panel: r(x + 30, 520, ancho - 60, 680),
   };
 }
 

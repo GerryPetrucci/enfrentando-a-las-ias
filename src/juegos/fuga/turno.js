@@ -10,6 +10,8 @@ import { probFallo } from './riesgo.js';
 import { tentacionDe } from './tentacion.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { narrarRonda } from './narracion.js';
+import { avanzarHistoria } from './historia.js';
+import { modificadoresTrama, resolverTrama } from './trama.js';
 
 const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida
 const acotar = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -49,6 +51,7 @@ export function aplicarTurno(E, respuestas) {
   const alarmaAntes = E.alarma, cohesionAntes = E.cohesion;
   const heridasAntes = [...E.heridas];
   const promesasPrevias = [...E.promesas];
+  const modificadores = J.map((j, i) => j ? modificadoresTrama(E, i, j) : []);
 
   // 1) fallo y dado de cada prisionero. Falla con 0 heridas = tropieza; con 1 o mas = cae.
   const fallos = [null, null], resultados = [null, null];
@@ -130,11 +133,12 @@ export function aplicarTurno(E, respuestas) {
   // 7) narracion, final y registro
   E.ronda++;
   const narracion = narrarRonda({ E, num: r + 1, sit, def, jugadas: J, fallos, resultados, tentacion, salen, alarmaAntes, cohesionAntes });
+  if (sit.contexto) narracion.splice(1, 0, { tipo: 'apertura', texto: sit.contexto });
   const final = E.ronda >= RONDAS || (!E.libres[0] && !E.libres[1]) ? cerrar(E) : null;
 
   const registro = {
     ronda: r + 1,
-    situacion: { id: sit.id, fase: sit.fase, titulo: def.titulo, corto: def.corto },
+    situacion: { id: sit.id, fase: sit.fase, titulo: def.titulo, corto: def.corto, ...(sit.rama ? { rama: sit.rama, contexto: sit.contexto } : {}) },
     jugadas: J.map((j) => (j ? { postura: j.postura, metodo: j.metodo, aprovechar: j.aprovechar } : null)),
     promesasPrevias,
     promesaRota,
@@ -160,6 +164,16 @@ export function aplicarTurno(E, respuestas) {
     },
     final,
   };
+  if (E.historia?.definicion.nodos.some((n) => n.reglas?.length)) {
+    registro.trama = { lugar: sit.lugar, eventos: resolverTrama(E, registro, modificadores) };
+    const dichas = new Set();
+    for (const evento of registro.trama.eventos) {
+      if (evento.alcance === 'grupo' && dichas.has(evento.texto)) continue;
+      registro.narracion.push({ tipo: 'consecuencia', texto: evento.alcance === 'grupo' ? evento.texto : `{${evento.actor}}: ${evento.texto}` });
+      dichas.add(evento.texto);
+    }
+  }
   E.historial.push(registro);
+  avanzarHistoria(E);
   return registro;
 }

@@ -64,7 +64,7 @@ test('la escena de cada camara mide lo que piden las mini escenas (entre 2:1 y 3
     const piezas = Object.entries({ alarmaRotulo: L.panel.alarma.rotulo, alarmaBarra: L.panel.alarma.barra, cohesionRotulo: L.panel.cohesion.rotulo, cohesionBarra: L.panel.cohesion.barra });
     for (const [nombre, r] of piezas) assert.ok(dentro(r, L.panel.marco), `${f}: ${nombre} se sale del panel`);
     for (let i = 0; i < piezas.length; i++) for (let j = i + 1; j < piezas.length; j++) assert.ok(sinChoque(piezas[i][1], piezas[j][1]), `${f}: ${piezas[i][0]} pisa a ${piezas[j][0]}`);
-    assert.ok(L.panel.alarma.barra.ancho >= 400 && L.panel.cohesion.barra.ancho >= 400, `${f}: las barras miden poco`);
+    assert.ok(L.panel.alarma.barra.ancho >= L.panel.marco.ancho * 0.45 && L.panel.cohesion.barra.ancho >= L.panel.marco.ancho * 0.45, `${f}: las barras aprovechan casi la mitad del panel cada una`);
   }
 });
 

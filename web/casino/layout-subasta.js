@@ -12,14 +12,15 @@ import { FORMATOS_ESCENA } from './layout.js';
 const r = (x, y, ancho, alto) => ({ x, y, ancho, alto });
 
 function dibujar9x16() {
+  const { x, ancho } = FORMATOS_ESCENA['9x16'].zona;
   const filas = Array.from({ length: 5 }, (_, s) => {
-    const y = 658 + 120 * s, x = 60;
-    return { fila: r(x, y, 890, 112), avatar: r(x + 14, y + 20, 72, 72), nombre: r(x + 100, y + 14, 300, 40), estado: r(x + 100, y + 58, 300, 32), boton: r(x + 410, y + 12, 88, 88), banco: r(x + 520, y + 10, 356, 44), barra: r(x + 520, y + 58, 356, 20), fichas: r(x + 520, y + 84, 356, 20) };
+    const y = 658 + 120 * s;
+    return { fila: r(x, y, ancho, 112), avatar: r(x + 14, y + 20, 72, 72), nombre: r(x + 100, y + 14, 264, 40), estado: r(x + 100, y + 58, 264, 32), boton: r(x + 380, y + 12, 88, 88), banco: r(x + 480, y + 10, 326, 44), barra: r(x + 480, y + 58, 326, 20), fichas: r(x + 480, y + 84, 326, 20) };
   });
   return {
-    etiqueta: r(60, 285, 890, 36), cabecera: r(60, 330, 890, 64),
-    consola: { marco: r(60, 402, 890, 244), contador: r(100, 450, 810, 124), luz: r(760, 414, 150, 30), rotulo: r(100, 414, 520, 30), sello: r(230, 582, 620, 60) },
-    filas, tira: r(60, 1256, 890, 40), casillaTira: { lado: 40, hueco: 6 }, subtitulos: r(60, 1304, 890, 196), panel: r(90, 664, 830, 560),
+    etiqueta: r(x, 285, ancho, 36), cabecera: r(x, 330, ancho, 64),
+    consola: { marco: r(x, 402, ancho, 244), contador: r(x + 40, 450, ancho - 80, 124), luz: r(x + ancho - 190, 414, 150, 30), rotulo: r(x + 40, 414, 520, 30), sello: r(230, 582, 620, 60) },
+    filas, tira: r(x, 1256, ancho, 40), casillaTira: { lado: 36, hueco: 6 }, subtitulos: r(x, 1304, ancho, 196), panel: r(x + 30, 664, ancho - 60, 560),
   };
 }
 

@@ -60,9 +60,9 @@ export const EDIFICIOS = {
   cuartel: { letra: 'c', costo: { Madera: 4, Roca: 3 } },
 };
 export const MAX_EDIFICIOS_POR_TIPO = 3;
-// Decidido el 18 de octubre de 2026 (antes 10/8/6/6 y 5 turnos): con modelos reales la Maravilla decidio 2 de 2 partidas (turnos 10 y 16 de 30), porque se paga hacia el turno 4 y 5 turnos casi no dan
-// tiempo a una coalicion. Costo x1.5 y 8 turnos de cuenta: se construye mas tarde y los demas reinos tienen tiempo de frenarla.
-export const MARAVILLA = { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9 };
+// Costos y plazo vigentes de 2.0.0. En 2.1.0 una fuerza enemiga de 3 unidades
+// en una region vecina pausa el avance; liberarla o pactar permite continuarlo.
+export const MARAVILLA = { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9, cerco: 3 };
 export const HONOR = { inicial: 5, maximo: 10, rotura: 3, cumplido: 1, cadaTurnos: 3, deshonrado: 2 };
 export const PACTO_TURNOS = 2;
 export const COMIDA = { tropasPorRacion: 4, regionesPorCosecha: 2, deserta: 0.1 };

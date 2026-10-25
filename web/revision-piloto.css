@@ -1,0 +1,20 @@
+.revision { max-width:1280px; margin:auto; padding:24px 20px 48px; }
+.marca-revision { color:var(--oro); font:700 18px var(--titulos); text-transform:uppercase; letter-spacing:.08em; }
+.revision h1 { font:800 clamp(32px,5vw,48px)/1.1 var(--titulos); margin:12px 0; }
+.revision section { margin-top:20px; }
+.controles-revision { position:sticky; top:0; z-index:2; padding:16px; background:var(--panel); border:1px solid var(--borde); border-radius:12px; display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center; }
+.revision label { display:flex; gap:10px; align-items:center; }
+.revision select,.revision button { font:600 15px var(--texto); padding:10px 12px; background:var(--noche); color:var(--hueso); border:1px solid var(--borde); border-radius:6px; min-height:42px; }
+.revision button { cursor:pointer; }
+.revision button:hover { border-color:var(--oro); }
+.revision button:disabled { opacity:.45; cursor:wait; }
+.revision #reproducir { color:var(--oro); }
+.botones-revision { display:flex; flex-wrap:wrap; gap:6px; }
+.avance-revision { flex:1 1 65%; }
+.avance-revision input { flex:1; min-width:90px; accent-color:var(--oro); }
+.revision output { font-variant-numeric:tabular-nums; }
+.pantalla-revision { border:1px solid var(--borde); background:var(--noche); border-radius:10px; overflow:hidden; }
+.pantalla-revision iframe { display:block; border:0; width:100%; height:75vh; min-height:450px; }
+.pantalla-revision video { display:block; max-width:100%; max-height:75vh; margin:auto; }
+.revision [hidden] { display:none; }
+@media(max-width:640px) { .revision { padding:16px 10px; } .revision label { max-width:100%; } .revision select { max-width:70vw; } .controles-revision { padding:10px; } }

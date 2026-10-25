@@ -25,7 +25,9 @@ const copia = (x) => structuredClone(x);
 // La partida tal como se ve mientras esta por publicarse: solo hasta `hastaTurno` y sin nada del resultado. `prompts` (opcional) ya viene recortado por quien lo pide.
 export function partidaParcial(partida, hastaTurno, prompts = null) {
   const base = Object.fromEntries(CLAVES_PARCIALES.filter((k) => partida?.[k] !== undefined).map((k) => [k, copia(partida[k])]));
-  const rondas = (Array.isArray(partida?.rondas) ? partida.rondas : []).filter((r, i) => numeroDeRonda(r, i) <= hastaTurno);
+  // `privado` (Lobo: quien actuo como lobo, lo que inspecciono la vidente, las respuestas crudas...) es lo que la escena nunca muestra: hasta que se sube la parte
+  // final adelantaria identidades. Sale solo en la partida completa.
+  const rondas = (Array.isArray(partida?.rondas) ? partida.rondas : []).filter((r, i) => numeroDeRonda(r, i) <= hastaTurno).map(({ privado, ...publico }) => publico);
   return { ...base, rondas: copia(rondas), truncada: true, parcial: { hastaTurno: Math.max(0, hastaTurno) }, estadoPublicacion: POR_PUBLICARSE, ...(prompts ? { prompts } : {}) };
 }
 

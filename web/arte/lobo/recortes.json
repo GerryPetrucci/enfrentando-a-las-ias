@@ -1,0 +1,346 @@
+﻿[
+    {
+        "archivo":  "noche-aldeano-01.png",
+        "origen":  "noche-aldeano.png",
+        "x":  0,
+        "y":  180,
+        "ancho":  320,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-aldeano-02.png",
+        "origen":  "noche-aldeano.png",
+        "x":  320,
+        "y":  180,
+        "ancho":  320,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-aldeano-03.png",
+        "origen":  "noche-aldeano.png",
+        "x":  640,
+        "y":  180,
+        "ancho":  320,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-aldeano-04.png",
+        "origen":  "noche-aldeano.png",
+        "x":  960,
+        "y":  180,
+        "ancho":  320,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-aldeano-05.png",
+        "origen":  "noche-aldeano.png",
+        "x":  1280,
+        "y":  180,
+        "ancho":  320,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-aldeano-06.png",
+        "origen":  "noche-aldeano.png",
+        "x":  1600,
+        "y":  180,
+        "ancho":  316,
+        "alto":  428
+    },
+    {
+        "archivo":  "noche-bruja-01.png",
+        "origen":  "noche-bruja.png",
+        "x":  0,
+        "y":  216,
+        "ancho":  320,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-bruja-02.png",
+        "origen":  "noche-bruja.png",
+        "x":  320,
+        "y":  216,
+        "ancho":  320,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-bruja-03.png",
+        "origen":  "noche-bruja.png",
+        "x":  640,
+        "y":  216,
+        "ancho":  320,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-bruja-04.png",
+        "origen":  "noche-bruja.png",
+        "x":  960,
+        "y":  216,
+        "ancho":  320,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-bruja-05.png",
+        "origen":  "noche-bruja.png",
+        "x":  1280,
+        "y":  216,
+        "ancho":  320,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-bruja-06.png",
+        "origen":  "noche-bruja.png",
+        "x":  1600,
+        "y":  216,
+        "ancho":  316,
+        "alto":  418
+    },
+    {
+        "archivo":  "noche-cazador-01.png",
+        "origen":  "noche-cazador.png",
+        "x":  0,
+        "y":  150,
+        "ancho":  320,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cazador-02.png",
+        "origen":  "noche-cazador.png",
+        "x":  320,
+        "y":  150,
+        "ancho":  320,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cazador-03.png",
+        "origen":  "noche-cazador.png",
+        "x":  640,
+        "y":  150,
+        "ancho":  320,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cazador-04.png",
+        "origen":  "noche-cazador.png",
+        "x":  960,
+        "y":  150,
+        "ancho":  320,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cazador-05.png",
+        "origen":  "noche-cazador.png",
+        "x":  1280,
+        "y":  150,
+        "ancho":  320,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cazador-06.png",
+        "origen":  "noche-cazador.png",
+        "x":  1600,
+        "y":  150,
+        "ancho":  316,
+        "alto":  432
+    },
+    {
+        "archivo":  "noche-cupido-01.png",
+        "origen":  "noche-cupido.png",
+        "x":  0,
+        "y":  180,
+        "ancho":  319,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-cupido-02.png",
+        "origen":  "noche-cupido.png",
+        "x":  319,
+        "y":  180,
+        "ancho":  321,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-cupido-03.png",
+        "origen":  "noche-cupido.png",
+        "x":  640,
+        "y":  180,
+        "ancho":  320,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-cupido-04.png",
+        "origen":  "noche-cupido.png",
+        "x":  960,
+        "y":  180,
+        "ancho":  320,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-cupido-05.png",
+        "origen":  "noche-cupido.png",
+        "x":  1280,
+        "y":  180,
+        "ancho":  320,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-cupido-06.png",
+        "origen":  "noche-cupido.png",
+        "x":  1600,
+        "y":  180,
+        "ancho":  316,
+        "alto":  426
+    },
+    {
+        "archivo":  "noche-lobo-01.png",
+        "origen":  "noche-lobo.png",
+        "x":  0,
+        "y":  184,
+        "ancho":  320,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-lobo-02.png",
+        "origen":  "noche-lobo.png",
+        "x":  320,
+        "y":  184,
+        "ancho":  320,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-lobo-03.png",
+        "origen":  "noche-lobo.png",
+        "x":  640,
+        "y":  184,
+        "ancho":  320,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-lobo-04.png",
+        "origen":  "noche-lobo.png",
+        "x":  960,
+        "y":  184,
+        "ancho":  320,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-lobo-05.png",
+        "origen":  "noche-lobo.png",
+        "x":  1280,
+        "y":  184,
+        "ancho":  320,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-lobo-06.png",
+        "origen":  "noche-lobo.png",
+        "x":  1600,
+        "y":  184,
+        "ancho":  316,
+        "alto":  425
+    },
+    {
+        "archivo":  "noche-misteriosa-01.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  0,
+        "y":  180,
+        "ancho":  319,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-misteriosa-02.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  319,
+        "y":  180,
+        "ancho":  321,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-misteriosa-03.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  640,
+        "y":  180,
+        "ancho":  320,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-misteriosa-04.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  960,
+        "y":  180,
+        "ancho":  320,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-misteriosa-05.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  1280,
+        "y":  180,
+        "ancho":  320,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-misteriosa-06.png",
+        "origen":  "noche-misteriosa.png",
+        "x":  1600,
+        "y":  180,
+        "ancho":  316,
+        "alto":  424
+    },
+    {
+        "archivo":  "noche-vidente-01.png",
+        "origen":  "noche-vidente.png",
+        "x":  0,
+        "y":  180,
+        "ancho":  320,
+        "alto":  430
+    },
+    {
+        "archivo":  "noche-vidente-02.png",
+        "origen":  "noche-vidente.png",
+        "x":  320,
+        "y":  180,
+        "ancho":  320,
+        "alto":  430
+    },
+    {
+        "archivo":  "noche-vidente-03.png",
+        "origen":  "noche-vidente.png",
+        "x":  640,
+        "y":  180,
+        "ancho":  320,
+        "alto":  430
+    },
+    {
+        "archivo":  "noche-vidente-04.png",
+        "origen":  "noche-vidente.png",
+        "x":  960,
+        "y":  180,
+        "ancho":  320,
+        "alto":  430
+    },
+    {
+        "archivo":  "noche-vidente-05.png",
+        "origen":  "noche-vidente.png",
+        "x":  1280,
+        "y":  180,
+        "ancho":  320,
+        "alto":  430
+    },
+    {
+        "archivo":  "noche-vidente-06.png",
+        "origen":  "noche-vidente.png",
+        "x":  1600,
+        "y":  180,
+        "ancho":  316,
+        "alto":  430
+    },
+    {
+        "archivo":  "dia-asamblea-01.png",
+        "origen":  "dia-asamblea-amanecer.png",
+        "x":  12,
+        "y":  68,
+        "ancho":  516,
+        "alto":  288
+    }
+]

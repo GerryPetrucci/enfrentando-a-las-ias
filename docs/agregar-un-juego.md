@@ -64,6 +64,9 @@ En 9:16 las redes tapan arriba (285 px) y abajo (420 px) con su propia interfaz.
 2. Revisa a ojo una captura 9:16 del caso mas grande con `node herramientas/capturar-escena.mjs --formato=9x16` (el mas cargado: mas jugadores, mensajes mas largos, pantalla final).
 3. Solo una banda que cubre todo el ancho a proposito (como las bandas VS de Guerra) puede ir de lado a lado, y aun asi dentro de la zona a lo alto.
 
+## Gancho «Próximamente» del juego (regla del 25 de octubre de 2026)
+
+Todo juego tiene gancho en cada parte: en video si sus partidas dan al menos 2 momentos con puntos (`destacadasDe`) y, si no, **en imagen** (`herramientas/gancho-imagen.mjs`: «Próximamente», el juego, «Juego N · Parte M de K»). No hace falta hacer nada para que funcione. Si el juego tiene arte que su escena ya usa (un panorama, personajes), registralo en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`) para que la imagen lo lleve; sin eso sale solo con la marca. Detalle en `docs/produccion-videos.md`.
 ## Colores de las IAs (global, no se definen por juego)
 
 El color de cada IA vive en [`web/paleta.js`](../web/paleta.js) y es el mismo en todos los juegos, el sitio y el

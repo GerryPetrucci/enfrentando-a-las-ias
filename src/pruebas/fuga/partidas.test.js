@@ -77,7 +77,7 @@ test('100 partidas al azar cumplen los invariantes: limites, puntos enteros, fin
   }
 });
 
-test('con asientos rotados los dos modelos enfrentan las mismas situaciones y los mismos dados', async () => {
+test('con asientos rotados se conserva el mundo y los dados aunque las decisiones puedan cambiar la ruta', async () => {
   const claves = ['leal', 'traidor'];
   const plan = planDeSerie({ claves, partidas: 2, seedBase: 7, mismoSeed: true });
   const agentesPorClave = new Map(claves.map((c) => [c, resolverAgente(c, fuga)]));
@@ -86,8 +86,10 @@ test('con asientos rotados los dos modelos enfrentan las mismas situaciones y lo
   assert.deepEqual(b.jugadores.map((j) => j.id), ['traidor', 'leal']);
   assert.deepEqual(a.rondas[0].oculto.dados, b.rondas[0].oculto.dados);
   const n = Math.min(a.rondas.length, b.rondas.length);
-  assert.deepEqual(a.rondas.slice(0, n).map((r) => r.situacion.id), b.rondas.slice(0, n).map((r) => r.situacion.id));
-  assert.deepEqual(a.rondas.slice(0, n).map((r) => r.oculto.peligro), b.rondas.slice(0, n).map((r) => r.oculto.peligro));
+  assert.equal(a.historia.huella, b.historia.huella);
+  assert.equal(a.seed, b.seed);
+  assert.deepEqual(a.rondas.slice(0, n).map((r) => r.oculto.dados), b.rondas.slice(0, n).map((r) => r.oculto.dados));
+  assert.deepEqual(a.rondas.slice(0, n).map((r) => r.oculto.salida.dados), b.rondas.slice(0, n).map((r) => r.oculto.salida.dados));
 });
 
 test('una partida cortada con maxRondas no se cae: sin final, sin epilogo', async () => {

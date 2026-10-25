@@ -305,9 +305,9 @@
 
 /* ---------- La Fuga: sala de control con camaras de vigilancia (estilo C de la maqueta). Colores propios: verde de vigilancia, rojo de alarma y oro del botin. Ningun color de IA aqui: llega por --c y --t. ---------- */
 .escena.mesa-vigilancia { --vg:#7bd88f; --vg-fondo:#0d1a10; --vg-linea:#1f3a26; --alerta:#ff5a4d; }
-.mesa-vigilancia .fieltro { background:#070b08; }
+.mesa-vigilancia .fieltro { background:radial-gradient(ellipse at 50% 36%, #162522 0, #0b1314 48%, #060a0c 100%); }
 .mesa-vigilancia .fieltro::after, .mesa-vigilancia .riel, .mesa-vigilancia .luz { display:none; }
-.medidores-fuga { z-index:10; border:1.5px solid #7bd88f66; background:#0d1a10; }
+.medidores-fuga { z-index:10; border:1.5px solid #7bd88f55; border-radius:10px; background:linear-gradient(110deg, #142321, #0c1518); box-shadow:0 8px 24px #0005,inset 0 1px #ffffff0b; }
 .rotulo-med { z-index:12; display:flex; align-items:center; font:700 24px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--vg); white-space:nowrap; }
 .rotulo-med b { margin-left:.4em; font-weight:800; color:var(--hueso); }
 .f-16x9 .rotulo-med { font-size:26px; }
@@ -320,7 +320,7 @@
 .barra-med.cohesion.negativa i { background:var(--alerta); }
 .barra-med.cohesion::after { content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:2px; background:#ffffffaa; }
 
-.cam-fuga { z-index:10; background:var(--vg-fondo); border:2px solid var(--vg); box-shadow:inset 0 0 40px #000c, 0 0 22px #7bd88f22; transition:border-color .3s; }
+.cam-fuga { z-index:10; background:linear-gradient(145deg, #192b2b, #0b1519); border:2px solid #7bd88f80; border-radius:12px; box-shadow:inset 0 1px #ffffff12,0 12px 30px #0006; transition:border-color .3s; }
 .cam-fuga.sin-senal { border-color:var(--alerta); box-shadow:inset 0 0 60px #ff5a4d44; }
 .cam-fuga.salida { border-color:var(--oro); }
 .escena-fuga { z-index:11; overflow:hidden; background:linear-gradient(#0d1a10, #0a140c); }
@@ -342,16 +342,92 @@
 .pieza-fuga { position:absolute; z-index:1; color:#7bd88fb3; }
 .pieza-fuga svg { width:100%; height:100%; }
 .pieza-fuga.botin { color:var(--oro); }
+.ambiente-causal .fondo-arquitectura { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+.ambiente-causal::after { opacity:.12; }
+.ambiente-causal::before { display:none; }
+.ambiente-causal > .pieza-fuga:not(.botin), .ambiente-causal > .suelo { display:none; }
+.ambiente-causal .pieza-fuga { color:var(--fa-linea); filter:drop-shadow(0 3px 5px var(--fa-sombra)); }
+.ambiente-causal[data-zona="bloque"] .pieza-fuga[data-pieza="puerta"], .ambiente-causal[data-zona="bloque"] .pieza-fuga[data-pieza="cerradura"] { display:none; }
+.ambiente-causal .suelo { border-color:var(--fa-linea); }
+.ambiente-causal .puerta-danada, .ambiente-causal .rastro-puerta, .ambiente-causal .patrulla-visual { display:none; }
+.ambiente-causal.puerta-forzada .puerta-intacta { display:none; }
+.ambiente-causal.puerta-forzada .puerta-danada, .ambiente-causal.puerta-forzada:not(.rastro-borrado) .rastro-puerta, .ambiente-causal.patrulla-activa .patrulla-visual { display:inline; }
+.ubicacion-fuga, .huella-fuga { position:absolute; bottom:8px; z-index:4; display:flex; flex-direction:column; gap:3px; max-width:48%; padding:7px 11px; background:var(--fa-sombra); border-left:3px solid var(--fa-linea); border-radius:3px; }
+.ubicacion-fuga { left:14px; }
+.huella-fuga { right:14px; text-align:right; border-left:0; border-right:3px solid var(--fa-linea); }
+.ubicacion-fuga strong, .huella-fuga strong { font:700 24px/1 var(--titulos); letter-spacing:.03em; color:var(--hueso); }
+.ubicacion-fuga small, .huella-fuga small { font:500 16px/1.15 var(--texto); color:var(--fa-linea); }
+.huella-fuga[data-estado="rastro"] { border-color:var(--fa-rastro); }
+.huella-fuga[data-estado="rastro"] strong { color:var(--fa-rastro); }
+.huella-fuga[data-estado="borrado"] { border-color:var(--fa-borrado); }
+.huella-fuga[data-estado="borrado"] strong { color:var(--fa-borrado); }
+.huella-fuga[data-estado="patrulla"] { border-color:var(--fa-patrulla); }
+.huella-fuga[data-estado="patrulla"] strong { color:var(--fa-patrulla); }
+.pixel-escenario, .pixel-persona, .pixel-aldeano { image-rendering:pixelated; }
+.ambiente-causal .lampara-pixel { animation:lampara-pixel 6s steps(1,end) infinite; }
+.ambiente-causal .ventilador-pixel { transform-origin:76px 29px; animation:ventilador-pixel 2s steps(4,end) infinite; }
+.ambiente-causal .vapor-pixel { animation:vapor-pixel 2.4s steps(3,end) infinite; }
+.patrulla-activa .haz-patrulla { animation:buscar-rastro 3s steps(3,end) infinite alternate; }
+.patrulla-activa .guardia-pixel { animation:guardia-pixel 3s steps(1,end) infinite; }
+.personaje-pixel .busto-pixel { animation:respirar-pixel 3s steps(1,end) infinite; }
+.personaje-pixel .pi { transform:translateY(calc(var(--sw, 0) * 1px)); }
+.personaje-pixel .pd { transform:translateY(calc(var(--sw, 0) * -1px)); }
+.personaje-pixel .brazo { transform:translate(calc(var(--br, 0) * 1px), calc(var(--br, 0) * -2px)); }
+.personaje-pixel .sil-svg { filter:drop-shadow(3px 0 0 var(--fa-sombra)); }
+.personaje-pixel .venda-pixel, .personaje-pixel .objeto-credencial, .personaje-pixel .objeto-cuerda { display:none; }
+.personaje-pixel.herido .venda-pixel, .personaje-pixel.tiene-credencial .objeto-credencial, .personaje-pixel.tiene-cuerda .objeto-cuerda { display:inline; }
+.personaje-pixel.credencial-invalida .objeto-credencial { opacity:.35; }
+.personaje-pixel.apoyando .brazo { transform:translate(-2px,-3px); }
+.sil-svg-lobo { width:100%; height:100%; overflow:visible; }
+.personaje-lobo .sil-svg-lobo { filter:drop-shadow(2px 0 0 var(--la-sombra)); }
+.personaje-lobo .rol-lobo, .personaje-lobo .rol-vidente, .personaje-lobo .rol-bruja,
+.personaje-lobo .rol-cazador, .personaje-lobo .enamorado-corazon { display:none; }
+.personaje-lobo.revelado-lobo .rol-lobo { display:inline; }
+.personaje-lobo.revelado-vidente .rol-vidente { display:inline; }
+.personaje-lobo.revelado-bruja .rol-bruja { display:inline; }
+.personaje-lobo.revelado-cazador .rol-cazador { display:inline; }
+.personaje-lobo.enamorado .enamorado-corazon { display:inline; }
+/* Lobo, Vidente y Bruja cubren toda la cabeza con su propio tocado: se oculta el pelo/ojos base para que no se mezclen. Cazador y el corazon de Cupido no tapan la cabeza, asi que el pelo/ojos base sigue visible con ellos. */
+.personaje-lobo.revelado-lobo .pelo-base, .personaje-lobo.revelado-lobo .ojos-base,
+.personaje-lobo.revelado-vidente .pelo-base, .personaje-lobo.revelado-vidente .ojos-base,
+.personaje-lobo.revelado-bruja .pelo-base, .personaje-lobo.revelado-bruja .ojos-base { display:none; }
+.personaje-lobo.muerto .sil-svg-lobo { filter:grayscale(1) drop-shadow(2px 0 0 var(--la-sombra)); opacity:.6; }
+.ambiente-causal .gota-pixel { animation:gota-pixel 2.8s steps(5,end) infinite; }
+.ambiente-causal .agua-pixel { animation:agua-pixel 4s steps(2,end) infinite alternate; }
+.ambiente-causal .baliza-pixel, .ambiente-causal .monitor-pixel { animation:baliza-pixel 4s steps(1,end) infinite; }
+.ambiente-causal .papel-pixel { animation:papel-pixel 4s steps(2,end) infinite alternate; }
+.ambiente-causal .perro-pixel { animation:guardia-pixel 4s steps(1,end) infinite; }
+.ambiente-causal .reflector-pixel { animation:buscar-rastro 5s steps(3,end) infinite alternate; }
+@keyframes gota-pixel { 0%,20% { opacity:0; transform:translateY(0); } 25%,80% { opacity:.7; } 100% { opacity:0; transform:translateY(37px); } }
+@keyframes agua-pixel { to { transform:translateX(2px); } }
+@keyframes baliza-pixel { 0%,80%,100% { opacity:1; } 85% { opacity:.6; } }
+@keyframes papel-pixel { to { transform:translateX(1px); } }
+@keyframes lampara-pixel { 0%,92%,96%,100% { opacity:1; } 94%,98% { opacity:.55; } }
+@keyframes ventilador-pixel { to { transform:rotate(360deg); } }
+@keyframes vapor-pixel { 0% { opacity:0; transform:translateY(2px); } 35% { opacity:.5; } 100% { opacity:0; transform:translateY(-4px); } }
+@keyframes buscar-rastro { to { transform:translateY(-3px); } }
+@keyframes guardia-pixel { 50% { transform:translateX(-1px); } }
+@keyframes respirar-pixel { 50% { transform:translateY(-1px); } }
+.flama-pixel { animation:llama-pixel 1.4s steps(2,end) infinite; transform-origin:14px 2px; }
+@keyframes llama-pixel { 50% { transform:translateY(-1px) scaleY(1.1); } }
+@media (prefers-reduced-motion:reduce) {
+  .ambiente-causal .lampara-pixel, .ambiente-causal .ventilador-pixel, .ambiente-causal .vapor-pixel,
+  .patrulla-activa .haz-patrulla, .patrulla-activa .guardia-pixel, .personaje-pixel .busto-pixel,
+  .ambiente-causal .gota-pixel, .ambiente-causal .agua-pixel, .ambiente-causal .baliza-pixel,
+  .ambiente-causal .monitor-pixel, .ambiente-causal .papel-pixel, .ambiente-causal .perro-pixel,
+  .ambiente-causal .reflector-pixel, .flama-pixel { animation:none; }
+}
 .senal-fuga { z-index:12; display:none; align-items:center; justify-content:center; font:800 60px var(--titulos); letter-spacing:.2em; text-transform:uppercase; color:var(--alerta); background:repeating-linear-gradient(0deg, #0b0e0cdd 0 3px, #1d2b21dd 3px 6px); }
 .senal-fuga.dorada { color:var(--oro); }
 .senal-fuga.on { display:flex; }
 .rotulo-cam, .puntos-cam, .rec-cam, .hora-cam { z-index:13; display:flex; align-items:center; font:700 26px var(--titulos); letter-spacing:.14em; text-transform:uppercase; color:var(--vg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .puntos-cam { justify-content:flex-end; color:var(--hueso); }
+.mesa-vigilancia .rotulo-cam { color:#eef5f3; padding-left:12px; border-left:4px solid var(--c); letter-spacing:.09em; }
 .rec-cam { justify-content:flex-end; color:#ff8f86; font-size:24px; }
 .rec-cam.sin-senal { color:var(--alerta); }
 .rec-cam.salida { color:var(--oro); }
 .hora-cam { justify-content:flex-end; font:600 24px var(--digitos); letter-spacing:.06em; color:#7bd88fcc; }
-.sello-fuga { z-index:13; display:flex; align-items:center; gap:14px; font:800 32px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:var(--t); white-space:nowrap; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; overflow:hidden; }
+.sello-fuga { z-index:13; display:flex; align-items:center; gap:14px; font:800 32px var(--titulos); letter-spacing:.06em; text-transform:uppercase; color:#f3f6f4; text-shadow:0 2px 8px #000c; white-space:nowrap; opacity:0; transform:translateY(8px); transition:opacity .25s, transform .25s; overflow:hidden; }
 .sello-fuga.on { opacity:1; transform:none; }
 .sello-fuga.juego { color:var(--alerta); }
 .sello-fuga .rota-cam { padding:1px 10px; border:2px solid var(--alerta); border-radius:6px; font-size:.7em; color:var(--alerta); }
@@ -430,3 +506,78 @@
 .f-16x9 .cierre-juego .cr-redes { display:flex; flex-wrap:wrap; justify-content:center; gap:12px 16px; }
 .f-16x9 .cierre-juego .cr-red { grid-template-columns:44px auto auto; padding:10px 24px; }
 .f-16x9 .cierre-juego .cr-sitio b { font-size:40px; }
+
+/* Solo Lobo: paleta recibida desde LOBO_AMBIENTE; sin fuentes remotas. */
+.mesa-lobo { background:var(--la-cielo); }
+.mesa-lobo .fieltro { background:radial-gradient(ellipse at 50% 45%,var(--la-pared),var(--la-cielo) 74%); }
+.mesa-lobo .fieltro::after, .mesa-lobo .riel, .mesa-lobo .luz, .mesa-lobo .marca-agua { display:none; }
+.mesa-lobo .cabecera .tit { font-size:46px; }
+.mesa-lobo .cabecera .mano { font-size:27px; color:var(--la-luz); }
+.mesa-lobo .etiqueta-ia { color:var(--la-linea); }
+.escenario-lobo { overflow:hidden; border-top:2px solid var(--la-linea); border-bottom:2px solid var(--la-linea); background:#000; }
+.escenario-lobo.dia-lobo { background:var(--la-cielo); }
+.fotograma-lobo { position:absolute; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }
+.dia-lobo .fotograma-lobo { object-fit:cover; image-rendering:auto; }
+.rotulo-lobo { position:absolute; top:0; left:0; right:0; z-index:2; padding:12px 22px; color:var(--la-luz); background:linear-gradient(#000e,#0000); font:700 23px var(--titulos); letter-spacing:.16em; text-transform:uppercase; }
+.relato-lobo { position:absolute; bottom:0; left:0; right:0; z-index:3; padding:44px 24px 18px; background:linear-gradient(#0000,#000e 38%); text-align:center; }
+.relato-lobo strong { display:block; font:800 48px/1.03 var(--titulos); color:var(--la-luz); overflow-wrap:anywhere; }
+.relato-lobo p { margin-top:10px; font:500 23px/1.25 var(--texto); overflow-wrap:anywhere; }
+.relato-lobo small { display:block; margin-top:14px; color:var(--la-linea); font:600 20px var(--titulos); }
+.declaracion-lobo { top:auto; height:46%; bottom:18px; left:18px; right:18px; padding:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:color-mix(in srgb,var(--la-cielo) 86%,transparent); border:1px solid var(--la-linea); }
+.declaracion-lobo strong { font-size:32px; }
+.declaracion-lobo p { margin-top:10px; font-size:26px; line-height:1.2; }
+.declaracion-lobo small { margin-top:8px; font-size:19px; }
+.revelacion-lobo p { font:700 32px var(--titulos); color:var(--la-luz); }
+.asiento-lobo { display:flex; align-items:flex-start; gap:8px; padding:8px; border-left:3px solid var(--c); background:color-mix(in srgb,var(--la-pared) 55%,var(--la-cielo)); }
+.asiento-lobo .personaje-lobo { width:48px; height:74px; flex:none; }
+.identidad-lobo { padding-top:3px; flex:1; min-width:0; }
+.identidad-lobo small { display:block; font:700 18px var(--titulos); color:var(--la-linea); letter-spacing:.12em; }
+.identidad-lobo strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:700 24px/1.2 var(--titulos); }
+.rol-publico-lobo { display:block; font:600 18px/1.3 var(--titulos); color:var(--la-linea); }
+.rol-conocido-lobo .rol-publico-lobo { color:var(--la-luz); }
+.voto-lobo { display:block; white-space:nowrap; font:800 22px var(--titulos); color:var(--la-luz); }
+.voto-lobo:empty { display:none; }
+.rol-afirmado-lobo { display:block; font:600 17px/1.15 var(--titulos); color:var(--la-luz); }
+.mentira-lobo { border:3px solid var(--la-corazon); background:var(--la-cielo); }
+.mentira-lobo strong { color:var(--la-corazon); }
+.habla-lobo { outline:2px solid var(--la-luz); outline-offset:-2px; }
+.objetivo-lobo { outline:2px solid var(--la-corazon); outline-offset:-2px; }
+.caido-lobo .identidad-lobo strong { color:var(--la-linea); }
+.sale-lobo { box-shadow:inset 0 0 22px color-mix(in srgb,var(--la-corazon) 30%,transparent); }
+.mesa-lobo .subtitulos { border-left-color:var(--la-luz); background:color-mix(in srgb,var(--la-cielo) 92%,transparent); }
+.mesa-lobo[data-jugadores="8"] .asiento-lobo .personaje-lobo { width:62px; height:112px; }
+.mesa-lobo.f-16x9 .relato-lobo strong { font-size:58px; }
+.mesa-lobo.f-16x9 .declaracion-lobo { top:auto; bottom:24px; left:24px; right:24px; padding:18px; }
+.mesa-lobo.f-16x9 .declaracion-lobo strong { font-size:36px; }
+.mesa-lobo.f-16x9 .declaracion-lobo p { font-size:30px; }
+.mesa-lobo.f-16x9 .asiento-lobo .personaje-lobo { width:60px; height:94px; }
+.mesa-lobo.f-16x9 .identidad-lobo { padding-top:10px; }
+.mesa-lobo.f-16x9 .rol-publico-lobo { font-size:20px; }
+.mesa-lobo .personaje-lobo.revelado-cupido .enamorado-corazon { display:inline; }
+.panorama-lobo { display:none; background:var(--la-cielo); border:1px solid var(--la-linea); padding:12px; }
+.mostrando-panorama-lobo .escenario-lobo, .mostrando-panorama-lobo .asiento-lobo { visibility:hidden; }
+.mostrando-panorama-lobo .panorama-lobo { display:flex; flex-direction:column; }
+.titulo-panorama-lobo { flex:none; text-align:center; font:800 34px/1.2 var(--titulos); color:var(--la-luz); margin:4px 0 14px; }
+.reparto-lobo { flex:1; min-height:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.integrante-elenco-lobo { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0; background:var(--la-pared); border:1px solid var(--la-linea); }
+/* Escala de los cuadros del elenco (px de la tira x escala): la tarjeta mas angosta mide ~185 px (9:16) y la mas baja ~239 px, con tres lineas de texto. */
+.reparto-lobo { --escala-elenco:.8; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .reparto-lobo { --escala-elenco:.75; }
+.hueco-figura-lobo { flex:none; display:flex; align-items:flex-end; justify-content:center; height:calc(var(--alto-hueco) * var(--escala-elenco) * 1px); }
+.figura-atlas-lobo { flex:none; width:calc(var(--ancho-cuadro) * var(--escala-elenco) * 1px); height:calc(var(--alto-cuadro) * var(--escala-elenco) * 1px); background-repeat:no-repeat; background-size:calc(var(--ancho-cuadro) * var(--cuadros) * var(--escala-elenco) * 1px) 100%; animation:animar-atlas-lobo var(--ciclo-atlas) steps(var(--cuadros),end) infinite; }
+@keyframes animar-atlas-lobo { to { background-position:calc(var(--ancho-cuadro) * var(--cuadros) * var(--escala-elenco) * -1px) 0; } }
+.nombre-elenco-lobo { font:800 24px var(--titulos); color:var(--la-luz); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rol-elenco-lobo { font:700 23px var(--titulos); }
+.declaracion-elenco-lobo { font:600 18px var(--titulos); color:var(--la-linea); }
+.mesa-lobo.f-16x9[data-jugadores="12"] .reparto-lobo { grid-template-columns:repeat(6,minmax(0,1fr)); }
+.casas-lobo { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:minmax(0,1fr); gap:10px; flex:1; min-height:0; padding:8px; }
+.mesa-lobo.f-16x9 .casas-lobo { grid-template-columns:repeat(6,minmax(0,1fr)); }
+.mesa-lobo.f-16x9[data-jugadores="8"] .casas-lobo { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.mesa-lobo.f-9x16[data-jugadores="12"] .identidad-lobo { padding-top:0; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .identidad-lobo small { font-size:15px; line-height:1; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .identidad-lobo strong { font-size:22px; line-height:1.1; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .rol-publico-lobo { font-size:16px; line-height:1.1; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .rol-afirmado-lobo { font-size:15px; line-height:1.1; }
+.mesa-lobo.f-9x16[data-jugadores="12"] .voto-lobo { font-size:19px; line-height:1.1; }
+.casa-anonima-lobo { min-height:0; overflow:hidden; background:#000; }
+.habitante-anonimo { display:block; width:100%; height:100%; object-fit:contain; image-rendering:pixelated; }

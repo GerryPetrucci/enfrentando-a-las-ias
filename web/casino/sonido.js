@@ -56,7 +56,7 @@ export function eventosDePaso(paso) {
 
 // Motor de audio: sfx.preparar() (con un gesto del usuario, o solo en OBS) abre el audio y carga las muestras que existan; sfx.carta(), sfx.ficha()...
 // suenan el efecto. Donde no hay AudioContext (Node), con el sonido apagado o ante cualquier fallo, todo es silencio y nada lanza.
-export function crearSonido({ activo = true, azar = () => 0, base = '' } = {}) {
+export function crearSonido({ activo = true, azar = () => 0, base = '', separado = false } = {}) {
   const AC = globalThis.AudioContext ?? globalThis.webkitAudioContext;
   const sfx = { disponible: false };
   const muestras = {};
@@ -98,7 +98,11 @@ export function crearSonido({ activo = true, azar = () => 0, base = '' } = {}) {
     if (!activo || typeof AC !== 'function') return;
     try {
       ctx ??= new AC();
-      if (!maestro) { maestro = ctx.createGain(); maestro.gain.value = VOLUMEN; maestro.connect(ctx.destination); }
+      if (!maestro) {
+        maestro = ctx.createGain(); maestro.gain.value = VOLUMEN;
+        if (separado) { const canal = ctx.createStereoPanner(); canal.pan.value = 1; maestro.connect(canal); canal.connect(ctx.destination); }
+        else maestro.connect(ctx.destination);
+      }
       await ctx.resume?.();
       sfx.disponible = true;
     } catch { return; }

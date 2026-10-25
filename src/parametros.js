@@ -5,6 +5,9 @@
 // razonamiento oculto se cobra como salida y en los modelos caros (Claude Sonnet 5.5 razona por defecto en "high") cuesta mucho
 // mas sin cambiar lo que se mide. Los modelos que no tienen niveles (DeepSeek V3.2, Llama, Laguna, Ling) usan su valor por
 // defecto: lo que admite cada contendiente esta en `razonamiento` de src/modelos.js y se verifica con herramientas/verificar-modelos.mjs.
+// Excepcion (25 de octubre de 2026): GLM 5.3 y Kimi K3.1 no ofrecen "medium" y su defecto es "max"; con "max" gastaron los 4000 tokens pensando
+// y no contestaron. Como la regla es "nunca un nivel mayor que medium", usan "low" (el mas alto que no pasa de medium); ver razonamientoDe en
+// herramientas/prueba-de-humo-modelos.mjs.
 //
 // Nota: Claude Sonnet y Haiku 5.5 y los GPT-6 no aceptan `temperature` (OpenRouter la ignora para ellos); la temperatura 0.7
 // solo se aplica de verdad en los modelos que la admiten.

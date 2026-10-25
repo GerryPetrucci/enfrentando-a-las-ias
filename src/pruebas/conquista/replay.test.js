@@ -75,6 +75,10 @@ test('si lo guardado no cuadra (un estado cambiado) la reconstruccion lo dice y 
   manipulada.rondas[2].estado.dueno[0] = manipulada.rondas[2].estado.dueno[0] === 3 ? 2 : 3;
   assert.equal(reconstruirPrompts(manipulada).fiel, false);
   // sin el mapa guardado el motor lo vuelve a sacar del seed: si coincide con lo jugado la rejugada sigue siendo fiel, y lo que la comprueba son los estados guardados
+  const maravillaAlterada = structuredClone(partida);
+  const estado = maravillaAlterada.rondas[2].estado;
+  estado.maravilla = estado.maravilla ? { ...estado.maravilla, n: estado.maravilla.n + 1 } : { r: 0, k: 0, n: 8, t0: 1, cercada: true };
+  assert.equal(reconstruirPrompts(maravillaAlterada).fiel, false, 'el progreso de una Maravilla tambien debe coincidir');
   assert.equal(reconstruirPrompts({ ...partida, mapa: null }).fiel, true);
   for (const mala of [null, undefined, {}, { ...partida, rondas: 'x' }, { ...partida, jugadores: null }]) {
     assert.doesNotThrow(() => reconstruirPrompts(mala));

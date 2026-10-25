@@ -7,8 +7,10 @@ import subasta from './subasta.js';
 import mayormenor from './mayormenor.js';
 import tripledado from './tripledado.js';
 import dudaapuesta from './dudaapuesta.js';
+import lobo from './lobo.js';
 
 export const JUEGOS = {
+  [lobo.id]: lobo,
   [dilema.id]: dilema,
   [conquista.id]: conquista,
   [fuga.id]: fuga,

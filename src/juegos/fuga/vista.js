@@ -5,6 +5,7 @@
 import { RONDAS, TURNOS_OBJETO, nivelAlerta } from './constantes.js';
 import { tentacionDe } from './tentacion.js';
 import { porId } from './catalogo.js';
+import { hechosActivos, HECHOS, modificadoresTrama } from './trama.js';
 
 const objetoTxt = (o) => (o && o.restan > 0 ? `${o.nombre} (ayuda ${o.restan} situacion${o.restan === 1 ? '' : 'es'} mas)` : 'ninguno');
 
@@ -37,6 +38,17 @@ export function vistaTexto(E, i) {
   const L = [];
   L.push(`SITUACION ${E.ronda + 1} DE ${RONDAS} (${sit.fase})`);
   L.push(`Escena: ${def.descripcion}`);
+  if (sit.contexto) L.push(`Recorrido: ${sit.contexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`);
+  const nodo = E.historia?.definicion.nodos.find((n) => n.id === E.historia.actual);
+  const plano = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (nodo?.lugar) {
+    L.push(`Lugar: ${plano(nodo.lugar)}`);
+    if (nodo.objetivo) L.push(`Opciones de este lugar: ${plano(nodo.objetivo)}`);
+    const activas = new Map(['sigilo', 'fuerza', 'engano', 'esperar'].flatMap((metodo) => modificadoresTrama(E, i, { metodo })).map((m) => [m.id, m]));
+    for (const m of activas.values()) L.push(`Consecuencia presente: ${plano(m.texto)}${m.metodos ? ` Metodos: ${m.metodos.join(', ')}.` : ''}`);
+    const memoria = HECHOS.flatMap((h) => hechosActivos(E, h));
+    for (const h of memoria) L.push(`Hecho observado (situacion ${h.ronda}, ${h.actor === i ? 'tu' : 'companero'}): ${plano(h.texto)}`);
+  }
   L.push(`Pista: ${def.pistas[sit.apuntaA]}`);
   L.push(`Alerta: ${nivelAlerta(E.alarma)}`);
   const tentacion = tentacionDe(E, E.ronda);

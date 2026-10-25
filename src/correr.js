@@ -42,6 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
 import { obtenerJuego } from './juegos/index.js';
+import { resumenPorModelo } from './invalidas.js';
 import { VERSION_PROMPT, construirSistema } from './prompt.js';
 import { resolverAgente, agenteModeloEnLote } from './agentes.js';
 import { CONTENDIENTES, fijarModo } from './modelos.js';
@@ -208,10 +209,17 @@ export async function correr(argv, {
   // avisa una sola linea al terminar.
   const alTerminar = (r, p) => {
     const nombres = r.jugadores.map((j) => j.nombre);
-    const texto = r.truncada ? `cortada a ${r.rondas.length} turno(s)` : r.empate ? `empate ${r.puntos.join('-')}` : `gana ${nombres[r.ganador]} ${r.puntos.join('-')}`;
+    // Un juego por bandos (Lobo) puede tener varios ganadores: `ganador` queda en null y manda `ganadorBando`.
+    const quien = r.ganador != null ? `gana ${nombres[r.ganador]}` : r.ganadorBando ? `gana el bando ${r.ganadorBando}` : 'sin ganador';
+    const texto = r.truncada ? `cortada a ${r.rondas.length} turno(s)` : r.empate ? `empate ${r.puntos.join('-')}` : `${quien} ${r.puntos.join('-')}`;
     consola.log(`${lote ? `  Partida ${p.n + 1}/${partidas}` : ''}  ${texto}${r.mapa?.bioma ? ` · bioma ${r.mapa.bioma}` : ''}`);
-    const fallos = r.rondas.flatMap((x) => x.errores.filter(Boolean));
+    const fallos = r.rondas.flatMap((x) => (x.errores ?? []).filter(Boolean));
     if (fallos.length) consola.log(`     ! ${fallos.length} error(es) de API: ${fallos[0].slice(0, 90)}`);
+    // Siempre se dice por que fallaron las llamadas invalidas (el detalle con el texto crudo: node herramientas/analizar-invalidas.mjs).
+    for (const f of resumenPorModelo(r)) {
+      consola.log(`     ! ${f.nombre}: ${f.invalidas}${f.llamadas ? ` de ${f.llamadas}` : ''} llamada(s) inválida(s)`);
+      for (const c of f.causas.slice(0, 3)) consola.log(`         ${c.veces > 1 ? `${c.veces}× ` : ''}${c.causa.slice(0, 110)}`);
+    }
     for (const aviso of r.avisos) consola.log(`     ! ${aviso}`);
   };
   const resultados = await ejecutarSerie({

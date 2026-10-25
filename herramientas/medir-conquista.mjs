@@ -30,6 +30,11 @@ if (sin.has('eventos')) EVENTOS.activo = false;
 if (sin.has('tierra')) TIERRA.factor = 1;
 if (arg('tierra', null) !== null) TIERRA.factor = Number(arg('tierra'));
 if (arg('maravilla', null) !== null) { const [turnos, costo] = arg('maravilla').split(',').map(Number); MARAVILLA.turnos = turnos; if (costo) for (const r of Object.keys(MARAVILLA.costo)) MARAVILLA.costo[r] = Math.round(MARAVILLA.costo[r] * costo); }
+if (arg('cerco', null) !== null) {
+  const cerco = Number(arg('cerco'));
+  if (!Number.isInteger(cerco) || cerco < 0) { console.error('--cerco requiere un entero no negativo; 0 apaga el cerco para comparar.'); process.exit(2); }
+  MARAVILLA.cerco = cerco;
+}
 if (arg('hegemon', null) !== null) { const [entra, sale, bono] = arg('hegemon').split(',').map(Number); Object.assign(HEGEMON, { entra, sale, bonoAtaque: bono }); }
 for (const id of mezcla) if (!conquista.bots[id]) { console.error(`bot desconocido: ${id}. Bots: ${Object.keys(conquista.bots).join(', ')}`); process.exit(2); }
 
@@ -80,7 +85,7 @@ for (let g = 0; g < partidas; g++) {
 
 const pc = (a, b) => (b ? Math.round((100 * a) / b) : null);
 const salida = {
-  reglas: conquista.versionReglas, partidas: R.partidas, jugadores, mezcla, ablacion: [...sin], tierra: TIERRA.factor, bioma: bioma ?? 'del seed', victoriasPorAsiento: R.porAsiento.map((n) => pc(n, R.partidas)),
+  reglas: conquista.versionReglas, partidas: R.partidas, jugadores, mezcla, ablacion: [...sin], tierra: TIERRA.factor, cercoMaravilla: MARAVILLA.cerco, bioma: bioma ?? 'del seed', victoriasPorAsiento: R.porAsiento.map((n) => pc(n, R.partidas)),
   liderGana: Object.fromEntries([10, 15, 20].map((t) => [`T${t}`, { porciento: pc(...R.lideres[t]), de: R.lideres[t][1] }])),
   cambiosDeLider: +(R.cambiosLider / R.partidas).toFixed(2), turnosPorPartida: +(R.turnos / R.partidas).toFixed(1), terminanAntesDelTurno30: pc(R.partidas - R.hastaT30, R.partidas), maravilla: pc(R.maravilla, R.partidas),
   porBot: Object.fromEntries(ids.map((i) => {

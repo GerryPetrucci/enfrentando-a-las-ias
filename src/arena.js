@@ -13,6 +13,22 @@ import { crearRng } from './rng.js';
 // Presupuesto de llamadas por partida (CLAUDE.md): al pasarlo se avisa, no se corta.
 export const LIMITE_LLAMADAS = 100;
 
+// Optativo por juego. Reservar toda la fase antes de lanzar Promise.all evita
+// consultar solo algunos asientos cuando queda poco presupuesto.
+export function comprobarPresupuestoLlamadas(juego, llamadas, activos) {
+  const limite = juego.limiteLlamadasDuro;
+  if (limite === undefined || limite === null) return null;
+  if (!Number.isSafeInteger(limite) || limite < 0) throw new Error('Límite duro de llamadas inválido.');
+  const necesarias = activos.filter(Boolean).length;
+  return llamadas + necesarias > limite
+    ? { motivo: 'llamadas', limite, llamadas, necesarias, restantes: limite - llamadas }
+    : null;
+}
+
+// Los errores de API de cada asiento van en `registro.errores`. Un juego que no los guarda (Lobo solo marca `invalidas`) los recibe aqui, asi quedan
+// en el resultado y la consola puede contarlos; si el juego ya trae `errores` no se toca.
+const conErrores = (registro, errores) => (registro && registro.errores === undefined ? Object.assign(registro, { errores }) : registro);
+
 // Cada asiento tiene su propio rng: asi lo que sortee un agente no depende del orden en que respondan los demas.
 const rngDeAsiento = (seed, i) => crearRng(((seed >>> 0) ^ Math.imul(i + 1, 0x9e3779b1)) >>> 0);
 
@@ -30,10 +46,21 @@ export async function correrPartida({
   const tope = (juego.rondas ?? 1000) + 2;
   let tokens = 0;
   let llamadas = 0;
+  let cortePorLlamadas = null;
 
   while (!juego.terminado(estado) && (maxRondas === null || registros.length < maxRondas)) {
     if (registros.length >= tope) throw new Error(`${juego.id}: la partida no termina despues de ${tope} rondas`);
     const activos = juego.activos ? juego.activos(estado) : agentes.map(() => true);
+
+    cortePorLlamadas = comprobarPresupuestoLlamadas(juego, llamadas, activos);
+    if (cortePorLlamadas) {
+      const aviso = `Corte duro: ${llamadas}/${cortePorLlamadas.limite} llamadas; la siguiente fase necesita ${cortePorLlamadas.necesarias}.`;
+      avisos.push(aviso);
+      alAvisar(aviso);
+      const cierre = conErrores(juego.cerrarPorLimiteLlamadas?.(estado, cortePorLlamadas), agentes.map(() => null));
+      if (cierre) { registros.push(cierre); alRegistrar(cierre, estado); }
+      break;
+    }
 
     // Simultaneo de verdad: nadie ve la jugada del otro antes de decidir.
     const respuestas = await Promise.all(
@@ -46,25 +73,29 @@ export async function correrPartida({
           avisos.push(aviso);
           alAvisar(aviso);
         }
+        // Lo que gasto una llamada, haya salido bien o no: una respuesta cortada por max_tokens tambien cobra sus tokens.
+        const gastar = (u) => {
+          if (!u) return;
+          tokens += u.total_tokens ?? 0;
+          uso[i].tokensEntrada += u.prompt_tokens ?? 0;
+          uso[i].tokensSalida += u.completion_tokens ?? 0;
+        };
         try {
           await limitador?.esperar();
           // Solo los bots de control piden el estado completo; un modelo recibe unicamente su vista.
           const entrada = { juego, vista: juego.vista(estado, i), rng: rngs[i], ...(agente.necesitaEstado ? { estado, i } : {}) };
           const r = await agente.jugar(entrada);
-          if (r.uso) {
-            tokens += r.uso.total_tokens ?? 0;
-            uso[i].tokensEntrada += r.uso.prompt_tokens ?? 0;
-            uso[i].tokensSalida += r.uso.completion_tokens ?? 0;
-          }
+          gastar(r.uso);
           return { ...juego.normalizar(r.respuesta, estado), crudo: r.crudo, error: null };
         } catch (err) {
-          // Un modelo caido no tumba la partida: juega el default y queda anotado.
-          return { ...juego.normalizar(null, estado), crudo: null, error: String(err?.message ?? err) };
+          // Un modelo caido no tumba la partida: juega el default y queda anotado, con el texto que llego (si llego algo) y lo que costo.
+          gastar(err?.uso);
+          return { ...juego.normalizar(null, estado), crudo: typeof err?.crudo === 'string' ? err.crudo : null, error: String(err?.message ?? err) };
         }
       })
     );
 
-    const registro = juego.aplicar(estado, respuestas, rng);
+    const registro = conErrores(juego.aplicar(estado, respuestas, rng), respuestas.map((r) => r?.error ?? null));
     registros.push(registro);
     alRegistrar(registro, estado);
   }
@@ -85,6 +116,7 @@ export async function correrPartida({
     ...juego.resultado(estado),
     truncada: !juego.terminado(estado),
     llamadas,
+    ...(cortePorLlamadas ? { cortePorLlamadas } : {}),
     avisos,
     usoPorJugador: uso,
     duracionMs: Date.now() - inicio,

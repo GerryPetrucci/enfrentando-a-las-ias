@@ -16,4 +16,5 @@ export const FORMATOS = {
 // Zona segura del 9x16 (en pixeles de la hoja): lo importante (marcador, avisos, caras) va aqui. Sale de los margenes mas
 // estrictos de las redes (arriba 250, abajo 420, izquierda 60, derecha 130; cifras aproximadas de guias de 2026, hay que
 // confirmarlas con las plantillas oficiales) y es la zona dentro de la que se dibuja todo lo que se lee en el 9x16.
-export const ZONA_SEGURA = { x: 60, y: 285, ancho: 890, alto: 1215 };
+// Centrada en el video: reserva de 130 px a ambos lados (orden del 23 oct 2026).
+export const ZONA_SEGURA = { x: 130, y: 285, ancho: 820, alto: 1215 };

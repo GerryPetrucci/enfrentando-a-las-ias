@@ -121,6 +121,18 @@ test('la serie publica: lo publicado completo, lo subido a medias recortado, lo 
   assert.deepEqual(pub.partidas.map((p) => p.estadoPublicacion), [PUBLICADA, PUBLICADA]);
 });
 
+test('una partida de Lobo a medio publicar no saca su registro privado (identidades, inspecciones, textos crudos); la completa si lo conserva', async () => {
+  const { jugarLobo } = await import('./escena/ayudas-lobo.js');
+  const lobo = jugarLobo(3, 8);
+  assert.ok(lobo.rondas.every((r) => r.privado), 'el registro de Lobo trae privado en cada turno');
+  const parcial = partidaParcial(lobo, 6);
+  assert.ok(parcial.rondas.length > 0);
+  assert.ok(parcial.rondas.every((r) => r.privado === undefined && r.publico), 'lo que sale a medias es solo lo publico');
+  assert.ok(!JSON.stringify(parcial).includes('"privado"'));
+  assert.ok(lobo.rondas.every((r) => r.privado), 'no se modifica la partida original');
+  assert.ok(partidaCompleta(lobo).rondas.every((r) => r.privado), 'ya publicada la parte final todo es publico');
+});
+
 test('sin registro la serie entera esta por publicarse y solo muestra sus seeds; una serie rota no lanza', () => {
   const pub = armarSeriePublica(serie(), null, {});
   assert.equal(pub.publicacion.estado, POR_PUBLICARSE);

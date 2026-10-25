@@ -16,6 +16,7 @@ import { jugarSol } from './ayudas-sol.js';
 import { jugarTD } from './ayudas-td.js';
 import { jugarSub } from './ayudas-sub.js';
 import { jugarFuga } from './ayudas-fuga.js';
+import { jugarLobo } from './ayudas-lobo.js';
 import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
 
 test('el registro dice de cada juego con escena su nombre, cuantos jugadores, la camara por defecto y la unidad de un clip', () => {
@@ -33,7 +34,7 @@ test('todos los juegos registrados traen sus datos completos y una camara por de
   for (const id of juegosConEscena()) {
     const e = escenaDe(id);
     assert.ok(typeof e.nombre === 'string' && e.nombre.length > 0, id);
-    assert.ok(Number.isInteger(e.jugadores) && e.jugadores >= 2 && e.jugadores <= 5, `${id}: jugadores`);
+    assert.ok(Number.isInteger(e.jugadores) && e.jugadores >= 2 && e.jugadores <= 12, `${id}: jugadores`);
     assert.ok(Number.isInteger(e.camaraPorDefecto) && e.camaraPorDefecto >= 0 && e.camaraPorDefecto <= e.jugadores, `${id}: camara por defecto`);
     assert.ok(['mano', 'ronda', 'turno'].includes(e.unidad), `${id}: unidad`);
   }
@@ -48,7 +49,7 @@ test('un juego sin escena da un error que dice cuales hay', async () => {
 test('el catalogo de partidas usa el registro: un juego registrado vale y uno sin escena no, diciendo por que', async () => {
   // Triple dado exige los datos que usa su escena (comprobar en lineas.js): su partida de juguete trae un registro de prediccion completo; la Guerra de territorios, una partida real con su mapa
   const real = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
-  const partida = (id) => (id === 'conquista' ? real : { juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
+  const partida = (id) => (id === 'lobo' ? jugarLobo() : id === 'conquista' ? real : { juego: { id }, jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [id === 'tripledado' ? { fase: 'prediccion', oculto: { tarjetas: [] }, lanzamiento: { blancos: [] } } : id === 'subasta' ? { subasta: 1, oculto: { apuestas: [], bancos: [] } } : id === 'fuga' ? { ronda: 1, oculto: { alarmaAntes: 0, cohesionAntes: 0, fallo: [0, 0] }, ilegibles: [[], []] } : { mano: 1 }] });
   const c = catalogarPartidas([
     ...juegosConEscena().map((id) => ({ nombre: `${id}.json`, datos: { partidas: [partida(id)] } })),
     { nombre: 'dilema.json', datos: { partidas: [partida('dilema')] } },

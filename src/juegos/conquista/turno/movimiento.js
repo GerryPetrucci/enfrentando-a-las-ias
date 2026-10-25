@@ -77,6 +77,7 @@ function capturar(ctx, d, nuevo, viejo, huboCombate) {
   ctx.evt({ tipo: 'conquista', k: nuevo, contra: viejo, r: d });
   if (E.maravilla && E.maravilla.r === d) { // la Maravilla pasa intacta y su cuenta de turnos empieza de cero
     E.maravilla.k = nuevo; E.maravilla.n = 0; E.maravilla.t0 = ctx.t;
+    delete E.maravilla.cercada;
     ctx.evt({ tipo: 'maravilla_cae', k: nuevo, de: viejo });
   }
   if (d === R[viejo].capital && R[viejo].vivo) ctx.caidas.push({ k: viejo, por: nuevo });
@@ -152,9 +153,9 @@ function resolverRegion(ctx, d, llegadas, ataques) {
 
   const res = resolverBatalla(bandos, { terr: regs[d].terr, fort: E.fort[d], dueno: O });
   // Lo que el combate le deja a la escena del video (solo datos): el dueno, el terreno y la fortaleza de ANTES de la batalla (la conquista la baja despues), cada bando con su fuerza, sus unidades por tipo,
-  // su nivel de mejoras («armas») y sus miembros. Los campos de siempre ({ d, k, perdidas }) no cambian.
+  // su nivel de mejoras («armas») y sus miembros. Los campos de siempre ({ d, k, perdidas }) no cambian; `bajas` cuenta TODAS las unidades que desaparecen (un tercer bando eliminado sin pelear no entra en `perdidas`).
   const datos = {
-    dueno: O, terr: regs[d].terr, fort: E.fort[d],
+    dueno: O, terr: regs[d].terr, fort: E.fort[d], bajas: res.bajas,
     bandos: res.fichas.map((x) => ({ k: x.k, n: x.n, f: x.f, defensor: x.defensor, armas: nivelMaximo(ctx, x.miembros), uni: x.uni, miembros: x.miembros.map((m) => ({ k: m.k, uni: m.pila })) })),
   };
   const [, segundo] = res.fichas, duenoPeleo = miembros.find((m) => m.k === O);
@@ -162,7 +163,7 @@ function resolverRegion(ctx, d, llegadas, ataques) {
   if (res.empate) { // empate: el dueno resiste con 1 unidad; sin el en la pelea, ambos bandos desaparecen (y una region sin unidades de su dueno queda libre)
     if (duenoPeleo) {
       sumarPila(E, d, O, dejarUna(duenoPeleo.pila));
-      ctx.combates.push({ d, k: O, perdidas: res.todos - 1, ...datos, resultado: 'empate', quedan: 1 });
+      ctx.combates.push({ d, k: O, perdidas: res.todos - 1, ...datos, bajas: res.todos - 1, resultado: 'empate', quedan: 1 });
       ctx.evt({ tipo: 'repelido', k: segundo.k, contra: O, r: d });
     } else {
       if (O >= 0 && !duenoPasivo) { E.dueno[d] = -1; E.fort[d] = 0; E.edif[d] = null; E.dan[d] = 0; }

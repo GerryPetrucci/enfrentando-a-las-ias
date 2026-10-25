@@ -18,7 +18,7 @@ export function reconstruirPrompts(partida, hastaTurno = Infinity) {
   try {
     if (!Array.isArray(partida?.rondas) || !Array.isArray(partida?.jugadores)) return { fiel: false, turnos: [] };
     const k = partida.jugadores.length;
-    const E = crearEstado(crearRng(partida.seed), { jugadores: k, mapa: restaurarMapa(partida.mapa), nombres: partida.reinos });
+    const E = crearEstado(crearRng(partida.seed), { jugadores: k, mapa: restaurarMapa(partida.mapa), nombres: partida.reinos, cercoMaravilla: partida.cercoMaravilla ?? 0 });
     const turnos = [];
     let fiel = true;
     for (const r of partida.rondas) {
@@ -39,6 +39,8 @@ export function reconstruirPrompts(partida, hastaTurno = Infinity) {
       aplicarTurno(E, jugadas);
       if (!igual(E.dueno, r.estado?.dueno) || !igual(Array.from({ length: E.dueno.length }, (_, x) => tropasDe(E, x)), r.estado?.tropas)) fiel = false;
       if (r.estado?.uni !== undefined && JSON.stringify(instantanea(E).uni) !== JSON.stringify(r.estado.uni)) fiel = false; // las partidas 2.0.0 guardan las unidades de cada reino por region
+      const maravilla = (m) => m ? { r: m.r, k: m.k, n: m.n, t0: m.t0, cercada: !!m.cercada } : null;
+      if (JSON.stringify(maravilla(E.maravilla)) !== JSON.stringify(maravilla(r.estado?.maravilla))) fiel = false;
     }
     return { fiel, turnos };
   } catch {

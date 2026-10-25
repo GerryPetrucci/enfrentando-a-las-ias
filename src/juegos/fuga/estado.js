@@ -4,6 +4,7 @@
 
 import { CATALOGO } from './catalogo.js';
 import { FASES, SITUACIONES_POR_FASE, K, PISTA_FIABLE, P_TENTACION, PUNTOS, METODOS_DE_SITUACION } from './constantes.js';
+import { prepararHistoria } from './historia.js';
 
 // n elementos al azar, sin repetir y en orden aleatorio (Fisher-Yates parcial sobre una copia)
 function sortear(rng, lista, n) {
@@ -31,7 +32,7 @@ function instanciar(rng, def, fase) {
 
 const statsVacias = () => ({ ayudas: 0, sacrificios: 0, separaciones: 0, botines: 0, delaciones: 0, promesasHechas: 0, promesasRotas: 0, invalidas: 0, ilegibles: 0 });
 
-export function crearEstado(rng) {
+export function crearEstado(rng, { ramificada = false } = {}) {
   const situaciones = [];
   for (const fase of FASES) {
     for (const def of sortear(rng, CATALOGO.filter((s) => s.fase === fase.id), SITUACIONES_POR_FASE)) {
@@ -44,7 +45,7 @@ export function crearEstado(rng) {
   const salidas = situaciones.map(() => [rng(), rng()]);
   const botinSolo = situaciones.map(() => [rng(), rng()]);
   const semillaNarracion = Math.floor(rng() * 4294967296);
-  return {
+  const E = {
     ronda: 0,
     fin: false,
     finales: [null, null],
@@ -66,4 +67,9 @@ export function crearEstado(rng) {
     stats: [statsVacias(), statsVacias()],
     historial: [],
   };
+  if (ramificada) prepararHistoria(E, rng, (nodo) => {
+    const fase = FASES.find((f) => f.id === nodo.fase);
+    return sortear(rng, CATALOGO.filter((s) => nodo.escenas.includes(s.id)), nodo.escenas.length).map((def) => instanciar(rng, def, fase));
+  });
+  return E;
 }

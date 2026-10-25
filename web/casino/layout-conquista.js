@@ -33,19 +33,24 @@ function dibujar9x16(mapa) {
   const inicio = etiqueta.y + etiqueta.alto + 8, fin = y + alto;
   const marcador = r(x, fin - 38 * filas, ancho, 38 * filas), pie = marcador.y - 8;
   const m = ajustarMapa(r(x, inicio, ancho, pie - inicio), mapa);
+  // El zoom de una batalla o la Maravilla: una ventana grande arriba (donde se recorta el mapa acercado) y la tarjeta compacta debajo, las dos dentro de la zona segura.
+  const zoomVentana = r(x, inicio, ancho, 650), zoomTarjeta = r(x, zoomVentana.y + zoomVentana.alto + 15, ancho, 360);
   return {
     escalaCelda: m.celda, mapa: m.rect,
     etiqueta, cabecera, marcador,
-    feed: r(x, pie - 300, 540, 300), subtitulos: r(x + 550, pie - 260, ancho - 550, 260),
+    feed: r(x, pie - 300, 480, 300), subtitulos: r(x + 490, pie - 260, ancho - 490, 260),
     cartel: r(x, inicio, ancho, 80), flashback: r(x, inicio + 95, ancho, 420),
     tarjeta: r(x, inicio, ancho, 590), tarjetaAbajo: r(x, fin - 590, ancho, 590),
     vs: r(0, inicio, 1080, 620), vsAbajo: r(0, fin - 620, 1080, 620),
     panelFinal: r(x, inicio, ancho, fin - inicio),
+    zoomVentana, zoomTarjeta,
   };
 }
 
 function dibujar16x9(mapa) {
   const m = ajustarMapa(r(96, 54, 660, 930), mapa);
+  // El zoom en horizontal: la ventana ocupa todo el ancho de la zona segura arriba, y la tarjeta es una banda ancha debajo (margen 96 como el resto de la zona segura).
+  const zoomVentana = r(96, 54, 1728, 600), zoomTarjeta = r(96, zoomVentana.y + zoomVentana.alto + 20, 1728, 320);
   return {
     escalaCelda: m.celda, mapa: m.rect,
     etiqueta: r(96, 990, 1728, 36), cabecera: r(784, 54, 1040, 90),
@@ -54,6 +59,7 @@ function dibujar16x9(mapa) {
     tarjeta: r(784, 90, 1040, 730), tarjetaAbajo: r(784, 90, 1040, 730),
     vs: r(96, 200, 1728, 640), vsAbajo: r(96, 200, 1728, 640),
     panelFinal: r(96, 100, 1728, 880),
+    zoomVentana, zoomTarjeta,
   };
 }
 

@@ -25,11 +25,13 @@ function camara(x, y, ancho, alto) {
 }
 
 function dibujar9x16() {
-  const cams = [camara(60, 486, 890, 396), camara(60, 892, 890, 396)];
+  const { x, ancho } = FORMATOS_ESCENA['9x16'].zona;
+  const mitad = (ancho - 48) / 2, derecha = x + 32 + mitad;
+  const cams = [camara(x, 486, ancho, 396), camara(x, 892, ancho, 396)];
   return {
-    etiqueta: r(60, 285, 890, 36), cabecera: r(60, 330, 890, 64),
-    panel: { marco: r(60, 402, 890, 76), alarma: { rotulo: r(76, 408, 420, 28), barra: r(76, 444, 408, 18) }, cohesion: { rotulo: r(526, 408, 400, 28), barra: r(526, 444, 408, 18) } },
-    camaras: cams, subtitulos: r(60, 1296, 890, 204), regla: r(60, 486, 890, 802),
+    etiqueta: r(x, 285, ancho, 36), cabecera: r(x, 330, ancho, 64),
+    panel: { marco: r(x, 402, ancho, 76), alarma: { rotulo: r(x + 16, 408, mitad, 28), barra: r(x + 16, 444, mitad, 18) }, cohesion: { rotulo: r(derecha, 408, mitad, 28), barra: r(derecha, 444, mitad, 18) } },
+    camaras: cams, subtitulos: r(x, 1296, ancho, 204), regla: r(x, 486, ancho, 802),
   };
 }
 

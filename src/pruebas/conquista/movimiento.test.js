@@ -173,7 +173,7 @@ test('un combate de dos bandos registra bandos (con sus unidades por tipo), terr
   fijarTropas(E, a, 14); E.reinos[0].mejoras[0] = 1; // ataque 13 x 1.25 x 0.85 (tierra ajena) = 13.8125
   const ctx = mover(E, { 0: { ordenes: [`mover ${R(a)} ${R(d)} 13`] } });
   assert.deepEqual(ctx.combates, [{
-    d, k: 0, perdidas: 21, dueno: 1, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
+    d, k: 0, perdidas: 21, bajas: 21, dueno: 1, terr: 'll', fort: 1, resultado: 'captura', quedan: 1,
     bandos: [
       { k: 0, n: 13, f: 13.8125, defensor: false, armas: 1, uni: [13, 0, 0, 0], miembros: [{ k: 0, uni: [13, 0, 0, 0] }] },
       { k: 1, n: 9, f: 13.5, defensor: true, armas: 0, uni: [9, 0, 0, 0], miembros: [{ k: 1, uni: [9, 0, 0, 0] }] },

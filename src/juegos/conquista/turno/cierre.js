@@ -5,18 +5,28 @@ import { MARAVILLA, TURNOS } from '../constantes.js';
 import { resumenPublico } from '../texto.js';
 import { actualizarHegemon } from '../equilibrio.js';
 
-// La Maravilla suma un turno si su dueno la conserva; recien construida o recien conquistada (t0 === t) no suma ese turno.
+import { cercosDeMaravilla } from '../maravilla.js';
+
+// Un cerco militar interrumpe la cuenta sin exigir conquistar la capital.
 export function maravillaYVictoria(ctx) {
   const { E, R, t } = ctx, m = E.maravilla;
   if (m && m.t0 < t && E.dueno[m.r] === m.k && R[m.k].vivo) {
-    m.n++;
-    if (m.n >= MARAVILLA.turnos && E.ganador === null) {
+    const cercos = cercosDeMaravilla(E, t);
+    const estabaCercada = !!m.cercada;
+    m.cercada = cercos.length > 0;
+    if (m.cercada && !estabaCercada) ctx.evt({ tipo: 'maravilla_cerco', k: m.k, r: m.r, cercos, cuenta: m.n });
+    if (!m.cercada && estabaCercada) ctx.evt({ tipo: 'maravilla_libre', k: m.k, r: m.r, cuenta: m.n });
+    if (!m.cercada) m.n++;
+    if (!m.cercada && m.n >= MARAVILLA.turnos && E.ganador === null) {
       E.ganador = m.k; E.ganoPorMaravilla = true;
       ctx.evt({ tipo: 'maravilla_gana', k: m.k });
     }
   }
   const vivos = R.filter((r) => r.vivo);
   if (E.ganador === null && vivos.length === 1) E.ganador = vivos[0].s;
+  // Extincion mutua: los ultimos reinos caen en el mismo turno. La partida termina ahi (no sigue vacia hasta el turno 30) y gana el que mas regiones tenia al caer,
+  // luego el sorteo con seed: el orden de los caidos de clasificar(). El resultado lleva `extincionMutua` para que quien lo muestre lo diga.
+  if (E.ganador === null && vivos.length === 0) { E.ganador = clasificar(E)[0].s; E.extincionMutua = true; }
   E.turno = t;
   if (E.ganador === null && E.turno >= TURNOS) E.ganador = clasificar(E)[0].s; // al turno 30: mas regiones, tropas, almacen y sorteo
 }

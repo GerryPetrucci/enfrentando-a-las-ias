@@ -72,12 +72,16 @@ export function ventanaDeContenido(negros, duracion, { minimo = NEGRO.minimo } =
   return { inicio: entrada ? redondear(Math.max(0, entrada.fin - NEGRO.antes)) : null, fin: salida ? redondear(Math.min(duracion, salida.inicio + NEGRO.despues)) : null, avisos };
 }
 
-export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = null, duracion = null, formatos = FORMATOS }) {
+export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = null, duracion = null, formatos = FORMATOS, audioSeparado = false }) {
   const args = ['-hide_banner', '-loglevel', 'error', '-y'];
   if (inicio !== null) args.push('-ss', String(inicio));
   if (duracion !== null) args.push('-t', String(duracion)); // opcion de entrada: lo que se lee desde `inicio`
   args.push('-i', entrada, '-filter_complex', filtro(formatos));
   Object.keys(formatos).forEach((k, i) => {
+    if (audioSeparado) {
+      // Las salidas dobles se construyen mas abajo, en una invocacion de ffmpeg.
+      return;
+    }
     args.push(
       '-map', `[f${i}]`, '-map', '0:a?',
       '-c:v', 'libx264', '-crf', String(crf), '-preset', 'slow', '-pix_fmt', 'yuv420p',
@@ -85,6 +89,24 @@ export function argumentosFfmpeg({ entrada, nombre, carpeta, crf = 17, inicio = 
       join(carpeta, `${nombreDeVideo(nombre, k)}.mp4`)
     );
   });
+  if (audioSeparado) {
+    const claves = Object.keys(formatos), filtros = [filtro(formatos)];
+    claves.forEach((k, i) => filtros.push(`[f${i}]split=2[v${i}con][v${i}sin]`));
+    const cantidad = claves.length * 2;
+    filtros.push(`[0:a:0]asplit=${cantidad}${Array.from({ length: cantidad }, (_, i) => `[a${i}]`).join('')}`);
+    claves.forEach((k, i) => {
+      for (const [j, variante] of ['convoz', 'sinvoz'].entries()) {
+        const a = i * 2 + j;
+        filtros.push(`[a${a}]pan=stereo|c0=${j ? '0.5*c1' : '0.5*c0+0.5*c1'}|c1=${j ? '0.5*c1' : '0.5*c0+0.5*c1'}[mezcla${a}]`);
+      }
+    });
+    args[args.indexOf('-filter_complex') + 1] = filtros.join(';');
+    claves.forEach((k, i) => {
+      for (const [j, variante] of ['convoz', 'sinvoz'].entries()) args.push('-map', `[v${i}${j ? 'sin' : 'con'}]`, '-map', `[mezcla${i * 2 + j}]`,
+        '-c:v', 'libx264', '-crf', String(crf), '-preset', 'slow', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
+        join(carpeta, `${nombreDeVideo(`${nombre}_${variante}`, k)}.mp4`));
+    });
+  }
   return args;
 }
 
@@ -126,6 +148,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const esperado = `${HOJA.ancho}x${HOJA.alto}`;
   const real = medidasDe(entrada);
   if (real !== esperado) salir(`La grabacion mide ${real} y la hoja maestra debe medir ${esperado}. En OBS: Ajustes > Video, resolucion base y de salida en ${esperado}.`);
+  if (opciones['audio-separado']) {
+    const audio = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'a:0', '-show_entries', 'stream=channels', '-of', 'csv=p=0', entrada], { encoding: 'utf8' });
+    if (audio.stdout.trim() !== '2') salir('--audio-separado necesita una pista estereo: voz izquierda y efectos derecha. No sirve para grabaciones mezcladas.');
+  }
 
   const carpeta = resolve(typeof opciones.carpeta === 'string' ? opciones.carpeta : '.');
   mkdirSync(carpeta, { recursive: true });
@@ -140,12 +166,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
   const args = argumentosFfmpeg({
     entrada, nombre, carpeta, inicio, duracion,
-    crf: typeof opciones.crf === 'string' ? Number(opciones.crf) : 17,
+    crf: typeof opciones.crf === 'string' ? Number(opciones.crf) : 17, audioSeparado: !!opciones['audio-separado'],
   });
   console.log(`\n  Recortando ${entrada} en ${Object.keys(FORMATOS).length} formatos...`);
   const r = spawnSync('ffmpeg', args, { stdio: ['ignore', 'inherit', 'inherit'] });
   if (r.error) salir('No encuentro ffmpeg. Instala ffmpeg (por ejemplo: winget install Gyan.FFmpeg) y abre una terminal nueva.');
   if (r.status !== 0) salir('ffmpeg fallo (mira el mensaje de arriba).');
-  for (const [k, f] of Object.entries(FORMATOS)) console.log(`  ${join(carpeta, `${nombreDeVideo(nombre, k)}.mp4`)}   ${f.ancho}x${f.alto}   ${f.uso}`);
+  for (const [k, f] of Object.entries(FORMATOS)) for (const base of opciones['audio-separado'] ? [`${nombre}_convoz`, `${nombre}_sinvoz`] : [nombre]) console.log(`  ${join(carpeta, `${nombreDeVideo(base, k)}.mp4`)}   ${f.ancho}x${f.alto}   ${f.uso}`);
   console.log('');
 }

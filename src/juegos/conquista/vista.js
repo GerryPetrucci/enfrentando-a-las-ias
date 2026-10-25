@@ -42,6 +42,7 @@ export function vistaTexto(E, i) {
   L.push('Capitales: ' + R.map((r) => `${r.nombre} ${nombreRegion(r.capital)}`).join(SEP));
   L.push('Honor: ' + R.map((r) => `${r.nombre} ${r.honor}`).join(SEP));
   L.push(E.maravilla ? `Maravilla de ${R[E.maravilla.k].nombre} en ${nombreRegion(E.maravilla.r)} (faltan ${Math.max(0, MARAVILLA.turnos - E.maravilla.n)} turnos)` : 'Maravilla: ninguna');
+  if (E.maravilla?.cercada) L.push('La cuenta de la Maravilla esta pausada por cerco. Debes despejarlo o pactar para que vuelva a avanzar.');
   L.push(`Tu almacen: ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}mejoras ${UNIDADES.map((u, t) => u.id + yo.mejoras[t]).join(' ')}`);
   L.push(...lineasDeCapacidad(E, i));
   const pactos = R.filter((r) => r.s !== i && yo.pactos[r.s] >= t).map((r) => `${r.nombre} (hasta el turno ${yo.pactos[r.s]})`);

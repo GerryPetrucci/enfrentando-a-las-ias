@@ -35,8 +35,10 @@ test('cuerpoDeLlamada arma el cuerpo de siempre y agrega el razonamiento solo si
 
 test('ningun contendiente razona por encima del nivel medio, y todos declaran su ajuste', () => {
   for (const [id, c] of Object.entries(CONTENDIENTES)) {
-    assert.ok(c.razonamiento === 'medium' || c.razonamiento === null, `${id}: razonamiento = ${c.razonamiento}`);
+    // "low" solo para quien no ofrece "medium" y arranca por encima (GLM y Kimi, ver src/parametros.js): sigue siendo "nunca mas que medium".
+    assert.ok(['medium', 'low', null].includes(c.razonamiento), `${id}: razonamiento = ${c.razonamiento}`);
   }
+  assert.deepEqual(Object.entries(CONTENDIENTES).filter(([, c]) => c.razonamiento === 'low').map(([id]) => id), ['glm', 'kimi', 'glm-flash']);
 });
 
 // fetch falso que anota el cuerpo enviado y contesta como OpenRouter

@@ -25,14 +25,15 @@ function interpretar({ texto, uso, finishReason }) {
   const respuesta = extraerJSON(texto);
   // Sin jugada utilizable se lanza el motivo: la arena lo guarda en errores y el video lo muestra,
   // en vez de dejar solo "invalida" (y que parezca que el modelo eligio cooperar).
+  // El error lleva lo que SI llego (texto, por que termino, tokens) para poder analizar despues por que fallo y cuanto costo: la arena lo guarda.
   if (!respuesta) {
-    throw new Error(
+    throw Object.assign(new Error(
       finishReason === 'length'
         ? 'Respuesta cortada por max_tokens (finish_reason=length): el modelo se quedó sin espacio antes de dar su jugada.'
         : texto
           ? 'La respuesta no traía un JSON válido.'
           : 'La respuesta llegó vacía.'
-    );
+    ), { crudo: texto || null, finishReason: finishReason ?? null, uso: uso ?? null });
   }
   return { respuesta, crudo: texto, uso };
 }
@@ -48,16 +49,19 @@ const datosDeModelo = (clave, c) => ({
   versionPrompt: VERSION_PROMPT,
 });
 
-export function agenteModelo(clave) {
+export function agenteModelo(clave, { llamar = llamarModelo } = {}) {
   const c = contendiente(clave);
   return {
     ...datosDeModelo(clave, c),
     async jugar({ juego, vista }) {
-      return interpretar(await llamarModelo({
+      return interpretar(await llamar({
         modelo: c.modelo,
         sistema: construirSistema(juego),
         usuario: construirUsuario(vista),
         razonamiento: c.razonamiento ?? null,
+        // Una solicitud reservada por la arena equivale a un intento HTTP.
+        // Los reintentos internos no pueden gastar llamadas fuera del corte.
+        ...(juego.limiteLlamadasDuro !== undefined && juego.limiteLlamadasDuro !== null ? { reintentos: 0 } : {}),
       }));
     },
   };
