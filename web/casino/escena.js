@@ -69,7 +69,7 @@ export async function iniciar() {
     const [linea, { Mesa }] = await Promise.all([escena.linea(), escena.mesa()]);
     if (miGeneracion !== generacion) return; // mientras se cargaban los modulos se abrio otra partida
     const camara = params.camara ?? escena.camaraPorDefecto;
-    let beats;
+    let beats, llegaAlFinal = false;
     if (params.gancho) {
       // el gancho «Proximamente» (gancho.js): tarjetas y cortes rapidos de las unidades pedidas (cortes=), sin voz ni razones
       const todos = await armarLinea(entrada.juego, partida, { camara });
@@ -77,13 +77,16 @@ export async function iniciar() {
       beats = cortes.length ? armarGancho(todos, cortes, { juegoId: entrada.juego, partidaNumero: entrada.numero, parte: params.gancho.parte, de: params.gancho.de }) : [];
       if (!beats.length) { marco.innerHTML = ''; actual = null; habilitar(false); return aviso(`El gancho no tiene cortes válidos (${escena.unidad === 'turno' ? 'turnos' : `${escena.unidad}s`} pedidos: ${params.gancho.cortes.join(', ') || 'ninguno'}; no valen el primero ni el último).`); }
     } else {
-      beats = recortarClip(await armarLinea(entrada.juego, partida, { camara }), params.mano, params.hasta);
+      const todos = await armarLinea(entrada.juego, partida, { camara });
+      beats = recortarClip(todos, params.mano, params.hasta);
+      llegaAlFinal = beats.length > 0 && beats.at(-1).mano === todos.at(-1)?.mano; // la pieza llega al ultimo turno: el juego termina en ella
       if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
     }
     if (params.cierre && beats.length) {
-      // el cierre de cada video (cierre.js): la frase se elige con el seed de la pieza, asi el mismo video es siempre igual y cada pieza dice la suya
+      // el cierre de cada video (cierre.js): la frase se elige con el seed de la pieza, asi el mismo video es siempre igual y cada pieza dice la suya.
+      // Y le toca la frase de su tipo: gancho, clip (lo dice la direccion: cierre=clip), parte que deja el juego a medias o parte que lo termina (se deduce de si llega al ultimo turno).
       const clave = params.gancho ? claveDeCierre({ seed: partida.seed, partida: entrada.numero, gancho: params.gancho.parte }) : claveDeCierre({ seed: partida.seed, partida: entrada.numero, desde: params.mano, hasta: Number.isFinite(params.hasta) ? params.hasta : beats.at(-1).mano });
-      beats = conCierre(beats, clave);
+      beats = conCierre(beats, clave, params.gancho ? 'gancho' : params.tipoCierre ?? (llegaAlFinal ? 'final' : 'parte'));
     }
     vozDePieza = params.gancho ? vozSoloCierre(voz) : voz; // el gancho no se narra: solo suena el cierre
     marco.innerHTML = '';

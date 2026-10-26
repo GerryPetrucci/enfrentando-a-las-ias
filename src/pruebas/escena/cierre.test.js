@@ -5,21 +5,79 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FRASES_CIERRE, MIN_MS_CIERRE, claveDeCierre, indiceDeCierre, beatDeCierre, conCierre, esCierre, vozSoloCierre, planDeFrases, duracionDeCierre, htmlDeCierre } from '../../../web/casino/cierre.js';
+import { FRASES_CIERRE, FRASES_POR_TIPO, TIPOS_CIERRE, MIN_MS_CIERRE, claveDeCierre, indiceDeCierre, beatDeCierre, conCierre, esCierre, vozSoloCierre, planDeFrases, duracionDeCierre, htmlDeCierre } from '../../../web/casino/cierre.js';
 import { REDES, SITIO } from '../../../web/redes.js';
-import { duracionDeBeat } from '../../../web/casino/escena-config.js';
+import { duracionDeBeat, TIPOS_DE_CIERRE } from '../../../web/casino/escena-config.js';
 
 const beats = [{ id: 'a', mano: 1, tipo: 'x', minMs: 1000 }, { id: 'b', mano: 3, tipo: 'x', minMs: 1000 }];
+const SEGUIR = /s[ií]guenos|seguirnos/i; // «síguenos» / «seguirnos», no «siguiente»
 
-test('hay varias frases, todas pidiendo seguir o reaccionar, distintas y lo bastante cortas para decirse en unos segundos', () => {
-  assert.ok(FRASES_CIERRE.length >= 10, 'para que no se repitan seguido');
+test('hay varias frases, distintas y lo bastante cortas para decirse en unos segundos', () => {
+  assert.ok(FRASES_CIERRE.length >= 40, 'para que no se repitan seguido');
   assert.equal(new Set(FRASES_CIERRE).size, FRASES_CIERRE.length);
-  assert.ok(FRASES_CIERRE.includes('No olvides seguirnos y reaccionar.'), 'la frase que pidio el usuario, tal cual');
+  assert.ok(FRASES_POR_TIPO.final.includes('No olvides seguirnos y reaccionar.'), 'la frase que pidio el usuario, tal cual');
   for (const f of FRASES_CIERRE) {
-    assert.match(f, /s[ií]gu|reacci|seguirnos/i, f);
     assert.ok(f.length <= 90, `${f}: ${f.length} caracteres`);
     assert.match(f, /[.?!]$/, f);
   }
+});
+
+test('hay frases para cada tipo de pieza y los tipos de las frases son los de la direccion de la escena', () => {
+  assert.deepEqual(TIPOS_CIERRE, TIPOS_DE_CIERRE);
+  assert.deepEqual(Object.keys(FRASES_POR_TIPO), TIPOS_DE_CIERRE);
+  for (const tipo of TIPOS_CIERRE) assert.ok(FRASES_POR_TIPO[tipo].length >= 10, `${tipo}: pocas frases`);
+  assert.deepEqual(FRASES_CIERRE.slice(0, 12), FRASES_POR_TIPO.final.slice(0, 12), 'cierre-0..11 siguen siendo las de siempre: las voces ya generadas valen');
+  assert.equal(FRASES_CIERRE[0], 'No olvides seguirnos y reaccionar.');
+});
+
+test('cada frase es coherente con su pieza: el final invita a seguir, la parte a medias promete la siguiente, el clip manda a la partida completa y el gancho pide estar al pendiente', () => {
+  for (const f of FRASES_POR_TIPO.final) assert.match(f, /s[ií]gu|reacci|seguirnos|coment|resultado|enfrentar|ponemos/i, f);
+  for (const f of FRASES_POR_TIPO.parte) {
+    assert.match(f, /siguiente parte|desenlace|termina|ganador|ganando|gana\b|partida/i, f);
+    assert.doesNotMatch(f, /pr[oó]xima partida|más partidas|gracias por ver|completa/i, `una parte que no termina no se despide: ${f}`);
+  }
+  for (const f of FRASES_POR_TIPO.clip) {
+    assert.match(f, /completa|entera|resto|fragmento|momento|contexto|llegó/i, f);
+    assert.doesNotMatch(f, /siguiente parte|pr[oó]xima partida|pronto|próximamente/i, `un clip manda a la partida completa: ${f}`);
+  }
+  for (const f of FRASES_POR_TIPO.gancho) {
+    assert.match(f, /pronto|pendiente|llega|viene|próximamente|prepárate|notificaciones|adelanto|cuenta regresiva|por llegar|comienza|empezó|sabrás/i, f);
+    assert.doesNotMatch(f, /siguiente parte|gracias por ver|completa ya/i, `un gancho anuncia lo que viene: ${f}`);
+  }
+});
+
+test('no todas las frases piden «síguenos»: cada tipo mezcla avisos, preguntas y llamadas a ver la partida', () => {
+  for (const tipo of TIPOS_CIERRE) {
+    const piden = FRASES_POR_TIPO[tipo].filter((f) => SEGUIR.test(f)).length, total = FRASES_POR_TIPO[tipo].length;
+    assert.ok(piden >= 1, `${tipo}: alguna sí invita a seguir`);
+    assert.ok(piden / total <= 0.75, `${tipo}: ${piden} de ${total} piden seguir`);
+  }
+});
+
+test('la frase sale del tipo de la pieza: el mismo video siempre dice la misma y cada tipo usa su bloque de frases', () => {
+  let desde = 0;
+  for (const tipo of TIPOS_CIERRE) {
+    const bloque = FRASES_POR_TIPO[tipo];
+    for (let i = 0; i < 40; i++) {
+      const clave = `seed:p1:${i}-${i + 5}`, indice = indiceDeCierre(clave, tipo);
+      assert.ok(indice >= desde && indice < desde + bloque.length, `${tipo}: ${indice}`);
+      assert.equal(beatDeCierre(clave, 1, tipo).texto, FRASES_CIERRE[indice]);
+      assert.equal(beatDeCierre(clave, 1, tipo).id, `cierre-${indice}`);
+      assert.equal(conCierre(beats, clave, tipo).at(-1).texto, bloque[indice - desde]);
+    }
+    assert.ok(new Set(Array.from({ length: 40 }, (_, i) => indiceDeCierre(`k${i}`, tipo))).size >= 5, `${tipo}: se repite demasiado`);
+    desde += bloque.length;
+  }
+  assert.equal(indiceDeCierre('x'), indiceDeCierre('x', 'final'), 'sin tipo, la frase de siempre');
+  assert.equal(indiceDeCierre('x', 'desconocido'), indiceDeCierre('x', 'final'), 'un tipo desconocido tampoco lanza');
+  assert.equal(beatDeCierre('x').id, beatDeCierre('x', 0, 'final').id);
+});
+
+test('la duracion del cierre depende de la frase del tipo (su voz es la de esa frase)', () => {
+  const clave = 'k', id = `cierre-${indiceDeCierre(clave, 'clip')}`;
+  const voz = { [id]: { ms: 9000, archivo: 'a.ogg', fuente: beatDeCierre(clave, 0, 'clip').texto } };
+  assert.equal(duracionDeCierre(clave, voz, 'clip'), 9000);
+  assert.equal(duracionDeCierre(clave, voz, 'parte'), MIN_MS_CIERRE, 'la voz de la frase de un clip no sirve en una parte');
 });
 
 test('la clave de cada pieza distingue partidas con el mismo seed y piezas de la misma partida', () => {

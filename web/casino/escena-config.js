@@ -15,6 +15,9 @@ const bandera = (v) => v !== null && v !== '' && v !== '0' && v !== 'false';
 
 export const FORMATOS_PAGINA = ['9x16', '16x9', 'hoja']; // 'hoja' dibuja los dos formatos juntos en la hoja maestra de OBS
 
+// Los tipos de pieza para la frase del cierre (cierre.js): `cierre=parte` en la direccion. final = la parte que llega al ultimo turno; parte = una que deja el juego a medias; clip; gancho.
+export const TIPOS_DE_CIERRE = ['final', 'parte', 'clip', 'gancho'];
+
 // Una ruta de este mismo sitio (voz/ep1.json): letras, numeros, punto, guion y barras, sin subir de carpeta. Nunca una URL de otro dominio: la pagina esta publicada
 // y ?voz= o un voz.json ajeno podrian hacer sonar cualquier audio de internet.
 export const esRutaRelativa = (texto) => typeof texto === 'string' && /^[\w.-]+(\/[\w.-]+)*$/.test(texto) && !texto.split('/').includes('..');
@@ -60,8 +63,9 @@ export const segundos = (ms) => Number((ms / 1000).toFixed(1));
 
 // La direccion de la escena para abrirla y grabar una pieza (rondas desde..hasta): sin barra (limpio=1), arranca sola (auto=1) y con margenes y fundidos de negro (grabar=1). La usan el paquete
 // (su LEEME) y herramientas/partes.mjs; `formato` por omision es la hoja maestra de 4K del OBS del proyecto.
-export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, formato = 'hoja', voz = null }) {
-  const q = new URLSearchParams({ archivo, partida: String(partida), ronda: String(desde), hasta: String(hasta), formato, auto: '1', limpio: '1', grabar: '1', cierre: '1' }); // cierre=1: la tarjeta final con el logo y las redes (cierre.js)
+export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, formato = 'hoja', voz = null, cierre = null }) {
+  // cierre=1: la tarjeta final con el logo y las redes (cierre.js); con `cierre` (final | parte | clip) la pagina sabe que frase le toca a la pieza (sin ella la deduce: llega al ultimo turno o no)
+  const q = new URLSearchParams({ archivo, partida: String(partida), ronda: String(desde), hasta: String(hasta), formato, auto: '1', limpio: '1', grabar: '1', cierre: TIPOS_DE_CIERRE.includes(cierre) ? cierre : '1' });
   if (voz) q.set('voz', voz);
   return `escena.html?${q}`;
 }
@@ -69,7 +73,7 @@ export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, forma
 // La direccion para grabar el gancho «Próximamente» de una parte (gancho.js): los cortes son unidades (manos, rondas o turnos) de la partida. El gancho no se narra: con `voz` la pagina usa solo
 // el audio del cierre (cierre.js: vozSoloCierre), nunca el de los cortes.
 export function direccionDeGancho({ archivo, partida = 1, cortes, parte = 1, de = 2, formato = 'hoja', voz = null }) {
-  const q = new URLSearchParams({ archivo, partida: String(partida), gancho: '1', cortes: (cortes ?? []).join(','), parte: String(parte), de: String(de), formato, auto: '1', limpio: '1', grabar: '1', cierre: '1' });
+  const q = new URLSearchParams({ archivo, partida: String(partida), gancho: '1', cortes: (cortes ?? []).join(','), parte: String(parte), de: String(de), formato, auto: '1', limpio: '1', grabar: '1', cierre: 'gancho' });
   if (voz) q.set('voz', voz);
   return `escena.html?${q}`;
 }
@@ -105,6 +109,7 @@ export function leerParametros(search) {
     escala: Number.isFinite(escala) && escala > 0 ? escala : 'ajustar',
     // gancho=1&cortes=10,6,14&parte=2&de=2: el gancho «Próximamente» de una parte (gancho.js). null = una pieza normal.
     cierre: bandera(q.get('cierre')), // cierre=1: se agrega al final la tarjeta con el logo, los @ de las redes y la pagina de resultados (cierre.js)
+    tipoCierre: TIPOS_DE_CIERRE.includes(q.get('cierre')) ? q.get('cierre') : null, // cierre=parte|final|clip|gancho: que frase le toca a la pieza; null (cierre=1) = la pagina lo deduce
     gancho: bandera(q.get('gancho')) ? { cortes: cortesDe(q.get('cortes')), parte: Math.max(1, entero(q.get('parte')) ?? 1), de: Math.max(1, entero(q.get('de')) ?? 2) } : null,
   };
 }

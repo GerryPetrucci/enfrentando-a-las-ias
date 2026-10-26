@@ -68,7 +68,10 @@ test('direccionDeGrabacion: la direccion de la escena para grabar una pieza (sin
   assert.equal(sinVoz.searchParams.has('voz'), false);
   // lo que construye la direccion lo entiende leerParametros tal cual
   const p = leerParametros(sinVoz.search);
-  assert.deepEqual([p.mano, p.hasta, p.formato, p.auto, p.limpio, p.grabar, p.cierre], [1, 4, '9x16', true, true, true, true]);
+  assert.deepEqual([p.mano, p.hasta, p.formato, p.auto, p.limpio, p.grabar, p.cierre, p.tipoCierre], [1, 4, '9x16', true, true, true, true, null]);
+  // con el tipo de la pieza, la direccion dice que frase final le toca (parte a medias, parte final o clip); un tipo que no existe se queda en cierre=1
+  for (const tipo of ['parte', 'final', 'clip']) assert.equal(leerParametros(new URL('http://x/' + direccionDeGrabacion({ archivo: 'a.json', desde: 1, hasta: 4, cierre: tipo })).search).tipoCierre, tipo);
+  assert.equal(new URL('http://x/' + direccionDeGrabacion({ archivo: 'a.json', desde: 1, hasta: 4, cierre: 'gancho-x' })).searchParams.get('cierre'), '1');
   // partes.mjs imprime la misma direccion que el paquete: antes no llevaba limpio ni grabar y grababa sin margenes
   assert.equal(urlDeParte({ archivo: 'a.json', partida: 1, formato: 'hoja', parte: { mano: 1, hasta: 4 } }), direccionDeGrabacion({ archivo: 'a.json', partida: 1, desde: 1, hasta: 4, formato: 'hoja' }));
 });
@@ -76,10 +79,11 @@ test('direccionDeGrabacion: la direccion de la escena para grabar una pieza (sin
 test('direccionDeGancho: la direccion para grabar el gancho de una parte (cortes, parte y de cuantas), con margenes de negro y el cierre (la voz solo dice el cierre); leerParametros la entiende tal cual', () => {
   const d = new URL(`http://x/${direccionDeGancho({ archivo: 'pruebas/a b.json', partida: 2, cortes: [10, 6, 14], parte: 2, de: 2 })}`);
   assert.equal(d.pathname, '/escena.html');
-  assert.deepEqual(Object.fromEntries(d.searchParams), { archivo: 'pruebas/a b.json', partida: '2', gancho: '1', cortes: '10,6,14', parte: '2', de: '2', formato: 'hoja', auto: '1', limpio: '1', grabar: '1', cierre: '1' });
+  assert.deepEqual(Object.fromEntries(d.searchParams), { archivo: 'pruebas/a b.json', partida: '2', gancho: '1', cortes: '10,6,14', parte: '2', de: '2', formato: 'hoja', auto: '1', limpio: '1', grabar: '1', cierre: 'gancho' });
   const p = leerParametros(d.search);
   assert.deepEqual(p.gancho, { cortes: [10, 6, 14], parte: 2, de: 2 });
   assert.deepEqual([p.formato, p.auto, p.limpio, p.grabar, p.voz, p.cierre], ['hoja', true, true, true, null, true]);
+  assert.equal(p.tipoCierre, 'gancho', 'el gancho cierra con las frases del gancho');
   const conVoz = new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', cortes: [3], parte: 1, de: 2, voz: 'data/voz/a-p1/voz.json' })}`);
   assert.equal(conVoz.searchParams.get('voz'), 'data/voz/a-p1/voz.json', 'la voz del cierre');
   assert.equal(new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', cortes: [3], parte: 1, de: 2, formato: '9x16' })}`).searchParams.get('formato'), '9x16');
