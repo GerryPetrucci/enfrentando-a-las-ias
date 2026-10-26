@@ -35,6 +35,9 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   primero, los del juego (`textos-juego.js`) y los de los modelos que juegan; de 1 a 5, nunca omitidos (si falta lugar se quitan los del final, nunca `#IAvsIA`). El **título mide
   como máximo 90 caracteres** y la descripción 280 (`MAX_TITULO`, `MAX_DESCRIPCION`). Una prueba lo exige en todas las piezas de todos los juegos. Regla decidida 26-10-2026.
   Un modelo nuevo se agrega también a `MODELOS` en `web/casino/paquete-textos.js` para que tenga su hashtag.
+- **LEEME de cada paquete** (`herramientas/paquete.mjs`, `leemeDe`): todo lo que se copia va en bloques de código, nunca suelto en una frase: direcciones de grabación, nombre al que se
+  renombra cada `.mkv`, carpeta de destino y comandos `node ...` (recorte, regenerar imagen, servidor). Empieza con un «Resumen rápido» con todos los nombres y todos los comandos juntos. Los
+  nombres de los videos que quedan van en código en línea. Una prueba lo exige. Regla decidida 26-10-2026.
 - Tests funcionales con bots/mocks. Pruebas afectadas primero; suite completa al
   cerrar cambios de codigo. `npm.cmd test` funciona en PowerShell. No repetirla
   si no hay nuevos cambios, fallos o dudas que lo justifiquen.

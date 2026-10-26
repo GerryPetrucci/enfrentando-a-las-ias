@@ -17,6 +17,12 @@ horizontal y los recortes de la hoja maestra mantienen sus dimensiones.
   paquete-j1/            paquete-j2/
 ```
 
+En el LEEME todo lo que se copia (la direccion de cada pieza, el nombre al que se renombra
+la grabacion de OBS, su carpeta y los comandos `node ...` de recorte) esta en **bloques de
+codigo**, y al principio trae un **resumen rapido** con todos los nombres de los `.mkv` y todos
+los comandos de recorte juntos, en el orden en que se graban. Los nombres de los videos que
+quedan en `por-subir/` van en codigo en linea. Lo exige `paquetecli.test.js`.
+
 El LEEME enumera las piezas en orden de subida: gancho de la parte 1, parte 1,
 sus clips, gancho de la parte 2, parte 2 y sus clips. Una pieza solo se genera
 si hay momentos adecuados; no se inventan clips para llenar un cupo. Cada clip

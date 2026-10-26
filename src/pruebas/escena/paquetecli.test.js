@@ -119,6 +119,39 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   assert.ok(texto.includes(PARTIDA.juego.nombre));
 });
 
+test('el LEEME pone los nombres de archivo, las direcciones y los comandos en bloques de código (copiables) y los junta en un resumen al principio', async () => {
+  const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
+  const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
+  const texto = leemeDe(paquete, CTX);
+  const lineas = texto.split('\n');
+  assert.equal(lineas.filter((l) => /^\s*```/.test(l)).length % 2, 0, 'cada bloque de código se cierra');
+  const bloques = [...texto.matchAll(/^( *)```(\w*)\n([\s\S]*?)\n\1```$/gm)].map((m) => ({ lenguaje: m[2], cuerpo: m[3].split('\n').map((l) => l.slice(m[1].length)).join('\n') })); // sin la sangria de la vineta
+  const fuera = texto.replace(/^( *)```(\w*)\n[\s\S]*?\n\1```$/gm, '');
+  // lo que se copia solo aparece dentro de bloques: nunca suelto en una frase
+  assert.doesNotMatch(fuera, /\bnode herramientas\/(recortar-formatos|gancho-imagen)\.mjs/, 'un comando de recorte fuera de un bloque');
+  assert.doesNotMatch(fuera, /\bj\d+_(hk|pt|clp)\d\.mkv\b/, 'el nombre de una grabación fuera de un bloque');
+  assert.doesNotMatch(fuera, /http:\/\/localhost:4321\/(escena|gancho-imagen)\.html/, 'una dirección de grabación fuera de un bloque');
+  const grabables = paquete.piezas.filter((p) => p.tipo !== 'gancho-imagen');
+  // el resumen va antes del paso 0: los nombres (en el orden de grabacion) y los comandos, un renglon por pieza
+  const iResumen = texto.indexOf('## Resumen rápido'), iPaso0 = texto.indexOf('## Paso 0');
+  assert.ok(iResumen > 0 && iResumen < iPaso0, 'el resumen va antes del paso 0');
+  const resumen = texto.slice(iResumen, iPaso0);
+  const nombres = resumen.match(/```text\n([\s\S]*?)\n```/)[1].split('\n'), comandos = resumen.match(/```powershell\n([\s\S]*?)\n```/)[1].split('\n');
+  assert.equal(nombres.length, grabables.length);
+  assert.equal(comandos.length, grabables.length);
+  nombres.forEach((n, i) => { assert.match(n, /^j1_(hk|pt|clp)\d\.mkv$/, n); assert.ok(comandos[i].startsWith('node herramientas/recortar-formatos.mjs "') && comandos[i].includes(` ${n.replace(/\.mkv$/, '')} `), `${n} → ${comandos[i]}`); });
+  assert.ok(bloques.some((b) => b.lenguaje === 'powershell' && b.cuerpo === 'node src/servidor.js'), 'el comando del servidor tambien es un bloque');
+  // cada pieza: su direccion, el nombre a ponerle y su comando de recorte, cada cosa en su propio bloque
+  for (const p of grabables) {
+    const base = nombreDePieza({ juego: 1, pieza: p.id });
+    assert.ok(bloques.some((b) => b.cuerpo === `http://localhost:4321/${p.grabar.url}`), `${p.id}: dirección en un bloque`);
+    assert.ok(nombres.includes(`${base}.mkv`) && bloques.some((b) => b.cuerpo === `${base}.mkv`), `${p.id}: el nombre, en el resumen y en su sección`);
+    assert.ok(comandos.some((c) => c.includes(`/${base}.mkv" ${base} `)) && bloques.some((b) => b.lenguaje === 'powershell' && !b.cuerpo.includes('\n') && b.cuerpo.includes(`/${base}.mkv" ${base} `)), `${p.id}: el comando de recorte, en el resumen y en su sección`);
+  }
+  assert.ok(texto.includes('`j1_pt1_convoz_9x16_fb-ig-tk-yt.mp4` → Facebook, Instagram, TikTok, YouTube'), 'los videos que quedan, en código en línea');
+  assert.ok(bloques.some((b) => b.cuerpo === `${SERIE}/originales/j1/`), 'la carpeta de originales, copiable');
+});
+
 test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si cambian los tiempos, cambia lo que se le pide a quien graba', async () => {
   const { FUNDIDOS } = await import('../../../web/casino/escena-config.js');
   const guardado = { ...FUNDIDOS };

@@ -426,7 +426,7 @@ test('el LEEME de un paquete con ganchos en imagen los lista como imagenes ya ge
   assert.match(leeme, new RegExp(`## Paso 1 · Grabar las ${piezasGrabables} piezas \\(y subir las 2 imágenes de gancho, que no se graban\\)`));
   assert.match(leeme, /### gancho-1 · Lobo en la aldea · Gancho de la parte 1 \(imagen\)/);
   assert.match(leeme, /imagen fija\*\*: no se graba con OBS/);
-  assert.ok(leeme.includes('j7_hk1_9x16_fb-ig-tk-yt.png → Facebook, Instagram, TikTok, YouTube') && leeme.includes('j7_hk2_16x9_fb-x-yt.png → Facebook, X, YouTube'));
+  assert.ok(leeme.includes('`j7_hk1_9x16_fb-ig-tk-yt.png` → Facebook, Instagram, TikTok, YouTube') && leeme.includes('`j7_hk2_16x9_fb-x-yt.png` → Facebook, X, YouTube'));
   assert.ok(leeme.includes('node herramientas/gancho-imagen.mjs --juego=lobo --numero=7 --parte=2 --de=2 "--salida=grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-1/por-subir/j7"'));
   assert.ok(leeme.includes('http://localhost:4321/gancho-imagen.html?juego=lobo&numero=7&parte=1&de=2&formato=9x16'));
   assert.match(leeme, /Cada imagen de gancho se ve completa/);

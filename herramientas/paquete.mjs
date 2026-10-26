@@ -66,46 +66,85 @@ export function leemeDe(paquete, contexto = {}) {
   const nombreJuego = paquete.piezas[0]?.titulo.split(' · ')[0] ?? paquete.juego ?? 'juego';
   const { margenMs, colaMs } = paquete.piezas.find((p) => p.grabar.plan)?.grabar.plan ?? FUNDIDOS; // los margenes que se le piden a quien graba: los del plan de las piezas (que salen de FUNDIDOS)
   const imagenes = paquete.piezas.filter((p) => p.tipo === 'gancho-imagen'), grabables = paquete.piezas.length - imagenes.length;
+  // Lo que se copia (direcciones, nombres de archivo y comandos) va en bloques de codigo: el visor de Markdown los distingue del resto y los deja copiar con un clic.
+  // Los bloques van sangrados 2 espacios para que sigan dentro de su vineta.
+  const codigo = (texto, lenguaje = 'text') => [`  \`\`\`${lenguaje}`, ...String(texto).split('\n').map((l) => `  ${l}`), '  ```'];
+  const comandoDeRecorte = (base) => `node herramientas/recortar-formatos.mjs "${originales}/${base}.mkv" ${base} "--carpeta=${pendientes}" --audio-separado`;
+  const aGrabar = ordenDePublicacion(paquete.piezas).filter((p) => p.tipo !== 'gancho-imagen').map((p) => ({ p, base: nombreDePieza({ juego: juegoNumero, pieza: p.id }) }));
   const piezas = ordenDePublicacion(paquete.piezas).map((p) => {
     const base = nombreDePieza({ juego: juegoNumero, pieza: p.id });
     if (p.tipo === 'gancho-imagen') {
       return [
         `### ${p.id} · ${p.titulo}`,
         '- Es una **imagen fija**: no se graba con OBS. Regla del proyecto: si una parte no puede tener gancho en video, su gancho es una imagen («Próximamente», el juego, su número y la parte).',
-        `- Ya se generó en ${pendientes}/ (un archivo por formato):`,
-        ...Object.entries(FORMATOS).map(([k, f]) => `  - ${nombreDeImagen({ juegoNumero, parte: p.parte, formato: k })} → ${f.redes.map((r) => REDES[r]).join(', ')}`),
-        `- Si falta o quieres regenerarla: node herramientas/gancho-imagen.mjs --juego=${new URL(p.grabar.url, 'http://local').searchParams.get('juego')} --numero=${juegoNumero} --parte=${p.parte} --de=2 "--salida=${pendientes}"`,
-        `- Vista previa en el navegador (con el servidor abierto): ${SERVIDOR}/${p.grabar.url}`,
+        `- Ya se generó en \`${pendientes}/\` (un archivo por formato):`,
+        ...Object.entries(FORMATOS).map(([k, f]) => `  - \`${nombreDeImagen({ juegoNumero, parte: p.parte, formato: k })}\` → ${f.redes.map((r) => REDES[r]).join(', ')}`),
+        '- Si falta o quieres regenerarla (PowerShell, en la carpeta del proyecto):',
+        ...codigo(`node herramientas/gancho-imagen.mjs --juego=${new URL(p.grabar.url, 'http://local').searchParams.get('juego')} --numero=${juegoNumero} --parte=${p.parte} --de=2 "--salida=${pendientes}"`, 'powershell'),
+        '- Vista previa en el navegador (con el servidor abierto):',
+        ...codigo(`${SERVIDOR}/${p.grabar.url}`),
         `- Nota: ${p.grabar.nota}`,
-        `- Texto único: textos/${p.id}.txt (título + descripción). YouTube usa ambos; las demás redes, la descripción.`,
+        `- Texto único: \`textos/${p.id}.txt\` (título + descripción). YouTube usa ambos; las demás redes, la descripción.`,
         '',
       ].join('\n');
     }
     return [
       `### ${p.id} · ${p.titulo}`,
-      `- Dirección para abrir y grabar: ${SERVIDOR}/${p.grabar.url}`,
+      '- Dirección para abrir y grabar (cópiala en la *URL* de la fuente de navegador de OBS):',
+      ...codigo(`${SERVIDOR}/${p.grabar.url}`),
       `- Dura: ${formatoDeTiempo(p.grabar.ms)} de pieza; la grabación completa dura ${formatoDeTiempo(p.grabar.plan.totalMs)} contando ${segundos(p.grabar.plan.margenMs)} s de negro al empezar, los dos fundidos y ${segundos(p.grabar.plan.colaMs)} s de negro al final. Detén la grabación con la pantalla en negro, al menos ${segundos(p.grabar.plan.colaMs)} s después del fundido final (la página se queda negra: no hay prisa).`,
-      `- Guarda la grabación (OBS graba la hoja en MKV): renómbrala ${base}.mkv y muévela a ${originales}/`,
-      `- Recórtala: node herramientas/recortar-formatos.mjs "${originales}/${base}.mkv" ${base} "--carpeta=${pendientes}" --audio-separado`,
-      `- Quedan en ${pendientes}/ (dos versiones por formato, con los mismos tiempos):`,
-      ...Object.entries(FORMATOS).flatMap(([k, f]) => ['convoz', 'sinvoz'].map((v) => `  - ${nombreDeVideo(`${base}_${v}`, k)}.mp4 → ${f.redes.map((r) => REDES[r]).join(', ')}`)),
+      '- Guarda la grabación (OBS graba la hoja en MKV) y **renómbrala** así:',
+      ...codigo(`${base}.mkv`),
+      '- Muévela a esta carpeta:',
+      ...codigo(`${originales}/`),
+      '- **Recórtala** (PowerShell, en la carpeta del proyecto):',
+      ...codigo(comandoDeRecorte(base), 'powershell'),
+      `- Quedan en \`${pendientes}/\` (dos versiones por formato, con los mismos tiempos):`,
+      ...Object.entries(FORMATOS).flatMap(([k, f]) => ['convoz', 'sinvoz'].map((v) => `  - \`${nombreDeVideo(`${base}_${v}`, k)}.mp4\` → ${f.redes.map((r) => REDES[r]).join(', ')}`)),
       `- Nota: ${p.grabar.nota}`,
       ...(p.grabar.ms > LIMITE_X_MS ? [`- ⚠ Dura más de ${formatoDeTiempo(LIMITE_X_MS)}: no cabe en X con una cuenta gratis (en X sube un clip en su lugar).`] : []),
-      `- Texto único: textos/${p.id}.txt (título + descripción${p.comentarioFijado ? ' + comentario fijado' : ''}). YouTube usa ambos; las demás redes, la descripción.`,
+      `- Texto único: \`textos/${p.id}.txt\` (título + descripción${p.comentarioFijado ? ' + comentario fijado' : ''}). YouTube usa ambos; las demás redes, la descripción.`,
       '',
     ].join('\n');
   });
+  // Un resumen al principio: todos los nombres y todos los comandos juntos, para no buscarlos pieza por pieza.
+  const resumen = aGrabar.length ? [
+    '## Resumen rápido (para copiar)',
+    '',
+    'Nombre de cada grabación de OBS (renombra el `.mkv` así y muévelo a la carpeta `originales`), en el orden en que se graban:',
+    '',
+    '```text',
+    ...aGrabar.map(({ base }) => `${base}.mkv`),
+    '```',
+    '',
+    'Carpeta de las grabaciones originales:',
+    '',
+    '```text',
+    `${originales}/`,
+    '```',
+    '',
+    'Comandos para recortarlas (PowerShell, en la carpeta del proyecto), uno por pieza y en el mismo orden:',
+    '',
+    '```powershell',
+    ...aGrabar.map(({ base }) => comandoDeRecorte(base)),
+    '```',
+    '',
+  ] : [];
   return [
     `# Paquete de publicación · ${nombreJuego} · partida ${contexto.partidaNumero ?? 1} · juego j${juegoNumero}`,
     '',
     `Partida: data/${contexto.archivo ?? '?'} · generado el ${fechaCDMX()} (CDMX). Esta carpeta se puede borrar y volver a generar con \`node herramientas/paquete.mjs\` (con --forzar).`,
     '',
     ...(paquete.advertencias.length ? ['## Avisos antes de empezar', ...paquete.advertencias.map((a) => `- ${a}`), ''] : []),
+    ...resumen,
     '## Paso 0 · Antes de grabar',
     '- Audio separado: las direcciones llevan audio=separado. Voz a la izquierda y efectos a la derecha. OBS debe grabar en estéreo, sin «Mono» en propiedades avanzadas ni filtros que mezclen canales. No publicar la maestra con los canales separados.',
     '- Haz primero una prueba corta: en la versión sinvoz deben oírse efectos y ninguna voz; en convoz, ambos centrados. Una grabación antigua mezclada no sirve para este modo.',
     '- Guion propuesto: guion.md. Son los textos de esta partida en orden de cada pieza, con tiempos de referencia. Tu narradora puede adaptarlos; si una toma humana dura más hay que ajustar la edición, no acelerar su voz.',
-    `1. En una terminal, en la carpeta del proyecto, corre \`node src/servidor.js\` y déjala abierta mientras grabas (es lo que sirve las direcciones ${SERVIDOR}/...).`,
+    `1. En una terminal (PowerShell), en la carpeta del proyecto, corre este comando y déjala abierta mientras grabas (es lo que sirve las direcciones ${SERVIDOR}/...):`,
+    '   ```powershell',
+    '   node src/servidor.js',
+    '   ```',
     '2. OBS ya debe estar en el perfil «Enfrentando-Hoja4K»: la hoja maestra de 3840 × 2160 a 30 fps, con una fuente de navegador de 3840 × 2160 (sin «Archivo local») que tenga marcado «Controlar audio mediante OBS». Si algo no coincide, mira el paso 0.1 de privado/contenido/guia-paso-a-paso.md.',
     '',
     `## Paso 1 · Grabar las ${grabables} piezas${imagenes.length ? ` (y subir ${imagenes.length === 1 ? 'la imagen' : `las ${imagenes.length} imágenes`} de gancho, que no se graban)` : ''}`,
