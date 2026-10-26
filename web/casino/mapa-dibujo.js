@@ -132,7 +132,7 @@ export function pintarContorno(ctx, mapa, g, id, color, grosor = 4) {
 }
 
 // ---- fichas por region ----
-// PNG reales para leña y maza; el resto usa bloques pixel art, incluida la herradura.
+// Los iconos de la hoja del usuario (arte-conquista.js) para comida, madera, oro, hierro, caballos y tropas; Roca (que no viene en la hoja) y cualquier icono que no cargue usan bloques pixel art.
 export function pintarIcono(ctx,tipo,x,y,r) {
   if(pintarArte(ctx,tipo,x,y,r*2.2,r*2.2)) return;
   pintarRecursoPixel(ctx,tipo,x,y,r);
@@ -188,14 +188,17 @@ function pintarNumeroCasilla(ctx, x, y, rad, nombre) {
 function pintarMaravilla(ctx,x,y,rad,n,tope) {
   const u=rad/12, base=y-rad*1.7;
   ctx.save();ctx.translate(x,base);ctx.scale(u,u);
-  ctx.fillStyle='#0b0b0e';ctx.fillRect(-23,-44,46,49);
-  ctx.fillStyle=A.oroOscuro;ctx.fillRect(-22,0,44,4);ctx.fillRect(-20,-4,40,4);
-  ctx.fillStyle=A.oro;ctx.fillRect(-18,-8,36,4);ctx.fillRect(-17,-31,34,5);
-  ctx.fillStyle=A.marfil;for(const cx of[-14,-5,4,13]){ctx.fillRect(cx-2,-26,4,18);ctx.fillStyle=A.caballo;ctx.fillRect(cx+1,-26,1,18);ctx.fillStyle=A.marfil;}
-  ctx.fillStyle=A.oroOscuro;ctx.beginPath();ctx.moveTo(-21,-32);ctx.lineTo(0,-46);ctx.lineTo(21,-32);ctx.closePath();ctx.fill();
-  ctx.fillStyle=A.oro;ctx.beginPath();ctx.moveTo(-17,-34);ctx.lineTo(0,-44);ctx.lineTo(17,-34);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#fff3c4';ctx.fillRect(-1,-51,2,8);ctx.fillRect(-4,-48,8,2);
-  ctx.fillStyle=A.acero;ctx.fillRect(-3,-39,6,5);
+  // El icono de la Maravilla (maravilla.png, de la hoja del usuario) apoyado sobre el contador; sin el (aun no carga o falla) queda el monumento de bloques de siempre.
+  if(!pintarArte(ctx,'Maravilla',0,6,58,56,'base')){
+    ctx.fillStyle='#0b0b0e';ctx.fillRect(-23,-44,46,49);
+    ctx.fillStyle=A.oroOscuro;ctx.fillRect(-22,0,44,4);ctx.fillRect(-20,-4,40,4);
+    ctx.fillStyle=A.oro;ctx.fillRect(-18,-8,36,4);ctx.fillRect(-17,-31,34,5);
+    ctx.fillStyle=A.marfil;for(const cx of[-14,-5,4,13]){ctx.fillRect(cx-2,-26,4,18);ctx.fillStyle=A.caballo;ctx.fillRect(cx+1,-26,1,18);ctx.fillStyle=A.marfil;}
+    ctx.fillStyle=A.oroOscuro;ctx.beginPath();ctx.moveTo(-21,-32);ctx.lineTo(0,-46);ctx.lineTo(21,-32);ctx.closePath();ctx.fill();
+    ctx.fillStyle=A.oro;ctx.beginPath();ctx.moveTo(-17,-34);ctx.lineTo(0,-44);ctx.lineTo(17,-34);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff3c4';ctx.fillRect(-1,-51,2,8);ctx.fillRect(-4,-48,8,2);
+    ctx.fillStyle=A.acero;ctx.fillRect(-3,-39,6,5);
+  }
   ctx.fillStyle='#0b0b0e';ctx.fillRect(-14,5,28,11);texto(ctx,(n??0)+'/'+tope,0,11,9,800,'#fff3c4');ctx.restore();
 }
 

@@ -1,11 +1,20 @@
-// PNG locales; el motor y sus registros no dependen de ellos. Canvas conserva
-// sus dibujos como alternativa si las imágenes todavía no cargan o fallan.
-export const PNG_RECURSOS = Object.freeze({ Madera:'madera-haz-lena.png', Tropas:'tropas-maza.png' });
+// PNG locales (la hoja de iconos del usuario, recortada por herramientas/recortar-iconos-conquista.mjs); el motor y sus registros no dependen de ellos. Canvas conserva
+// sus dibujos como alternativa si las imágenes todavía no cargan o fallan. Roca no viene en la hoja: se sigue dibujando por código.
+export const PNG_RECURSOS = Object.freeze({
+  Comida:'comida.png', Madera:'madera.png', Oro:'oro.png', Hierro:'hierro.png', Caballos:'caballos.png', Tropas:'tropas.png', Maravilla:'maravilla.png',
+});
 
 export function encajarSprite(origen, x, y, ancho, alto, anclaje = 'centro') {
   const escala = Math.min(ancho / origen.ancho, alto / origen.alto);
   const w = origen.ancho * escala, h = origen.alto * escala;
   return { x: x - w / 2, y: anclaje === 'base' ? y - h : y - h / 2, ancho: w, alto: h };
+}
+
+// Un icono que se dibuja mucho mas chico que su PNG (el marcador, las fichas) se promedia: sin suavizado el vecino mas cercano salta pixeles y el dibujo se ve roto.
+// Uno que se agranda o queda parecido conserva los pixeles duros. `anchoDestino` va en las unidades del contexto: se cuenta su escala (ctx.scale) para saber los pixeles reales.
+export function suavizarAlReducir(ctx, anchoDestino, anchoOrigen) {
+  const k = typeof ctx?.getTransform === 'function' ? Math.abs(ctx.getTransform().a) || 1 : 1;
+  return anchoDestino * k < anchoOrigen * 0.75;
 }
 
 const dibujos = new Map();
@@ -45,7 +54,8 @@ export function pintarArte(ctx, tipo, x, y, ancho, alto, anclaje = 'centro') {
   const sprite = dibujos.get(tipo);
   if (!sprite?.origen) return false;
   const o = sprite.origen, d = encajarSprite(o, x, y, ancho, alto, anclaje);
-  ctx.save(); ctx.imageSmoothingEnabled = false;
+  const reduce = suavizarAlReducir(ctx, d.ancho, o.ancho);
+  ctx.save(); ctx.imageSmoothingEnabled = reduce; if (reduce) ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(sprite.imagen, o.x, o.y, o.ancho, o.alto, d.x, d.y, d.ancho, d.alto);
   ctx.restore();
   return true;
