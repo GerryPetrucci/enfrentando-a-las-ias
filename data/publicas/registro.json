@@ -21,6 +21,50 @@
           ]
         }
       }
+    },
+    "2026-10-21-mayormenor-claude-vs-gpt": {
+      "partidas": {
+        "2": {
+          "estado": "publicada",
+          "hastaTurno": 18,
+          "partes": [
+            {
+              "parte": 1,
+              "hastaTurno": 9,
+              "final": false,
+              "fecha": "2026-10-25"
+            },
+            {
+              "parte": 2,
+              "hastaTurno": 18,
+              "final": true,
+              "fecha": "2026-10-25"
+            }
+          ]
+        }
+      }
+    },
+    "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek": {
+      "partidas": {
+        "1": {
+          "estado": "publicada",
+          "hastaTurno": 20,
+          "partes": [
+            {
+              "parte": 1,
+              "hastaTurno": 11,
+              "final": false,
+              "fecha": "2026-10-25"
+            },
+            {
+              "parte": 2,
+              "hastaTurno": 20,
+              "final": true,
+              "fecha": "2026-10-25"
+            }
+          ]
+        }
+      }
     }
   }
 }

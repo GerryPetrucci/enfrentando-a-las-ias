@@ -1,12 +1,105 @@
 {
-  "generado": "2026-10-21T18:57:45.967Z",
+  "generado": "2026-10-26T04:55:31.570Z",
   "juegos": [
     {
       "id": "conquista",
       "nombre": "Guerra de territorios",
       "categoria": "Estrategia y conquista",
-      "versionReglas": "conquista-1.1.0",
-      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Guerra de territorios ===\nObjetivo: ser el unico reino triunfante.\nMapa de regiones (R01, R02, ...) con terreno (ll = llanura, bo = bosque, mo = montana) y a veces un recurso. De 2 a 5 reinos, cada uno con una capital. 30 turnos; todos actuan a la vez.\n\nRECURSOS: Comida, Madera, Roca, Hierro, Oro y Caballos. Cada region tuya con recurso da +2 de ese recurso por turno; ademas 1 Comida por cada 2 regiones.\n\nORDENES (maximo 12 por turno):\n- reclutar REGION N: N tropas en region tuya (1 Comida c/u).\n- mover DESDE HASTA N: N tropas a region vecina (si es enemiga, atacas). Con Caballos (1 por 3 tropas) llegas a 2 regiones.\n- fortificar REGION: nivel 1: 3 Madera + 2 Roca; 2: 4 Roca + 3 Madera; 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa.\n- armar: +25% de ataque (4 Hierro + 2 Madera; maximo 2 veces).\n- mercenarios REGION N: N tropas a 2 Oro c/u (maximo 3 por turno).\n- regalar RECURSO CANTIDAD REINO: das recursos a otro reino.\n- ofrecer REINO RECURSO CANT RECURSO CANT: das lo primero por lo segundo (maximo 10 por lado, 2 por turno); el otro la ve el turno siguiente y la acepta con: aceptar REINO. Todo o nada.\n- construir REGION EDIFICIO: granja (4 Madera: +2 Comida), mercado (3 Madera + 3 Roca: +2 Oro), cuartel (4 Madera + 3 Roca: reclutar ahi cuesta la mitad). Uno por region, maximo 3 por tipo; si conquistan la region, pasa al conquistador a mitad de efecto.\n- construir REGION maravilla (solo en tu capital; solo existe una): 15 Roca + 12 Madera + 9 Hierro + 9 Oro. Quien la conserve 8 turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.\n- romper REINO: rompes tu pacto y puedes atacarlo este turno.\n\nCOMBATE: gana el lado con mas fuerza y conserva tropas x (1 - fuerza del segundo / la suya); los demas se eliminan. Ataque = tropas x armas. Defensa = tropas x (1 + 0.5 por nivel de fortaleza), +25% en bosque o +50% en montana. Si pierdes tu capital, caes.\nHAMBRE: cada 4 tropas comen 1 Comida por turno; si falta, desertan el 10%.\nDIPLOMACIA: un mensaje publico y hasta 2 privados por turno (maximo 140 caracteres; los privados llegan el turno siguiente, solo al destinatario). Pacto de no agresion: dura 2 turnos y se forma si dos reinos se lo proponen (tu propuesta queda abierta un turno mas). Atacar a un aliado exige romper el pacto ese turno. En los ultimos 2 turnos no hay alianzas.\nHONOR (publico, 0 a 10): empiezas en 5. Romper un pacto resta 3; cumplirlo hasta el final suma 1; cada 3 turnos suma 1. Con 2 o menos, mercenarios a 3 Oro y no firmas pactos nuevos.\nMEMORIA: cada turno puedes dejar una nota de plan (maximo 250 caracteres); solo tu la ves, el turno siguiente.\nVICTORIA: gana el unico reino vivo, quien complete la maravilla o, al turno 30, quien controle mas regiones (desempate: tropas).\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\n{\"ordenes\": [\"reclutar R03 4\", \"mover R07 R12 5\", \"construir R03 granja\"], \"pacto_con\": \"reino o null\", \"mensaje\": \"texto breve\", \"privados\": [{\"a\": \"reino\", \"texto\": \"texto breve\"}], \"nota\": \"tu plan\", \"razon\": \"una frase\"}\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
+      "versionReglas": "conquista-2.0.0",
+      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Guerra de territorios ===\nObjetivo: ser el unico reino triunfante.\nMapa de regiones (R01, R02, ...) con terreno (ll = llanura, bo = bosque, mo = montana) y a veces un recurso. De 2 a 5 reinos, cada uno con una capital. 30 turnos; todos actuan a la vez.\n\nRECURSOS: Comida, Madera, Roca, Hierro, Oro y Caballos. Cada region tuya con recurso da +2 de ese recurso por turno; ademas 1 Comida por cada 2 regiones.\n\nUNIDADES (cada region guarda cuantas hay de cada tipo; empiezas solo con Lanceros):\n- L Lancero: 1 Comida. Fuerza 1.\n- A Arquero: 1 Comida + 1 Madera. Fuerza 2.\n- J Jinete: 1 Comida + 1 Caballos. Fuerza 3. Es el unico que llega a 2 regiones.\n- I Ingenio: 1 Comida + 1 Madera + 1 Roca + 1 Hierro. Fuerza 3.5 al atacar y 1 al defender. Solo se recluta en una region con cuartel.\nDOMINIO: cada tipo rinde el DOBLE contra el tipo al que domina: L domina a J, A domina a L, J domina a A e I. Contra una mezcla, el doble cuenta en proporcion a las unidades de cada tipo del rival.\n\nORDENES (maximo 14 por turno):\n- reclutar REGION TIPO N: N unidades en region tuya (si hay cuartel, cuesta la mitad).\n- mover DESDE HASTA TIPO N [TIPO N ...] (o \"todo\": todo menos 1 unidad), por ejemplo mover R07 R12 L4 A2. Si la region es enemiga, atacas; si es de un aliado con pacto (no su capital), entras de visita. En tu region debe quedar 1 unidad; las de visita pueden irse enteras. Solo los Jinetes llegan a 2 regiones, y la del medio debe ser tuya, libre o de un aliado (nunca de otro reino).\n- atacar REGION [TIPO N ... | todo]: atacas donde ya estas, con esas unidades (sin lista, todas), a los reinos sin pacto contigo que tengan unidades ahi. Pelean las que no se movieron este turno. El dueno ataca con toda su guarnicion.\n- mejorar TIPO: +25% de fuerza a todas tus unidades de ese tipo (maximo 2 niveles). Nivel 1: 3 Hierro + 2 Oro; nivel 2: 5 Hierro + 4 Oro. Hace falta un cuartel.\n- fortificar REGION: nivel 1: 3 Madera + 2 Roca; 2: 4 Roca + 3 Madera; 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa.\n- mercenarios REGION N: N Lanceros a 2 Oro c/u (maximo 3 por turno).\n- regalar RECURSO CANTIDAD REINO: das recursos a otro reino.\n- ofrecer REINO RECURSO CANT RECURSO CANT: das lo primero por lo segundo (maximo 10 por lado, 2 por turno); el otro la ve el turno siguiente y la acepta con aceptar REINO. Todo o nada.\n- construir REGION EDIFICIO: granja (4 Madera: +2 Comida), mercado (3 Madera + 3 Roca: +2 Oro), cuartel (4 Madera + 3 Roca: reclutar ahi cuesta la mitad, recluta Ingenios y permite mejorar). Uno por region, maximo 3 por tipo; al conquistar la region pasa al conquistador a mitad de efecto.\n- construir REGION maravilla (solo en tu capital; solo existe una): 21 Roca + 17 Madera + 13 Hierro + 13 Oro. Quien la conserve 9 turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.\n- romper REINO: terminas tu pacto con ese reino. No te obliga a atacar: tus tropas en su territorio pueden irse o atacar.\n\nCOMBATE: fuerza = unidades x fuerza x mejoras x dominio. Defensa = fuerza x (1 + 0.5 por nivel de fortaleza), +25% en bosque, +50% en montana; si 1/4 o mas de los atacantes son Ingenios la fortaleza cuenta la mitad, con 1/2 o mas no cuenta. Gana el lado de mas fuerza y conserva sus unidades x (1 - fuerza del segundo / la suya); los demas se eliminan. Si pierdes tu capital, caes.\nHAMBRE: cada 4 unidades comen 1 Comida por turno (Jinetes e Ingenios cuentan doble); si falta, desertan el 10%.\nAISLAMIENTO: una region tuya sin camino a tu capital (por regiones tuyas, libres o de un aliado con pacto) esta aislada: no produce, no cuenta para la cosecha base y ahi no se recluta, fortifica ni construye; sus unidades siguen comiendo.\nDIPLOMACIA: un mensaje publico y hasta 2 privados por turno (maximo 140 caracteres; los privados llegan el turno siguiente, solo al destinatario). Pacto de no agresion: dura 2 turnos y se forma si dos reinos se lo proponen (tu propuesta sigue abierta un turno mas). Atacar a un aliado exige romper el pacto ese turno. En los ultimos 2 turnos no hay alianzas (tus tropas de visita pasan a hostiles).\nALIANZAS: con pacto vigente dejas tropas de visita en regiones de tu aliado (no en su capital). Si atacan esa region, tus tropas defienden con las del dueno, con su fortaleza y terreno; si eres aliado de los dos bandos no participas. Dos aliados que atacan la misma region pelean juntos y se queda con ella quien conserve mas unidades. Si el pacto termina o se rompe, las tropas de visita son hostiles: pueden quedarse sin pelear, irse (mover) o atacar (atacar REGION); el dueno tambien puede atacarlas. Quien pelea en la region de un reino sin pacto con el rinde x0.85 (tierra ajena). Las tropas de visita comen de tu Comida.\nEQUILIBRIO: el Hegemon (el reino con mas regiones, desde el 35% de las regiones con dueno hasta que baje del 30%) recibe el ataque de los demas con +50%. EVENTOS para todos en los turnos 5, 9, 13, 17, 21 y 25, anunciados un turno antes (Presagio): Sequia (cosecha base a la mitad 2 turnos), Peste (el reino con mas unidades pierde 15%), Cosecha (+1 Comida por region) o Caravana (el reino con menos regiones recibe 6 Oro + 3 Caballos).\nHONOR (publico, 0 a 10): empiezas en 5. Romper un pacto resta 3; cumplirlo hasta el final suma 1; cada 3 turnos suma 1. Con 2 o menos, mercenarios a 3 Oro y no firmas pactos nuevos.\nMEMORIA: cada turno puedes dejar una nota de plan (maximo 250 caracteres) que solo tu ves el turno siguiente.\nVICTORIA: gana el unico reino vivo, quien complete la maravilla o, al turno 30, quien controle mas regiones (desempate: unidades).\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\n{\"ordenes\": [\"reclutar R03 L4\", \"mover R07 R12 L3 A2\", \"construir R03 granja\"], \"pacto_con\": \"reino o null\", \"mensaje\": \"texto breve\", \"privados\": [{\"a\": \"reino\", \"texto\": \"texto breve\"}], \"nota\": \"tu plan\", \"razon\": \"una frase\"}\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
+      "tabla": [
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6.1-sol",
+          "partidas": 2,
+          "victorias": 2,
+          "empates": 0,
+          "derrotas": 0,
+          "puntos": 10,
+          "traiciones": 1,
+          "promesasHechas": 18,
+          "promesasRotas": 1,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 230,
+          "ordenesTotal": 317,
+          "puntosPorPartida": 5,
+          "fiabilidad": 0.944,
+          "obediencia": 0.726
+        },
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-sonnet-5.5",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 17,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 121,
+          "ordenesTotal": 179,
+          "puntosPorPartida": 2,
+          "fiabilidad": 1,
+          "obediencia": 0.676
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "tipo": "modelo",
+          "modelo": "google/gemini-3.8-flash",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 14,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 6,
+          "ordenesValidas": 184,
+          "ordenesTotal": 218,
+          "puntosPorPartida": 2,
+          "fiabilidad": 1,
+          "obediencia": 0.844
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 3,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 35,
+          "ordenesTotal": 89,
+          "puntosPorPartida": 0,
+          "fiabilidad": 1,
+          "obediencia": 0.393
+        }
+      ]
+    },
+    {
+      "id": "mayormenor",
+      "nombre": "Mayor o menor",
+      "categoria": "Estrategia de eliminación",
+      "versionReglas": "mayormenor-2.0.0",
+      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Mayor o menor ===\nEres uno de 2 jugadores en un duelo de cartas y apuestas. Se juegan 18 rondas. Cada jugador empieza con 10 fichas. Hay un mazo de 33 cartas: 3 copias de cada numero del 0 al 10. Al empezar, cada jugador recibe 11 cartas al azar de ese mazo, en secreto (los numeros pueden repetirse); las otras 11 no se usan. El crupier tiene dos mazos de 9 cartas (del 1 al 9), uno para cada jugador.\n\nLOS PAPELES\nEn las rondas impares el Jugador 1 es el jugador activo y el Jugador 2 es el predictor; en las pares es al reves. Cada jugador es activo 9 veces. En cada ronda, el crupier saca la siguiente carta de SU mazo: el mazo del jugador activo (cada carta de un mazo sale una sola vez).\n\nCOMO ES UNA RONDA (el activo y el predictor deciden a la vez y en secreto)\n1. El crupier revela su carta. Los dos la ven.\n2. El JUGADOR ACTIVO elige una de sus cartas para jugarla boca abajo. El PREDICTOR, sin ver esa carta, apuesta fichas a que sera MAYOR o MENOR que la del crupier.\n3. Se revela la carta del activo.\n- Si la carta del activo es mayor que la del crupier, el activo gana tantas fichas como la diferencia (por ejemplo, crupier 5 y carta 8: gana 3 fichas). Si es menor o igual, no gana nada.\n- Una carta IGUAL a la del crupier cuenta como MENOR: quien aposto \"menor\" acierta y quien aposto \"mayor\" falla.\n- Si el predictor acierta, recupera su apuesta y gana otras tantas fichas. Si falla, pierde lo que aposto.\n- Las fichas que se ganan salen de la banca, no del rival; las que se pierden vuelven a la banca.\n- La carta jugada y la del crupier se retiran para siempre.\n\nRONDAS DOBLES\nTres rondas de la partida son dobles: una entre la 3 y la 6, otra entre la 8 y la 12 y otra entre la 14 y la 18. Desde la primera ronda se te dice cuales son. En una ronda doble las fichas que se GANAN se pagan al doble (la diferencia del activo y lo que gana el predictor que acierta); lo que se pierde se pierde igual que siempre.\n\nLA APUESTA\nApuestas un numero entero de fichas, de 1 hasta las que tengas, pero nunca mas de 6 fichas en una ronda. No puedes apostar 0. Si pides mas del maximo, apuestas el maximo.\n\nSI TU RESPUESTA NO SIRVE\nSi tu respuesta no se entiende o no es legal (una carta que no tienes, una apuesta de 0 o con decimales, un lado que no sea \"mayor\" o \"menor\"), el juego juega por ti: si eres el activo, una carta tuya al azar; si eres el predictor, una apuesta de 1 ficha a un lado sorteado. Queda anotado como respuesta invalida y el historial marca esa jugada con [reemplazo].\n\nQUE SE VE Y QUE NO\nVes tus cartas y las fichas de los dos, cuantas cartas le quedan a tu rival y cuales ya jugo, las cartas que aun no conoces (de ellas salen las que conserva tu rival), las cartas del crupier que ya salieron de los dos mazos y todo lo que paso en las rondas anteriores. No ves las cartas que conserva tu rival, ni lo que tu rival decide en la misma ronda que tu (la carta del activo y la apuesta del predictor), ni el orden en que saldran las cartas del crupier.\n\nEL FINAL\nLa partida termina despues de la ronda 18, o antes, si alguien se queda sin fichas. Gana quien tenga mas fichas; si tienen las mismas, es empate.\n\nTU PUNTAJE\nGanar 4, empatar 2, perder 0.\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\n{\"carta\": numero del 0 al 10 que juegas (solo si eres el jugador activo), \"lado\": \"mayor\" o \"menor\" (solo si eres el predictor), \"fichas\": numero entero de fichas que apuestas, de 1 en adelante hasta el maximo permitido (solo si eres el predictor), \"razon\": \"una frase explicando tu decision\"}\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
       "tabla": [
         {
           "id": "gpt",
@@ -18,16 +111,16 @@
           "victorias": 1,
           "empates": 0,
           "derrotas": 0,
-          "puntos": 5,
-          "traiciones": 1,
-          "promesasHechas": 8,
-          "promesasRotas": 1,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
           "jugadasInvalidas": 0,
-          "ordenesValidas": 93,
-          "ordenesTotal": 175,
-          "puntosPorPartida": 5,
-          "fiabilidad": 0.875,
-          "obediencia": 0.531
+          "ordenesValidas": 18,
+          "ordenesTotal": 18,
+          "puntosPorPartida": 4,
+          "fiabilidad": null,
+          "obediencia": 1
         },
         {
           "id": "claude",
@@ -39,58 +132,16 @@
           "victorias": 0,
           "empates": 0,
           "derrotas": 1,
-          "puntos": 3,
-          "traiciones": 0,
-          "promesasHechas": 5,
-          "promesasRotas": 0,
-          "jugadasInvalidas": 0,
-          "ordenesValidas": 62,
-          "ordenesTotal": 90,
-          "puntosPorPartida": 3,
-          "fiabilidad": 1,
-          "obediencia": 0.689
-        },
-        {
-          "id": "gemini",
-          "nombre": "Gemini",
-          "color": "#4285F4",
-          "tipo": "modelo",
-          "modelo": "google/gemini-3.8-flash",
-          "partidas": 1,
-          "victorias": 0,
-          "empates": 0,
-          "derrotas": 1,
-          "puntos": 1,
-          "traiciones": 0,
-          "promesasHechas": 5,
-          "promesasRotas": 0,
-          "jugadasInvalidas": 0,
-          "ordenesValidas": 63,
-          "ordenesTotal": 81,
-          "puntosPorPartida": 1,
-          "fiabilidad": 1,
-          "obediencia": 0.778
-        },
-        {
-          "id": "deepseek",
-          "nombre": "DeepSeek",
-          "color": "#4D6BFE",
-          "tipo": "modelo",
-          "modelo": "deepseek/deepseek-v3.2",
-          "partidas": 1,
-          "victorias": 0,
-          "empates": 0,
-          "derrotas": 1,
           "puntos": 0,
           "traiciones": 0,
-          "promesasHechas": 2,
+          "promesasHechas": 0,
           "promesasRotas": 0,
           "jugadasInvalidas": 0,
-          "ordenesValidas": 20,
-          "ordenesTotal": 36,
+          "ordenesValidas": 18,
+          "ordenesTotal": 18,
           "puntosPorPartida": 0,
-          "fiabilidad": 1,
-          "obediencia": 0.556
+          "fiabilidad": null,
+          "obediencia": 1
         }
       ]
     }
@@ -108,20 +159,112 @@
           "color": "#F4F4F2",
           "tipo": "modelo",
           "modelo": "openai/gpt-6.1-sol",
+          "partidas": 2,
+          "victorias": 2,
+          "empates": 0,
+          "derrotas": 0,
+          "puntos": 10,
+          "traiciones": 1,
+          "promesasHechas": 18,
+          "promesasRotas": 1,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 230,
+          "ordenesTotal": 317,
+          "puntosPorPartida": 5,
+          "fiabilidad": 0.944,
+          "obediencia": 0.726
+        },
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-sonnet-5.5",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 17,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 121,
+          "ordenesTotal": 179,
+          "puntosPorPartida": 2,
+          "fiabilidad": 1,
+          "obediencia": 0.676
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "tipo": "modelo",
+          "modelo": "google/gemini-3.8-flash",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 14,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 6,
+          "ordenesValidas": 184,
+          "ordenesTotal": 218,
+          "puntosPorPartida": 2,
+          "fiabilidad": 1,
+          "obediencia": 0.844
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2",
+          "partidas": 2,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 2,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 3,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 35,
+          "ordenesTotal": 89,
+          "puntosPorPartida": 0,
+          "fiabilidad": 1,
+          "obediencia": 0.393
+        }
+      ]
+    },
+    {
+      "nombre": "Estrategia de eliminación",
+      "juegos": [
+        "Mayor o menor"
+      ],
+      "tabla": [
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6.1-sol",
           "partidas": 1,
           "victorias": 1,
           "empates": 0,
           "derrotas": 0,
-          "puntos": 5,
-          "traiciones": 1,
-          "promesasHechas": 8,
-          "promesasRotas": 1,
+          "puntos": 4,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
           "jugadasInvalidas": 0,
-          "ordenesValidas": 93,
-          "ordenesTotal": 175,
-          "puntosPorPartida": 5,
-          "fiabilidad": 0.875,
-          "obediencia": 0.531
+          "ordenesValidas": 18,
+          "ordenesTotal": 18,
+          "puntosPorPartida": 4,
+          "fiabilidad": null,
+          "obediencia": 1
         },
         {
           "id": "claude",
@@ -133,63 +276,372 @@
           "victorias": 0,
           "empates": 0,
           "derrotas": 1,
-          "puntos": 3,
-          "traiciones": 0,
-          "promesasHechas": 5,
-          "promesasRotas": 0,
-          "jugadasInvalidas": 0,
-          "ordenesValidas": 62,
-          "ordenesTotal": 90,
-          "puntosPorPartida": 3,
-          "fiabilidad": 1,
-          "obediencia": 0.689
-        },
-        {
-          "id": "gemini",
-          "nombre": "Gemini",
-          "color": "#4285F4",
-          "tipo": "modelo",
-          "modelo": "google/gemini-3.8-flash",
-          "partidas": 1,
-          "victorias": 0,
-          "empates": 0,
-          "derrotas": 1,
-          "puntos": 1,
-          "traiciones": 0,
-          "promesasHechas": 5,
-          "promesasRotas": 0,
-          "jugadasInvalidas": 0,
-          "ordenesValidas": 63,
-          "ordenesTotal": 81,
-          "puntosPorPartida": 1,
-          "fiabilidad": 1,
-          "obediencia": 0.778
-        },
-        {
-          "id": "deepseek",
-          "nombre": "DeepSeek",
-          "color": "#4D6BFE",
-          "tipo": "modelo",
-          "modelo": "deepseek/deepseek-v3.2",
-          "partidas": 1,
-          "victorias": 0,
-          "empates": 0,
-          "derrotas": 1,
           "puntos": 0,
           "traiciones": 0,
-          "promesasHechas": 2,
+          "promesasHechas": 0,
           "promesasRotas": 0,
           "jugadasInvalidas": 0,
-          "ordenesValidas": 20,
-          "ordenesTotal": 36,
+          "ordenesValidas": 18,
+          "ordenesTotal": 18,
           "puntosPorPartida": 0,
-          "fiabilidad": 1,
-          "obediencia": 0.556
+          "fiabilidad": null,
+          "obediencia": 1
         }
       ]
     }
   ],
   "episodios": [
+    {
+      "etiqueta": "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
+      "archivo": "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json",
+      "fecha": "2026-10-22T20:38:06.199Z",
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "seedBase": 1704202488,
+      "serie": {
+        "partidas": 1,
+        "rotar": true,
+        "mismoSeed": true
+      },
+      "enfrentamiento": "Claude vs GPT vs Gemini vs DeepSeek",
+      "partidas": 1,
+      "estado": "publicada",
+      "modo": "pago",
+      "versionReglas": "conquista-2.0.0",
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-sonnet-5.5"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6.1-sol"
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M",
+          "tipo": "modelo",
+          "modelo": "google/gemini-3.8-flash"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2"
+        }
+      ],
+      "detalle": [
+        {
+          "n": 1,
+          "seed": 1704202488,
+          "estado": "publicada",
+          "hastaTurno": null,
+          "turnos": 20,
+          "asientos": [
+            "claude",
+            "gpt",
+            "gemini",
+            "deepseek"
+          ],
+          "ganador": "GPT",
+          "puntos": [
+            1,
+            5,
+            3,
+            0
+          ],
+          "ganoPorMaravilla": true
+        }
+      ],
+      "evaluacion": {
+        "partidas": 1,
+        "jugadores": [
+          {
+            "id": "gpt",
+            "nombre": "GPT",
+            "partidas": 1,
+            "puntosPorPartida": 5,
+            "conteos": {
+              "victorias": 1,
+              "caidas": 0
+            },
+            "caracteristicas": {
+              "obediencia": {
+                "valor": 0.965,
+                "frase": "órdenes casi siempre legales (137 de 142)",
+                "notable": false
+              },
+              "palabra": {
+                "valor": 10,
+                "frase": "no rompió ningún pacto",
+                "notable": false
+              },
+              "negociacion": {
+                "valor": 0.6,
+                "frase": "negoció lo normal: 10 pactos y 2 comercios",
+                "notable": false
+              },
+              "conquista": {
+                "valor": 2,
+                "frase": "conquistó 2 regiones a otros reinos (ganó 1 de 1 batalla; ejército: Lanceros, Arqueros y Jinetes); termina con 14 regiones",
+                "notable": true
+              },
+              "camino": {
+                "valor": "maravilla",
+                "frase": "completó la Maravilla en el turno 20 y ganó",
+                "notable": true
+              }
+            },
+            "destacadas": [
+              "completó la Maravilla en el turno 20 y ganó",
+              "conquistó 2 regiones a otros reinos (ganó 1 de 1 batalla; ejército: Lanceros, Arqueros y Jinetes); termina con 14 regiones"
+            ]
+          },
+          {
+            "id": "gemini",
+            "nombre": "Gemini",
+            "partidas": 1,
+            "puntosPorPartida": 3,
+            "conteos": {
+              "victorias": 0,
+              "caidas": 0
+            },
+            "caracteristicas": {
+              "obediencia": {
+                "valor": 0.883,
+                "frase": "121 de 137 órdenes eran legales; no respondió bien 6 turnos de 20",
+                "notable": true
+              },
+              "palabra": {
+                "valor": 10,
+                "frase": "no rompió ningún pacto",
+                "notable": false
+              },
+              "negociacion": {
+                "valor": 0.55,
+                "frase": "negoció lo normal: 9 pactos y 2 comercios",
+                "notable": false
+              },
+              "conquista": {
+                "valor": 11,
+                "frase": "conquistó 11 regiones a otros reinos (ganó 11 de 15 batallas; ejército: Lanceros, Arqueros y Jinetes)",
+                "notable": true
+              },
+              "camino": {
+                "valor": null,
+                "frase": "no fue por la Maravilla",
+                "notable": false
+              }
+            },
+            "destacadas": [
+              "121 de 137 órdenes eran legales; no respondió bien 6 turnos de 20",
+              "conquistó 11 regiones a otros reinos (ganó 11 de 15 batallas; ejército: Lanceros, Arqueros y Jinetes)"
+            ]
+          },
+          {
+            "id": "claude",
+            "nombre": "Claude",
+            "partidas": 1,
+            "puntosPorPartida": 1,
+            "conteos": {
+              "victorias": 0,
+              "caidas": 0
+            },
+            "caracteristicas": {
+              "obediencia": {
+                "valor": 0.663,
+                "frase": "solo 59 de 89 órdenes eran legales",
+                "notable": true
+              },
+              "palabra": {
+                "valor": 10,
+                "frase": "no rompió ningún pacto",
+                "notable": false
+              },
+              "negociacion": {
+                "valor": 0.7,
+                "frase": "negoció lo normal: 12 pactos y 2 comercios",
+                "notable": false
+              },
+              "conquista": {
+                "valor": 0,
+                "frase": "no atacó a nadie: termina con 9 regiones",
+                "notable": true
+              },
+              "camino": {
+                "valor": null,
+                "frase": "no fue por la Maravilla",
+                "notable": false
+              }
+            },
+            "destacadas": [
+              "solo 59 de 89 órdenes eran legales",
+              "no atacó a nadie: termina con 9 regiones"
+            ]
+          },
+          {
+            "id": "deepseek",
+            "nombre": "DeepSeek",
+            "partidas": 1,
+            "puntosPorPartida": 0,
+            "conteos": {
+              "victorias": 0,
+              "caidas": 1
+            },
+            "caracteristicas": {
+              "obediencia": {
+                "valor": 0.283,
+                "frase": "solo 15 de 53 órdenes eran legales",
+                "notable": true
+              },
+              "palabra": {
+                "valor": 8,
+                "frase": "no rompió ningún pacto",
+                "notable": false
+              },
+              "negociacion": {
+                "valor": 0.13,
+                "frase": "casi no negoció: 1 pacto y 0 comercios",
+                "notable": true
+              },
+              "conquista": {
+                "valor": 0,
+                "frase": "cayó en el turno 8",
+                "notable": true
+              },
+              "camino": {
+                "valor": null,
+                "frase": "no fue por la Maravilla",
+                "notable": false
+              }
+            },
+            "destacadas": [
+              "solo 15 de 53 órdenes eran legales",
+              "cayó en el turno 8",
+              "casi no negoció: 1 pacto y 0 comercios"
+            ]
+          }
+        ],
+        "comentario": [
+          {
+            "tipo": "resumen",
+            "texto": "En estas 1 partida de Guerra de territorios, con estas reglas, GPT sumó más puntos por partida (5)."
+          },
+          {
+            "tipo": "jugador",
+            "texto": "GPT: completó la Maravilla en el turno 20 y ganó; conquistó 2 regiones a otros reinos (ganó 1 de 1 batalla; ejército: Lanceros, Arqueros y Jinetes); termina con 14 regiones."
+          },
+          {
+            "tipo": "jugador",
+            "texto": "Gemini: 121 de 137 órdenes eran legales; no respondió bien 6 turnos de 20; conquistó 11 regiones a otros reinos (ganó 11 de 15 batallas; ejército: Lanceros, Arqueros y Jinetes)."
+          },
+          {
+            "tipo": "jugador",
+            "texto": "Claude: solo 59 de 89 órdenes eran legales; no atacó a nadie: termina con 9 regiones."
+          },
+          {
+            "tipo": "jugador",
+            "texto": "DeepSeek: solo 15 de 53 órdenes eran legales; cayó en el turno 8; casi no negoció: 1 pacto y 0 comercios."
+          },
+          {
+            "tipo": "aviso",
+            "texto": "Con 1 partida (menos de una vuelta completa de asientos) esto es solo una muestra, no un ranking."
+          },
+          {
+            "tipo": "aviso",
+            "texto": "Esto es lo que pasó en estas partidas; no es un ranking general de las IAs."
+          }
+        ]
+      }
+    },
+    {
+      "etiqueta": "2026-10-21-mayormenor-claude-vs-gpt",
+      "archivo": "2026-10-21-mayormenor-claude-vs-gpt.json",
+      "fecha": "2026-10-21T22:00:31.912Z",
+      "juego": {
+        "id": "mayormenor",
+        "nombre": "Mayor o menor",
+        "categoria": "Estrategia de eliminación"
+      },
+      "seedBase": 596137124,
+      "serie": {
+        "partidas": 2,
+        "rotar": true,
+        "mismoSeed": true
+      },
+      "enfrentamiento": "Claude vs GPT",
+      "partidas": 2,
+      "estado": "por-publicarse",
+      "modo": "pago",
+      "versionReglas": "mayormenor-2.0.0",
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-sonnet-5.5"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6.1-sol"
+        }
+      ],
+      "detalle": [
+        {
+          "n": 1,
+          "seed": 596137124,
+          "estado": "por-publicarse",
+          "hastaTurno": 0,
+          "turnos": null,
+          "asientos": [
+            "claude",
+            "gpt"
+          ],
+          "ganador": null,
+          "puntos": null,
+          "ganoPorMaravilla": null
+        },
+        {
+          "n": 2,
+          "seed": 596137124,
+          "estado": "publicada",
+          "hastaTurno": null,
+          "turnos": 18,
+          "asientos": [
+            "gpt",
+            "claude"
+          ],
+          "ganador": "GPT",
+          "puntos": [
+            4,
+            0
+          ],
+          "ganoPorMaravilla": false
+        }
+      ],
+      "evaluacion": null
+    },
     {
       "etiqueta": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
       "archivo": "2026-10-19-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json",
@@ -287,6 +739,125 @@
     }
   ],
   "partidas": [
+    {
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "serie": "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
+      "n": 1,
+      "fecha": "2026-10-22T20:38:06.199Z",
+      "seed": 1704202488,
+      "estado": "publicada",
+      "hastaTurno": null,
+      "turnos": 20,
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G"
+        },
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D"
+        }
+      ],
+      "ganador": "GPT",
+      "puntos": [
+        1,
+        5,
+        3,
+        0
+      ],
+      "ganoPorMaravilla": true,
+      "versionReglas": "conquista-2.0.0",
+      "modo": "pago"
+    },
+    {
+      "juego": {
+        "id": "mayormenor",
+        "nombre": "Mayor o menor",
+        "categoria": "Estrategia de eliminación"
+      },
+      "serie": "2026-10-21-mayormenor-claude-vs-gpt",
+      "n": 1,
+      "fecha": "2026-10-21T22:00:31.912Z",
+      "seed": 596137124,
+      "estado": "por-publicarse",
+      "hastaTurno": 0,
+      "turnos": null,
+      "jugadores": [
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C"
+        },
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G"
+        }
+      ],
+      "ganador": null,
+      "puntos": null,
+      "ganoPorMaravilla": null,
+      "versionReglas": "mayormenor-2.0.0",
+      "modo": "pago"
+    },
+    {
+      "juego": {
+        "id": "mayormenor",
+        "nombre": "Mayor o menor",
+        "categoria": "Estrategia de eliminación"
+      },
+      "serie": "2026-10-21-mayormenor-claude-vs-gpt",
+      "n": 2,
+      "fecha": "2026-10-21T22:00:31.912Z",
+      "seed": 596137124,
+      "estado": "publicada",
+      "hastaTurno": null,
+      "turnos": 18,
+      "jugadores": [
+        {
+          "id": "gpt",
+          "nombre": "GPT",
+          "color": "#F4F4F2",
+          "inicial": "G"
+        },
+        {
+          "id": "claude",
+          "nombre": "Claude",
+          "color": "#D97757",
+          "inicial": "C"
+        }
+      ],
+      "ganador": "GPT",
+      "puntos": [
+        4,
+        0
+      ],
+      "ganoPorMaravilla": false,
+      "versionReglas": "mayormenor-2.0.0",
+      "modo": "pago"
+    },
     {
       "juego": {
         "id": "conquista",
