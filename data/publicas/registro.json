@@ -65,6 +65,22 @@
           ]
         }
       }
+    },
+    "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek": {
+      "partidas": {
+        "1": {
+          "estado": "por-publicarse",
+          "hastaTurno": 2,
+          "partes": [
+            {
+              "parte": 1,
+              "hastaTurno": 2,
+              "final": false,
+              "fecha": "2026-10-26"
+            }
+          ]
+        }
+      }
     }
   }
 }

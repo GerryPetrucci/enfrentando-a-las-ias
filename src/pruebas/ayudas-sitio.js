@@ -8,6 +8,9 @@ import * as menu from '../../web/menu.js';
 import * as propuestas from '../../web/propuestas.js';
 import * as textos from '../../web/casino/textos-juego.js';
 import * as redes from '../../web/redes.js';
+import * as carrusel from '../../web/carrusel.js';
+import * as evaluacion from '../../web/casino/evaluacion-conquista.js';
+import * as conversacionLobo from '../../web/casino/conversacion-lobo.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -16,8 +19,9 @@ export const codigoDe = (archivo) => {
   return /<script type="module">([\s\S]*?)<\/script>/.exec(html)[1].replace(/^import .*$/gm, '');
 };
 
-// opciones: { search, hash, marcador (null = sin red), issues (lo que devuelve la API de GitHub; null = falla), tipoElegido, formulario: { campo: { value } } (los campos del formulario de proponer) }
-export async function correrPagina(archivo, { search = '', hash = '', marcador = { juegos: [], partidas: [] }, issues = [], tipoElegido = 'juego', formulario = {} } = {}) {
+// opciones: { search, hash, marcador (null = sin red), issues (lo que devuelve la API de GitHub; null = falla), tipoElegido, formulario: { campo: { value } } (los campos del formulario de proponer),
+//   publicas: { [id]: serie } (los archivos de data/publicas/ que pide la pagina de una partida) }
+export async function correrPagina(archivo, { search = '', hash = '', marcador = { juegos: [], partidas: [] }, issues = [], tipoElegido = 'juego', formulario = {}, publicas = {} } = {}) {
   const nodos = new Map();
   const manejadores = [];
   const llamadasMenu = [];
@@ -46,11 +50,13 @@ export async function correrPagina(archivo, { search = '', hash = '', marcador =
       if (issues === null) throw new Error('sin red');
       return { ok: true, json: async () => issues };
     }
+    const publica = /^data\/publicas\/([^?]+)\.json/.exec(String(url));
+    if (publica) { const serie = publicas[decodeURIComponent(publica[1])]; return serie ? { ok: true, status: 200, json: async () => structuredClone(serie) } : { ok: false, status: 404, json: async () => null }; }
     throw new Error(`fetch inesperado: ${url}`);
   };
   const window = { open: (...a) => abiertas.push(a) };
   const modulos = {
-    ...catalogo, ...menu, ...propuestas, ...textos, ...redes,
+    ...catalogo, ...menu, ...propuestas, ...textos, ...redes, ...carrusel, ...evaluacion, ...conversacionLobo,
     cargarMarcador: async () => (marcador === null ? { juegos: [], partidas: [], error: true } : marcador),
     montarMenu: (datos, opciones) => llamadasMenu.push(opciones),
   };

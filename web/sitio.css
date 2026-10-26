@@ -68,7 +68,23 @@ main.ancha { max-width:1100px; margin:0 auto; padding:0 16px 64px; }
 /* tarjetas de juego y de partida en cuadricula */
 .rejilla { display:grid; gap:14px; grid-template-columns:1fr; }
 @media (min-width:640px) { .rejilla { grid-template-columns:repeat(2,1fr); } }
-@media (min-width:980px) { .rejilla.tres { grid-template-columns:repeat(3,1fr); } }
+/* Las tarjetas de juego de la portada: una fila. Si caben, se reparten el ancho; si no (cada una pide como minimo 300 px, o el 82 % del ancho en un telefono para que se asome la siguiente),
+   la fila se desliza con el dedo, la rueda o las flechas (web/carrusel.js). Sin JavaScript sigue siendo una fila que se desliza con el dedo. */
+.cabecera-seccion { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.cabecera-seccion h2 { margin:0; }
+.cabecera-seccion + .nota { margin-top:6px; }
+.carrusel-controles { display:none; gap:8px; flex:none; }
+.carrusel[data-desborde="si"] .carrusel-controles { display:flex; }
+.carrusel-pista { display:flex; gap:14px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; scroll-padding-inline:6px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:var(--borde) transparent;
+  padding:6px; margin:-6px; /* aire para el levantado de la tarjeta y para el anillo de foco, que el recorte del desplazamiento comeria */ }
+.carrusel-pista:focus-visible { outline-offset:-3px; }
+.carrusel-pista > a.tarjeta { flex:1 0 min(300px,82%); max-width:420px; scroll-snap-align:start; min-width:0; }
+.carrusel-pista > .vacio { flex:1 1 100%; }
+.carrusel-flecha { width:44px; height:44px; display:grid; place-items:center; padding:0; border-radius:50%; border:1px solid var(--oro); background:transparent; color:var(--oro); cursor:pointer; }
+.carrusel-flecha svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+.carrusel-flecha:hover:not(:disabled) { background:var(--oro); color:var(--noche); }
+.carrusel-flecha:disabled { opacity:.35; cursor:default; }
+@media (prefers-reduced-motion:reduce) { a.tarjeta { transition:none; } a.tarjeta:hover { transform:none; } }
 a.tarjeta { display:flex; flex-direction:column; gap:6px; padding:16px; background:var(--panel); border:1px solid var(--borde); border-radius:16px; color:var(--hueso); text-decoration:none; transition:border-color .15s, transform .15s; }
 a.tarjeta:hover { border-color:var(--oro); transform:translateY(-2px); }
 a.tarjeta h3 { margin:0; font:800 26px/1.1 var(--titulos); letter-spacing:.05em; text-transform:uppercase; }
@@ -168,6 +184,11 @@ pre.prompt { margin:0 16px 16px; padding:14px; background:var(--noche); border:1
 .ficha dt { color:var(--suave); font:700 12px var(--titulos); letter-spacing:.14em; text-transform:uppercase; }
 .ficha dd { margin:0 0 4px; }
 .ficha dd.nota { color:var(--oro); font-weight:600; }
+/* conversacion de Lobo en la aldea (web/casino/conversacion-lobo.js) */
+.hecho-lobo { margin:10px 0; padding:8px 14px; border-left:3px solid var(--oro); background:rgba(224,178,92,.06); border-radius:0 10px 10px 0; }
+.votos .hecho-lobo { margin-bottom:6px; }
+.votos-lista { margin:0 0 6px; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:6px 14px; font-size:14px; color:var(--suave); }
+.votos-lista li { padding:4px 10px; background:var(--panel); border:1px solid var(--borde); border-radius:8px; }
 
 /* pagina de un juego y propuestas */
 .intro-juego { max-width:720px; color:var(--suave); font-size:17px; }
@@ -184,3 +205,10 @@ fieldset.tipos input { width:auto; min-height:0; accent-color:var(--oro); }
 .errores { margin:0; padding:10px 14px; border:1px solid var(--rojo); border-radius:10px; color:var(--rojo); font-weight:600; }
 .errores[hidden] { display:none; }
 .rejilla.una { grid-template-columns:1fr; }
+
+/* Todos los dispositivos: telefonos con muesca o esquinas redondeadas (viewport-fit=cover) respetan sus zonas seguras, y con el dedo (pointer:coarse) todo lo que se toca mide al menos 44 px. */
+@supports (padding:max(0px)) {
+  .barra-dentro, main.ancha, .envoltura, footer.pie { padding-left:max(16px,env(safe-area-inset-left)); padding-right:max(16px,env(safe-area-inset-right)); }
+  footer.pie { padding-bottom:max(48px,calc(24px + env(safe-area-inset-bottom))); }
+}
+@media (pointer:coarse) { .menu a, .juegos-boton, .menu-boton, .pestanas a, .lista-juegos a, .enlaces a { min-height:44px; } .enlaces a { display:inline-flex; align-items:center; } }

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Partida · Enfrentando a las IAs</title>
 <meta name="description" content="La conversación entre las IAs y los prompts de una partida de Enfrentando a las IAs.">
 <meta name="theme-color" content="#101014">
@@ -18,8 +18,9 @@
 
 <script type="module">
 import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
-import { ESTADOS, fechaLarga, etiquetaDePartida } from './catalogo.js?v=__V__';
+import { ESTADOS, fechaLarga, etiquetaDePartida, unidadDeJuego } from './catalogo.js?v=__V__';
 import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js?v=__V__';
+import { conversacionDeLobo } from './casino/conversacion-lobo.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
 const q = new URLSearchParams(location.search);
@@ -45,6 +46,21 @@ function turno(p, r, prompts) {
     return `<div class="jugada-ia" style="--c:${esc(p.jugadores?.[k]?.color ?? '#888')}"><h4>${ia(p, k)}${reino(p, k)}</h4>${ordenes}${x.razon ? `<p class="razon">«${esc(x.razon)}»</p>` : ''}${prompt}</div>`;
   }).join('');
   return `<article class="turno"><h3>Turno ${esc(t)}</h3>${msgs}${privados}${jugadas}</article>`;
+}
+
+// Lobo en la aldea: la conversacion publica (casino/conversacion-lobo.js), ronda por ronda. Los nombres ya vienen con su letra si un modelo ocupa varios asientos.
+const iaLobo = (p, k, nombre) => `<span class="ia">${disco(p.jugadores?.[k])}${esc(nombre)}</span>`;
+function rondaLobo(p, r) {
+  const hechos = r.hechos.map((h) => {
+    if (h.tipo === 'mensaje') return `<div class="mensaje"><div class="quien">${iaLobo(p, h.asiento, h.quien)} dice en público${h.nota ? ` · <em>${esc(h.nota)}</em>` : ''}</div><q>${esc(h.texto)}</q></div>`;
+    if (h.tipo === 'silencio') return `<p class="hecho-lobo">${iaLobo(p, h.asiento, h.quien)} guarda silencio.</p>`;
+    if (h.tipo === 'votos') {
+      const filas = h.filas.map((f) => `<li>${esc(f.de)} <span aria-hidden="true">→</span><span class="solo-lectores"> votó por </span> ${esc(f.a)}</li>`).join('');
+      return `<div class="votos"><p class="hecho-lobo">${h.empate ? 'La aldea vota y empata.' : 'La aldea vota.'}</p><ul class="votos-lista">${filas}</ul>${h.recibidos.length ? `<p class="meta">Votos recibidos: ${h.recibidos.map((x) => `${esc(x.quien)} ${esc(x.votos)}`).join(' · ')}</p>` : ''}</div>`;
+    }
+    return `<p class="hecho-lobo">${esc(h.texto)}</p>`;
+  }).join('');
+  return `<article class="turno"><h3>Ronda ${esc(r.ronda)}</h3>${hechos}</article>`;
 }
 
 function fichas(p) {
@@ -85,11 +101,13 @@ if (serie) {
   document.title = `${nombre} · seed ${p.seed ?? serie.seedBase} · Enfrentando a las IAs`;
   const prompts = new Map((p.prompts?.turnos ?? []).map((t) => [t.turno, t.prompts]));
   const rondas = Array.isArray(p.rondas) ? p.rondas : [];
+  const esLobo = serie.juego?.id === 'lobo', conversacion = esLobo ? conversacionDeLobo(p) : [];
+  const unidad = unidadDeJuego(serie.juego?.id);
   const enlaceEscena = `escena.html?archivo=${encodeURIComponent(`publicas/${id}.json`)}&partida=${n}`;
   const tanda = serie.partidas.map((x, i) => ({ juego: serie.juego, serie: id, n: i + 1, seed: x.seed ?? serie.seedBase, jugadores: x.jugadores }));
   const etiqueta = etiquetaDePartida(tanda[n - 1], tanda);
   const estado = pendiente ? 'por-publicarse' : 'publicada';
-  const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y lo que recibió cada IA hasta el turno ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
+  const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y ${esLobo ? 'lo que pasó' : 'lo que recibió cada IA'} ${esc(unidad.hasta)} ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
   contenido.innerHTML = `
     <p class="migas"><a href="juego.html?id=${encodeURIComponent(serie.juego?.id ?? '')}">← ${esc(nombre)}</a></p>
     <h1 class="titulo-pagina">${esc(nombre)}</h1>
@@ -101,8 +119,11 @@ if (serie) {
     ${serie.prompt?.sistema ? `<details><summary>Las reglas que recibieron todas las IAs (prompt de sistema)</summary><pre class="prompt">${esc(serie.prompt.sistema)}</pre></details>` : ''}
     ${pendiente ? '' : resultado(p)}
     <section><h2>La conversación</h2>
-    <p class="nota">Lo que escribió y decidió cada IA en cada turno, tal como lo registró el motor. Lo que se dicen en privado solo lo ve su destinatario durante la partida; aquí se publica hasta donde llega el video.</p>
-    ${rondas.length ? rondas.map((r) => turno(p, r, prompts.get(r.turno ?? r.ronda))).join('') : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
+    <p class="nota">${esLobo
+    ? `Lo que dijo cada IA en el debate y lo que pasó en cada ronda, tal como lo registró el motor.${pendiente ? ' Los roles de quienes siguen vivos no se publican hasta la parte final.' : ''} Los números de asiento que citan las IAs en sus mensajes se muestran con el nombre de ese jugador.`
+    : 'Lo que escribió y decidió cada IA en cada turno, tal como lo registró el motor. Lo que se dicen en privado solo lo ve su destinatario durante la partida; aquí se publica hasta donde llega el video.'}</p>
+    ${esLobo ? (conversacion.length ? conversacion.map((r) => rondaLobo(p, r)).join('') : `<p class="vacio">Todavía no hay ${unidad.nombre}s publicadas de esta partida.</p>`)
+      : rondas.length ? rondas.map((r) => turno(p, r, prompts.get(r.turno ?? r.ronda))).join('') : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
 } else {
   montarMenu(datos, { pagina: 'partida' });
 }

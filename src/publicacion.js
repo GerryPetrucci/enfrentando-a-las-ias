@@ -14,8 +14,14 @@ export const PUBLICADA = 'publicada';
 // Lo UNICO que sale de una partida a medio publicar. Todo lo demas (puntos, ganador, orden, metricas, duracion, tokens, avisos, cuantos turnos tuvo en total...) adelanta el resultado.
 const CLAVES_PARCIALES = ['seed', 'juego', 'jugadores', 'mapa', 'reinos', 'rotacion', 'invertido', 'rondas'];
 
-export const numeroDeRonda = (r, i) => (Number.isInteger(r?.turno) ? r.turno : Number.isInteger(r?.ronda) ? r.ronda : i + 1);
-export const ultimaRonda = (partida) => (Array.isArray(partida?.rondas) && partida.rondas.length ? numeroDeRonda(partida.rondas.at(-1), partida.rondas.length - 1) : 0);
+// Lobo guarda UN REGISTRO POR FASE (cupido, lobos, bruja, vidente, dia): su `turno` cuenta fases, y los videos, el paquete y `hasta` hablan de RONDAS. Por eso en Lobo se cuenta por `ronda`.
+const esLobo = (partida) => partida?.juego?.id === 'lobo';
+export const numeroDeRonda = (r, i, partida = null) => (esLobo(partida) && Number.isInteger(r?.ronda) ? r.ronda : Number.isInteger(r?.turno) ? r.turno : Number.isInteger(r?.ronda) ? r.ronda : i + 1);
+export const ultimaRonda = (partida) => (Array.isArray(partida?.rondas) && partida.rondas.length ? numeroDeRonda(partida.rondas.at(-1), partida.rondas.length - 1, partida) : 0);
+
+// Lo UNICO que sale de un registro de Lobo a medio publicar: lo que la escena muestra (eventos publicos). Todo lo demas delata identidades: `privado`, `invalidas` (quien actuo en cada
+// fase secreta: los lobos, la vidente, la bruja...), `errores` (los motivos de una jugada invalida citan roles: «el asiento 3 es de la manada») y `camara` (la foto de la fase siguiente).
+const registroPublicoDeLobo = ({ turno, ronda, fase, publico }) => ({ turno, ronda, fase, publico: { eventos: Array.isArray(publico?.eventos) ? publico.eventos : [] } });
 
 // ¿Una parte que llega hasta `hastaTurno` es la FINAL de la partida (la que dice el resultado)? Si la partida se corto antes de terminar, no hay parte final.
 export const esParteFinal = (partida, hastaTurno) => partida?.truncada !== true && Number.isInteger(hastaTurno) && ultimaRonda(partida) >= 1 && hastaTurno >= ultimaRonda(partida);
@@ -27,7 +33,8 @@ export function partidaParcial(partida, hastaTurno, prompts = null) {
   const base = Object.fromEntries(CLAVES_PARCIALES.filter((k) => partida?.[k] !== undefined).map((k) => [k, copia(partida[k])]));
   // `privado` (Lobo: quien actuo como lobo, lo que inspecciono la vidente, las respuestas crudas...) es lo que la escena nunca muestra: hasta que se sube la parte
   // final adelantaria identidades. Sale solo en la partida completa.
-  const rondas = (Array.isArray(partida?.rondas) ? partida.rondas : []).filter((r, i) => numeroDeRonda(r, i) <= hastaTurno).map(({ privado, ...publico }) => publico);
+  const rondas = (Array.isArray(partida?.rondas) ? partida.rondas : []).filter((r, i) => numeroDeRonda(r, i, partida) <= hastaTurno)
+    .map((r) => (esLobo(partida) ? registroPublicoDeLobo(r) : (({ privado, ...publico }) => publico)(r)));
   return { ...base, rondas: copia(rondas), truncada: true, parcial: { hastaTurno: Math.max(0, hastaTurno) }, estadoPublicacion: POR_PUBLICARSE, ...(prompts ? { prompts } : {}) };
 }
 

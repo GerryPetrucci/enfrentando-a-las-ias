@@ -38,6 +38,9 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
 - **LEEME de cada paquete** (`herramientas/paquete.mjs`, `leemeDe`): todo lo que se copia va en bloques de código, nunca suelto en una frase: direcciones de grabación, nombre al que se
   renombra cada `.mkv`, carpeta de destino y comandos `node ...` (recorte, regenerar imagen, servidor). Empieza con un «Resumen rápido» con todos los nombres y todos los comandos juntos. Los
   nombres de los videos que quedan van en código en línea. Una prueba lo exige. Regla decidida 26-10-2026.
+- **Sitio (`web/*.html`, `sitio.css`) 100 % responsivo**: sin desborde horizontal de 280 px a 2560 px, `viewport-fit=cover` con zonas seguras, objetivos táctiles de 44 px con el dedo. Las
+  tarjetas de juego de la portada van en un carrusel (`web/carrusel.js`) que se desliza solo cuando no caben en el ancho. Un juego nuevo aparece solo en la portada cuando tiene una partida
+  en `data/publicas/`; si guarda un registro por fase (como Lobo) hay que revisar en `src/publicacion.js` qué se publica a medias y cómo se cuenta `hasta`. Regla decidida 26-10-2026.
 - Tests funcionales con bots/mocks. Pruebas afectadas primero; suite completa al
   cerrar cambios de codigo. `npm.cmd test` funciona en PowerShell. No repetirla
   si no hay nuevos cambios, fallos o dudas que lo justifiquen.

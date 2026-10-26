@@ -133,6 +133,30 @@ test('una partida de Lobo a medio publicar no saca su registro privado (identida
   assert.ok(partidaCompleta(lobo).rondas.every((r) => r.privado), 'ya publicada la parte final todo es publico');
 });
 
+test('Lobo: «hasta» cuenta RONDAS (no fases) y lo que sale a medias son solo los eventos publicos: nada que delate quien actuo en la noche', async () => {
+  const { jugarLobo } = await import('./escena/ayudas-lobo.js');
+  const lobo = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((seed) => jugarLobo(seed, 8)).find((p) => ultimaRonda(p) >= 3); // una partida de al menos 3 rondas
+  assert.ok(lobo, 'hay una partida de bots de 3 o mas rondas');
+  assert.ok(lobo.rondas.length > lobo.rondas.at(-1).ronda, 'hay mas registros (fases) que rondas');
+  assert.equal(ultimaRonda(lobo), lobo.rondas.at(-1).ronda, 'la ultima ronda es la del ultimo registro, no el numero de fases');
+  assert.equal(esParteFinal(lobo, ultimaRonda(lobo)), true);
+  assert.equal(esParteFinal(lobo, 2), false, 'la ronda 2 no es el final de una partida de mas rondas');
+  const parcial = partidaParcial(lobo, 2);
+  assert.deepEqual([...new Set(parcial.rondas.map((r) => r.ronda))], [1, 2], 'las rondas 1 y 2 completas, con todas sus fases');
+  assert.equal(parcial.rondas.length, lobo.rondas.filter((r) => r.ronda <= 2).length);
+  for (const r of parcial.rondas) {
+    assert.deepEqual(Object.keys(r).sort(), ['fase', 'publico', 'ronda', 'turno'], 'solo lo que muestra la escena');
+    assert.deepEqual(Object.keys(r.publico), ['eventos']);
+    assert.deepEqual(r.publico.eventos, lobo.rondas.find((o) => o.turno === r.turno).publico.eventos, 'los eventos, tal cual');
+  }
+  const texto = JSON.stringify(parcial);
+  for (const clave of ['"invalidas"', '"errores"', '"camara"', '"privado"']) assert.ok(!texto.includes(clave), `${clave} delata identidades`);
+  assert.ok(lobo.rondas.every((r) => 'invalidas' in r && r.publico.camara), 'la partida original no se toca');
+  // los demas juegos conservan su criterio de siempre (turno primero)
+  assert.equal(numeroDeRonda({ turno: 9, ronda: 2 }, 0, { juego: { id: 'conquista' } }), 9);
+  assert.equal(numeroDeRonda({ turno: 9, ronda: 2 }, 0, lobo), 2);
+});
+
 test('sin registro la serie entera esta por publicarse y solo muestra sus seeds; una serie rota no lanza', () => {
   const pub = armarSeriePublica(serie(), null, {});
   assert.equal(pub.publicacion.estado, POR_PUBLICARSE);

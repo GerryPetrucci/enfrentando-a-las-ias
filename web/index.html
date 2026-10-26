@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Enfrentando a las IAs · El marcador honesto</title>
 <meta name="description" content="Ponemos a las IAs a jugar entre sí, con el mismo prompt para todas, y llevamos la cuenta. Elige un juego o busca cualquier partida por IA o por seed.">
 <meta property="og:type" content="website">
@@ -32,10 +32,16 @@
     <div id="redes"></div>
   </div>
 
-  <section aria-labelledby="t-juegos">
-    <h2 id="t-juegos">Juegos</h2>
+  <section class="carrusel" id="carrusel-juegos" data-desborde="no" aria-labelledby="t-juegos">
+    <div class="cabecera-seccion">
+      <h2 id="t-juegos">Juegos</h2>
+      <div class="carrusel-controles">
+        <button class="carrusel-flecha" type="button" data-dir="-1" aria-label="Ver los juegos anteriores" aria-controls="juegos" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="carrusel-flecha" type="button" data-dir="1" aria-label="Ver los juegos siguientes" aria-controls="juegos" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
     <p class="nota">Cada juego es independiente: tiene su propia tabla y no hay un ranking general de las IAs.</p>
-    <div class="rejilla tres" id="juegos"></div>
+    <div class="carrusel-pista" id="juegos" tabindex="0" role="region" aria-label="Juegos: desliza para ver más"></div>
   </section>
 
   <section aria-labelledby="t-partidas">
@@ -57,6 +63,7 @@ import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
 import { ESTADOS, fechaCorta, fechaLarga, resumenDeJuegos, buscar, leerBusqueda, textoDeBusqueda, resumenDePartida, enlaceDePartida, etiquetaDePartida } from './catalogo.js?v=__V__';
 import { redesHtml } from './redes.js?v=__V__';
 import { textoDeJuego } from './casino/textos-juego.js?v=__V__';
+import { montarCarrusel } from './carrusel.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
 const PARTIDAS_RECIENTES = 6, PARTIDAS_BUSCADAS = 30;
@@ -80,12 +87,15 @@ $('redes').innerHTML = redesHtml();
 const datos = await cargarMarcador();
 montarMenu(datos, { pagina: 'inicio', generado: datos.generado ? `Marcador actualizado el ${fechaLarga(datos.generado)}.` : '' });
 
+const carrusel = montarCarrusel($('carrusel-juegos')); // las tarjetas de juego se deslizan solo cuando no caben en el ancho de la pagina
+
 function pintar() {
   const texto = $('q').value.trim();
   history.replaceState(null, '', `${location.pathname}${textoDeBusqueda(texto)}${location.hash}`);
   const { juegos, partidas } = buscar(datos, texto);
   const hay = (datos.juegos ?? []).length > 0;
   $('juegos').innerHTML = juegos.length ? juegos.map(tarjetaJuego).join('') : `<p class="vacio">${hay ? 'Ningún juego coincide con esa búsqueda.' : 'Todavía no hay juegos publicados.'}</p>`;
+  carrusel.actualizar();
   const mostradas = partidas.slice(0, texto ? PARTIDAS_BUSCADAS : PARTIDAS_RECIENTES);
   $('t-partidas').textContent = texto ? 'Partidas que coinciden' : 'Últimas partidas';
   $('partidas').innerHTML = mostradas.length ? mostradas.map(tarjetaPartida).join('') : `<p class="vacio">${texto ? `Ninguna partida coincide con «${esc(texto)}». Si buscas el seed de un video que acabas de ver, puede que su partida aún no se haya subido aquí.` : 'Todavía no hay partidas.'}</p>`;

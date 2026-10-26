@@ -1,5 +1,5 @@
 {
-  "generado": "2026-10-26T04:55:31.570Z",
+  "generado": "2026-10-26T19:54:22.821Z",
   "juegos": [
     {
       "id": "conquista",
@@ -144,6 +144,14 @@
           "obediencia": 1
         }
       ]
+    },
+    {
+      "id": "lobo",
+      "nombre": "Lobo en la aldea",
+      "categoria": "Identidad oculta",
+      "versionReglas": "lobo-1.2.0",
+      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Lobo en la aldea ===\nLobo en la aldea. Asientos numerados desde 0. Roles secretos repartidos con seed.\n8 jugadores: 2 lobos, 1 vidente, 1 bruja, 1 cazador, 1 cupido, 2 aldeanos; máximo 6 rondas.\n12 jugadores: 3 lobos, 2 videntes, 1 bruja, 1 cazador, 1 cupido, 4 aldeanos; máximo 6 rondas.\nCupido elige dos enamorados la primera noche (puede incluirse); si uno muere el otro también. La cámara muestra la pareja y Cupido queda revelado públicamente desde esa elección.\nCada noche los lobos eligen simultáneamente un no lobo vivo: solo el consenso unánime mata.\nLa bruja conoce la víctima y puede salvarla (incluso a sí misma) y envenenar a otro vivo; una poción de cada tipo por partida, ambas en la misma noche si quiere.\nCada vidente inspecciona a otro vivo: conoce en privado si es lobo. Las dos videntes de la mesa de 12 deciden simultánea e independientemente, sin reconocerse ni compartir hallazgos automáticamente. Pueden comunicarlos en sus mensajes públicos. Todas las inspecciones se resuelven antes de las muertes del amanecer.\nEl cazador, cuando muere, dispara a otro vivo antes de resolver la victoria, también si muere por amor.\nDe día cada vivo envía mensaje público y voto secreto en una sola respuesta simultánea. No ve los mensajes de ese mismo día antes de votar. No se permite votarse a sí mismo.\nOpcionalmente puede añadir afirmaRol con lobo, vidente, bruja, cazador, cupido o aldeano. Es una declaración pública que puede ser falsa, no una verificación. Se guardan todas con asiento y ronda; al morir o al final se contrasta la última con el rol real. No se interpreta el texto libre para declarar un rol.\nEl más votado muere y revela rol; empate en el máximo: nadie cae. Toda muerte revela rol.\nGana aldea cuando no quedan lobos; lobos cuando no quedan otros vivos (sin victoria por paridad).\nAl alcanzar el tope sin eliminación total de un bando hay empate; extinción simultánea también es empate.\n+10 a todo el bando ganador aunque haya muerto; +5 a cada enamorado si ambos sobreviven al final.\n+1 por inspección de lobo, veneno/disparo sobre lobo, salvar no lobo, voto de aldea sobre lobo; cada lobo vivo suma +1 al terminar una votación sin estar entre los más votados.\nLas afirmaciones públicas pueden ser mentiras. Obediencia se mide aparte. Una respuesta inválida se reemplaza con el seed.\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\nResponde solo JSON según la fase de tu vista:\ncupido: {\"enamorados\":[0,1]}\nlobos: {\"accion\":\"matar\",\"objetivo\":2}\nbruja: {\"salvar\":false,\"matar\":null} (matar puede ser un asiento)\nvidente: {\"accion\":\"inspeccionar\",\"objetivo\":2}\ncazador: {\"accion\":\"disparar\",\"objetivo\":2}\ndia: {\"mensaje\":\"texto público, hasta 1000 caracteres\",\"voto\":2,\"afirmaRol\":\"vidente\"} (afirmaRol es opcional; omítelo si no declaras rol)\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
+      "tabla": []
     }
   ],
   "categorias": [
@@ -291,6 +299,116 @@
     }
   ],
   "episodios": [
+    {
+      "etiqueta": "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek",
+      "archivo": "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek.json",
+      "fecha": "2026-10-25T17:49:49.446Z",
+      "juego": {
+        "id": "lobo",
+        "nombre": "Lobo en la aldea",
+        "categoria": "Identidad oculta"
+      },
+      "seedBase": 3441676158,
+      "serie": {
+        "partidas": 1,
+        "rotar": true,
+        "mismoSeed": true
+      },
+      "enfrentamiento": "Grok vs Qwen vs Mistral vs MiniMax vs GLM vs Kimi vs Phi-4 vs DeepSeek",
+      "partidas": 1,
+      "estado": "por-publicarse",
+      "modo": "pago",
+      "versionReglas": "lobo-1.2.0",
+      "jugadores": [
+        {
+          "id": "grok",
+          "nombre": "Grok",
+          "color": "#84F1D0",
+          "inicial": "X",
+          "tipo": "modelo",
+          "modelo": "x-ai/grok-4.3"
+        },
+        {
+          "id": "qwen",
+          "nombre": "Qwen",
+          "color": "#B2A0E3",
+          "inicial": "Q",
+          "tipo": "modelo",
+          "modelo": "qwen/qwen3.8-max-0902"
+        },
+        {
+          "id": "mistral",
+          "nombre": "Mistral",
+          "color": "#F08C19",
+          "inicial": "T",
+          "tipo": "modelo",
+          "modelo": "mistralai/mistral-medium-3-5"
+        },
+        {
+          "id": "minimax",
+          "nombre": "MiniMax",
+          "color": "#F1279A",
+          "inicial": "B",
+          "tipo": "modelo",
+          "modelo": "minimax/minimax-m3"
+        },
+        {
+          "id": "glm",
+          "nombre": "GLM",
+          "color": "#E9F580",
+          "inicial": "Z",
+          "tipo": "modelo",
+          "modelo": "z-ai/glm-5.3"
+        },
+        {
+          "id": "kimi",
+          "nombre": "Kimi",
+          "color": "#AA65D2",
+          "inicial": "K",
+          "tipo": "modelo",
+          "modelo": "moonshotai/kimi-k3.1-pro"
+        },
+        {
+          "id": "phi4",
+          "nombre": "Phi-4",
+          "color": "#52F48E",
+          "inicial": "P",
+          "tipo": "modelo",
+          "modelo": "microsoft/phi-4"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2"
+        }
+      ],
+      "detalle": [
+        {
+          "n": 1,
+          "seed": 3441676158,
+          "estado": "por-publicarse",
+          "hastaTurno": 2,
+          "turnos": null,
+          "asientos": [
+            "grok",
+            "qwen",
+            "mistral",
+            "minimax",
+            "glm",
+            "kimi",
+            "phi4",
+            "deepseek"
+          ],
+          "ganador": null,
+          "puntos": null,
+          "ganoPorMaravilla": null
+        }
+      ],
+      "evaluacion": null
+    },
     {
       "etiqueta": "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek",
       "archivo": "2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json",
@@ -739,6 +857,75 @@
     }
   ],
   "partidas": [
+    {
+      "juego": {
+        "id": "lobo",
+        "nombre": "Lobo en la aldea",
+        "categoria": "Identidad oculta"
+      },
+      "serie": "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek",
+      "n": 1,
+      "fecha": "2026-10-25T17:49:49.446Z",
+      "seed": 3441676158,
+      "estado": "por-publicarse",
+      "hastaTurno": 2,
+      "turnos": null,
+      "jugadores": [
+        {
+          "id": "grok",
+          "nombre": "Grok",
+          "color": "#84F1D0",
+          "inicial": "X"
+        },
+        {
+          "id": "qwen",
+          "nombre": "Qwen",
+          "color": "#B2A0E3",
+          "inicial": "Q"
+        },
+        {
+          "id": "mistral",
+          "nombre": "Mistral",
+          "color": "#F08C19",
+          "inicial": "T"
+        },
+        {
+          "id": "minimax",
+          "nombre": "MiniMax",
+          "color": "#F1279A",
+          "inicial": "B"
+        },
+        {
+          "id": "glm",
+          "nombre": "GLM",
+          "color": "#E9F580",
+          "inicial": "Z"
+        },
+        {
+          "id": "kimi",
+          "nombre": "Kimi",
+          "color": "#AA65D2",
+          "inicial": "K"
+        },
+        {
+          "id": "phi4",
+          "nombre": "Phi-4",
+          "color": "#52F48E",
+          "inicial": "P"
+        },
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "inicial": "D"
+        }
+      ],
+      "ganador": null,
+      "puntos": null,
+      "ganoPorMaravilla": null,
+      "versionReglas": "lobo-1.2.0",
+      "modo": "pago"
+    },
     {
       "juego": {
         "id": "conquista",

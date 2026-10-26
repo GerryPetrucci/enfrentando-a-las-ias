@@ -11,4 +11,6 @@ El sitio (decidido el 21 de octubre de 2026: **no hay series, solo juegos y part
 
 
 
+**Lobo a medio publicar (26-10-2026): solo los eventos públicos y `hasta` cuenta RONDAS.** Lobo guarda un registro por fase (cupido, lobos, bruja, vidente, día); el video y el paquete hablan de rondas, así que `partidaParcial`/`ultimaRonda` cuentan por `ronda` (no por `turno`, que cuenta fases). De cada registro solo sale `{ turno, ronda, fase, publico: { eventos } }`: `invalidas` delata quién actuó en cada fase secreta (los lobos, la vidente, la bruja), `errores` cita roles en los motivos y `camara` es la foto de la fase siguiente. La página de la partida (`web/casino/conversacion-lobo.js`) las muestra por rondas, con el nombre de cada modelo y sin números de asiento. Lo cubre `src/pruebas/publicacion.test.js`. Advertencia: el seed es público (títulos, página) y los roles de Lobo salen de él con el motor, que también es público: quien quiera calcularlos puede; no se oculta.
+
 **Una partida a medio publicar no saca el registro `privado` de los turnos (25-10-2026).** En Lobo cada turno guarda ahí quien actuo como lobo, lo que inspecciono la vidente y el texto crudo de las respuestas invalidas: subir la parte 1 con ellos adelantaria identidades. `partidaParcial` (src/publicacion.js) los quita; la partida completa los conserva porque ya se subio la parte final.
