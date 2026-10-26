@@ -24,6 +24,13 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   con puntos) el paquete genera un **gancho en imagen** (`herramientas/gancho-imagen.mjs`, página `web/gancho-imagen.html`): «Próximamente», nombre del juego,
   «Juego N · Parte M de K» (N = el jN del paquete) y la etiqueta de IA, con el arte del juego si está en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`; sin él, solo la
   marca), dentro de la zona segura. Al agregar un juego, registrar su arte allí (ver `docs/produccion-videos.md`). Regla decidida 25-10-2026.
+- Narración (voz y subtítulos): nunca se lee el número de jugador/asiento. Se dice el nombre del modelo («Grok»); si un modelo ocupa varios asientos lleva letra por
+  orden de asiento («Grok A», «Grok B», «Grok C»). El número solo se escribe en pantalla, desde 1 y sin cero a la izquierda. Lo que un modelo cita de otro en su mensaje («asiento 5»,
+  «al 0», «Lobo 4», «entre 3,6,7») se traduce al nombre en voz, subtítulos y tarjeta. Un mensaje de varias tarjetas (1/4, 2/4...) dice «X dice» solo en la primera. Regla decidida
+  25-10-2026 (Lobo: `web/casino/lobo-nombres.js`; el motor y el prompt siguen contando asientos desde 0: es solo presentación).
+- Cierre de cada video (`web/casino/cierre.js`): la frase depende de la pieza. `final` (la parte que llega al último turno: seguir para ver más juegos), `parte` (deja el juego a medias:
+  «no te pierdas la siguiente parte»), `clip` (ver la partida completa) y `gancho` (estar al pendiente). No todas piden «síguenos». La dirección de grabación lo lleva en `cierre=parte|final|clip|gancho`.
+- Título y descripción de cada pieza, en todas las redes, empiezan igual: `Juego JN - Parte 1/2 - Seed S` (clip: `Clip 2 (Parte 1/2)`; gancho: `Próximamente Parte 2/2`). Regla decidida 25-10-2026 (`web/casino/editorial-paquete.js`).
 - Tests funcionales con bots/mocks. Pruebas afectadas primero; suite completa al
   cerrar cambios de codigo. `npm.cmd test` funciona en PowerShell. No repetirla
   si no hay nuevos cambios, fallos o dudas que lo justifiquen.

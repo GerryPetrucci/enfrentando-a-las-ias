@@ -85,6 +85,22 @@ el resultado. Titulo y descripcion tienen presupuestos conservadores de 100 y
 280 caracteres. Son propuestas para revisar; no se prometen textos distintos
 si el registro y la pieza son identicos, ni se inventa un conflicto para variarlos.
 
+**Todo titulo y toda descripcion empiezan igual** (decidido el 25 de octubre de 2026),
+para encontrar el juego, su numero, la parte y el seed a simple vista en cualquier red:
+`Guerra de territorios J3 - Parte 1/2 - Seed 1704202488`; un clip dice
+`Clip 2 (Parte 1/2)` y un gancho (de video o de imagen) `Proximamente Parte 2/2`.
+Lo que sigue (hecho destacado o participantes) se acota para que el identificador nunca se corte.
+
+## La frase del cierre segun la pieza
+
+El cierre de cada video (logo, redes y pagina de resultados) dice una frase distinta
+segun lo que se ve: `final` (la parte que llega al ultimo turno: invita a ver mas
+juegos), `parte` (deja el juego a medias: que no se pierdan la siguiente), `clip`
+(ver la partida completa) y `gancho` (estar al pendiente). La direccion de grabacion del
+paquete lo trae como `cierre=parte|final|clip|gancho`; con `cierre=1` la pagina deduce
+`final` o `parte` segun si la pieza llega a la ultima unidad. `narrar.mjs` narra todas
+las frases de todos los tipos; si cambian o se agregan, `--solo-cierres` las suma a una voz ya generada.
+
 Al regenerar con `--forzar`, los archivos antiguos por red y los de piezas
 ausentes se apartan en `textos/anteriores/` para conservar anotaciones. Los
 archivos actuales del paquete se reescriben, como antes.
