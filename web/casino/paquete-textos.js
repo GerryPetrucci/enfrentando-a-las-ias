@@ -129,15 +129,16 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   const intro = lista.find((b) => b.tipo === 'intro'), introMs = intro ? duracionDeBeat(intro, voz, 1) : 0;
   // lo que hay que saber para grabar una pieza: la direccion de la escena, sus rondas, lo que dura y el plan de la grabacion (con los margenes de negro)
   // la pieza termina con el cierre (cierre.js: logo, redes y pagina de resultados): lo que dura se suma a lo que dura la pieza
-  const grabarDe = (desde, hasta, ms, nota) => {
-    const total = Math.round(ms + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz));
-    return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
+  // `cierre` = el tipo de la pieza para la frase final (cierre.js): parte (deja el juego a medias), final (la parte que lo termina) o clip
+  const grabarDe = (desde, hasta, ms, nota, cierre) => {
+    const total = Math.round(ms + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz, cierre));
+    return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz, cierre }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
   };
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : partida.extincionMutua === true ? `Ganó ${ganador} tras una extinción mutua` : `Ganó ${ganador}`) : 'Terminó en empate';
     piezas.push({
-      id: `parte-${n}`, tipo: 'parte', parte: n, titulo: `${t.nombre} · Parte ${n} de 2`,
-      grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.'),
+      id: `parte-${n}`, tipo: 'parte', parte: n, titulo: `${t.nombre} · Parte ${n} de 2`, cierre: n === 2 ? 'final' : 'parte',
+      grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.', n === 2 ? 'final' : 'parte'),
       textos: textosDe({ sug, encabezado: `${t.nombre} · Parte ${n} de 2`, parte: n, tipo: 'parte' }), comentarioFijado,
     });
   }
@@ -161,8 +162,8 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const etiqueta = w.mano === w.hasta ? `${unidad} ${w.mano}` : `${unidad}s ${w.mano} a ${w.hasta}`;
     const motivos = (d.motivos ?? []).join(', ');
     piezas.push({
-      id: `clip-${i + 1}`, tipo: 'clip', parte, titulo: `${t.nombre} · ${etiqueta}`,
-      grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`),
+      id: `clip-${i + 1}`, tipo: 'clip', parte, titulo: `${t.nombre} · ${etiqueta}`, cierre: 'clip',
+      grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`, 'clip'),
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
   });
@@ -196,9 +197,9 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       });
       continue;
     }
-    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, partidaNumero, parte: n, de: 2 }), null, 1).at(-1).finMs + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, gancho: n }), voz);
+    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, partidaNumero, parte: n, de: 2 }), null, 1).at(-1).finMs + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, gancho: n }), voz, 'gancho');
     piezas.push({
-      id: `gancho-${n}`, tipo: 'gancho', parte: n, titulo: `${t.nombre} · Gancho de la parte ${n}`,
+      id: `gancho-${n}`, tipo: 'gancho', parte: n, titulo: `${t.nombre} · Gancho de la parte ${n}`, cierre: 'gancho',
       grabar: {
         url: direccionDeGancho({ archivo, partida: partidaNumero, cortes: cortes.map((c) => c.unidad), parte: n, de: 2, formato, voz: rutaVoz }), desde: null, hasta: null, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)),
         nota: `La voz solo dice el cierre (los cortes no se narran): ponle tu música al subirlo (nada con derechos). Cortes: ${cortes.map((c) => `${c.etiqueta} (${unidad.toLowerCase()} ${c.unidad})`).join(', ')}. Se sube antes de la parte ${n}.`,
@@ -206,6 +207,6 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       textos, comentarioFijado: null,
     });
   }
-  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, enlace, destacadas });
+  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, juegoNumero: juegoN, unidad, enlace, destacadas });
   return { juego, piezas, ordenPublicacion: ordenDePublicacion(piezas).map((p) => p.id), advertencias };
 }

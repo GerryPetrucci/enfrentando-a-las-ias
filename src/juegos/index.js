@@ -8,8 +8,10 @@ import mayormenor from './mayormenor.js';
 import tripledado from './tripledado.js';
 import dudaapuesta from './dudaapuesta.js';
 import lobo from './lobo.js';
+import civilizaciones from './civilizaciones.js';
 
 export const JUEGOS = {
+  [civilizaciones.id]: civilizaciones,
   [lobo.id]: lobo,
   [dilema.id]: dilema,
   [conquista.id]: conquista,

@@ -9,7 +9,7 @@ import { REPARTOS_PUBLICOS } from '../../../web/casino/lobo-repartos-publicos.js
 import { mezclarCasas } from '../../../web/casino/lobo-casas.js';
 import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-lobo.js';
 import { crearNarrador } from '../../../web/casino/narracion-lobo.js';
-import { NOCHES } from '../../../web/casino/lobo-arte.js';
+import { ENTRADAS } from '../../../web/casino/lobo-arte.js';
 
 test('reparto público derivado del motor: no queda una tabla paralela desactualizada',()=>{
   assert.deepEqual(REPARTOS_PUBLICOS,repartosPublicos());
@@ -26,7 +26,7 @@ test('casas mezcladas deterministas con composición exacta, usando otro RNG que
     for(let seed=0;seed<40;seed++){
       const casas=mezclarCasas(n,seed);
       assert.deepEqual(casas,mezclarCasas(n,seed));assert.deepEqual([...casas].sort(),REPARTOS_PUBLICOS[n]);
-      assert.ok(casas.every(r=>NOCHES[r].length===6));distintos.add(JSON.stringify(casas));
+      assert.ok(casas.every(r=>ENTRADAS[r].length===6));distintos.add(JSON.stringify(casas));
     }
     assert.ok(distintos.size>20);
     const p={seed:107,jugadores:Array.from({length:n},(_,i)=>({nombre:`Nombre ${i}`,rol:'lobo'})),rondas:[{fase:'cupido',ronda:1,publico:{eventos:[]}}]};

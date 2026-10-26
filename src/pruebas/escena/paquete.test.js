@@ -98,7 +98,8 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
     for (const pieza of paquete.piezas.filter(sinGancho)) { // el gancho tiene su propia direccion (gancho=1&cortes=...; el de imagen, la de su pagina): su prueba esta mas abajo
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
-      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar, q.cierre], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1', '1'], `${id}: ${pieza.id} termina con el cierre`);
+      assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar, q.cierre], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1', pieza.cierre], `${id}: ${pieza.id} termina con el cierre`);
+      assert.equal(pieza.cierre, pieza.tipo === 'clip' ? 'clip' : pieza.parte === 2 ? 'final' : 'parte', `${id}: ${pieza.id} lleva la frase de su tipo`);
     }
   }
 });
@@ -300,7 +301,7 @@ test('un gancho por parte (gancho-1, gancho-2) cuando esa parte tiene momentos p
   const partes = dividirEnDos(beats);
   for (const g of ganchos) {
     const n = Number(g.id.slice(-1)), q = params(g.grabar.url), rango = n === 1 ? partes.parte1 : partes.parte2;
-    assert.deepEqual([q.gancho, q.parte, q.de, q.formato, q.grabar, q.auto, q.limpio, q.cierre], ['1', String(n), '2', 'hoja', '1', '1', '1', '1']);
+    assert.deepEqual([q.gancho, q.parte, q.de, q.formato, q.grabar, q.auto, q.limpio, q.cierre], ['1', String(n), '2', 'hoja', '1', '1', '1', 'gancho']);
     assert.equal(q.voz, undefined, 'sin voz generada no se pasa ninguna');
     const conVoz = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40), rutaVoz: 'data/voz/x-p1/voz.json' });
     assert.equal(params(conVoz.paquete.piezas.find((p) => p.id === g.id).grabar.url).voz, 'data/voz/x-p1/voz.json', 'con voz se pasa: la pagina solo usa la del cierre (los cortes no se narran)');
@@ -359,7 +360,7 @@ test('Lobo no tiene momentos con puntos para cortes: cada parte lleva un gancho 
     assert.match(g.grabar.url, /^gancho-imagen\.html\?/);
     assert.match(g.grabar.nota, new RegExp(`Juego 7 · Parte ${g.parte} de 2.*con el arte del juego`));
     assert.equal(g.comentarioFijado, null);
-    assert.match(g.publicacion.titulo, new RegExp(`Próximamente · Parte ${g.parte}`));
+    assert.ok(g.publicacion.titulo.startsWith(`Lobo en la aldea J7 - Próximamente Parte ${g.parte}/2 - Seed ${partida.seed}`), g.publicacion.titulo);
     assert.match(g.publicacion.titulo, /8 IAs frente a frente/, 'con ocho nombres se dice cuantos son, no se corta la lista');
     for (const [red, texto] of [['tiktok', g.textos.tiktok], ['instagram', g.textos.instagram], ['facebook', g.textos.facebook], ['x', g.textos.x], ['titulo de YouTube', g.textos.youtube.titulo]]) {
       assert.match(texto, /\[GANCHO: .+\]/, `${red}: va marcado`);
@@ -374,6 +375,26 @@ test('Lobo no tiene momentos con puntos para cortes: cada parte lleva un gancho 
   assert.equal(orden.indexOf('gancho-1'), 0);
   assert.equal(paquete.advertencias.filter((a) => /IMAGEN/.test(a)).length, 2);
   assert.equal(construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 3 }).piezas.find((p) => p.id === 'gancho-1').textos.tiktok.includes('Juego 3'), true, 'sin jN se usa el numero de partida');
+});
+
+const IDENTIFICADOR = /^(.+) J(\d+) - (Parte \d\/2|Clip \d+ \(Parte \d\/2\)|Próximamente Parte \d\/2) - Seed (\d+)/;
+
+test('el titulo y la descripcion de CADA pieza empiezan igual en todas las redes: Juego, jN, parte (o clip, o gancho) y seed', async () => {
+  for (const [id, partida] of Object.entries(PARTIDAS)) {
+    const { paquete } = await paqueteDe(id, partida, { juegoNumero: 3 });
+    assert.ok(paquete.piezas.length >= 4, id);
+    for (const p of paquete.piezas) {
+      const tramo = p.tipo === 'parte' ? `Parte ${p.parte}/2` : p.tipo === 'clip' ? `Clip ${p.id.split('-').at(-1)} (Parte ${p.parte}/2)` : `Próximamente Parte ${p.parte}/2`;
+      const identificador = `${textoDeJuego(id).nombre} J3 - ${tramo} - Seed ${partida.seed}`;
+      assert.ok(p.publicacion.titulo.startsWith(identificador), `${id}/${p.id}: título «${p.publicacion.titulo}»`);
+      assert.ok(p.publicacion.descripcion.startsWith(identificador), `${id}/${p.id}: descripción «${p.publicacion.descripcion}»`);
+      assert.match(p.publicacion.titulo, IDENTIFICADOR);
+      assert.ok(p.publicacion.titulo.length <= LIMITES.youtubeTitulo && p.publicacion.descripcion.length <= 280, `${id}/${p.id}: límites`);
+      assert.match(p.publicacion.descripcion, /Generado por IA/, 'el aviso de IA sobrevive al recorte');
+    }
+  }
+  const { paquete } = await paqueteDe('mayormenor', PARTIDAS.mayormenor);
+  assert.match(paquete.piezas[0].publicacion.titulo, /^Mayor o menor J1 - Parte 1\/2 - Seed /, 'sin jN se usa el numero de partida');
 });
 
 test('el LEEME de un paquete con ganchos en imagen los lista como imagenes ya generadas (nombres, comando para regenerar, vista previa) y no los cuenta entre lo que se graba', async () => {

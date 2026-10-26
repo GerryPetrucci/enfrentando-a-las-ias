@@ -1,14 +1,28 @@
 ﻿# Arte de Guerra de territorios
 
-## PNG utilizados
+## PNG utilizados (25 de octubre de 2026)
 
-- madera-haz-lena.png: copia sin modificaciones de assets/128x128_png/003_01_split_firewood_bundle.png, haz de leña partida.
-- tropas-maza.png: copia sin modificaciones de assets/128x128_png/232_15_spiked_mace.png, maza con bola de picos para tropas totales.
+Salen de dos entregas del usuario, ambas con fondo transparente y guardadas sin tocar en `privado/prototipos/conquista-iconos/`: una hoja de iconos en cuadrícula de 3 × 3 (`Iconos RPG en cuadrícula pixel art.png` → `hoja-iconos.png`, 25 de octubre de 2026) y la pila de rocas (`Pila de rocas pixelada.png` → `roca.png`, 26 de octubre de 2026), que la hoja no traía. `herramientas/recortar-iconos-conquista.mjs` recorta cada icono a un PNG (caja del dibujo + 2 px, sin el velo casi invisible del fondo) y reduce los que pasan de 128 px (la Maravilla, de 256 px) promediando el área; no se retoca ni se redibuja nada. Es la única fuente de estos archivos: no se editan a mano (una prueba guarda su huella).
 
-Fuente: paquete proporcionado por el usuario Fantasy Survival RPG Inventory Icons — 128 Free Sample. Licencia exacta: LICENSE-paquete-original.txt. Permite uso y modificación en juegos, apps y videos personales/comerciales terminados. No permite redistribuir los originales como un paquete de assets independiente competidor. No es dominio público. No se inventa un autor o URL ausentes del paquete.
+| Archivo | Lo que dibuja | Dónde se usa |
+|---|---|---|
+| comida.png | filete de carne | recurso Comida |
+| madera.png | tres troncos apilados | recurso Madera |
+| roca.png | pila de rocas | recurso Roca |
+| oro.png | pepitas de oro | recurso Oro |
+| hierro.png | lingotes de metal | recurso Hierro |
+| caballos.png | herradura | recurso Caballos |
+| tropas.png | maza con bola de picos | total de tropas del marcador |
+| maravilla.png | castillo con cúpula azul y cascadas | la Maravilla sobre su región |
+
+La hoja trae además un **arco** y una **espada** que todavía no tienen lugar en la escena: se quedan en `privado/` (`herramientas/recortar-iconos-conquista.mjs --todos` los recorta cuando se decida dónde van).
+
+Procedencia: el usuario aportó la hoja y la roca; los archivos no dicen con qué herramienta ni bajo qué condiciones se hizo, y aquí no se inventa un autor, un generador ni una licencia. Si la hoja es contenido generado con IA, la etiqueta «Contenido generado por IA» de cada video ya lo cubre.
 
 ## Dibujos por código
 
-Comida (gavilla de trigo), Caballos (herradura), Roca, Hierro y Oro se dibujan mediante bloques Canvas en recursos-pixel-conquista.js, con materiales de web/paleta.js. No utilizan archivos generados por IA. Leña y maza conservan una alternativa dibujada si el PNG no carga.
+Cada recurso conserva en `recursos-pixel-conquista.js` (bloques Canvas, con materiales de `web/paleta.js`) su dibujo anterior como alternativa si su PNG no carga; la Maravilla, su monumento de bloques en `mapa-dibujo.js`.
 
-La Maravilla conserva el dibujo de píxeles previo en mapa-dibujo.js y queda fuera del cargador de PNG. El atlas y el tronco de roble descartados no se distribuyen desde web/; se conservaron como historial privado de la entrega rechazada.
+## Pack anterior
+
+Los PNG de la leña partida y la maza que se usaban antes (paquete Fantasy Survival RPG Inventory Icons — 128 Free Sample, con su licencia) ya no se usan y se movieron a `privado/papelera-imagenes-2026-10-25/conquista-paquete-anterior/`.

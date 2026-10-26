@@ -1,0 +1,355 @@
+{
+  "origen": "privado/prototipos/lobo-assets/entrada-<rol>.png (ChatGPT, 24 de octubre de 2026)",
+  "umbralAlfa": 16,
+  "cuadros": 6,
+  "entradas": [
+    {
+      "rol": "lobo",
+      "hoja": "entrada-lobo.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 359,
+      "alto": 430,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-lobo-01.png",
+          "n": 1,
+          "x": 4,
+          "y": 137,
+          "corteX0": 0,
+          "corteX1": 362
+        },
+        {
+          "archivo": "entrada-lobo-02.png",
+          "n": 2,
+          "x": 366,
+          "y": 137,
+          "corteX0": 362,
+          "corteX1": 724
+        },
+        {
+          "archivo": "entrada-lobo-03.png",
+          "n": 3,
+          "x": 728,
+          "y": 137,
+          "corteX0": 724,
+          "corteX1": 1086
+        },
+        {
+          "archivo": "entrada-lobo-04.png",
+          "n": 4,
+          "x": 1090,
+          "y": 137,
+          "corteX0": 1086,
+          "corteX1": 1448
+        },
+        {
+          "archivo": "entrada-lobo-05.png",
+          "n": 5,
+          "x": 1452,
+          "y": 137,
+          "corteX0": 1448,
+          "corteX1": 1810
+        },
+        {
+          "archivo": "entrada-lobo-06.png",
+          "n": 6,
+          "x": 1814,
+          "y": 137,
+          "corteX0": 1810,
+          "corteX1": 2172
+        }
+      ]
+    },
+    {
+      "rol": "vidente",
+      "hoja": "entrada-vidente.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 380,
+      "alto": 435,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-vidente-01.png",
+          "n": 1,
+          "x": -14,
+          "y": 142,
+          "corteX0": 0,
+          "corteX1": 364
+        },
+        {
+          "archivo": "entrada-vidente-02.png",
+          "n": 2,
+          "x": 348,
+          "y": 142,
+          "corteX0": 364,
+          "corteX1": 722
+        },
+        {
+          "archivo": "entrada-vidente-03.png",
+          "n": 3,
+          "x": 710,
+          "y": 142,
+          "corteX0": 722,
+          "corteX1": 1077
+        },
+        {
+          "archivo": "entrada-vidente-04.png",
+          "n": 4,
+          "x": 1072,
+          "y": 142,
+          "corteX0": 1077,
+          "corteX1": 1436
+        },
+        {
+          "archivo": "entrada-vidente-05.png",
+          "n": 5,
+          "x": 1434,
+          "y": 142,
+          "corteX0": 1436,
+          "corteX1": 1798
+        },
+        {
+          "archivo": "entrada-vidente-06.png",
+          "n": 6,
+          "x": 1796,
+          "y": 142,
+          "corteX0": 1798,
+          "corteX1": 2172
+        }
+      ]
+    },
+    {
+      "rol": "bruja",
+      "hoja": "entrada-bruja.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 369,
+      "alto": 430,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-bruja-01.png",
+          "n": 1,
+          "x": -3,
+          "y": 152,
+          "corteX0": 0,
+          "corteX1": 364
+        },
+        {
+          "archivo": "entrada-bruja-02.png",
+          "n": 2,
+          "x": 359,
+          "y": 152,
+          "corteX0": 364,
+          "corteX1": 724
+        },
+        {
+          "archivo": "entrada-bruja-03.png",
+          "n": 3,
+          "x": 721,
+          "y": 152,
+          "corteX0": 724,
+          "corteX1": 1086
+        },
+        {
+          "archivo": "entrada-bruja-04.png",
+          "n": 4,
+          "x": 1083,
+          "y": 152,
+          "corteX0": 1086,
+          "corteX1": 1449
+        },
+        {
+          "archivo": "entrada-bruja-05.png",
+          "n": 5,
+          "x": 1445,
+          "y": 152,
+          "corteX0": 1449,
+          "corteX1": 1809
+        },
+        {
+          "archivo": "entrada-bruja-06.png",
+          "n": 6,
+          "x": 1807,
+          "y": 152,
+          "corteX0": 1809,
+          "corteX1": 2172
+        }
+      ]
+    },
+    {
+      "rol": "cazador",
+      "hoja": "entrada-cazador.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 380,
+      "alto": 448,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-cazador-01.png",
+          "n": 1,
+          "x": -8,
+          "y": 129,
+          "corteX0": 0,
+          "corteX1": 370
+        },
+        {
+          "archivo": "entrada-cazador-02.png",
+          "n": 2,
+          "x": 354,
+          "y": 129,
+          "corteX0": 370,
+          "corteX1": 728
+        },
+        {
+          "archivo": "entrada-cazador-03.png",
+          "n": 3,
+          "x": 716,
+          "y": 129,
+          "corteX0": 728,
+          "corteX1": 1086
+        },
+        {
+          "archivo": "entrada-cazador-04.png",
+          "n": 4,
+          "x": 1078,
+          "y": 129,
+          "corteX0": 1086,
+          "corteX1": 1445
+        },
+        {
+          "archivo": "entrada-cazador-05.png",
+          "n": 5,
+          "x": 1440,
+          "y": 129,
+          "corteX0": 1445,
+          "corteX1": 1804
+        },
+        {
+          "archivo": "entrada-cazador-06.png",
+          "n": 6,
+          "x": 1802,
+          "y": 129,
+          "corteX0": 1804,
+          "corteX1": 2172
+        }
+      ]
+    },
+    {
+      "rol": "cupido",
+      "hoja": "entrada-cupido.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 376,
+      "alto": 436,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-cupido-01.png",
+          "n": 1,
+          "x": -6,
+          "y": 141,
+          "corteX0": 0,
+          "corteX1": 368
+        },
+        {
+          "archivo": "entrada-cupido-02.png",
+          "n": 2,
+          "x": 356,
+          "y": 141,
+          "corteX0": 368,
+          "corteX1": 729
+        },
+        {
+          "archivo": "entrada-cupido-03.png",
+          "n": 3,
+          "x": 718,
+          "y": 141,
+          "corteX0": 729,
+          "corteX1": 1088
+        },
+        {
+          "archivo": "entrada-cupido-04.png",
+          "n": 4,
+          "x": 1080,
+          "y": 141,
+          "corteX0": 1088,
+          "corteX1": 1446
+        },
+        {
+          "archivo": "entrada-cupido-05.png",
+          "n": 5,
+          "x": 1442,
+          "y": 141,
+          "corteX0": 1446,
+          "corteX1": 1806
+        },
+        {
+          "archivo": "entrada-cupido-06.png",
+          "n": 6,
+          "x": 1804,
+          "y": 141,
+          "corteX0": 1806,
+          "corteX1": 2172
+        }
+      ]
+    },
+    {
+      "rol": "aldeano",
+      "hoja": "entrada-aldeano.png",
+      "hojaAncho": 2172,
+      "hojaAlto": 724,
+      "ancho": 379,
+      "alto": 430,
+      "cuadrosOrigen": [
+        {
+          "archivo": "entrada-aldeano-01.png",
+          "n": 1,
+          "x": -5,
+          "y": 159,
+          "corteX0": 0,
+          "corteX1": 372
+        },
+        {
+          "archivo": "entrada-aldeano-02.png",
+          "n": 2,
+          "x": 357,
+          "y": 159,
+          "corteX0": 372,
+          "corteX1": 732
+        },
+        {
+          "archivo": "entrada-aldeano-03.png",
+          "n": 3,
+          "x": 719,
+          "y": 159,
+          "corteX0": 732,
+          "corteX1": 1089
+        },
+        {
+          "archivo": "entrada-aldeano-04.png",
+          "n": 4,
+          "x": 1081,
+          "y": 159,
+          "corteX0": 1089,
+          "corteX1": 1447
+        },
+        {
+          "archivo": "entrada-aldeano-05.png",
+          "n": 5,
+          "x": 1443,
+          "y": 159,
+          "corteX0": 1447,
+          "corteX1": 1807
+        },
+        {
+          "archivo": "entrada-aldeano-06.png",
+          "n": 6,
+          "x": 1805,
+          "y": 159,
+          "corteX0": 1807,
+          "corteX1": 2172
+        }
+      ]
+    }
+  ]
+}

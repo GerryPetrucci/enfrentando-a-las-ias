@@ -118,5 +118,6 @@ test('las tiras del repositorio salen exactamente de la hoja original (la herram
     assert.deepEqual([guardada.ancho, guardada.alto], [p.tira.ancho, p.tira.alto]);
     assert.equal(Buffer.compare(Buffer.from(guardada.datos), Buffer.from(p.tira.datos)), 0, `${p.rol}: la tira guardada difiere de la que sale de la hoja`);
   }
-  assert.equal(readFileSync(new URL('../../../web/casino/lobo-personajes-animados.js', import.meta.url), 'utf8'), modulo(personajes));
+  // Sin importar el fin de linea: en Windows git (core.autocrlf) reescribe el archivo con CRLF al hacer checkout, y el contenido es el mismo.
+  assert.equal(readFileSync(new URL('../../../web/casino/lobo-personajes-animados.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n'), modulo(personajes));
 });

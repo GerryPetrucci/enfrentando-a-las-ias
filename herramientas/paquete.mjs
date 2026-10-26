@@ -169,7 +169,7 @@ export function guionDePaquete(paquete, beats, { voz = null, seed, partidaNumero
     const cortes = cortesPedidos(beats, (q.get('cortes') ?? '').split(',').filter(Boolean).map(Number), []);
     const base = p.tipo === 'gancho' ? armarGancho(beats, cortes, { juegoId: paquete.juego, partidaNumero, parte: p.parte, de: 2 }) : beats.filter((b) => b.mano >= p.grabar.desde && b.mano <= p.grabar.hasta);
     const clave = claveDeCierre({ seed, partida: partidaNumero, desde: p.grabar.desde, hasta: p.grabar.hasta, gancho: p.tipo === 'gancho' ? p.parte : null });
-    const linea = conCierre(base, clave), audio = p.tipo === 'gancho' ? Object.fromEntries(Object.entries(voz ?? {}).filter(([id]) => id.startsWith('cierre-'))) : voz;
+    const linea = conCierre(base, clave, p.cierre), audio = p.tipo === 'gancho' ? Object.fromEntries(Object.entries(voz ?? {}).filter(([id]) => id.startsWith('cierre-'))) : voz;
     texto.push(`## ${p.id} · ${p.titulo}`, '', ...(p.tipo === 'gancho' ? ['[Los cortes van sin narración; solo se lee el cierre.]', ''] : []));
     for (const m of marcarTiempos(linea, audio)) if (m.texto && (p.tipo !== 'gancho' || m.tipo === 'cierre')) texto.push(`**${formatoDeTiempo(m.inicioMs)} — ${formatoDeTiempo(m.finMs)} · ${m.tipo}**`, '', m.texto, '');
   }

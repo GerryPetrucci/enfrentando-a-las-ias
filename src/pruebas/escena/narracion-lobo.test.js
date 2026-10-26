@@ -65,8 +65,17 @@ test('Lobo: conserva las citas largas en sus fragmentos y reinicia selección ca
   mensajes[0].mensaje = 'Sospecho del asiento 7. '.repeat(25).trim();
   const beats = construirLineaDeTiempo(p).filter((b) => b.registro === p.rondas.indexOf(dia) && b.tipo === 'mensaje' && b.asiento === mensajes[0].asiento);
   assert.ok(beats.length > 1);
-  assert.equal(beats.map((b) => b.pasos[1].mensaje).join(' '), mensajes[0].mensaje);
-  assert.ok(beats.every((b) => b.texto === b.lineas[0].texto));
+  // el «asiento 7» del modelo se traduce al nombre de ese jugador; el resto del mensaje se conserva entero
+  const sospechado = p.jugadores[7].nombre;
+  assert.equal(beats.map((b) => b.pasos[1].mensaje).join(' '), mensajes[0].mensaje.replaceAll('del asiento 7', `de ${sospechado}`));
+  // La voz y los subtitulos dicen la cita sin el numero de asiento; solo la primera tarjeta lleva «X dice»: las que la continúan no lo repiten.
+  const [primera, ...siguientes] = beats;
+  assert.equal(primera.texto, primera.lineas[0].texto.replace(` · ${primera.asiento + 1} dice: `, ' dice: '));
+  assert.match(primera.texto, / dice: «/);
+  for (const b of siguientes) {
+    assert.doesNotMatch(b.texto, /dice/, 'la continuación no repite el nombre');
+    assert.equal(b.texto, `«${b.pasos[1].mensaje}»`);
+  }
 });
 
 test('Lobo: ningún rol vivo se confirma antes de su muerte o del final; privados inaccesibles', () => {
@@ -81,7 +90,7 @@ test('Lobo: ningún rol vivo se confirma antes de su muerte o del final; privado
       const paso = b.pasos[1];
       if (b.tipo === 'muerte') assert.match(b.texto, /: era /);
       else if (b.tipo !== 'final') assert.doesNotMatch(b.texto, /: era |Su rol era |el cazador,|es realmente/i);
-      if (b.tipo === 'mensaje' && b.texto.includes('dice:')) assert.equal(b.texto, b.lineas[0].texto);
+      if (b.tipo === 'mensaje' && b.texto.includes('dice:')) assert.equal(b.texto, b.lineas[0].texto.replace(` · ${b.asiento + 1} dice: `, ' dice: '));
       if (b.tipo === 'votacion') assert.ok(!b.texto.includes('era '));
       if (b.tipo === 'noche') assert.equal(paso.asiento, undefined);
     }
