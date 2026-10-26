@@ -389,12 +389,32 @@ test('el titulo y la descripcion de CADA pieza empiezan igual en todas las redes
       assert.ok(p.publicacion.titulo.startsWith(identificador), `${id}/${p.id}: título «${p.publicacion.titulo}»`);
       assert.ok(p.publicacion.descripcion.startsWith(identificador), `${id}/${p.id}: descripción «${p.publicacion.descripcion}»`);
       assert.match(p.publicacion.titulo, IDENTIFICADOR);
-      assert.ok(p.publicacion.titulo.length <= LIMITES.youtubeTitulo && p.publicacion.descripcion.length <= 280, `${id}/${p.id}: límites`);
+      assert.ok(p.publicacion.titulo.length <= 90 && p.publicacion.titulo.length <= LIMITES.youtubeTitulo && p.publicacion.descripcion.length <= 280, `${id}/${p.id}: límites (título ${p.publicacion.titulo.length}, descripción ${p.publicacion.descripcion.length})`);
       assert.match(p.publicacion.descripcion, /Generado por IA/, 'el aviso de IA sobrevive al recorte');
+      // SIEMPRE lleva hashtags (regla del usuario, 26-10-2026): la ultima linea, #IAvsIA primero, de 1 a 5, los del juego y los de quienes juegan
+      const etiquetas = p.publicacion.descripcion.split('\n').at(-1).split(' ');
+      assert.equal(etiquetas[0], '#IAvsIA', `${id}/${p.id}: «${p.publicacion.descripcion}»`);
+      assert.ok(etiquetas.length >= 1 && etiquetas.length <= 5 && etiquetas.every((h) => /^#\S+$/.test(h)), `${id}/${p.id}: ${etiquetas.join(' ')}`);
+      assert.ok(etiquetas.length >= 3, `${id}/${p.id}: con los textos de hoy caben por lo menos 3 hashtags («${etiquetas.join(' ')}»)`);
+      assert.ok(textoDeJuego(id).hashtags.slice(0, 1).every((h) => etiquetas.includes(h)), `${id}/${p.id}: el primer hashtag del juego`);
     }
   }
   const { paquete } = await paqueteDe('mayormenor', PARTIDAS.mayormenor);
   assert.match(paquete.piezas[0].publicacion.titulo, /^Mayor o menor J1 - Parte 1\/2 - Seed /, 'sin jN se usa el numero de partida');
+});
+
+test('Lobo: los textos para subir llevan hashtags (#IAvsIA, los del juego y los de los modelos que juegan, incluidos los nuevos) y el titulo mide a lo mas 90', async () => {
+  const partida = jugarLobo(3, 8);
+  partida.jugadores = ['grok', 'qwen', 'mistral', 'minimax', 'glm', 'kimi', 'phi4', 'deepseek'].map((id) => ({ id, nombre: id, tipo: 'modelo' }));
+  const beats = await armarLinea('lobo', partida), destacadas = await destacadasDe('lobo', partida, 10);
+  const paquete = construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 1, enlace: `${ENLACE}?seed=${partida.seed}` });
+  assert.deepEqual(hashtagsDe(textoDeJuego('lobo'), partida.jugadores), ['#IAvsIA', '#LoboEnLaAldea', '#DeducciónSocial', '#Grok', '#Qwen'], 'nunca mas de 5');
+  assert.deepEqual(hashtagsDe(textoDeJuego('lobo'), [{ id: 'mistral' }, { id: 'minimax' }, { id: 'glm-flash' }, { id: 'kimi' }, { id: 'phi4' }]).slice(3), ['#Mistral', '#MiniMax']);
+  assert.deepEqual(hashtagsDe({ hashtags: [] }, [{ id: 'glm' }, { id: 'kimi' }, { id: 'phi4' }]), ['#IAvsIA', '#GLM', '#Kimi', '#Phi4']);
+  for (const p of paquete.piezas) {
+    assert.ok(p.publicacion.titulo.length <= 90, `${p.id}: ${p.publicacion.titulo.length} caracteres`);
+    assert.match(p.publicacion.descripcion, /\n#IAvsIA #LoboEnLaAldea #DeducciónSocial #Grok #Qwen$/, `${p.id}: «${p.publicacion.descripcion}»`);
+  }
 });
 
 test('el LEEME de un paquete con ganchos en imagen los lista como imagenes ya generadas (nombres, comando para regenerar, vista previa) y no los cuenta entre lo que se graba', async () => {

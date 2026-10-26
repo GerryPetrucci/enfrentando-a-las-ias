@@ -28,6 +28,30 @@ test('la publicacion cambia con hechos de la pieza y no toma mensajes, razones n
   assert.ok(b.titulo.length <= 100 && b.descripcion.length <= 280);
 });
 
+test('toda descripcion lleva hashtags (#IAvsIA primero y de 1 a 5), el titulo mide a lo mas 90 y la descripcion a lo mas 280, aun con textos y enlaces largos', () => {
+  const pieza = { id: 'parte-2', tipo: 'parte', parte: 2, grabar: { desde: 3, hasta: 4, url: 'escena.html' } };
+  const largo = 'Se revela una jugada tan larga y tan llena de detalles que no cabe en ninguna red social si no se acota con cuidado. '.repeat(3);
+  const beats = [{ mano: 3, tipo: 'resultado', lineas: [{ tipo: 'resultado', texto: largo }] }];
+  const base = { beats, nombres: ['Claude', 'GPT', 'Gemini', 'DeepSeek'], seed: 1704202488, juego: 'Guerra de territorios', juegoNumero: 3, enlace: 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/?seed=1704202488' };
+  const cinco = ['#IAvsIA', '#Estrategia', '#JuegosDeEstrategia', '#Claude', '#ChatGPT'];
+  const lleno = publicacionDePieza(pieza, { ...base, hashtags: cinco });
+  assert.ok(lleno.titulo.length <= 90 && lleno.descripcion.length <= 280, `${lleno.titulo.length} / ${lleno.descripcion.length}`);
+  assert.ok(lleno.titulo.startsWith('Guerra de territorios J3 - Parte 2/2 - Seed 1704202488'), 'el identificador nunca se corta');
+  assert.equal(lleno.descripcion.split('\n').at(-1), cinco.join(' '), 'caben los cinco');
+  assert.ok(lleno.descripcion.includes('Generado por IA') && lleno.descripcion.includes(base.enlace));
+  const sin = publicacionDePieza(pieza, base);
+  assert.equal(sin.descripcion.split('\n').at(-1), '#IAvsIA', 'aunque nadie los pase, #IAvsIA va siempre');
+  const sucios = publicacionDePieza(pieza, { ...base, hashtags: ['Estrategia', '#Dos Palabras', '#Claude', '#Claude', '#IAvsIA'] });
+  assert.equal(sucios.descripcion.split('\n').at(-1), '#IAvsIA #Claude', 'sin repetidos ni textos que no son un hashtag, y #IAvsIA primero');
+  const apretado = publicacionDePieza(pieza, { ...base, enlace: `${base.enlace}&x=${'a'.repeat(60)}`, hashtags: cinco });
+  assert.ok(apretado.descripcion.length <= 280 && apretado.titulo.length <= 90);
+  assert.match(apretado.descripcion.split('\n').at(-1), /^#IAvsIA( #\S+){0,3}$/, 'con poco lugar se quitan hashtags del final, nunca el primero');
+  assert.ok(apretado.descripcion.includes(`&x=${'a'.repeat(60)}`) && apretado.descripcion.startsWith('Guerra de territorios J3 - Parte 2/2'), 'el enlace y el identificador se conservan');
+  const absurdo = publicacionDePieza(pieza, { ...base, juego: 'Un juego con un nombre larguisimo para apretar el espacio del titulo y de la descripcion', hashtags: cinco });
+  assert.ok(absurdo.titulo.length <= 90 && absurdo.descripcion.length <= 280, 'los topes valen siempre');
+  assert.match(absurdo.descripcion.split('\n').at(-1), /^#IAvsIA/);
+});
+
 test('la organizacion separa j1 y j2, conserva archivos y rutas del LEEME y es idempotente', async () => {
   const { mkdirSync, writeFileSync, existsSync } = await import('node:fs');
   const dir = mkdtempSync(join(tmpdir(), 'produccion-orden-')), serie = join(dir, 'juego', 'serie');

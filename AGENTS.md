@@ -31,6 +31,10 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
 - Cierre de cada video (`web/casino/cierre.js`): la frase depende de la pieza. `final` (la parte que llega al último turno: seguir para ver más juegos), `parte` (deja el juego a medias:
   «no te pierdas la siguiente parte»), `clip` (ver la partida completa) y `gancho` (estar al pendiente). No todas piden «síguenos». La dirección de grabación lo lleva en `cierre=parte|final|clip|gancho`.
 - Título y descripción de cada pieza, en todas las redes, empiezan igual: `Juego JN - Parte 1/2 - Seed S` (clip: `Clip 2 (Parte 1/2)`; gancho: `Próximamente Parte 2/2`). Regla decidida 25-10-2026 (`web/casino/editorial-paquete.js`).
+- **Hashtags en todo texto para subir:** toda descripción que se genere para publicar (parte, clip, gancho, de cualquier juego) termina con hashtags en su última línea: `#IAvsIA`
+  primero, los del juego (`textos-juego.js`) y los de los modelos que juegan; de 1 a 5, nunca omitidos (si falta lugar se quitan los del final, nunca `#IAvsIA`). El **título mide
+  como máximo 90 caracteres** y la descripción 280 (`MAX_TITULO`, `MAX_DESCRIPCION`). Una prueba lo exige en todas las piezas de todos los juegos. Regla decidida 26-10-2026.
+  Un modelo nuevo se agrega también a `MODELOS` en `web/casino/paquete-textos.js` para que tenga su hashtag.
 - Tests funcionales con bots/mocks. Pruebas afectadas primero; suite completa al
   cerrar cambios de codigo. `npm.cmd test` funciona en PowerShell. No repetirla
   si no hay nuevos cambios, fallos o dudas que lo justifiquen.

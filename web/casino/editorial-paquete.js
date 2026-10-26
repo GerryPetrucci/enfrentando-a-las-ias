@@ -4,7 +4,12 @@ export const CLIPS_POR_PARTE = { conquista: [2, 2], fuga: [1, 1], mayormenor: [1
 const TIPOS = new Set(['resultado', 'resolucion', 'batalla', 'revelado', 'consecuencia', 'final', 'cierre', 'comentarios', 'enfrentamiento']);
 const LINEAS = new Set(['hecho', 'resultado', 'comentario', 'revelacion', 'consecuencia', 'cierre', 'enfrentamiento']);
 const limpio = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
-const acotar = (t, n) => t.length <= n ? t : `${t.slice(0, n - 1).trimEnd()}…`;
+// Corta en una palabra entera (si hay una espacio en el ultimo 40 %) y sin dejar un signo colgando antes de los puntos suspensivos: «8 IAs frente a frente…», no «8 IAs frente a frente: l…».
+const acotar = (t, n) => {
+  if (t.length <= n) return t;
+  const corte = t.slice(0, n - 1), espacio = corte.lastIndexOf(' ');
+  return `${(espacio >= (n - 1) * 0.6 ? corte.slice(0, espacio) : corte).replace(/[\s.,;:¿¡!?-]+$/u, '')}…`;
+};
 
 // Un gancho puede ser un video (`gancho`: cortes de la partida) o, si la parte no tiene momentos buenos para uno, una imagen fija (`gancho-imagen`, gancho-imagen.js).
 const esGancho = (pieza) => pieza.tipo === 'gancho' || pieza.tipo === 'gancho-imagen';
@@ -29,9 +34,14 @@ export function identificadorDePieza(pieza, { juego, juegoNumero = null, seed, p
   return `${juego}${Number.isInteger(juegoNumero) ? ` J${juegoNumero}` : ''} - ${tramo} - Seed ${seed}`;
 }
 
-// Un mismo titulo/descripcion para todas las redes: 100/280 caracteres como
-// presupuestos editoriales conservadores. Empiezan siempre con el identificador (arriba); el resto cambia con los hechos.
-export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNumero = null, unidad = 'Ronda', enlace = '', destacadas = [] }) {
+// Los topes de lo que se escribe para subir (decididos por el usuario el 26 de octubre de 2026 el del titulo; el de la descripcion es el de X): una prueba los exige en todas las piezas de todos los juegos.
+export const MAX_TITULO = 90, MAX_DESCRIPCION = 280, MAX_HASHTAGS = 5;
+const MIN_DETALLE = 12; // si no queda lugar para decir algo ademas de lo obligatorio, se omite
+
+// Un mismo titulo/descripcion para todas las redes. Empiezan siempre con el identificador (arriba); el resto cambia con los hechos. TODA descripcion lleva hashtags (decidido por el usuario
+// el 26 de octubre de 2026): `hashtags` son los que arma el paquete (#IAvsIA, los del juego y los de los modelos que juegan) y, si no llegan, al menos #IAvsIA. Si no cabe todo en
+// MAX_DESCRIPCION, primero se quita la linea de la ventana, luego hashtags (nunca el primero) y por ultimo se acota el detalle.
+export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNumero = null, unidad = 'Ronda', enlace = '', destacadas = [], hashtags = [] }) {
   const hechos = hechosDePieza(beats, pieza, destacadas), n = pieza.parte ?? Number(pieza.id.split('-').at(-1));
   const identificador = identificadorDePieza(pieza, { juego, juegoNumero, seed });
   const rivales = nombres.map((s) => acotar(s, 22)).join(' vs ');
@@ -41,14 +51,22 @@ export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNu
   const detalleCon = (quien) => hechos[0] ? `${unidad} ${hechos[0].unidad}: ${hechos[0].texto}`
     : pieza.tipo === 'gancho-imagen' ? `${quien}: la partida llega pronto.` : pieza.tipo === 'gancho' ? `${quien}. Un adelanto de las ${unidad.toLowerCase()}s ${cortes ?? ''}.` : `${quien}.`;
   const detalle = detalleCon(nombres.length > 4 ? `${nombres.length} IAs frente a frente` : rivales);
-  const MIN_DETALLE = 12; // si tras el identificador no queda lugar para decir algo, se queda solo el identificador
-  const lugarTitulo = 100 - identificador.length - ' | '.length;
-  const titulo = lugarTitulo >= MIN_DETALLE ? `${identificador} | ${acotar(detalle, lugarTitulo)}` : identificador;
-  const cola = `\n${ventana}\nGenerado por IA · Proyecto independiente${enlace ? `\n${enlace}` : ''}`;
-  const lugarDescripcion = 280 - identificador.length - '\n'.length - cola.length;
-  const conNombres = detalleCon(rivales), enDescripcion = conNombres.length <= lugarDescripcion ? conNombres : detalle;
-  const descripcion = lugarDescripcion >= MIN_DETALLE ? `${identificador}\n${acotar(enDescripcion, lugarDescripcion)}${cola}` : `${identificador}${cola}`.slice(0, 280);
-  return { titulo, descripcion, evidencia: hechos.slice(0, 3) };
+  const lugarTitulo = MAX_TITULO - identificador.length - ' | '.length;
+  const titulo = acotar(lugarTitulo >= MIN_DETALLE ? `${identificador} | ${acotar(detalle.replace(/\.$/, ''), lugarTitulo)}` : identificador, MAX_TITULO); // solo el identificador de un juego de nombre absurdo se corta
+  const etiquetas = [...new Set(['#IAvsIA', ...(Array.isArray(hashtags) ? hashtags : []).filter((h) => /^#\S+$/.test(h))])].slice(0, MAX_HASHTAGS); // #IAvsIA siempre, y primero
+  const conNombres = detalleCon(rivales);
+  const aviso = 'Generado por IA · Proyecto independiente';
+  for (const cuantas of Array.from({ length: etiquetas.length }, (_, i) => etiquetas.length - i)) {
+    for (const conVentana of [true, false]) {
+      const fijo = [identificador, ...(conVentana ? [ventana] : []), aviso, ...(enlace ? [enlace] : []), etiquetas.slice(0, cuantas).join(' ')];
+      const lugar = MAX_DESCRIPCION - fijo.join('\n').length - '\n'.length;
+      if (lugar < MIN_DETALLE) continue;
+      const cuerpo = conNombres.length <= lugar ? conNombres : detalle;
+      fijo.splice(1, 0, acotar(cuerpo, lugar));
+      return { titulo, descripcion: fijo.join('\n'), evidencia: hechos.slice(0, 3) };
+    }
+  }
+  return { titulo, descripcion: [identificador, aviso, etiquetas[0]].join('\n').slice(0, MAX_DESCRIPCION), evidencia: hechos.slice(0, 3) };
 }
 
 export function ordenDePublicacion(piezas) {

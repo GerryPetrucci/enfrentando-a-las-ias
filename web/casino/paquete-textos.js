@@ -9,14 +9,15 @@ import { elegirCortes, armarGancho } from './gancho.js';
 import { direccionDeGanchoImagen, ARTE_GANCHO } from './gancho-imagen.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
 import { textoDeJuego } from './textos-juego.js';
-import { CLIPS_POR_PARTE, publicacionDePieza, ordenDePublicacion } from './editorial-paquete.js';
+import { CLIPS_POR_PARTE, MAX_TITULO, MAX_DESCRIPCION, publicacionDePieza, ordenDePublicacion } from './editorial-paquete.js';
 
-// Lo que admite cada red (por verificar de nuevo en privado/contenido/guia-paso-a-paso.md); el paquete se queda siempre por debajo.
-export const LIMITES = { x: 280, tiktok: 2200, instagram: 2200, youtubeTitulo: 100, youtubeDescripcion: 5000 };
+// Lo que admite cada red (por verificar de nuevo en privado/contenido/guia-paso-a-paso.md); el paquete se queda siempre por debajo. El titulo mide como maximo 90 (decision del usuario, 26-10-2026).
+export const LIMITES = { x: MAX_DESCRIPCION, tiktok: 2200, instagram: 2200, youtubeTitulo: MAX_TITULO, youtubeDescripcion: 5000 };
 const AVISO = 'Contenido generado por IA. Proyecto independiente, sin afiliación con los proveedores de los modelos.';
 const AVISO_CORTO = 'Generado por IA · Proyecto independiente';
 const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_VIDEO_MS = 180000; // conservar el aviso editorial existente de tres minutos
-const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama']];
+const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama'],
+  [/^grok/, '#Grok'], [/^qwen/, '#Qwen'], [/^(mistral|ministral)/, '#Mistral'], [/^minimax/, '#MiniMax'], [/^glm/, '#GLM'], [/^kimi/, '#Kimi'], [/^phi/, '#Phi4']];
 const UNIDADES = { mano: 'Mano', ronda: 'Ronda', turno: 'Turno' };
 const PUNTOS_EN_PANTALLA = ['fuga', 'conquista']; // los juegos cuyo final muestra los mismos puntos que guarda `partida.puntos`
 const MAX_INVALIDAS = 0.25; // desde esta fraccion de jugadas invalidas por llamada se avisa de un modelo caido o que no responde bien
@@ -207,6 +208,6 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       textos, comentarioFijado: null,
     });
   }
-  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, juegoNumero: juegoN, unidad, enlace, destacadas });
+  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, juegoNumero: juegoN, unidad, enlace, destacadas, hashtags });
   return { juego, piezas, ordenPublicacion: ordenDePublicacion(piezas).map((p) => p.id), advertencias };
 }

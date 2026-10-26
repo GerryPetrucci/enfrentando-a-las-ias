@@ -81,8 +81,7 @@ descripcion, y las demas redes usan la descripcion. No copiar las etiquetas.
 Los textos se basan en hechos visibles de la ventana y priorizan las rondas
 destacadas, sin llamadas a modelos. No extraen razones, mensajes ni privados.
 Un gancho identifica a los participantes y las rondas del adelanto, sin contar
-el resultado. Titulo y descripcion tienen presupuestos conservadores de 100 y
-280 caracteres. Son propuestas para revisar; no se prometen textos distintos
+el resultado. Titulo y descripcion tienen topes de 90 y 280 caracteres. Son propuestas para revisar; no se prometen textos distintos
 si el registro y la pieza son identicos, ni se inventa un conflicto para variarlos.
 
 **Todo titulo y toda descripcion empiezan igual** (decidido el 25 de octubre de 2026),
@@ -90,6 +89,14 @@ para encontrar el juego, su numero, la parte y el seed a simple vista en cualqui
 `Guerra de territorios J3 - Parte 1/2 - Seed 1704202488`; un clip dice
 `Clip 2 (Parte 1/2)` y un gancho (de video o de imagen) `Proximamente Parte 2/2`.
 Lo que sigue (hecho destacado o participantes) se acota para que el identificador nunca se corte.
+
+**Hashtags y topes (26 de octubre de 2026):** TODA descripcion generada lleva hashtags en su ultima
+linea: `#IAvsIA` primero, luego los del juego (`web/casino/textos-juego.js`) y los de los modelos
+que juegan (`MODELOS` en `web/casino/paquete-textos.js`; un modelo nuevo se agrega ahi), de 1 a 5.
+El **titulo mide como maximo 90 caracteres** y la descripcion 280. Cuando no cabe todo en 280 se
+quita primero la linea de las rondas, luego hashtags desde el final (nunca `#IAvsIA`) y por ultimo
+se acota el detalle. El comentario fijado no lleva hashtags (no es el texto de la publicacion).
+Una prueba (`paquete.test.js`, `produccion.test.js`) lo exige en cada pieza de cada juego.
 
 ## La frase del cierre segun la pieza
 
