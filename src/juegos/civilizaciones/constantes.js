@@ -53,7 +53,9 @@ export const RAMAS = [
   { id: 'S', nombre: 'SABER' }, { id: 'E', nombre: 'ESPIRITU' }, { id: 'D', nombre: 'DEFENSA' },
 ];
 export const ERAS = 6;
-export const COSTO_TECNOLOGIA = [10, 19, 32, 48, 70, 96];                   // Ciencia por era
+// Ciencia por era. La spec 1.2.0 partia de 10-19-32-48-70-96 (calibrada en el simulador abstracto de la revision, que no pagaba edificios ni colonias); con el motor real y los
+// bots de la capa 1 (200 mundos) esa escalera dejaba al expansionista en 14 tecnologias y al equilibrado en 23, fuera de los rangos 15-36 y 24-28 de la spec 9.3. Bajada un 10 %.
+export const COSTO_TECNOLOGIA = [9, 17, 29, 43, 63, 86];
 export const DIFUSION = { num: 7, den: 10 };                                 // si el rival ya la conocia al cierre anterior: ceil(costo x 7 / 10)
 export const TECNOLOGIAS_PARA_ERA = 4;                                       // se pasa a la era E+1 al conocer 4 de las 6 de la era E
 export const PROYECTOS = { base: 1, conEscritura: 2 };
@@ -182,7 +184,7 @@ export const INDICE = {
   tecnologia: { puntos: 40, referencia: 126 },        // suma de las eras de las 36 tecnologias
   cultura: { puntos: 15, referencia: 300 },
   poblacion: { puntos: 10, referencia: 80 },
-  economia: { puntos: 10, referencia: 1500 },
+  economia: { puntos: 10, referencia: 3000 },        // 1,500 saturaba el pilar en el 100 % de las partidas de los tres bots (spec 9.3: ningun pilar al 98 % con el equilibrado)
   maravillas: { puntos: 15, porMaravilla: 2.5 },
   estabilidad: { puntos: 10 },
   publicado: [10, 20, 30],

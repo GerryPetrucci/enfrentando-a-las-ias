@@ -12,7 +12,7 @@ test('36 tecnologias: 6 ramas x 6 eras, cada una con su previa y con ids unicos'
   assert.equal(new Set(TECNOLOGIAS.map((t) => t.id)).size, 36);
   for (const r of RAMAS) assert.deepEqual(TECNOLOGIAS.filter((t) => t.rama === r.id).map((t) => t.era), [1, 2, 3, 4, 5, 6], r.nombre);
   assert.equal(TECNOLOGIAS.reduce((s, t) => s + t.era, 0), INDICE.tecnologia.referencia, 'las 36 suman la referencia del pilar de Tecnologia (126)');
-  assert.deepEqual(COSTO_TECNOLOGIA, [10, 19, 32, 48, 70, 96]);
+  assert.deepEqual(COSTO_TECNOLOGIA, [9, 17, 29, 43, 63, 86], 'escalera calibrada en la capa 1 (la spec partia de 10-19-32-48-70-96)');
   assert.equal(ERAS, 6);
 });
 

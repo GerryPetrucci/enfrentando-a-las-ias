@@ -9,7 +9,7 @@ import { civilizaciones, tokens } from './ayudas.js';
 
 // EL CONTRATO: el texto de reglas es igual para todas las IAs. Si cambia, cambia `versionReglas` (las partidas de versiones distintas no se comparan). Esta prueba ata las dos cosas:
 // al cambiar el texto hay que subir la version y anotar aqui su huella, a proposito.
-const HUELLAS = { 'civilizaciones-1.2.0': '7a6c76b69a9594a8' };
+const HUELLAS = { 'civilizaciones-1.2.1': '9817be32260cdac0' };
 const huella = () => createHash('sha256').update(civilizaciones.reglas + '\n' + civilizaciones.formatoRespuesta).digest('hex').slice(0, 16);
 
 test('el texto de reglas y su version van juntos: cambiar el contrato obliga a subir `versionReglas` y anotar su huella', () => {
@@ -42,7 +42,7 @@ test('las reglas de 1.2.0 estan escritas: tributo completo, sitio 1 a 3, aceptar
   assert.match(REGLAS, /ORDENES \(maximo 12 por turno; basta con 3 a 6\)/);
   assert.match(REGLAS, /INDICE DE AVANCE \(100\)/);
   assert.match(REGLAS, /Maravillas 15 \(2\.5 cada una\)/);
-  assert.match(REGLAS, /1,500 de recursos producidos/);
+  assert.match(REGLAS, /3,000 de recursos producidos/);
 });
 
 test('presupuesto: la parte fija del prompt (reglas + formato + instrucciones) cabe con margen en el tope de entrada de 6,000 tokens', () => {

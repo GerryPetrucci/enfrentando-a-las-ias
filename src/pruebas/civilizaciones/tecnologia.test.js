@@ -9,9 +9,9 @@ import { turno, fundado } from './ayudas.js';
 const civ = (extra = {}) => ({ ...crearCivilizacion(0), fundada: true, ...extra });
 const rivalSin = () => ({ tecnologiasCierre: [] });
 
-test('C09: el costo con difusion es (costo x 7 + 9) div 10 en enteros, siempre hacia arriba (con la escalera 10-19-32-48-70-96: 7, 14, 23, 34, 49, 68)', () => {
+test('C09: el costo con difusion es (costo x 7 + 9) div 10 en enteros, siempre hacia arriba (con la escalera 9-17-29-43-63-86: 7, 12, 21, 31, 45, 61)', () => {
   const rival = { tecnologiasCierre: TECNOLOGIAS.map((t) => t.id) };
-  assert.deepEqual(['T1', 'S2', 'T3', 'T4', 'M5', 'D6'].map((id) => costoVigente(id, rival)), [7, 14, 23, 34, 49, 68]);
+  assert.deepEqual(['T1', 'S2', 'T3', 'T4', 'M5', 'D6'].map((id) => costoVigente(id, rival)), [7, 12, 21, 31, 45, 61]);
   assert.deepEqual(['T1', 'S2', 'T3', 'T4', 'M5', 'D6'].map((id) => costoVigente(id, rivalSin())), COSTO_TECNOLOGIA);
   // la aritmetica es entera: 0.7 x 19 = 13.3 sube a 14 (con la escalera 1.2.0), 0.7 x 70 = 49 exacto no sube, y 0.7 x 10 = 7 tampoco
   const difundido = (c) => Math.floor((c * 7 + 9) / 10);
