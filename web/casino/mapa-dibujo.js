@@ -132,7 +132,7 @@ export function pintarContorno(ctx, mapa, g, id, color, grosor = 4) {
 }
 
 // ---- fichas por region ----
-// Los iconos de la hoja del usuario (arte-conquista.js) para comida, madera, oro, hierro, caballos y tropas; Roca (que no viene en la hoja) y cualquier icono que no cargue usan bloques pixel art.
+// Los iconos de la hoja del usuario (arte-conquista.js) para los seis recursos (comida, madera, roca, oro, hierro y caballos) y las tropas; cualquier icono que no cargue usa bloques pixel art.
 export function pintarIcono(ctx,tipo,x,y,r) {
   if(pintarArte(ctx,tipo,x,y,r*2.2,r*2.2)) return;
   pintarRecursoPixel(ctx,tipo,x,y,r);

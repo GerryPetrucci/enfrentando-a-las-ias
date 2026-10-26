@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Recorta la hoja de iconos de Guerra de territorios (9 dibujos en cuadricula de 3 x 3, fondo transparente) en un PNG por icono: web/arte/conquista/<nombre>.png.
 // La hoja la entrego el usuario el 25 de octubre de 2026 (privado/prototipos/conquista-iconos/hoja-iconos.png). Orden de lectura: comida, madera, oro / hierro, caballos, arco /
-// espada, maza (las tropas), maravilla. Roca no viene en la hoja: sigue dibujada por codigo (recursos-pixel-conquista.js).
+// espada, maza (las tropas), maravilla. Roca llego aparte, en su propio archivo (privado/prototipos/conquista-iconos/roca.png).
 //
 //   node herramientas/recortar-iconos-conquista.mjs
 //   --origen=privado/prototipos/conquista-iconos/hoja-iconos.png   la hoja
+//   --roca=privado/prototipos/conquista-iconos/roca.png            el icono de Roca
 //   --salida=web/arte/conquista                                     carpeta de los PNG
 //   --todos                                                         escribe tambien arco y espada (sin uso todavia en la escena)
 //
@@ -24,6 +25,9 @@ export const ICONOS = [
   { nombre: 'hierro', tipo: 'Hierro', lado: 128 }, { nombre: 'caballos', tipo: 'Caballos', lado: 128 }, { nombre: 'arco', tipo: null, lado: 128 },
   { nombre: 'espada', tipo: null, lado: 128 }, { nombre: 'tropas', tipo: 'Tropas', lado: 128 }, { nombre: 'maravilla', tipo: 'Maravilla', lado: 256 },
 ];
+// Los iconos que llegaron en su propio archivo (un solo dibujo, fondo transparente): Roca, que la hoja no traia (el usuario la entrego el 26 de octubre de 2026).
+export const SUELTOS = [{ nombre: 'roca', tipo: 'Roca', lado: 128, origen: 'privado/prototipos/conquista-iconos/roca.png' }];
+export const cajaDelDibujo = ({ ancho, alto }) => ({ x0: 0, y0: 0, x1: ancho - 1, y1: alto - 1 });
 const CELDA = 8, VECINDAD = 3, UMBRAL_BLOQUE = 40, MARGEN = 2; // un bloque = celdas de 8 px con dibujo, unidas si estan a 3 celdas (24 px) o menos
 
 // Los bloques de dibujo de la hoja, de arriba abajo y de izquierda a derecha en cada fila: [{ x0, y0, x1, y1 }] (px, inclusive).
@@ -104,6 +108,12 @@ function principal() {
     writeFileSync(join(salida, `${icono.nombre}.png`), codificarPNG(png));
     console.log(`  ${icono.nombre}.png  ${png.ancho} x ${png.alto}${icono.tipo ? `  (${icono.tipo})` : ''}`);
   });
+  for (const suelto of SUELTOS) {
+    const archivo = resolve(typeof o[suelto.nombre] === 'string' ? o[suelto.nombre] : suelto.origen);
+    const imagen = decodificarPNG(readFileSync(archivo)), png = reducir(recortarBloque(imagen, cajaDelDibujo(imagen)), suelto.lado);
+    writeFileSync(join(salida, `${suelto.nombre}.png`), codificarPNG(png));
+    console.log(`  ${suelto.nombre}.png  ${png.ancho} x ${png.alto}  (${suelto.tipo})`);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) principal();

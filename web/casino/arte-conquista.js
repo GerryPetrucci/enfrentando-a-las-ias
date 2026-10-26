@@ -1,7 +1,7 @@
-// PNG locales (la hoja de iconos del usuario, recortada por herramientas/recortar-iconos-conquista.mjs); el motor y sus registros no dependen de ellos. Canvas conserva
-// sus dibujos como alternativa si las imágenes todavía no cargan o fallan. Roca no viene en la hoja: se sigue dibujando por código.
+// PNG locales (la hoja de iconos del usuario y su icono de Roca, recortados por herramientas/recortar-iconos-conquista.mjs); el motor y sus registros no dependen de ellos. Canvas
+// conserva sus dibujos como alternativa si las imágenes todavía no cargan o fallan.
 export const PNG_RECURSOS = Object.freeze({
-  Comida:'comida.png', Madera:'madera.png', Oro:'oro.png', Hierro:'hierro.png', Caballos:'caballos.png', Tropas:'tropas.png', Maravilla:'maravilla.png',
+  Comida:'comida.png', Madera:'madera.png', Roca:'roca.png', Oro:'oro.png', Hierro:'hierro.png', Caballos:'caballos.png', Tropas:'tropas.png', Maravilla:'maravilla.png',
 });
 
 export function encajarSprite(origen, x, y, ancho, alto, anclaje = 'centro') {

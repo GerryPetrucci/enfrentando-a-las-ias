@@ -4,17 +4,16 @@ import {readFileSync, readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {PNG_RECURSOS,encajarSprite,pintarArte,arteListo,suavizarAlReducir} from '../../../web/casino/arte-conquista.js';
 import {pintarRecursoPixel} from '../../../web/casino/recursos-pixel-conquista.js';
-import {ICONOS,bloquesDeLaHoja,recortarBloque,reducir} from '../../../herramientas/recortar-iconos-conquista.mjs';
+import {ICONOS,SUELTOS,cajaDelDibujo,bloquesDeLaHoja,recortarBloque,reducir} from '../../../herramientas/recortar-iconos-conquista.mjs';
 import {decodificarPNG,codificarPNG} from '../../../herramientas/recortar-elenco-lobo.mjs';
 
 const CARPETA='../../../web/arte/conquista/';
-test('los iconos de la hoja del usuario son los PNG de comida, madera, oro, hierro, caballos, tropas y la Maravilla; Roca sigue dibujada por código',()=>{
-  assert.deepEqual(PNG_RECURSOS,{Comida:'comida.png',Madera:'madera.png',Oro:'oro.png',Hierro:'hierro.png',Caballos:'caballos.png',Tropas:'tropas.png',Maravilla:'maravilla.png'});
-  assert.ok(!('Roca' in PNG_RECURSOS),'la hoja no trae Roca');
-  const hashes={'comida.png':'2c92f5b8852c69317b012e9ebd897df865a062813298b48a36c258057cc7800c','madera.png':'42a67cd7a8bcecb56a747bc9126448c98d685b031be384d65379f2bfa73814d1','oro.png':'ec04819c8a1bfa8d0ed32aaf13ec9e23dbb448a5b2e2cd4f91384e182cbdcac0','hierro.png':'266873227ae8079df23d154bba08ddc11bb3a1d22573b6ce6b3f8c3af12829f1','caballos.png':'a2bf38ea3518d2e98337298137ad5d908be7d8746ddc984f1c970a42d937b3c9','tropas.png':'37f8dc98b039d22818b5ce2c82b4442c86cce6f73a70a4eb26531510799802cd','maravilla.png':'12d8b77bef76071edf365ef52523370e331d2a2f3acd9f9cec15bdb31e7ddd57'};
+test('los seis recursos, las tropas y la Maravilla usan los PNG de los iconos del usuario',()=>{
+  assert.deepEqual(PNG_RECURSOS,{Comida:'comida.png',Madera:'madera.png',Roca:'roca.png',Oro:'oro.png',Hierro:'hierro.png',Caballos:'caballos.png',Tropas:'tropas.png',Maravilla:'maravilla.png'});
+  const hashes={'comida.png':'2c92f5b8852c69317b012e9ebd897df865a062813298b48a36c258057cc7800c','madera.png':'42a67cd7a8bcecb56a747bc9126448c98d685b031be384d65379f2bfa73814d1','roca.png':'96427f1d3cba30e5aa47ee6336b72b7b62975d5f00011a30655a3167b6a79d9a','oro.png':'ec04819c8a1bfa8d0ed32aaf13ec9e23dbb448a5b2e2cd4f91384e182cbdcac0','hierro.png':'266873227ae8079df23d154bba08ddc11bb3a1d22573b6ce6b3f8c3af12829f1','caballos.png':'a2bf38ea3518d2e98337298137ad5d908be7d8746ddc984f1c970a42d937b3c9','tropas.png':'37f8dc98b039d22818b5ce2c82b4442c86cce6f73a70a4eb26531510799802cd','maravilla.png':'12d8b77bef76071edf365ef52523370e331d2a2f3acd9f9cec15bdb31e7ddd57'};
   for(const archivo of Object.values(PNG_RECURSOS)){
     const png=readFileSync(new URL(CARPETA+archivo,import.meta.url)), {ancho,alto,datos}=decodificarPNG(png);
-    assert.equal(createHash('sha256').update(png).digest('hex'),hashes[archivo],archivo+': es el que sale de la hoja con herramientas/recortar-iconos-conquista.mjs (si se cambia la hoja, se regenera y se actualiza este hash)');
+    assert.equal(createHash('sha256').update(png).digest('hex'),hashes[archivo],archivo+': es el que sale de los iconos del usuario con herramientas/recortar-iconos-conquista.mjs (si cambian, se regenera y se actualiza este hash)');
     assert.equal(png[25],6,archivo+': conserva transparencia RGBA');
     assert.ok(Math.max(ancho,alto)<=(archivo==='maravilla.png'?256:128),archivo+': no pasa del tamaño que se dibuja');
     assert.equal(datos[3],0,archivo+': la esquina es transparente (se recortó al dibujo)');
@@ -26,6 +25,8 @@ test('la carpeta del arte solo guarda los PNG que se usan (arco y espada de la h
   const png=readdirSync(new URL(CARPETA,import.meta.url)).filter(n=>n.endsWith('.png')).sort();
   assert.deepEqual(png,Object.values(PNG_RECURSOS).sort());
   assert.ok(ICONOS.filter(i=>i.tipo===null).map(i=>i.nombre).join()==='arco,espada');
+  assert.deepEqual(SUELTOS.map(i=>i.tipo),['Roca'],'Roca llego en su propio archivo, no en la hoja');
+  assert.deepEqual(cajaDelDibujo({ancho:10,alto:6}),{x0:0,y0:0,x1:9,y1:5});
 });
 test('los sprites conservan proporciones y encajan en el marcador sin estirarse',()=>{
   assert.deepEqual(encajarSprite({ancho:100,alto:200},80,120,60,60),{x:65,y:90,ancho:30,alto:60});
@@ -48,7 +49,7 @@ test('Caballos dibuja una herradura abierta arriba y cerrada en su base',()=>{
 });
 test('sin imágenes cargadas (Node) todos los recursos conservan su dibujo por código como alternativa',async()=>{
   await arteListo;
-  for(const tipo of ['Comida','Madera','Caballos','Roca','Hierro','Oro','Tropas','Maravilla'])assert.equal(pintarArte(null,tipo,0,0,20,20),false);
+  for(const tipo of Object.keys(PNG_RECURSOS))assert.equal(pintarArte(null,tipo,0,0,20,20),false);
 });
 
 // ---- la herramienta que recorta la hoja ----
