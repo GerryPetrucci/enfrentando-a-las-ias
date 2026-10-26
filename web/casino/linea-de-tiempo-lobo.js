@@ -4,6 +4,7 @@ import { duracion } from './linea-comun.js';
 import { nombreRol, ROLES_LOBO } from './lobo-arte.js';
 import { crearNarrador } from './narracion-lobo.js';
 import { mezclarCasas } from './lobo-casas.js';
+import { nombresDeEscena, etiquetaAsiento, traducirAsientos } from './lobo-nombres.js';
 export const JUGADORES_TOPE = 12, RONDAS_TOPE = 6, CAMARA_POR_DEFECTO = 0;
 export const MIN_MS = { preparacion: 6500, noche: 3600, enamorados: 3600, amanecer: 3000, muerte: 4000, disparo: 3200, mensaje: 3200, votacion: 5000, final: 6500, identidad: 5000, elenco: 10000 };
 const copiar = (x) => structuredClone(x);
@@ -25,13 +26,16 @@ export function fragmentarMensaje(texto, max = 120) {
 export function construirLineaDeTiempo(partida) {
   const registros = listas(partida?.rondas), n = partida?.jugadores?.length;
   if (!registros.length || ![8, 12].includes(n)) return [];
-  const nombre = (i) => `${partida.jugadores[i]?.nombre ?? 'Jugador'} · ${String(i).padStart(2, '0')}`;
+  const nombres = nombresDeEscena(partida.jugadores.map((j) => j?.nombre));
+  const nombre = (i) => nombres[i] ?? 'Jugador'; // lo que se dice y se subtitula: solo el nombre del modelo (con letra si se repite), nunca el numero de asiento
+  const hecho = (i) => `${nombre(i)} · ${etiquetaAsiento(i)}`; // el hecho visible (`lineas`) conserva el numero real del asiento
   const narrador = crearNarrador({ nombre, nombres: partida.jugadores.map((j) => j.nombre) });
   const estado = { jugadores: Array.from({ length: n }, (_, asiento) => ({ asiento, vivo: true })), enamorados: [], declaraciones: [], fin: false };
   const beats = [], noches = new Set();
-  const crear = (tipo, r, registro, texto, paso, antes = copiar(estado)) => {
+  // `texto`: el hecho visible; `voz`: lo que recibe el narrador cuando lo dice tal cual (las citas de los mensajes), sin numeros de asiento.
+  const crear = (tipo, r, registro, texto, paso, antes = copiar(estado), voz = texto) => {
     const lineas = texto ? [{ tipo: 'hecho', texto }] : [];
-    const { dicho, mudas } = narrador.contar({ tipo, ronda: r.ronda, paso, texto });
+    const { dicho, mudas } = narrador.contar({ tipo, ronda: r.ronda, paso, texto: voz });
     const narracion = dicho.map((l) => l.texto).join(' ');
     beats.push({ id: `lobo-${r.ronda}-${beats.length}-${tipo}`, mano: r.ronda, registro, tipo, asiento: paso.asiento ?? null, camara: [],
       texto: narracion, lineas, dicho, mudas, minMs: duracion(MIN_MS[tipo], narracion), reemplazo: false,
@@ -50,7 +54,8 @@ export function construirLineaDeTiempo(partida) {
       crear('noche', r, indice, `Noche ${r.ronda}. La aldea duerme; alguien recorre sus calles.`, { tipo: 'noche' });
     }
     const eventos = listas(r.publico.eventos);
-    if (r.fase === 'dia') narrador.prepararDia(eventos);
+    // el narrador elige que acusaciones lee en voz alta: ya con los asientos citados convertidos en nombres, igual que se leeran
+    if (r.fase === 'dia') narrador.prepararDia(eventos.map((e) => (e?.tipo === 'mensaje' && typeof e.mensaje === 'string' ? { ...e, mensaje: traducirAsientos(e.mensaje, nombre, n) } : e)));
     for (const e of eventos) {
       if (!e || typeof e !== 'object') continue;
       const antes = copiar(estado), valido = (i) => asientoValido(i, n);
@@ -59,7 +64,7 @@ export function construirLineaDeTiempo(partida) {
           if (e.asientos?.length !== 2 || !e.asientos.every(valido)) break;
           estado.enamorados = [...e.asientos];
           if (valido(e.cupido)) estado.jugadores[e.cupido].rol = 'cupido';
-          crear('enamorados', r, indice, `${valido(e.cupido) ? `${nombre(e.cupido)} se revela como Cupido. ` : ''}${nombre(e.asientos[0])} y ${nombre(e.asientos[1])} quedan unidos: si uno muere, el otro también.`, { tipo: 'enamorados', asientos: [...e.asientos], ...(valido(e.cupido) ? { cupido: e.cupido } : {}) }, antes); break;
+          crear('enamorados', r, indice, `${valido(e.cupido) ? `${hecho(e.cupido)} se revela como Cupido. ` : ''}${hecho(e.asientos[0])} y ${hecho(e.asientos[1])} quedan unidos: si uno muere, el otro también.`, { tipo: 'enamorados', asientos: [...e.asientos], ...(valido(e.cupido) ? { cupido: e.cupido } : {}) }, antes); break;
         }
         case 'amanecer':
           crear('amanecer', r, indice, eventos.some((e) => e.tipo === 'muerte') ? 'Amanece en la aldea.' : 'Amanece en la aldea. Nadie ha muerto esta noche.', { tipo: 'amanecer', hayMuertes: eventos.some((e) => e.tipo === 'muerte') }); break;
@@ -68,10 +73,10 @@ export function construirLineaDeTiempo(partida) {
           estado.jugadores[e.asiento] = { ...estado.jugadores[e.asiento], vivo: false, rol: e.rol };
           const comprobacion = comprobar(e.asiento, e.rol);
           const causa = { amor: 'muere por su vínculo de amor', voto: 'es expulsado por la aldea', disparo: 'cae por el disparo del cazador', veneno: 'muere por el veneno', noche: 'muere durante la noche' }[e.causa] ?? 'muere';
-          crear('muerte', r, indice, `${nombre(e.asiento)} ${causa}. Su rol era ${nombreRol(e.rol)}.`, { tipo: 'muerte', asiento: e.asiento, rol: e.rol, causa: e.causa, ...(comprobacion ? { comprobacion } : {}) }, antes); break;
+          crear('muerte', r, indice, `${hecho(e.asiento)} ${causa}. Su rol era ${nombreRol(e.rol)}.`, { tipo: 'muerte', asiento: e.asiento, rol: e.rol, causa: e.causa, ...(comprobacion ? { comprobacion } : {}) }, antes); break;
         }
         case 'disparo':
-          if (valido(e.asiento) && valido(e.objetivo)) crear('disparo', r, indice, `${nombre(e.asiento)}, el cazador, dispara a ${nombre(e.objetivo)}.`, { tipo: 'disparo', asiento: e.asiento, objetivo: e.objetivo });
+          if (valido(e.asiento) && valido(e.objetivo)) crear('disparo', r, indice, `${hecho(e.asiento)}, el cazador, dispara a ${hecho(e.objetivo)}.`, { tipo: 'disparo', asiento: e.asiento, objetivo: e.objetivo });
           break;
         case 'mensaje': {
           if (!valido(e.asiento)) break;
@@ -81,14 +86,17 @@ export function construirLineaDeTiempo(partida) {
             estado.declaraciones.push({ asiento: e.asiento, ronda: r.ronda, rol: afirmaRol });
             estado.jugadores[e.asiento].afirmaRol = afirmaRol;
           }
-          const partes = fragmentarMensaje(e.mensaje);
-          partes.forEach((mensaje, i) => crear('mensaje', r, indice, mensaje ? `${nombre(e.asiento)} dice: «${mensaje}»` : `${nombre(e.asiento)} guarda silencio.`, { tipo: 'mensaje', asiento: e.asiento, mensaje, parte: i + 1, total: partes.length, ...(i === 0 && nuevaDeclaracion ? { afirmaRol } : {}) }, i === 0 ? antes : copiar(estado)));
+          // los asientos que cita el modelo («asiento 5») se vuelven nombres antes de partir el mensaje en tarjetas: ni la voz ni la tarjeta dicen un numero de asiento
+          const partes = fragmentarMensaje(traducirAsientos(e.mensaje, nombre, n));
+          const dice = (quien) => (mensaje) => (mensaje ? `${quien(e.asiento)} dice: «${mensaje}»` : `${quien(e.asiento)} guarda silencio.`);
+          // «X dice» solo abre el mensaje: las tarjetas que lo continúan (2/4, 3/4...) se leen sin repetirlo, para que la voz no corte la frase
+          partes.forEach((mensaje, i) => crear('mensaje', r, indice, dice(hecho)(mensaje), { tipo: 'mensaje', asiento: e.asiento, mensaje, parte: i + 1, total: partes.length, ...(i === 0 && nuevaDeclaracion ? { afirmaRol } : {}) }, i === 0 ? antes : copiar(estado), i === 0 ? dice(nombre)(mensaje) : `«${mensaje}»`));
           break;
         }
         case 'votacion': {
           const votos = listas(e.votos).filter((v) => valido(v?.asiento) && valido(v?.voto)).map(({ asiento, voto }) => ({ asiento, voto }));
           const expulsado = valido(e.expulsado) ? e.expulsado : null;
-          crear('votacion', r, indice, e.empate ? 'La votación termina en empate. Nadie es expulsado.' : expulsado !== null ? `La aldea vota. ${nombre(expulsado)} recibe más votos y será expulsado.` : 'La aldea muestra sus votos.',
+          crear('votacion', r, indice, e.empate ? 'La votación termina en empate. Nadie es expulsado.' : expulsado !== null ? `La aldea vota. ${hecho(expulsado)} recibe más votos y será expulsado.` : 'La aldea muestra sus votos.',
             { tipo: 'votacion', votos, conteo: listas(e.conteo).slice(0, n), empate: e.empate === true, expulsado }); break;
         }
         case 'final': {
@@ -100,7 +108,7 @@ export function construirLineaDeTiempo(partida) {
           crear('final', r, indice, `${texto} Se revelan todas las identidades.${parejaViva ? ' Los dos enamorados sobreviven y ganan su bono.' : ''}`, { tipo: 'final', ganadorBando: e.ganadorBando, motivo: e.motivo, parejaViva }, antes);
           for (const j of estado.jugadores.filter((j) => j.vivo)) {
             const comprobacion = comprobar(j.asiento, j.rol);
-            if (comprobacion) crear('identidad', r, indice, `${nombre(j.asiento)} revela su identidad.`, { tipo: 'identidad', asiento: j.asiento, rol: j.rol, comprobacion });
+            if (comprobacion) crear('identidad', r, indice, `${hecho(j.asiento)} revela su identidad.`, { tipo: 'identidad', asiento: j.asiento, rol: j.rol, comprobacion });
           }
           crear('elenco', r, indice, 'La aldea revela su elenco completo.', { tipo: 'elenco', jugadores: copiar(estado.jugadores) }); break;
         }

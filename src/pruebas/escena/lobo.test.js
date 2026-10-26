@@ -15,7 +15,7 @@ test('8/12: escena registrada, intro, rondas y estado final coinciden con el reg
     assert.equal(motivoDeNoReproducible('lobo', partida), null);
     const beats = await armarLinea('lobo', partida, { camara: 12 });
     assert.equal(beats[0].tipo, 'intro');
-    for (const b of beats.filter((b) => Number.isInteger(b.asiento))) assert.ok(b.lineas.some((l) => l.texto.includes(`${partida.jugadores[b.asiento].nombre} · ${String(b.asiento).padStart(2, '0')}`)), 'El hecho visible conserva el índice real del asiento, aunque la voz lo resuma o calle.');
+    for (const b of beats.filter((b) => Number.isInteger(b.asiento))) assert.ok(b.lineas.some((l) => l.texto.includes(`${partida.jugadores[b.asiento].nombre} · ${b.asiento + 1}`)), 'El hecho visible lleva el número de asiento en pantalla (desde 1, sin cero a la izquierda), aunque la voz lo resuma o calle.');
     assert.ok(beats.every((b) => !b.camara.length)); // La opción camara no levanta el secreto.
     const ultimo = beats.at(-1).pasos.find((p) => p.tipo === 'estado-final');
     assert.equal(ultimo.fin, true);
@@ -119,10 +119,10 @@ test('las cuatro combinaciones de formato y mesa caben; no se solapan escenario,
   assert.throws(() => colocarLobo('hoja', 8)); assert.throws(() => colocarLobo('9x16', 10));
 });
 
-test('43 recortes existentes con dimensiones exactas y fuente; noche y día usan selección segura', () => {
+test('7 recortes manuales (la noche misteriosa y la asamblea) con dimensiones exactas y fuente; noche y día usan selección segura', () => {
   const recortes = JSON.parse(readFileSync(new URL('../../../web/arte/lobo/recortes.json', import.meta.url), 'utf8').replace(/^﻿/, ''));
   const rutas = [...Object.values(NOCHES).flat(), ...ASAMBLEA];
-  assert.equal(recortes.length, 43);
+  assert.equal(recortes.length, 7);
   assert.equal(rutas.length, recortes.length, 'cada imagen de la escena tiene su recorte y viceversa');
   for (const ruta of rutas) {
     const png = readFileSync(new URL(`../../../web/${ruta}`, import.meta.url));

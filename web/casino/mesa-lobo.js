@@ -1,8 +1,9 @@
 import { MesaBase, el, poner } from './mesa-base.js';
 import { colocarLobo, ordenarPorVotos } from './layout-lobo.js';
 import { ALDEANO_PIXEL } from './personajes-pixel-lobo.js';
-import { fotogramasDe, nombreRol, PERSONAJES_ANIMADOS, NOCHES } from './lobo-arte.js';
+import { fotogramasDe, nombreRol, PERSONAJES_ANIMADOS, ENTRADAS } from './lobo-arte.js';
 import { textoDeComprobacion } from './narracion-lobo.js';
+import { nombresDeEscena, etiquetaAsiento } from './lobo-nombres.js';
 import { estiloJugador } from './kit.js';
 import { LOBO_AMBIENTE } from '../paleta.js';
 
@@ -11,7 +12,8 @@ export class Mesa extends MesaBase {
 
   constructor(formato, partida, opciones = {}) {
     // La mesa solo retiene metadatos de asientos, nunca registros privados.
-    const jugadores = partida.jugadores.map(({ id, nombre, color }) => ({ id, nombre, color }));
+    const nombres = nombresDeEscena(partida.jugadores.map((j) => j.nombre)); // el mismo nombre que dice la voz: el modelo, con letra si ocupa varios asientos
+    const jugadores = partida.jugadores.map(({ id, color }, i) => ({ id, nombre: nombres[i], color }));
     super(formato, { jugadores }, opciones, colocarLobo(formato, jugadores.length));
     this.generacion = 0;
     this.cacheImagenes = new Map();
@@ -35,7 +37,7 @@ export class Mesa extends MesaBase {
       nodo.style.cssText += `;${estiloJugador(this.partida.jugadores[i])}`;
       nodo.dataset.asiento = String(i);
       // El SVG contiene el catálogo común, sin seleccionar ninguna identidad secreta.
-      nodo.innerHTML = `<div class="personaje-lobo">${ALDEANO_PIXEL}</div><div class="identidad-lobo"><small>${String(i).padStart(2, '0')}</small><strong></strong><span class="voto-lobo"></span><span class="rol-publico-lobo"></span><span class="rol-afirmado-lobo"></span></div>`;
+      nodo.innerHTML = `<div class="personaje-lobo">${ALDEANO_PIXEL}</div><div class="identidad-lobo"><small>${etiquetaAsiento(i)}</small><strong></strong><span class="voto-lobo"></span><span class="rol-publico-lobo"></span><span class="rol-afirmado-lobo"></span></div>`;
       const nombre = nodo.querySelector('strong'); nombre.textContent = this.nombre(i); nombre.title = this.nombre(i);
       return { nodo, retrato: nodo.querySelector('.personaje-lobo'), rol: nodo.querySelector('.rol-publico-lobo'), afirmado: nodo.querySelector('.rol-afirmado-lobo'), voto: nodo.querySelector('.voto-lobo') };
     });
@@ -97,7 +99,8 @@ export class Mesa extends MesaBase {
     const archivos = fotogramasDe(paso);
     await Promise.all(archivos.map((ruta) => this.imagenLista(ruta)));
     if (ficha !== this.generacion) return;
-    this.fotograma.src = archivos[this.rapido ? (paso.tipo === 'noche' || paso.tipo === 'enamorados' ? 3 : archivos.length - 1) : 0];
+    // En las capturas (`rapido`) queda el cuadro de la accion: la noche con la puerta abierta y el figurante (4.o), Cupido entrando (el 1.o de los de noche) o el ultimo.
+    this.fotograma.src = archivos[this.rapido ? (paso.tipo === 'noche' ? 3 : paso.tipo === 'enamorados' ? 0 : archivos.length - 1) : 0];
     if (this.rapido) return;
     // Pasos vinculados al beat; no quedan intervalos vivos al saltar o reiniciar.
     for (const ruta of archivos) {
@@ -119,20 +122,21 @@ export class Mesa extends MesaBase {
     this.panorama.className = 'fijo panorama-lobo entrada-aldea-lobo';
     const titulo = el('titulo-panorama-lobo'); titulo.textContent = 'La aldea se prepara para dormir';
     const casas = el('casas-lobo');
+    // En las capturas (`rapido`) solo se ve el cuadro 4 (el personaje entra de noche): no se precargan los otros cinco de cada rol.
+    const cuadros = this.rapido ? [3] : [0, 1, 2, 3, 4, 5];
     for (const rol of reparto) {
       const casa = el('casa-anonima-lobo');
       const imagen = document.createElement('img'); imagen.className = 'habitante-anonimo'; imagen.alt = '';
-      imagen.src = NOCHES[rol][0]; casa.append(imagen);
+      imagen.src = ENTRADAS[rol][cuadros[0]]; casa.append(imagen);
       casas.append(casa);
     }
     this.panorama.append(titulo, casas);
-    await Promise.all([...new Set(reparto)].flatMap((rol) => NOCHES[rol]).map((ruta) => this.imagenLista(ruta)));
+    await Promise.all([...new Set(reparto)].flatMap((rol) => cuadros.map((c) => ENTRADAS[rol][c])).map((ruta) => this.imagenLista(ruta)));
     if (ficha !== this.generacion) return;
     const imagenes = casas.querySelectorAll('img');
-    const cuadros = this.rapido ? [3] : [0,1,2,3,4,5];
     for (const cuadro of cuadros) {
       if (ficha !== this.generacion) return;
-      imagenes.forEach((imagen, i) => { imagen.src = NOCHES[reparto[i]][cuadro]; });
+      imagenes.forEach((imagen, i) => { imagen.src = ENTRADAS[reparto[i]][cuadro]; });
       if (!this.rapido) await this.esperar(ms * .78 / cuadros.length);
     }
   }
@@ -175,7 +179,7 @@ export class Mesa extends MesaBase {
     this.aplicarEstado(antes);
     this.cabecera.querySelector('.mano').textContent = ['final', 'identidad', 'elenco'].includes(beat.tipo) ? 'Final' : `Ronda ${beat.mano}`;
     this.escenario.classList.toggle('dia-lobo', !['noche', 'enamorados'].includes(paso.tipo));
-    const n = (i) => `${String(i).padStart(2, '0')} · ${this.nombre(i)}`;
+    const n = (i) => `${etiquetaAsiento(i)} · ${this.nombre(i)}`;
     this.sobretitulo.textContent = ({ preparacion: 'La aldea se prepara', noche: 'La aldea duerme', enamorados: 'El vínculo de Cupido', amanecer: 'La primera luz', muerte: 'Una identidad revelada', identidad: 'Una declaración al descubierto', disparo: 'El último disparo', mensaje: 'La asamblea · afirmación pública', votacion: 'Votos al descubierto', final: 'Todas las identidades', elenco: 'Elenco completo' })[paso.tipo];
     switch (paso.tipo) {
       case 'preparacion': await this.mostrarPreparacion(paso.casas, ms, ficha); break;

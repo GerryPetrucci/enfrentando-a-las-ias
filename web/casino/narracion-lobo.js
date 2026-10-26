@@ -19,7 +19,7 @@ const NOCHES = [
 
 export function crearNarrador({ nombre = (i) => `Jugador ${i + 1}`, nombres = [] } = {}) {
   let citados = new Set(), resumenPendiente = false;
-  const declaracionesDichas = new Map();
+  const declaracionesDichas = new Map(), declaracionesPendientes = new Map();
   // Priorizar acusaciones que identifican a otra persona por nombre o asiento.
   // Leer una afirmación no la convierte en confirmación de su contenido.
   function prepararDia(eventos) {
@@ -51,9 +51,15 @@ export function crearNarrador({ nombre = (i) => `Jugador ${i + 1}`, nombres = []
           voz = 'El resto de la aldea comparte sus sospechas.';
           comentario = true; resumenPendiente = false;
         }
-        if (paso.afirmaRol && declaracionesDichas.get(paso.asiento) !== paso.afirmaRol) {
-          voz = `${voz ? `${voz} ` : ''}${nombre(paso.asiento)} afirma ser ${nombreRol(paso.afirmaRol)}.`;
-          declaracionesDichas.set(paso.asiento, paso.afirmaRol);
+        // La declaración de rol llega con la primera tarjeta del mensaje, pero se dice al terminarlo: no se mete entre dos tarjetas de la misma frase.
+        if (paso.afirmaRol && paso.total > 1 && paso.parte < paso.total) declaracionesPendientes.set(paso.asiento, paso.afirmaRol);
+        if (!(paso.total > 1) || paso.parte >= paso.total) {
+          const declarado = paso.afirmaRol ?? declaracionesPendientes.get(paso.asiento);
+          declaracionesPendientes.delete(paso.asiento);
+          if (declarado && declaracionesDichas.get(paso.asiento) !== declarado) {
+            voz = `${voz ? `${voz} ` : ''}${nombre(paso.asiento)} afirma ser ${nombreRol(declarado)}.`;
+            declaracionesDichas.set(paso.asiento, declarado);
+          }
         }
         break;
       case 'identidad': voz = textoDeComprobacion(nombre(paso.asiento), paso.comprobacion); break;
