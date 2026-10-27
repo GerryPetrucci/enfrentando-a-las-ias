@@ -12,7 +12,7 @@ test('esta registrado y cumple el contrato de un juego: seis funciones, 2 jugado
   assert.equal(civilizaciones.categoria, 'Desarrollo y civilización');
   for (const f of ['crear', 'terminado', 'vista', 'normalizar', 'aplicar', 'resultado']) assert.equal(typeof civilizaciones[f], 'function', f);
   assert.deepEqual([civilizaciones.jugadores, civilizaciones.minJugadores, civilizaciones.maxJugadores, civilizaciones.rondas], [2, 2, 2, 30]);
-  assert.equal(civilizaciones.versionReglas, 'civilizaciones-1.2.1');
+  assert.equal(civilizaciones.versionReglas, 'civilizaciones-1.2.2');
   assert.equal(typeof civilizaciones.reglas, 'string');
   assert.doesNotThrow(() => JSON.parse(civilizaciones.formatoRespuesta));
   assert.deepEqual(Object.keys(civilizaciones.bots).sort(), ['azar', 'cientifico', 'equilibrado', 'expansionista', 'pasivo']);

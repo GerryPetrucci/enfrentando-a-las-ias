@@ -27,7 +27,7 @@ export default {
   // 60 decisiones por partida (una llamada por civilizacion por turno): el corte duro del proyecto es 100 y los agentes no reintentan por dentro, asi que nunca se vuelven 180.
   llamadasMax: 100,
   limiteLlamadasDuro: 100,
-  versionReglas: 'civilizaciones-1.2.1', // 1.2.1: calibracion de la capa 1 (escalera de costos -10 %, referencia de Economia 3,000)
+  versionReglas: 'civilizaciones-1.2.2', // 1.2.2: activa secesion y colapso en el cierre (etapa 2.1); contrato de texto sin cambios.
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 

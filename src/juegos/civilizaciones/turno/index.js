@@ -9,7 +9,8 @@
 import { RECURSOS_ALMACEN, TURNOS, INDICE, HAMBRE } from '../constantes.js';
 import { fundar } from './fundacion.js';
 import { ejecutarOrdenes, contarOrdenes } from './ordenes.js';
-import { modificadores, produccion, espacioDe, estabilidadDe } from '../economia.js';
+import { modificadores, produccion, espacioDe } from '../economia.js';
+import { resolverEstabilidad } from './estabilidad.js';
 import { resolverInvestigacion, actualizarEra } from '../tecnologia.js';
 import { indiceDe } from '../indice.js';
 import { instantanea } from '../estado.js';
@@ -57,13 +58,6 @@ function crecer(civ, t, rc) {
 }
 
 // Fase 10: cierre. La Estabilidad se recalcula (no se acumula) y es la que usa la produccion del turno siguiente; las tecnologias conocidas pasan a ser la instantanea de difusion.
-function cerrar(E, civ, t, rc) {
-  const m = modificadores(civ, t);
-  civ.estabilidad = estabilidadDe(civ, t, m);
-  civ.sumaEstabilidad += civ.estabilidad;
-  civ.cierres++;
-  civ.tecnologiasCierre = [...civ.tecnologias];
-}
 
 // Al terminar el turno 30 gana el mayor Indice (a la precision publicada, un decimal); si empatan, mas tecnologias y, despues, un sorteo con el seed del mundo.
 function decidirGanador(E) {
@@ -88,7 +82,7 @@ export function aplicarTurno(E, jugadas) {
   investigarFase(E, rc);
   E.civs.forEach((c) => crecer(c, t, rc));
   // Fases 7 (invasion), 8 (mantenimiento) y 9 (Maravillas): capas 2 y 3.
-  E.civs.forEach((c) => cerrar(E, c, t, rc));
+  E.civs.forEach((c) => resolverEstabilidad(E, c, t, rc));
 
   E.turno = t;
   if (INDICE.publicado.includes(t)) {
