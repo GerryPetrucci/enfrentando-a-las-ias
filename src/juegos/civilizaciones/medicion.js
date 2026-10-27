@@ -17,10 +17,10 @@ const cacheMapas = new Map();
 const mapaDe = (seed, bioma) => { const k = `${seed}|${bioma}`; if (!cacheMapas.has(k)) cacheMapas.set(k, crearMapa(seed, 2, { bioma })); return cacheMapas.get(k); };
 
 // Juega UNA partida entre dos bots (claves de civilizaciones.bots) en el mundo `seed`. Devuelve lo que las metricas necesitan.
-export function jugarPartida(asientos, seed, { bioma, invariantes = false } = {}) {
+export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin = [] } = {}) {
   const J = civilizaciones;
   const mundoBioma = bioma ?? biomaDeSeed(seed, 2);
-  const E = J.crear(crearRng(seed * 7919 + 13), { jugadores: 2, mapa: mapaDe(seed, mundoBioma) });
+  const E = J.crear(crearRng(seed * 7919 + 13), { jugadores: 2, mapa: mapaDe(seed, mundoBioma), sin });
   const rngs = asientos.map((_, i) => crearRng((seed * 31 + i * 977) >>> 0));
   let lider = -1, cambios = 0;
   const malos = [];
@@ -35,6 +35,7 @@ export function jugarPartida(asientos, seed, { bioma, invariantes = false } = {}
   const lideresEn = (t) => { const x = E.indices.find((i) => i.turno === t); if (!x) return null; const d = x.publicado[0] - x.publicado[1]; return Math.abs(d) > 1 ? (d > 0 ? 0 : 1) : null; };
   return {
     seed, bioma: mundoBioma, asientos, ganador: E.ganador, desempate: E.desempate, cambios, lider10: lideresEn(10), lider20: lideresEn(20), malos,
+    ventaja10: Math.abs(E.indices.find((i) => i.turno === 10).publicado[0] - E.indices.find((i) => i.turno === 10).publicado[1]),
     civs: E.civs.map((c, s) => ({
       indice: ind[s].total, pilares: ind[s].pilares, tecnologias: c.tecnologias.length, era: c.era, poblacion: c.poblacion, regiones: c.regiones.length, hambres: c.hambres,
       colapsos: c.colapsos, validas: c.stats.validas, total: c.stats.total, edificios: c.construidos.length,
@@ -52,7 +53,7 @@ export function ic95(valoresPorMundo) {
 }
 
 // opciones: { mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false }
-export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false } = {}) {
+export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false, sin = [] } = {}) {
   const parejas = [];
   for (let i = 0; i < bots.length; i++) for (let j = i + 1; j < bots.length; j++) parejas.push([bots[i], bots[j]]);
   const porBot = Object.fromEntries(bots.map((id) => [id, { victoriasPorMundo: [], vsPasivoPorMundo: [], partidas: [], pasivo: [] }]));
@@ -61,12 +62,12 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
     const seed = semilla + g;
     const pm = Object.fromEntries(bots.map((id) => [id, { v: 0, n: 0, vp: 0, np: 0 }]));
     for (const [a, b] of parejas) for (const orden of [[a, b], [b, a]]) {
-      const p = jugarPartida(orden, seed, { bioma, invariantes });
+      const p = jugarPartida(orden, seed, { bioma, invariantes, sin });
       planas.push(p);
       orden.forEach((id, s) => { pm[id].n++; if (p.ganador === s) pm[id].v++; porBot[id].partidas.push(p.civs[s]); });
     }
     for (const id of bots) for (const orden of [[id, 'pasivo'], ['pasivo', id]]) {
-      const p = jugarPartida(orden, seed, { bioma, invariantes });
+      const p = jugarPartida(orden, seed, { bioma, invariantes, sin });
       planas.push(p);
       const s = orden.indexOf(id);
       pm[id].np++; if (p.ganador === s) pm[id].vp++;
@@ -75,7 +76,7 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
     for (const id of bots) { porBot[id].victoriasPorMundo.push(pm[id].v / pm[id].n); porBot[id].vsPasivoPorMundo.push(pm[id].vp / pm[id].np); }
     // Un espejo por mundo (cada vez otro bot): con mundos gemelos y el mismo bot en los dos asientos solo decide el sorteo del desempate, que depende del mundo; repetir el
     // espejo con otro bot en el mismo mundo daria el mismo resultado y haria creer que hay mas muestras de las que hay.
-    if (espejos) espejoPartidas.push(jugarPartida([bots[g % bots.length], bots[g % bots.length]], seed, { bioma, invariantes }));
+    if (espejos) espejoPartidas.push(jugarPartida([bots[g % bots.length], bots[g % bots.length]], seed, { bioma, invariantes, sin }));
   }
   const entreActivos = planas.filter((p) => p.asientos.every((x) => x !== 'pasivo'));
   const lideres = (campo) => { const f = entreActivos.filter((p) => p[campo] !== null); return { partidas: f.length, gana: f.length ? f.filter((p) => p.ganador === p[campo]).length / f.length : null }; };
@@ -88,14 +89,21 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
       era: media(ps.map((c) => c.era)), poblacion: media(ps.map((c) => c.poblacion)), regiones: media(ps.map((c) => c.regiones)), indice: media(ps.map((c) => c.indice)),
       pilares: Object.fromEntries(PILARES.map((k) => [k, media(ps.map((c) => c.pilares[k]))])), saturados: sat(ps),
       arbolAgotado: ps.filter((c) => c.tecnologias === TECNOLOGIAS.length).length / ps.length, hambres: media(ps.map((c) => c.hambres)), colapsos: media(ps.map((c) => c.colapsos)),
+      tasaColapso: ps.filter((c) => c.colapsos > 0).length / ps.length,
       ordenesValidas: ps.reduce((s, c) => s + c.validas, 0) / Math.max(1, ps.reduce((s, c) => s + c.total, 0)),
     };
   };
   const asiento0 = entreActivos.filter((p) => p.ganador === 0).length / Math.max(1, entreActivos.length);
   return {
-    mundos, semilla, bots, bioma: bioma ?? 'segun el seed', partidas: planas.length, turnos: TURNOS,
+    mundos, semilla, bots, sin, bioma: bioma ?? 'segun el seed', partidas: planas.length, turnos: TURNOS,
     porBot: Object.fromEntries(bots.map((id) => [id, resumenBot(id)])),
     liderT10: lideres('lider10'), liderT20: lideres('lider20'), cambiosDeLider: media(entreActivos.map((p) => p.cambios)),
+    remontadasT10: [{ min: 1, max: 5 }, { min: 5, max: 10 }, { min: 10, max: null }].map(({ min, max }) => {
+      const ps = entreActivos.filter((p) => p.lider10 !== null && p.ventaja10 > min && (max === null || p.ventaja10 <= max));
+      const semillas = [...new Set(ps.map((p) => p.seed))];
+      const tasas = semillas.map((seed) => { const xs = ps.filter((p) => p.seed === seed); return xs.filter((p) => p.ganador !== p.lider10).length / xs.length; });
+      return { minExclusivo: min, maxInclusivo: max, partidas: ps.length, remontadas: ps.filter((p) => p.ganador !== p.lider10).length, ic: ic95(tasas) };
+    }),
     asiento0: { partidas: entreActivos.length, gana: asiento0 },
     empatesAntesDelDesempate: planas.filter((p) => p.desempate !== null).length / Math.max(1, planas.length),
     espejos: espejos ? (() => { const g0 = espejoPartidas.filter((p) => p.ganador === 0).length / espejoPartidas.length; return { partidas: espejoPartidas.length, asiento0: g0, mitad: 1.96 * Math.sqrt(0.25 / espejoPartidas.length), porSorteo: espejoPartidas.filter((p) => p.desempate === 'sorteo').length / espejoPartidas.length }; })() : null,

@@ -25,7 +25,7 @@ test('jugarPartida: una partida entre dos bots en un mundo, determinista y con l
 });
 
 test('la medicion rapida (8 mundos) cumple las compuertas de la capa 1 de la spec 9.3', () => {
-  const R = medir({ mundos: 8, espejos: true, invariantes: true });
+  const R = medir({ mundos: 8, espejos: true, invariantes: true, sin: ['crisis'] });
   assert.equal(R.partidas, 8 * (3 * 2 + 3 * 2), 'por mundo: 3 parejas x 2 asientos y 3 bots x 2 asientos contra el pasivo');
   assert.deepEqual(Object.keys(R.porBot), BOTS_ACTIVOS);
   for (const id of BOTS_ACTIVOS) {

@@ -10,17 +10,25 @@ import { medir, BOTS_ACTIVOS } from '../src/juegos/civilizaciones/medicion.js';
 import { INDICE, COSTO_TECNOLOGIA } from '../src/juegos/civilizaciones/constantes.js';
 import civilizaciones from '../src/juegos/civilizaciones.js';
 import { BIOMAS } from '../src/mapa.js';
+import { medirCrisis } from '../src/juegos/civilizaciones/medicion-crisis.js';
 
 const arg = (nombre, defecto) => { const a = process.argv.find((x) => x.startsWith(`--${nombre}=`)); return a ? a.slice(nombre.length + 3) : defecto; };
 const bandera = (nombre) => process.argv.includes(`--${nombre}`);
 const bioma = arg('bioma', undefined);
 if (bioma !== undefined && !BIOMAS.includes(bioma)) { console.error(`bioma desconocido: ${bioma}. Biomas: ${BIOMAS.join(', ')}`); process.exit(2); }
 const bots = arg('bots', BOTS_ACTIVOS.join(',')).split(',').filter(Boolean);
+const sin = arg('sin', '').split(',').filter(Boolean);
+if (sin.some((capa) => capa !== 'crisis')) { console.error('--sin solo admite crisis en esta version'); process.exit(2); }
 for (const id of bots) if (!civilizaciones.bots[id] || id === 'pasivo' || id === 'azar') { console.error(`bot no valido: ${id}. Activos: ${BOTS_ACTIVOS.join(', ')}`); process.exit(2); }
 if (arg('indice', null) !== null) { const [c, p, e] = arg('indice').split(',').map(Number); INDICE.cultura.referencia = c; INDICE.poblacion.referencia = p; INDICE.economia.referencia = e; }
 if (arg('costos', null) !== null) { const cs = arg('costos').split(',').map(Number); if (cs.length !== 6 || cs.some((x) => !(x > 0))) { console.error('--costos requiere 6 numeros positivos'); process.exit(2); } cs.forEach((x, i) => { COSTO_TECNOLOGIA[i] = x; }); }
 
-const R = medir({ mundos: Number(arg('mundos', 200)), semilla: Number(arg('semilla', 1)), bots, bioma, espejos: bandera('espejos'), invariantes: bandera('invariantes') });
+if (bandera('parear-invasiones')) {
+  if (sin.length || bioma !== undefined) { console.error('--parear-invasiones usa todos los biomas y requiere crisis activas'); process.exit(2); }
+  console.log(JSON.stringify(medirCrisis({ mundos: Number(arg('mundos', 200)), semilla: Number(arg('semilla', 1)), bots }), null, 1));
+  process.exit(0);
+}
+const R = medir({ mundos: Number(arg('mundos', 200)), semilla: Number(arg('semilla', 1)), bots, bioma, sin, espejos: bandera('espejos'), invariantes: bandera('invariantes') });
 if (bandera('json')) { console.log(JSON.stringify(R, null, 1)); process.exit(0); }
 
 const pc = (x) => (x === null || x === undefined ? '  -  ' : `${(100 * x).toFixed(1)}%`.padStart(6));

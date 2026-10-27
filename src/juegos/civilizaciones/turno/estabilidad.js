@@ -17,7 +17,7 @@ export function perderRegion(civ) {
 
 export function resolverEstabilidad(E, civ, t, rc) {
   civ.estabilidad = estabilidadDe(civ, t);
-  if (civ.estabilidad === 0) {
+  if (E.capas?.crisis !== false && civ.estabilidad === 0) {
     const genteAntes = civ.poblacion, regiones = [];
     civ.poblacion = Math.max(1, civ.poblacion - Math.ceil(civ.poblacion * ESTABILIDAD.colapsoGente));
     for (let i = 0; i < ESTABILIDAD.colapsoRegiones; i++) {
@@ -27,7 +27,7 @@ export function resolverEstabilidad(E, civ, t, rc) {
     civ.colapsos++;
     civ.estabilidad = ESTABILIDAD.colapsoTras;
     rc.eventos.push({ tipo: 'colapso', s: civ.s, regiones, gentePerdida: genteAntes - civ.poblacion });
-  } else if (civ.estabilidad < ESTABILIDAD.critica && rngDe(E.seedMundo, t, 'secesion')() < ESTABILIDAD.probSecesion) {
+  } else if (E.capas?.crisis !== false && civ.estabilidad < ESTABILIDAD.critica && rngDe(E.seedMundo, t, 'secesion')() < ESTABILIDAD.probSecesion) {
     const region = perderRegion(civ);
     if (region !== null) rc.eventos.push({ tipo: 'secesion', s: civ.s, region });
   }

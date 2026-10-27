@@ -12,10 +12,10 @@ test('esta registrado y cumple el contrato de un juego: seis funciones, 2 jugado
   assert.equal(civilizaciones.categoria, 'Desarrollo y civilización');
   for (const f of ['crear', 'terminado', 'vista', 'normalizar', 'aplicar', 'resultado']) assert.equal(typeof civilizaciones[f], 'function', f);
   assert.deepEqual([civilizaciones.jugadores, civilizaciones.minJugadores, civilizaciones.maxJugadores, civilizaciones.rondas], [2, 2, 2, 30]);
-  assert.equal(civilizaciones.versionReglas, 'civilizaciones-1.2.2');
+  assert.equal(civilizaciones.versionReglas, 'civilizaciones-1.3.0');
   assert.equal(typeof civilizaciones.reglas, 'string');
   assert.doesNotThrow(() => JSON.parse(civilizaciones.formatoRespuesta));
-  assert.deepEqual(Object.keys(civilizaciones.bots).sort(), ['azar', 'cientifico', 'equilibrado', 'expansionista', 'pasivo']);
+  assert.deepEqual(Object.keys(civilizaciones.bots).sort(), ['adaptativa', 'azar', 'cientifico', 'equilibrado', 'expansionista', 'pasivo', 'voraz']);
 });
 
 test('C15: declara el corte duro de 100 llamadas: la arena reserva los dos asientos antes de cada fase y los agentes no reintentan', () => {

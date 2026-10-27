@@ -5,25 +5,25 @@
 import { normalizarReparto, modificadores } from '../economia.js';
 import { investigar } from '../tecnologia.js';
 import { construir, colonizar } from '../edificios.js';
+import { reclutar } from './invasion.js';
 
 const ORDEN_DE_FASE = ['asignar', 'colonizar', 'construir', 'reclutar', 'invertir', 'investigar', 'regalar', 'ofrecer', 'aceptar'];
 
 // Ordenes que existen en el parser pero cuyo motor llega en una capa posterior (spec 12): se descartan con ese motivo en vez de fingir que se aplicaron.
-const POR_CAPA = { reclutar: 2, invertir: 3, regalar: 4, ofrecer: 4, aceptar: 4 };
+const POR_CAPA = { invertir: 3, regalar: 4, ofrecer: 4, aceptar: 4 };
 
 export function ejecutarOrdenes(E, civ, jugada, rc, t) {
-  const ordenes = jugada.ordenes.map((o, i) => ({ o, i })).sort((a, b) => ORDEN_DE_FASE.indexOf(a.o.tipo) - ORDEN_DE_FASE.indexOf(b.o.tipo) || a.i - b.i).map((x) => x.o);
-  let colonizadas = 0;
-  const m = modificadores(civ, t);
+  const ordenes = jugada.ordenes.filter((o) => o.tipo !== 'responder' && o.tipo !== 'dilema').map((o, i) => ({ o, i })).sort((a, b) => ORDEN_DE_FASE.indexOf(a.o.tipo) - ORDEN_DE_FASE.indexOf(b.o.tipo) || a.i - b.i).map((x) => x.o);
+  let colonizadas = 0, reclutados = 0;
   for (const o of ordenes) {
+    const m = modificadores(civ, t); // el descuento de Genio se consume al construir
     let motivo = null;
     switch (o.tipo) {
       case 'asignar': civ.reparto = normalizarReparto(civ.reparto, o.reparto); break;
       case 'colonizar': motivo = colonizar(civ, E.mundo, o.region, m, colonizadas); if (!motivo) colonizadas++; break;
       case 'construir': motivo = construir(civ, o.region, o.edificio, t, m); break;
       case 'investigar': motivo = investigar(civ, o.tec, m.proyectos); break;
-      case 'dilema': motivo = 'no hay un dilema pendiente'; break;
-      case 'responder': motivo = 'no hay un evento ni una invasion a los que responder'; break;
+      case 'reclutar': motivo = reclutar(civ, o.n, m, reclutados); if (!motivo) reclutados += o.n; break;
       default: motivo = POR_CAPA[o.tipo] ? `la orden ${o.tipo} todavia no esta disponible (capa ${POR_CAPA[o.tipo]})` : 'orden desconocida';
     }
     rc.ordenes.push({ texto: o.texto, tipo: o.tipo, estado: motivo ? 'descartada' : 'aplicada', ...(motivo ? { motivo } : {}) });

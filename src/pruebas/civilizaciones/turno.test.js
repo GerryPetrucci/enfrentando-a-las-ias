@@ -57,13 +57,14 @@ test('las ordenes se resuelven en el orden de la fase 3 (asignar, colonizar, con
 
 test('cada orden se aplica o se descarta CON MOTIVO y el resto se aplica; las leidas cuentan para la obediencia', () => {
   const E = fundado();
+  E.calendario = []; // aisla esta prueba de los presagios generados
   const r = turno(E, [{ ordenes: ['construir R99 granero', `colonizar ${nombreRegion(E.civs[0].regiones[0])}`, 'investigar riego', 'reclutar 3', 'dilema 1', 'responder 2', 'hola', 'investigar cultivo'] }, {}]);
   const por = Object.fromEntries(r.civs[0].ordenes.map((o) => [o.tipo + (o.motivo ? '!' : ''), o.motivo ?? o.estado]));
   assert.equal(r.civs[0].ordenes.filter((o) => o.estado === 'aplicada').length, 1, 'solo investigar cultivo');
   assert.match(por['investigar!'], /era 2/);
   assert.match(por['dilema!'], /no hay un dilema pendiente/);
   assert.match(por['responder!'], /no hay un evento/);
-  assert.match(por['reclutar!'], /todavia no esta disponible \(capa 2\)/);
+  assert.match(por['reclutar!'], /no alcanzan Comida o Hierro/);
   assert.equal(r.civs[0].descartadas.length, 2, 'R99 no existe y "hola" no es una orden');
   const st = E.civs[0].stats;
   assert.deepEqual([st.validas, st.total, st.descartadas], [1, 8, 7]);

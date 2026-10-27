@@ -2,7 +2,7 @@
 // Todo son funciones de la civilizacion y del turno: ninguna cifra se escribe aqui, vienen de constantes.js.
 
 import {
-  RECURSOS, OFICIOS, PRODUCE_OFICIO, ESPACIO, ESTABILIDAD, HAMBRE, TEC, EDIFICIO, RASGO, MARAVILLA, DILEMAS, ESPIRITU_RAMA,
+  RECURSOS, OFICIOS, PRODUCE_OFICIO, ESPACIO, ESTABILIDAD, HAMBRE, TEC, EDIFICIO, RASGO, MARAVILLA, DILEMAS, ESPIRITU_RAMA, CRISIS,
 } from './constantes.js';
 import { nuevosModificadores, acumular } from './efectos.js';
 
@@ -10,6 +10,7 @@ import { nuevosModificadores, acumular } from './efectos.js';
 // tecnologias, Maravillas ya activas, dilemas elegidos y modificadores temporales vigentes.
 export function modificadores(civ, t) {
   const m = nuevosModificadores();
+  if (civ.descuentoIngeniero) m.edificiosCosto += CRISIS.genio.descuento;
   for (const id of civ.rasgos) acumular(m, RASGO[id].efectos);
   for (const tipo of new Set(Object.values(civ.edificios).filter((b) => b.desde <= t).map((b) => b.tipo))) acumular(m, EDIFICIO[tipo].efectos);
   for (const id of civ.tecnologias) acumular(m, TEC[id].efectos);

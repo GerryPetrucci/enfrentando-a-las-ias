@@ -29,6 +29,7 @@ export function construir(civ, region, tipo, t, m) {
   const costo = costoEdificio(tipo, m);
   if (!alcanza(civ, costo)) return 'no alcanzan los recursos';
   pagar(civ, costo);
+  civ.descuentoIngeniero = false;
   civ.edificios[region] = { tipo, desde: t + 1 };               // el bono rige desde el turno siguiente
   if (!civ.construidos.includes(tipo)) civ.construidos.push(tipo);
   return null;

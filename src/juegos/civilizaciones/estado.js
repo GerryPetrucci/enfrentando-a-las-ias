@@ -6,6 +6,7 @@ import {
   JUGADORES, ALMACEN_INICIAL, POBLACION_INICIAL, REPARTO_INICIAL, NOMBRE_FALLBACK, TEC, EDIFICIO, ERAS, TECNOLOGIAS_PARA_ERA, TECNOLOGIAS, RECURSOS_ALMACEN, INDICE_MAXIMO,
 } from './constantes.js';
 import { indiceDe } from './indice.js';
+import { calendarioEventos } from './avisos.js';
 
 export function crearCivilizacion(s) {
   return {
@@ -15,7 +16,8 @@ export function crearCivilizacion(s) {
     reservaCiencia: 0, cultura: 0, culturaAcumulada: 0, produccionTotal: 0, produccion: null,
     tecnologias: [], tecnologiasCierre: [], proyectos: [], era: 1, dilemas: {}, dilemaPendiente: null,
     estabilidad: 50, sumaEstabilidad: 0, cierres: 0, hambre: false, hambres: 0, colapsos: 0,
-    guardias: 0, temporales: [], maravillas: [],
+    guardias: 0, temporales: [], maravillas: [], descuentoIngeniero: false,
+    respuestasEventos: {}, respuestasInvasiones: {},
     nota: '', mensaje: '',
     stats: { validas: 0, total: 0, invalidas: 0, descartadas: 0, fundacionValida: null },
   };
@@ -23,12 +25,12 @@ export function crearCivilizacion(s) {
 
 // `mapa`: un mapa ya creado (las pruebas pasan uno con copia propia); sin el sale del seed y de su bioma. El seed del mundo se consume SIEMPRE del rng de la partida
 // y de el salen los gemelos: el calendario y los dados no dependen de lo que hagan las IAs.
-export function crearEstado(rng, { jugadores = JUGADORES, mapa = null, bioma } = {}) {
+export function crearEstado(rng, { jugadores = JUGADORES, mapa = null, bioma, sin = [] } = {}) {
   if (jugadores !== JUGADORES) throw new Error(`La Carrera de civilizaciones es de ${JUGADORES} civilizaciones (se pidieron ${jugadores}).`);
   const seedMundo = Math.floor(rng() * 4294967296) >>> 0;
   const mundo = crearMundo(seedMundo, { mapa, bioma });
   return {
-    turno: 0, seedMundo, mundo,
+    turno: 0, seedMundo, mundo, calendario: calendarioEventos(seedMundo), capas: { crisis: !sin.includes('crisis') },
     civs: Array.from({ length: JUGADORES }, (_, s) => crearCivilizacion(s)),
     ganador: null, desempate: null, indices: [],                        // indices: el Indice publicado de cada civilizacion en los turnos 10, 20 y 30
   };
@@ -62,6 +64,8 @@ export function comprobarInvariantes(E) {
     const p = `civ ${c.s}: `;
     if (c.fundada && !(c.poblacion >= 1)) mal.push(p + `poblacion ${c.poblacion} < 1`);
     if (!Number.isInteger(c.poblacion)) mal.push(p + 'poblacion no entera');
+    if (!Number.isInteger(c.guardias) || c.guardias < 0) mal.push(p + `Guardias invalidos: ${c.guardias}`);
+    if (!Number.isInteger(c.estabilidad) || c.estabilidad < 0 || c.estabilidad > 100) mal.push(p + `Estabilidad invalida: ${c.estabilidad}`);
     for (const r of RECURSOS_ALMACEN) if (!Number.isFinite(c.stock[r]) || c.stock[r] < 0) mal.push(p + `${r} = ${c.stock[r]}`);
     if (!Number.isFinite(c.reservaCiencia) || c.reservaCiencia < 0) mal.push(p + `reservaCiencia = ${c.reservaCiencia}`);
     if (c.reparto.length !== 6 || c.reparto.reduce((a, b) => a + b, 0) !== 100 || c.reparto.some((x) => x < 0 || x % 10 !== 0)) mal.push(p + `reparto ${JSON.stringify(c.reparto)}`);

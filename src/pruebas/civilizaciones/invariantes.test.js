@@ -39,6 +39,9 @@ test('los invariantes detectan lo que deben: poblacion 0, recurso negativo, repa
   assert.deepEqual(comprobarInvariantes(E), []);
   const rompe = (f) => { const x = fundado(); f(x.civs[0], x); return comprobarInvariantes(x).length; };
   assert.ok(rompe((c) => { c.poblacion = 0; }) > 0);
+  assert.ok(rompe((c) => { c.guardias = -1; }) > 0);
+  assert.ok(rompe((c) => { c.guardias = 1.5; }) > 0);
+  assert.ok(rompe((c) => { c.estabilidad = 101; }) > 0);
   assert.ok(rompe((c) => { c.stock.Oro = -1; }) > 0);
   assert.ok(rompe((c) => { c.reparto = [50, 50, 10, 0, 0, 0]; }) > 0);
   assert.ok(rompe((c) => { c.reparto = [45, 55, 0, 0, 0, 0]; }) > 0);

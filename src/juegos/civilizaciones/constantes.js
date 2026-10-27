@@ -167,6 +167,21 @@ export const EVENTOS = [
 ];
 export const PESTE_DESDE_TURNO = 9;
 
+// Parametros de los eventos (spec 3.10). Los porcentajes de perdida se
+// redondean hacia arriba; duraciones incluyen el turno del evento.
+export const CRISIS = {
+  sequia: { madera: 6, golpe: -0.40, conPozos: -0.20, turnos: 2, estabilidad: -5, migracion: 0.10 },
+  peste: { oro: 6, cuarentena: 0.08, hospitalCuarentena: 0.04, plegarias: 0.15, hospitalPlegarias: 0.07, cultura: 10, estabilidad: -10 },
+  inundacion: { madera: 4, comida: 0.50, turnos: 3 },
+  genio: { ciencia: 15, cultura: 15, descuento: -0.30 },
+  yacimiento: { hierro: 8, roca: 4, oro: 12 },
+  revuelta: { guardias: 3, oro: 8, estabilidad: 5 },
+  mercader: { oroComprar: 8, maderaComprar: 8, rocaComprar: 4, maderaVender: 8, oroVender: 10 },
+  incendio: { oro: 4, perdida: 0.30, apagado: 0.10 },
+  cometa: { probBueno: 0.5, cultura: 10, estabilidad: 5 },
+  exodo: { gente: 3, umbral: 60, estabilidad: -3 },
+};
+
 // ---- Maravillas (3.12): 6, unicas en el mundo ----
 const M = (id, nombre, tec, costo, ...efectos) => ({ id, nombre, tec, costo, efectos });
 export const MARAVILLAS = [

@@ -4,7 +4,7 @@
 //
 //   0 aviso   1 fundacion   2 respuestas, eventos y dilemas   3 ordenes economicas   4 produccion   5 investigacion y difusion   6 crecimiento
 //   7 invasion   8 mantenimiento   9 Maravillas   10 cierre (Estabilidad, secesion y colapso, Indice, registro)
-// Capa 1 (nucleo): fases 1, 3 (asignar, colonizar, construir, investigar), 4, 5, 6 y 10. Las demas llegan con sus capas (las ordenes de esas fases se descartan con su motivo).
+// Capas 1 y 2 activas; invertir y las transferencias llegan con las capas 3 y 4.
 
 import { RECURSOS_ALMACEN, TURNOS, INDICE, HAMBRE } from '../constantes.js';
 import { fundar } from './fundacion.js';
@@ -15,6 +15,9 @@ import { resolverInvestigacion, actualizarEra } from '../tecnologia.js';
 import { indiceDe } from '../indice.js';
 import { instantanea } from '../estado.js';
 import { rngDe } from '../rng.js';
+import { avisosDe } from '../avisos.js';
+import { resolverRespuestas } from './respuestas.js';
+import { resolverInvasion } from './invasion.js';
 
 const jugadaVacia = () => ({ invalida: true, motivo: 'sin respuesta', fundacion: null, ordenes: [], descartadas: [], mensaje: '', nota: '', razon: '' });
 const sumaProducida = (prod) => RECURSOS_ALMACEN.reduce((a, r) => a + prod[r], 0);
@@ -57,8 +60,6 @@ function crecer(civ, t, rc) {
   }
 }
 
-// Fase 10: cierre. La Estabilidad se recalcula (no se acumula) y es la que usa la produccion del turno siguiente; las tecnologias conocidas pasan a ser la instantanea de difusion.
-
 // Al terminar el turno 30 gana el mayor Indice (a la precision publicada, un decimal); si empatan, mas tecnologias y, despues, un sorteo con el seed del mundo.
 function decidirGanador(E) {
   const [a, b] = E.civs.map((c) => indiceDe(c).publicado);
@@ -76,13 +77,21 @@ export function aplicarTurno(E, jugadas) {
   const rc = { turno: t, civs: E.civs.map((c) => ({ s: c.s, ordenes: [], descartadas: js[c.s].descartadas, invalida: js[c.s].invalida, motivo: js[c.s].motivo ?? null })), eventos: [] };
 
   if (t === 1) E.civs.forEach((c) => { rc.civs[c.s].fundacion = fundar(E, c, js[c.s].fundacion); rc.eventos.push({ tipo: 'fundacion', s: c.s }); });
-  // Fase 2 (capa 2): respuestas, eventos y dilemas.
+  E.civs.forEach((c) => resolverRespuestas(E, c, js[c.s], t, rc));
   E.civs.forEach((c) => { ejecutarOrdenes(E, c, js[c.s], rc.civs[c.s], t); contarOrdenes(c, js[c.s], rc.civs[c.s]); c.nota = js[c.s].nota; c.mensaje = js[c.s].mensaje; });
   E.civs.forEach((c) => producir(E, c, t, rc));
   investigarFase(E, rc);
   E.civs.forEach((c) => crecer(c, t, rc));
-  // Fases 7 (invasion), 8 (mantenimiento) y 9 (Maravillas): capas 2 y 3.
+  const invasion = avisosDe(E, t).invasion;
+  if (invasion?.turno === t) E.civs.forEach((c) => {
+    const n = c.respuestasInvasiones[t];
+    resolverInvasion(E, c, invasion, n ?? 1, n !== undefined, rc);
+    delete c.respuestasInvasiones[t];
+  });
+  // Fase 9 (Maravillas): capa 3. Los temporales vencen tras el cierre para
+  // que su Estabilidad tambien rija en el ultimo turno inclusivo.
   E.civs.forEach((c) => resolverEstabilidad(E, c, t, rc));
+  E.civs.forEach((c) => { c.temporales = c.temporales.filter((x) => x.hasta > t); });
 
   E.turno = t;
   if (INDICE.publicado.includes(t)) {
