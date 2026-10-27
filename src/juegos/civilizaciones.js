@@ -27,7 +27,7 @@ export default {
   // 60 decisiones por partida (una llamada por civilizacion por turno): el corte duro del proyecto es 100 y los agentes no reintentan por dentro, asi que nunca se vuelven 180.
   llamadasMax: 100,
   limiteLlamadasDuro: 100,
-  versionReglas: 'civilizaciones-1.3.0', // Capa 2: dilemas, eventos e invasiones; contrato de texto sin cambios.
+  versionReglas: 'civilizaciones-1.4.0', // Capa 3: carrera de Maravillas; contrato de texto sin cambios.
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 

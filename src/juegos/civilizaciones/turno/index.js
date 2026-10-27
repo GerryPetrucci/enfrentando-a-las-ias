@@ -18,6 +18,7 @@ import { rngDe } from '../rng.js';
 import { avisosDe } from '../avisos.js';
 import { resolverRespuestas } from './respuestas.js';
 import { resolverInvasion } from './invasion.js';
+import { resolverMaravillas } from './maravillas.js';
 
 const jugadaVacia = () => ({ invalida: true, motivo: 'sin respuesta', fundacion: null, ordenes: [], descartadas: [], mensaje: '', nota: '', razon: '' });
 const sumaProducida = (prod) => RECURSOS_ALMACEN.reduce((a, r) => a + prod[r], 0);
@@ -88,7 +89,8 @@ export function aplicarTurno(E, jugadas) {
     resolverInvasion(E, c, invasion, n ?? 1, n !== undefined, rc);
     delete c.respuestasInvasiones[t];
   });
-  // Fase 9 (Maravillas): capa 3. Los temporales vencen tras el cierre para
+  resolverMaravillas(E, t, rc);
+  // Los temporales vencen tras el cierre para
   // que su Estabilidad tambien rija en el ultimo turno inclusivo.
   E.civs.forEach((c) => resolverEstabilidad(E, c, t, rc));
   E.civs.forEach((c) => { c.temporales = c.temporales.filter((x) => x.hasta > t); });

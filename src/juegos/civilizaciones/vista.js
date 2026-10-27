@@ -5,6 +5,8 @@ import { TURNOS, RECURSOS_ALMACEN, OFICIOS, TEC, EDIFICIOS, DILEMAS, EVENTO, TRI
 import { avisosDe, opcionesEvento } from './avisos.js';
 import { defensaDe } from './turno/invasion.js';
 import { describir } from './efectos.js';
+import { avanceMaravilla, construida } from './turno/maravillas.js';
+import { MARAVILLAS } from './constantes.js';
 import { nombreRegion } from './mundo.js';
 import { indiceDe } from './indice.js';
 import { disponibles } from './tecnologia.js';
@@ -23,6 +25,12 @@ export function vistaTexto(E, i) {
     return lineas.join('\n');
   }
   const m = modificadores(c, t);
+  if (E.capas?.carrera !== false) {
+    const estado = MARAVILLAS.map((w) => `${w.id} ${construida(E, w.id) ? `construida por ${E.civs.find((q) => q.maravillas.some((x) => x.id === w.id)).nombre}` : `tu ${avanceMaravilla(c, w.id)}% / rival ${avanceMaravilla(rival, w.id)}%`}`);
+    lineas.push(`Maravillas: ${estado.join('; ')}`);
+    const posibles = MARAVILLAS.filter((w) => c.tecnologias.includes(w.tec) && !construida(E, w.id));
+    if (posibles.length) lineas.push(`Puedes invertir: ${posibles.map((w) => `${w.id} (${costoTexto(w.costo)}; propio ${costoTexto(c.proyectosMaravillas[w.id]?.invertido ?? {}) || 'sin inversion'})`).join('; ')}`);
+  }
   const ind = indiceDe(c).publicado, indRival = indiceDe(rival).publicado;
   lineas.push(`Turno ${t} de ${TURNOS}. Eres ${c.nombre}. Era ${c.era}. Indice: tu ${ind} / rival ${indRival}.`);
   lineas.push(`Almacen: ${RECURSOS_ALMACEN.map((r) => `${r} ${c.stock[r]}`).join(' ')} | Poblacion ${c.poblacion} | Ciencia (reserva ${c.reservaCiencia}) | Cultura ${c.culturaAcumulada} | Estabilidad ${c.estabilidad}`);

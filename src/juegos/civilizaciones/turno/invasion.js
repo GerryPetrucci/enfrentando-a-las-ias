@@ -24,8 +24,8 @@ export function resolverInvasion(E, civ, invasion, n, explicita, rc) {
   } else if (defensa >= fuerza) {
     resultado = 'repelida'; civ.culturaAcumulada += INVASION.repelida.cultura;
   } else {
-    civ.stock.Comida -= Math.ceil(civ.stock.Comida * INVASION.saqueo.comida);
-    civ.stock.Oro -= Math.ceil(civ.stock.Oro * INVASION.saqueo.oro);
+    civ.stock.Comida = Math.max(0, civ.stock.Comida - Math.ceil(civ.stock.Comida * INVASION.saqueo.comida));
+    civ.stock.Oro = Math.max(0, civ.stock.Oro - Math.ceil(civ.stock.Oro * INVASION.saqueo.oro));
     resultado = 'saqueo';
     if (defensa < fuerza / 2) {
       resultado = 'derrota'; region = perderRegion(civ);

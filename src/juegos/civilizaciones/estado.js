@@ -3,7 +3,7 @@
 
 import { crearMundo } from './mundo.js';
 import {
-  JUGADORES, ALMACEN_INICIAL, POBLACION_INICIAL, REPARTO_INICIAL, NOMBRE_FALLBACK, TEC, EDIFICIO, ERAS, TECNOLOGIAS_PARA_ERA, TECNOLOGIAS, RECURSOS_ALMACEN, INDICE_MAXIMO,
+  JUGADORES, ALMACEN_INICIAL, POBLACION_INICIAL, REPARTO_INICIAL, NOMBRE_FALLBACK, TEC, EDIFICIO, ERAS, TECNOLOGIAS_PARA_ERA, TECNOLOGIAS, RECURSOS_ALMACEN, INDICE_MAXIMO, MARAVILLA,
 } from './constantes.js';
 import { indiceDe } from './indice.js';
 import { calendarioEventos } from './avisos.js';
@@ -16,7 +16,7 @@ export function crearCivilizacion(s) {
     reservaCiencia: 0, cultura: 0, culturaAcumulada: 0, produccionTotal: 0, produccion: null,
     tecnologias: [], tecnologiasCierre: [], proyectos: [], era: 1, dilemas: {}, dilemaPendiente: null,
     estabilidad: 50, sumaEstabilidad: 0, cierres: 0, hambre: false, hambres: 0, colapsos: 0,
-    guardias: 0, temporales: [], maravillas: [], descuentoIngeniero: false,
+    guardias: 0, temporales: [], maravillas: [], proyectosMaravillas: {}, descuentoIngeniero: false,
     respuestasEventos: {}, respuestasInvasiones: {},
     nota: '', mensaje: '',
     stats: { validas: 0, total: 0, invalidas: 0, descartadas: 0, fundacionValida: null },
@@ -30,7 +30,7 @@ export function crearEstado(rng, { jugadores = JUGADORES, mapa = null, bioma, si
   const seedMundo = Math.floor(rng() * 4294967296) >>> 0;
   const mundo = crearMundo(seedMundo, { mapa, bioma });
   return {
-    turno: 0, seedMundo, mundo, calendario: calendarioEventos(seedMundo), capas: { crisis: !sin.includes('crisis') },
+    turno: 0, seedMundo, mundo, calendario: calendarioEventos(seedMundo), capas: { crisis: !sin.includes('crisis'), carrera: !sin.includes('carrera') },
     civs: Array.from({ length: JUGADORES }, (_, s) => crearCivilizacion(s)),
     ganador: null, desempate: null, indices: [],                        // indices: el Indice publicado de cada civilizacion en los turnos 10, 20 y 30
   };
@@ -52,6 +52,7 @@ export function instantanea(E) {
         cultura: c.culturaAcumulada, tecnologias: [...c.tecnologias], proyectos: c.proyectos.map((p) => ({ ...p })), era: c.era,
         regiones: [...c.regiones], edificios: Object.fromEntries(Object.entries(c.edificios).map(([r, b]) => [r, b.tipo])),
         estabilidad: c.estabilidad, guardias: c.guardias, maravillas: c.maravillas.map((w) => w.id), indice: { ...ind.pilares, total: ind.total, publicado: ind.publicado },
+        proyectosMaravillas: Object.fromEntries(Object.entries(c.proyectosMaravillas).map(([id, p]) => [id, { inicio: p.inicio, invertido: { ...p.invertido } }])),
       };
     }),
   };
@@ -66,6 +67,10 @@ export function comprobarInvariantes(E) {
     if (!Number.isInteger(c.poblacion)) mal.push(p + 'poblacion no entera');
     if (!Number.isInteger(c.guardias) || c.guardias < 0) mal.push(p + `Guardias invalidos: ${c.guardias}`);
     if (!Number.isInteger(c.estabilidad) || c.estabilidad < 0 || c.estabilidad > 100) mal.push(p + `Estabilidad invalida: ${c.estabilidad}`);
+    for (const [id, proyecto] of Object.entries(c.proyectosMaravillas)) {
+      if (!MARAVILLA[id]) { mal.push(p + `proyecto de Maravilla desconocida ${id}`); continue; }
+      for (const [r, n] of Object.entries(proyecto.invertido)) if (!Number.isInteger(n) || n <= 0 || !(n <= (MARAVILLA[id].costo[r] ?? 0))) mal.push(p + `inversion invalida ${id} ${r} ${n}`);
+    }
     for (const r of RECURSOS_ALMACEN) if (!Number.isFinite(c.stock[r]) || c.stock[r] < 0) mal.push(p + `${r} = ${c.stock[r]}`);
     if (!Number.isFinite(c.reservaCiencia) || c.reservaCiencia < 0) mal.push(p + `reservaCiencia = ${c.reservaCiencia}`);
     if (c.reparto.length !== 6 || c.reparto.reduce((a, b) => a + b, 0) !== 100 || c.reparto.some((x) => x < 0 || x % 10 !== 0)) mal.push(p + `reparto ${JSON.stringify(c.reparto)}`);

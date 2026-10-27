@@ -10,6 +10,8 @@ import { modificadores } from './civilizaciones/economia.js';
 import { costoColonizar, costoEdificio } from './civilizaciones/edificios.js';
 import { disponibles } from './civilizaciones/tecnologia.js';
 import { tieneTipo } from './civilizaciones/estado.js';
+import { MARAVILLAS } from './civilizaciones/constantes.js';
+import { construida } from './civilizaciones/turno/maravillas.js';
 
 const COMUNES = ['granero', 'templo', 'biblioteca', 'acueducto', 'academia', 'mercado', 'aserradero', 'cantera', 'universidad', 'anfiteatro', 'hospital', 'imprenta', 'laboratorio', 'museo', 'parlamento'];
 
@@ -18,6 +20,7 @@ export const PERFILES = {
   expansionista: { reparto: [40, 20, 10, 10, 10, 10], ramas: ['T', 'C', 'E', 'S', 'M', 'D'], edificios: ['granero', 'acueducto', 'templo', 'mercado', 'hospital'], hasta: 12, rasgos: ['agricultores', 'pioneros'] },
   equilibrado: { reparto: [30, 10, 10, 20, 20, 10], ramas: ['S', 'E', 'T', 'C', 'M', 'D'], edificios: COMUNES, hasta: 8, minEstabilidad: 60, rotar: true, rasgos: ['eruditos', 'constructores'] },
   pasivo: { pasivo: true, rasgos: ['agricultores', 'constructores'] },
+  maravillero: { reparto: [20, 20, 30, 20, 10, 0], ramas: ['E', 'S', 'C', 'M', 'T', 'D'], edificios: ['templo'], hasta: 7, rasgos: ['constructores', 'devotos'], carrera: true },
 };
 // Sondas (C10): no cuentan como nuevos arquetipos del juego.
 PERFILES.voraz = { ...PERFILES.cientifico, reparto: [20, 10, 10, 0, 60, 0], hasta: 8 };
@@ -31,6 +34,7 @@ export const INFO_BOTS = {
   azar: { nombre: 'Al azar', color: '#B8544A' },
   voraz: { nombre: 'Sonda voraz', color: '#5A8FB8' },
   adaptativa: { nombre: 'Sonda adaptativa', color: '#C9A24B' },
+  maravillero: { nombre: 'Maravillero', color: '#9C8FB8' },
 };
 
 const base = (extra) => ({ mensaje: '', nota: '', razon: 'bot de control', ...extra });
@@ -124,9 +128,31 @@ export function jugar(E, s, perfil, rng) {
   }
   if (reclutas > 0) o.push(`reclutar ${reclutas}`);
 
+  if (E.capas?.carrera !== false) {
+    const ids = perfil.id === 'cientifico' || perfil.id === 'voraz' ? ['biblioteca mayor', 'observatorio']
+      : perfil.id === 'expansionista' ? ['piramide'] : MARAVILLAS.map((w) => w.id);
+    const candidatas = MARAVILLAS.filter((w) => ids.includes(w.id) && c.tecnologias.includes(w.tec) && !construida(E, w.id))
+      .sort((a, b) => Number(Boolean(c.proyectosMaravillas[b.id])) - Number(Boolean(c.proyectosMaravillas[a.id]))
+        || Object.values(a.costo).reduce((x,n) => x+n,0) - Object.values(b.costo).reduce((x,n) => x+n,0));
+    const w = candidatas.find((w) => {
+      const falta = Object.entries(w.costo).reduce((a,[r,n]) => a + n - (c.proyectosMaravillas[w.id]?.invertido[r] ?? 0),0);
+      const disponible = Object.entries(w.costo).reduce((a,[r,n]) => a + Math.min(stock[r], n - (c.proyectosMaravillas[w.id]?.invertido[r] ?? 0)),0);
+      return disponible > 0 && (!['equilibrado','adaptativa'].includes(perfil.id) || disponible >= falta * 0.6);
+    });
+    if (w) for (const [r,n] of Object.entries(w.costo)) {
+      const cantidad = Math.floor(Math.min(stock[r], n - (c.proyectosMaravillas[w.id]?.invertido[r] ?? 0)));
+      if (cantidad > 0 && o.length < 10) { o.push(`invertir ${w.id} ${r} ${cantidad}`); stock[r] -= cantidad; }
+    }
+  }
+
   // Investigacion: llena los proyectos libres con la tecnologia mas barata de su rama preferida (rotando ramas si `rotar`).
   const enCurso = new Set(c.proyectos.map((p) => p.tec));
-  const orden = (a, b) => (perfil.rotar ? TEC[a].era - TEC[b].era || perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama)
+  const objetivo = (id) => {
+    const k = MARAVILLAS.findIndex((w) => !c.tecnologias.includes(w.tec) && TEC[w.tec].rama === TEC[id].rama && TEC[w.tec].era >= TEC[id].era);
+    return k < 0 ? 100 : k;
+  };
+  const orden = (a, b) => (perfil.carrera ? objetivo(a) - objetivo(b) || TEC[a].era - TEC[b].era
+    : perfil.rotar ? TEC[a].era - TEC[b].era || perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama)
     : perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama) || TEC[a].era - TEC[b].era);
   const quedan = disponibles(c).filter((id) => !enCurso.has(id)).sort(orden);
   for (let libres = m.proyectos - c.proyectos.length; libres > 0 && quedan.length; libres--) o.push(`investigar ${TEC[quedan.shift()].nombre}`);

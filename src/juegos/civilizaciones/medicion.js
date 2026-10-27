@@ -23,10 +23,11 @@ export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin =
   const E = J.crear(crearRng(seed * 7919 + 13), { jugadores: 2, mapa: mapaDe(seed, mundoBioma), sin });
   const rngs = asientos.map((_, i) => crearRng((seed * 31 + i * 977) >>> 0));
   let lider = -1, cambios = 0;
-  const malos = [];
+  const malos = [], carreras = [];
   while (!J.terminado(E)) {
     const jugadas = asientos.map((id, s) => J.normalizar(J.bots[id].fn(E, s, rngs[s]), E));
-    J.aplicar(E, jugadas, null);
+    const registro = J.aplicar(E, jugadas, null);
+    carreras.push(...registro.eventos.filter((e) => e.tipo === 'maravilla'));
     if (invariantes) malos.push(...comprobarInvariantes(E));
     const [a, b] = E.civs.map((c) => indiceDe(c).total), d = a - b;
     if (Math.abs(d) > 1) { const q = d > 0 ? 0 : 1; if (lider !== -1 && q !== lider) cambios++; lider = q; }
@@ -36,6 +37,7 @@ export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin =
   return {
     seed, bioma: mundoBioma, asientos, ganador: E.ganador, desempate: E.desempate, cambios, lider10: lideresEn(10), lider20: lideresEn(20), malos,
     ventaja10: Math.abs(E.indices.find((i) => i.turno === 10).publicado[0] - E.indices.find((i) => i.turno === 10).publicado[1]),
+    carreras, carrerasPendientes: Object.keys(E.civs[0].proyectosMaravillas).filter((id) => E.civs[1].proyectosMaravillas[id]).length,
     civs: E.civs.map((c, s) => ({
       indice: ind[s].total, pilares: ind[s].pilares, tecnologias: c.tecnologias.length, era: c.era, poblacion: c.poblacion, regiones: c.regiones.length, hambres: c.hambres,
       colapsos: c.colapsos, validas: c.stats.validas, total: c.stats.total, edificios: c.construidos.length,
@@ -94,8 +96,16 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
     };
   };
   const asiento0 = entreActivos.filter((p) => p.ganador === 0).length / Math.max(1, entreActivos.length);
+  const carreras = entreActivos.flatMap((p) => p.carreras.map((c) => ({ ...c, seed: p.seed })));
+  const disputadas = carreras.filter((c) => c.disputada), desfasadas = disputadas.filter((c) => !c.simultanea);
+  const primero = (c) => c.ganador === (c.inicios[0] < c.inicios[1] ? 0 : 1);
+  const mundosCarrera = [...new Set(desfasadas.map((c) => c.seed))];
   return {
     mundos, semilla, bots, sin, bioma: bioma ?? 'segun el seed', partidas: planas.length, turnos: TURNOS,
+    carreras: { resueltas: carreras.length, disputadas: disputadas.length, inicioSimultaneo: disputadas.length - desfasadas.length,
+      desfasadas: desfasadas.length, primeroGana: desfasadas.filter(primero).length,
+      icPrimero: ic95(mundosCarrera.map((seed) => { const cs = desfasadas.filter((c) => c.seed === seed); return cs.filter(primero).length / cs.length; })),
+      pendientes: entreActivos.reduce((n, p) => n + p.carrerasPendientes, 0) },
     porBot: Object.fromEntries(bots.map((id) => [id, resumenBot(id)])),
     liderT10: lideres('lider10'), liderT20: lideres('lider20'), cambiosDeLider: media(entreActivos.map((p) => p.cambios)),
     remontadasT10: [{ min: 1, max: 5 }, { min: 5, max: 10 }, { min: 10, max: null }].map(({ min, max }) => {
