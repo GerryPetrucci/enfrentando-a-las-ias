@@ -18,7 +18,7 @@ const bioma = arg('bioma', undefined);
 if (bioma !== undefined && !BIOMAS.includes(bioma)) { console.error(`bioma desconocido: ${bioma}. Biomas: ${BIOMAS.join(', ')}`); process.exit(2); }
 const bots = arg('bots', BOTS_ACTIVOS.join(',')).split(',').filter(Boolean);
 const sin = arg('sin', '').split(',').filter(Boolean);
-if (sin.some((capa) => !['crisis', 'carrera'].includes(capa))) { console.error('--sin solo admite crisis,carrera en esta version'); process.exit(2); }
+if (sin.some((capa) => !['crisis', 'carrera', 'comercio'].includes(capa))) { console.error('--sin solo admite crisis,carrera,comercio'); process.exit(2); }
 for (const id of bots) if (!civilizaciones.bots[id] || id === 'pasivo' || id === 'azar') { console.error(`bot no valido: ${id}. Activos: ${BOTS_ACTIVOS.join(', ')}`); process.exit(2); }
 if (arg('indice', null) !== null) { const [c, p, e] = arg('indice').split(',').map(Number); INDICE.cultura.referencia = c; INDICE.poblacion.referencia = p; INDICE.economia.referencia = e; }
 if (arg('costos', null) !== null) { const cs = arg('costos').split(',').map(Number); if (cs.length !== 6 || cs.some((x) => !(x > 0))) { console.error('--costos requiere 6 numeros positivos'); process.exit(2); } cs.forEach((x, i) => { COSTO_TECNOLOGIA[i] = x; }); }

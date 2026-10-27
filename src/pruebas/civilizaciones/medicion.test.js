@@ -25,10 +25,11 @@ test('jugarPartida: una partida entre dos bots en un mundo, determinista y con l
 });
 
 test('la medicion rapida (8 mundos) cumple las compuertas de la capa 1 de la spec 9.3', () => {
-  const R = medir({ mundos: 8, espejos: true, invariantes: true, sin: ['crisis', 'carrera'] });
+  const botsBase = ['cientifico', 'expansionista', 'equilibrado'];
+  const R = medir({ mundos: 8, bots: botsBase, espejos: true, invariantes: true, sin: ['crisis', 'carrera', 'comercio'] });
   assert.equal(R.partidas, 8 * (3 * 2 + 3 * 2), 'por mundo: 3 parejas x 2 asientos y 3 bots x 2 asientos contra el pasivo');
-  assert.deepEqual(Object.keys(R.porBot), BOTS_ACTIVOS);
-  for (const id of BOTS_ACTIVOS) {
+  assert.deepEqual(Object.keys(R.porBot), botsBase);
+  for (const id of botsBase) {
     const b = R.porBot[id];
     assert.ok(b.tecnologias.media >= 15 && b.tecnologias.media <= 36, `${id}: ${b.tecnologias.media} tecnologias al turno 30`);
     assert.equal(b.contraPasivo.media, 1, `${id} gana al pasivo`);
@@ -49,7 +50,7 @@ test('la herramienta de consola imprime la tabla y --json da el mismo resultado;
   assert.match(salida, /cientifico/);
   const json = JSON.parse(execFileSync('node', ['herramientas/medir-civilizaciones.mjs', '--mundos=2', '--json'], { cwd: RAIZ, encoding: 'utf8' }));
   assert.equal(json.mundos, 2);
-  assert.equal(json.partidas, 24);
+  assert.equal(json.partidas, 2 * (BOTS_ACTIVOS.length * (BOTS_ACTIVOS.length - 1) + BOTS_ACTIVOS.length * 2));
   const mal = spawnSync('node', ['herramientas/medir-civilizaciones.mjs', '--bots=pasivo,cientifico'], { cwd: RAIZ, encoding: 'utf8' });
   assert.equal(mal.status, 2);
   assert.match(mal.stderr, /bot no valido/);

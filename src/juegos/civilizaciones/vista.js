@@ -36,6 +36,10 @@ export function vistaTexto(E, i) {
   lineas.push(`Almacen: ${RECURSOS_ALMACEN.map((r) => `${r} ${c.stock[r]}`).join(' ')} | Poblacion ${c.poblacion} | Ciencia (reserva ${c.reservaCiencia}) | Cultura ${c.culturaAcumulada} | Estabilidad ${c.estabilidad}`);
   lineas.push(`Reparto: ${OFICIOS.map((o, k) => `${o} ${c.reparto[k]}`).join(' ')}`);
   lineas.push(`Guardias ${c.guardias} (comen sin producir). Defensa ${defensaDe(c, t).toFixed(1)}.`);
+  if (E.capas?.comercio !== false) {
+    const ofertas = rival.ofertas.filter((o) => o.vence === t);
+    if (ofertas.length) lineas.push(`Ofertas del rival (caducan hoy): ${ofertas.map((o) => `aceptar ${o.n}: recibes ${o.nDa} ${o.da}, entregas ${o.nPide} ${o.pide}`).join('; ')}`);
+  }
   const { evento, invasion } = avisosDe(E, t);
   if (evento) {
     const e = EVENTO[evento.id];

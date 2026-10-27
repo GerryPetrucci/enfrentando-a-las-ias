@@ -21,6 +21,7 @@ export const PERFILES = {
   equilibrado: { reparto: [30, 10, 10, 20, 20, 10], ramas: ['S', 'E', 'T', 'C', 'M', 'D'], edificios: COMUNES, hasta: 8, minEstabilidad: 60, rotar: true, rasgos: ['eruditos', 'constructores'] },
   pasivo: { pasivo: true, rasgos: ['agricultores', 'constructores'] },
   maravillero: { reparto: [20, 20, 30, 20, 10, 0], ramas: ['E', 'S', 'C', 'M', 'T', 'D'], edificios: ['templo'], hasta: 7, rasgos: ['constructores', 'devotos'], carrera: true },
+  comerciante: { reparto: [30, 10, 10, 30, 10, 10], ramas: ['C', 'S', 'E', 'T', 'M', 'D'], edificios: ['mercado', 'puerto', 'gremio', 'banco', 'templo'], hasta: 9, rasgos: ['comerciantes', 'constructores'] },
 };
 // Sondas (C10): no cuentan como nuevos arquetipos del juego.
 PERFILES.voraz = { ...PERFILES.cientifico, reparto: [20, 10, 10, 0, 60, 0], hasta: 8 };
@@ -35,6 +36,7 @@ export const INFO_BOTS = {
   voraz: { nombre: 'Sonda voraz', color: '#5A8FB8' },
   adaptativa: { nombre: 'Sonda adaptativa', color: '#C9A24B' },
   maravillero: { nombre: 'Maravillero', color: '#9C8FB8' },
+  comerciante: { nombre: 'Comerciante', color: '#6FA86F' },
 };
 
 const base = (extra) => ({ mensaje: '', nota: '', razon: 'bot de control', ...extra });
@@ -82,6 +84,9 @@ export function jugar(E, s, perfil, rng) {
   }
   // Se reserva el tributo antes de presupuestar obras; se paga en fase 7.
   // El equilibrado prepara Guardias si puede cubrir la fuerza completa.
+  // Politica del bot: aparta lo ofrecido ayer hasta su vencimiento. El motor
+  // no lo reserva: un jugador puede gastarlo y la liquidacion detectara el fallo.
+  if (E.capas?.comercio !== false) for (const oferta of c.ofertas.filter((x) => x.vence === t)) stock[oferta.da] = Math.max(0, stock[oferta.da] - oferta.nDa);
   let reclutas = 0;
   if (invasion) {
     const porGuardia = defensaDe({ ...c, guardias: 1 }, t, m);
@@ -130,7 +135,7 @@ export function jugar(E, s, perfil, rng) {
 
   if (E.capas?.carrera !== false) {
     const ids = perfil.id === 'cientifico' || perfil.id === 'voraz' ? ['biblioteca mayor', 'observatorio']
-      : perfil.id === 'expansionista' ? ['piramide'] : MARAVILLAS.map((w) => w.id);
+      : perfil.id === 'expansionista' ? ['piramide'] : perfil.id === 'comerciante' ? ['faro', 'catedral mayor'] : MARAVILLAS.map((w) => w.id);
     const candidatas = MARAVILLAS.filter((w) => ids.includes(w.id) && c.tecnologias.includes(w.tec) && !construida(E, w.id))
       .sort((a, b) => Number(Boolean(c.proyectosMaravillas[b.id])) - Number(Boolean(c.proyectosMaravillas[a.id]))
         || Object.values(a.costo).reduce((x,n) => x+n,0) - Object.values(b.costo).reduce((x,n) => x+n,0));
@@ -156,7 +161,16 @@ export function jugar(E, s, perfil, rng) {
     : perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama) || TEC[a].era - TEC[b].era);
   const quedan = disponibles(c).filter((id) => !enCurso.has(id)).sort(orden);
   for (let libres = m.proyectos - c.proyectos.length; libres > 0 && quedan.length; libres--) o.push(`investigar ${TEC[quedan.shift()].nombre}`);
-  return base({ ordenes: o.slice(0, 12), nota: `Plan: ${perfil.id}.` });
+  let mensaje = '';
+  if (E.capas?.comercio !== false) {
+    const valor = { Comida: 1, Madera: 1, Roca: 1, Hierro: 1.5, Oro: 1.5 };
+    const oferta = E.civs[1 - s].ofertas.find((x) => x.vence === t && stock[x.pide] >= x.nPide && x.nDa * valor[x.da] >= x.nPide * valor[x.pide]);
+    if (oferta && o.length < 12) { o.push(`aceptar ${oferta.n}`); stock[oferta.pide] -= oferta.nPide; }
+    if (perfil.id === 'comerciante' && t % 3 === 0 && stock.Madera >= 6 && o.length < 12) {
+      o.push('ofrecer Madera 6 Oro 4'); mensaje = 'Ofrezco 6 Madera por 4 Oro para el siguiente turno.';
+    }
+  }
+  return base({ ordenes: o.slice(0, 12), nota: `Plan: ${perfil.id}.`, mensaje });
 }
 
 // Al azar: de 1 a 12 ordenes tomadas de la gramatica, algunas con basura. Solo prueba el motor y el parser; no entra a la tabla de balance.
@@ -171,6 +185,9 @@ export function azar(E, s, rng) {
     () => `investigar ${elige(TECNOLOGIAS).nombre}`,
     () => `reclutar ${Math.floor(rng() * 50)}`,
     () => `invertir piramide ${elige(RECURSOS_ALMACEN)} ${1 + Math.floor(rng() * 20)}`,
+    () => `regalar ${elige(RECURSOS_ALMACEN)} ${1 + Math.floor(rng() * 12)}`,
+    () => `ofrecer ${elige(RECURSOS_ALMACEN)} ${1 + Math.floor(rng() * 13)} ${elige(RECURSOS_ALMACEN)} ${1 + Math.floor(rng() * 13)}`,
+    () => `aceptar ${elige(['', '1', '2'])}`,
     () => elige(BASURA),
   ];
   const n = 1 + Math.floor(rng() * 12);

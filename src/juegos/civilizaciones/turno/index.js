@@ -4,7 +4,7 @@
 //
 //   0 aviso   1 fundacion   2 respuestas, eventos y dilemas   3 ordenes economicas   4 produccion   5 investigacion y difusion   6 crecimiento
 //   7 invasion   8 mantenimiento   9 Maravillas   10 cierre (Estabilidad, secesion y colapso, Indice, registro)
-// Capas 1 y 2 activas; invertir y las transferencias llegan con las capas 3 y 4.
+// Capas 1 a 4 activas: nucleo, crisis, Maravillas y comercio.
 
 import { RECURSOS_ALMACEN, TURNOS, INDICE, HAMBRE } from '../constantes.js';
 import { fundar } from './fundacion.js';
@@ -19,6 +19,7 @@ import { avisosDe } from '../avisos.js';
 import { resolverRespuestas } from './respuestas.js';
 import { resolverInvasion } from './invasion.js';
 import { resolverMaravillas } from './maravillas.js';
+import { nuevoComercio, liquidarComercio } from './comercio.js';
 
 const jugadaVacia = () => ({ invalida: true, motivo: 'sin respuesta', fundacion: null, ordenes: [], descartadas: [], mensaje: '', nota: '', razon: '' });
 const sumaProducida = (prod) => RECURSOS_ALMACEN.reduce((a, r) => a + prod[r], 0);
@@ -79,7 +80,10 @@ export function aplicarTurno(E, jugadas) {
 
   if (t === 1) E.civs.forEach((c) => { rc.civs[c.s].fundacion = fundar(E, c, js[c.s].fundacion); rc.eventos.push({ tipo: 'fundacion', s: c.s }); });
   E.civs.forEach((c) => resolverRespuestas(E, c, js[c.s], t, rc));
-  E.civs.forEach((c) => { ejecutarOrdenes(E, c, js[c.s], rc.civs[c.s], t); contarOrdenes(c, js[c.s], rc.civs[c.s]); c.nota = js[c.s].nota; c.mensaje = js[c.s].mensaje; });
+  const comercio = nuevoComercio(E, t);
+  E.civs.forEach((c) => ejecutarOrdenes(E, c, js[c.s], rc.civs[c.s], t, comercio));
+  liquidarComercio(comercio, rc);
+  E.civs.forEach((c) => { contarOrdenes(c, js[c.s], rc.civs[c.s]); c.nota = js[c.s].nota; c.mensaje = js[c.s].mensaje; });
   E.civs.forEach((c) => producir(E, c, t, rc));
   investigarFase(E, rc);
   E.civs.forEach((c) => crecer(c, t, rc));
