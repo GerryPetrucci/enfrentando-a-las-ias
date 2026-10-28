@@ -7,6 +7,7 @@ import {
 } from './constantes.js';
 import { indiceDe } from './indice.js';
 import { calendarioEventos } from './avisos.js';
+import { crearTemporada, cumpleNodo, SEED_TEMPORADA } from './temporada.js';
 
 export function crearCivilizacion(s) {
   return {
@@ -25,13 +26,16 @@ export function crearCivilizacion(s) {
 
 // `mapa`: un mapa ya creado (las pruebas pasan uno con copia propia); sin el sale del seed y de su bioma. El seed del mundo se consume SIEMPRE del rng de la partida
 // y de el salen los gemelos: el calendario y los dados no dependen de lo que hagan las IAs.
-export function crearEstado(rng, { jugadores = JUGADORES, mapa = null, bioma, sin = [] } = {}) {
+export function crearEstado(rng, { jugadores = JUGADORES, mapa = null, bioma, sin = [], seedTemporada = SEED_TEMPORADA } = {}) {
   if (jugadores !== JUGADORES) throw new Error(`La Carrera de civilizaciones es de ${JUGADORES} civilizaciones (se pidieron ${jugadores}).`);
   const seedMundo = Math.floor(rng() * 4294967296) >>> 0;
   const mundo = crearMundo(seedMundo, { mapa, bioma });
+  // null se reserva para regresiones del motor historico, nunca es el default.
+  const temporada = seedTemporada === null ? null : crearTemporada(seedTemporada);
   return {
     turno: 0, seedMundo, mundo, calendario: calendarioEventos(seedMundo), capas: { crisis: !sin.includes('crisis'), carrera: !sin.includes('carrera'), comercio: !sin.includes('comercio') },
-    civs: Array.from({ length: JUGADORES }, (_, s) => crearCivilizacion(s)),
+    temporada,
+    civs: Array.from({ length: JUGADORES }, (_, s) => ({ ...crearCivilizacion(s), temporada })),
     ganador: null, desempate: null, indices: [],                        // indices: el Indice publicado de cada civilizacion en los turnos 10, 20 y 30
   };
 }
@@ -92,10 +96,10 @@ export function comprobarInvariantes(E) {
       const t = TEC[id];
       if (!t) { mal.push(p + `tecnologia desconocida ${id}`); continue; }
       if (t.era > c.era) mal.push(p + `${id} es de la era ${t.era} y la civilizacion esta en la ${c.era}`);
-      if (t.era > 1 && !c.tecnologias.includes(TECNOLOGIAS.find((x) => x.rama === t.rama && x.era === t.era - 1).id)) mal.push(p + `${id} sin su previa`);
+      if (c.temporada ? !cumpleNodo(c, id) : t.era > 1 && !c.tecnologias.includes(TECNOLOGIAS.find((x) => x.rama === t.rama && x.era === t.era - 1).id)) mal.push(p + `${id} sin requisitos`);
     }
     for (let e = 1; e < c.era; e++) {
-      if (c.tecnologias.filter((id) => TEC[id].era === e).length < TECNOLOGIAS_PARA_ERA) mal.push(p + `esta en la era ${c.era} sin 4 tecnologias de la ${e}`);
+      if (c.temporada ? !cumpleNodo(c, `A${e + 1}`) : c.tecnologias.filter((id) => TEC[id].era === e).length < TECNOLOGIAS_PARA_ERA) mal.push(p + `esta en la era ${c.era} sin requisitos de la ${e}`);
     }
     if (c.era < 1 || c.era > ERAS) mal.push(p + `era ${c.era}`);
     const ind = indiceDe(c);

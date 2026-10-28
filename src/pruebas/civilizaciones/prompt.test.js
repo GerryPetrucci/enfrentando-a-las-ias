@@ -9,7 +9,7 @@ import { civilizaciones, tokens } from './ayudas.js';
 
 // EL CONTRATO: el texto de reglas es igual para todas las IAs. Si cambia, cambia `versionReglas` (las partidas de versiones distintas no se comparan). Esta prueba ata las dos cosas:
 // al cambiar el texto hay que subir la version y anotar aqui su huella, a proposito.
-const HUELLAS = { 'civilizaciones-1.5.0': '9817be32260cdac0' };
+const HUELLAS = { 'civilizaciones-2.0.0': 'ed59dbe59c401f30' };
 const huella = () => createHash('sha256').update(civilizaciones.reglas + '\n' + civilizaciones.formatoRespuesta).digest('hex').slice(0, 16);
 
 test('el texto de reglas y su version van juntos: cambiar el contrato obliga a subir `versionReglas` y anotar su huella', () => {

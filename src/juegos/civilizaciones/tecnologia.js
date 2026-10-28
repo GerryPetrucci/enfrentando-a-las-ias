@@ -3,6 +3,7 @@
 
 import { TEC, TECNOLOGIAS, COSTO_TECNOLOGIA, DIFUSION, TECNOLOGIAS_PARA_ERA, ERAS, DILEMAS } from './constantes.js';
 import { ceilDiv } from './economia.js';
+import { cumpleNodo } from './temporada.js';
 
 // Costo vigente de una tecnologia para `civ`: el de su era, o (costo x 7 + 9) div 10 si el rival YA la conocia al cierre del turno anterior.
 export function costoVigente(id, rival) {
@@ -18,7 +19,8 @@ export const previaDe = (id) => {
 // Se puede investigar: no la conoces, es de tu era o anterior y conoces la previa de su rama.
 export function disponible(civ, id) {
   const t = TEC[id];
-  return Boolean(t) && !civ.tecnologias.includes(id) && t.era <= civ.era && (t.era === 1 || civ.tecnologias.includes(previaDe(id)));
+  return Boolean(t) && !civ.tecnologias.includes(id) && t.era <= civ.era
+    && (civ.temporada ? cumpleNodo(civ, id) : t.era === 1 || civ.tecnologias.includes(previaDe(id)));
 }
 
 export const disponibles = (civ) => TECNOLOGIAS.filter((t) => disponible(civ, t.id)).map((t) => t.id);
@@ -28,6 +30,7 @@ export const disponibles = (civ) => TECNOLOGIAS.filter((t) => disponible(civ, t.
 export function investigar(civ, id, cupo) {
   if (!TEC[id]) return 'tecnologia desconocida';
   if (civ.tecnologias.includes(id)) return 'ya la conoces';
+  if (civ.temporada && !disponible(civ, id)) return `faltan requisitos de temporada para ${id}`;
   if (!disponible(civ, id)) return TEC[id].era > civ.era ? `es de la era ${TEC[id].era} y estas en la ${civ.era}` : `te falta ${TEC[previaDe(id)].nombre}`;
   if (civ.proyectos.some((p) => p.tec === id)) return null;
   if (civ.proyectos.length >= cupo) civ.reservaCiencia += civ.proyectos.pop().progreso;
@@ -54,7 +57,8 @@ export function resolverInvestigacion(civ, rival) {
 // Se pasa a la era E+1 al conocer 4 de las 6 tecnologias de la era E. Devuelve las eras nuevas; entrar a una era con dilema deja `dilemaPendiente`.
 export function actualizarEra(civ) {
   const nuevas = [];
-  while (civ.era < ERAS && civ.tecnologias.filter((id) => TEC[id].era === civ.era).length >= TECNOLOGIAS_PARA_ERA) {
+  while (civ.era < ERAS && (civ.temporada ? cumpleNodo(civ, `A${civ.era + 1}`)
+    : civ.tecnologias.filter((id) => TEC[id].era === civ.era).length >= TECNOLOGIAS_PARA_ERA)) {
     civ.era++;
     nuevas.push(civ.era);
     if (DILEMAS[civ.era]) civ.dilemaPendiente = civ.era;

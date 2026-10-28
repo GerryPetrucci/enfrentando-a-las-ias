@@ -7,7 +7,7 @@ import { crearMapa, biomaDeSeed, BIOMAS } from '../../mapa.js';
 import civilizaciones from '../civilizaciones.js';
 import { indiceDe } from './indice.js';
 import { INDICE, TECNOLOGIAS, TURNOS } from './constantes.js';
-import { comprobarInvariantes } from './estado.js';
+import { comprobarInvariantes, crearEstado } from './estado.js';
 
 export const BOTS_ACTIVOS = ['cientifico', 'expansionista', 'equilibrado', 'maravillero', 'comerciante'];
 const PILARES = ['tecnologia', 'cultura', 'poblacion', 'economia', 'maravillas', 'estabilidad'];
@@ -17,10 +17,11 @@ const cacheMapas = new Map();
 const mapaDe = (seed, bioma) => { const k = `${seed}|${bioma}`; if (!cacheMapas.has(k)) cacheMapas.set(k, crearMapa(seed, 2, { bioma })); return cacheMapas.get(k); };
 
 // Juega UNA partida entre dos bots (claves de civilizaciones.bots) en el mundo `seed`. Devuelve lo que las metricas necesitan.
-export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin = [] } = {}) {
+export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin = [], seedTemporada } = {}) {
   const J = civilizaciones;
   const mundoBioma = bioma ?? biomaDeSeed(seed, 2);
-  const E = J.crear(crearRng(seed * 7919 + 13), { jugadores: 2, mapa: mapaDe(seed, mundoBioma), sin });
+  const crear = seedTemporada === null ? crearEstado : J.crear; // solo regresiones historicas internas
+  const E = crear(crearRng(seed * 7919 + 13), { jugadores: 2, mapa: mapaDe(seed, mundoBioma), sin, seedTemporada });
   const rngs = asientos.map((_, i) => crearRng((seed * 31 + i * 977) >>> 0));
   let lider = -1, cambios = 0;
   const malos = [], carreras = [];
@@ -38,7 +39,7 @@ export function jugarPartida(asientos, seed, { bioma, invariantes = false, sin =
   const ind = E.civs.map((c) => indiceDe(c));
   const lideresEn = (t) => { const x = E.indices.find((i) => i.turno === t); if (!x) return null; const d = x.publicado[0] - x.publicado[1]; return Math.abs(d) > 1 ? (d > 0 ? 0 : 1) : null; };
   return {
-    seed, bioma: mundoBioma, asientos, ganador: E.ganador, desempate: E.desempate, cambios, lider10: lideresEn(10), lider20: lideresEn(20), malos,
+    seed, seedTemporada: E.temporada?.seed ?? null, version: E.temporada ? J.versionReglas : 'civilizaciones-1.5.0', bioma: mundoBioma, asientos, ganador: E.ganador, desempate: E.desempate, cambios, lider10: lideresEn(10), lider20: lideresEn(20), malos,
     ventaja10: Math.abs(E.indices.find((i) => i.turno === 10).publicado[0] - E.indices.find((i) => i.turno === 10).publicado[1]),
     carreras, comercios, ofertas, carrerasPendientes: Object.keys(E.civs[0].proyectosMaravillas).filter((id) => E.civs[1].proyectosMaravillas[id]).length,
     civs: E.civs.map((c, s) => ({
@@ -58,7 +59,7 @@ export function ic95(valoresPorMundo) {
 }
 
 // opciones: { mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false }
-export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false, sin = [] } = {}) {
+export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, espejos = false, invariantes = false, sin = [], seedTemporada } = {}) {
   const parejas = [];
   for (let i = 0; i < bots.length; i++) for (let j = i + 1; j < bots.length; j++) parejas.push([bots[i], bots[j]]);
   const porBot = Object.fromEntries(bots.map((id) => [id, { victoriasPorMundo: [], vsPasivoPorMundo: [], partidas: [], pasivo: [] }]));
@@ -67,12 +68,12 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
     const seed = semilla + g;
     const pm = Object.fromEntries(bots.map((id) => [id, { v: 0, n: 0, vp: 0, np: 0 }]));
     for (const [a, b] of parejas) for (const orden of [[a, b], [b, a]]) {
-      const p = jugarPartida(orden, seed, { bioma, invariantes, sin });
+      const p = jugarPartida(orden, seed, { bioma, invariantes, sin, seedTemporada });
       planas.push(p);
       orden.forEach((id, s) => { pm[id].n++; if (p.ganador === s) pm[id].v++; porBot[id].partidas.push({ ...p.civs[s], seed }); });
     }
     for (const id of bots) for (const orden of [[id, 'pasivo'], ['pasivo', id]]) {
-      const p = jugarPartida(orden, seed, { bioma, invariantes, sin });
+      const p = jugarPartida(orden, seed, { bioma, invariantes, sin, seedTemporada });
       planas.push(p);
       const s = orden.indexOf(id);
       pm[id].np++; if (p.ganador === s) pm[id].vp++;
@@ -81,7 +82,7 @@ export function medir({ mundos = 200, semilla = 1, bots = BOTS_ACTIVOS, bioma, e
     for (const id of bots) { porBot[id].victoriasPorMundo.push(pm[id].v / pm[id].n); porBot[id].vsPasivoPorMundo.push(pm[id].vp / pm[id].np); }
     // Un espejo por mundo (cada vez otro bot): con mundos gemelos y el mismo bot en los dos asientos solo decide el sorteo del desempate, que depende del mundo; repetir el
     // espejo con otro bot en el mismo mundo daria el mismo resultado y haria creer que hay mas muestras de las que hay.
-    if (espejos) espejoPartidas.push(jugarPartida([bots[g % bots.length], bots[g % bots.length]], seed, { bioma, invariantes, sin }));
+    if (espejos) espejoPartidas.push(jugarPartida([bots[g % bots.length], bots[g % bots.length]], seed, { bioma, invariantes, sin, seedTemporada }));
   }
   const entreActivos = planas.filter((p) => p.asientos.every((x) => x !== 'pasivo'));
   const proporcion = (ps, condicion) => {

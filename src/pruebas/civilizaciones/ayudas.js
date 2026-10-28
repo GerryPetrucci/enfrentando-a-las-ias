@@ -23,7 +23,7 @@ export function mapaDe(seed, bioma = 'continente') {
 export function nuevoEstado(seed = 7, bioma = 'continente') {
   const m = mapaDe(seed, bioma);
   const copia = { ...m, regs: m.regs.map((r) => ({ ...r, vecinos: [...r.vecinos] })) };
-  return crearEstado(crearRng(seed), { jugadores: 2, mapa: copia });
+  return crearEstado(crearRng(seed), { jugadores: 2, mapa: copia, seedTemporada: null }); // regresiones 1.5
 }
 
 export const resp = (extra = {}) => ({ ordenes: [], mensaje: '', nota: '', razon: '', ...extra });

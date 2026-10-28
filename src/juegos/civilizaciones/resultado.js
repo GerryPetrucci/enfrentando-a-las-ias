@@ -19,6 +19,7 @@ export function resultadoDe(E) {
   return {
     puntos, ganador: g, empate: false, metricas, orden: g === null ? [] : [g, 1 - g], desempate: E.desempate, turnos: E.turno, indices: E.indices,
     bioma: E.mundo.bioma, seedMundo: E.seedMundo, sitios: [...E.mundo.sitios],
+    temporada: E.temporada ? structuredClone(E.temporada) : null,
     fundaciones: E.civs.map((c) => ({ nombre: c.nombre, lema: c.lema, rasgos: [...c.rasgos], sitio: c.sitio, capital: c.capital, valida: c.stats.fundacionValida })),
     // El mapa completo, para que la escena de la web (que no puede importar de src/) dibuje la partida desde lo guardado.
     mapa: serializarMapa(E.mundo.mapa),

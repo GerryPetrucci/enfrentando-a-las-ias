@@ -12,6 +12,8 @@ import { disponibles } from './civilizaciones/tecnologia.js';
 import { tieneTipo } from './civilizaciones/estado.js';
 import { MARAVILLAS } from './civilizaciones/constantes.js';
 import { construida } from './civilizaciones/turno/maravillas.js';
+import { edificioDisponible } from './civilizaciones/temporada.js';
+import { planDelBot } from './civilizaciones/plan-bot.js';
 
 const COMUNES = ['granero', 'templo', 'biblioteca', 'acueducto', 'academia', 'mercado', 'aserradero', 'cantera', 'universidad', 'anfiteatro', 'hospital', 'imprenta', 'laboratorio', 'museo', 'parlamento'];
 
@@ -126,10 +128,17 @@ export function jugar(E, s, perfil, rng) {
   }
 
   // Un edificio por turno: el primero de su lista desbloqueado, que no tenga y que alcance, en una region sin edificio.
-  const libre = regiones.find((r) => !c.edificios[r]);
+  const plan = c.temporada ? planDelBot(c, perfil) : null;
+  const listaEdificios = plan ? [...new Set([...plan.filter((n) => n.tipo === 'edificio').map((n) => n.nombre), ...perfil.edificios])] : perfil.edificios;
+  // Los hitos sobreviven al reemplazo: si falta espacio, cambia un edificio
+  // que no es prioritario para la politica, conservando la investigacion lograda.
+  const prioridadEdificio = (r) => { const k = perfil.edificios.indexOf(c.edificios[r].tipo); return k < 0 ? 100 : k; };
+  const libre = regiones.find((r) => !c.edificios[r]) ?? (plan
+    ? [...regiones].sort((a, b) => prioridadEdificio(b) - prioridadEdificio(a))[0] : undefined);
+  let edificioNuevo = null;
   if (libre !== undefined && !terremoto) {
-    const tipo = perfil.edificios.find((e) => c.tecnologias.includes(EDIFICIO[e].tec) && !tieneTipo(c, e) && alcanza(costoEdificio(e, m)));
-    if (tipo) { pagar(costoEdificio(tipo, m)); o.push(`construir ${nombreRegion(libre)} ${tipo}`); }
+    const tipo = listaEdificios.find((e) => (c.temporada ? edificioDisponible(c, e) && !c.construidos.includes(e) : c.tecnologias.includes(EDIFICIO[e].tec)) && !tieneTipo(c, e) && alcanza(costoEdificio(e, m)));
+    if (tipo) { pagar(costoEdificio(tipo, m)); o.push(`construir ${nombreRegion(libre)} ${tipo}`); edificioNuevo = tipo; }
   }
   if (reclutas > 0) o.push(`reclutar ${reclutas}`);
 
@@ -159,7 +168,10 @@ export function jugar(E, s, perfil, rng) {
   const orden = (a, b) => (perfil.carrera ? objetivo(a) - objetivo(b) || TEC[a].era - TEC[b].era
     : perfil.rotar ? TEC[a].era - TEC[b].era || perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama)
     : perfil.ramas.indexOf(TEC[a].rama) - perfil.ramas.indexOf(TEC[b].rama) || TEC[a].era - TEC[b].era);
-  const quedan = disponibles(c).filter((id) => !enCurso.has(id)).sort(orden);
+  const proyectada = edificioNuevo ? { ...c, construidos: [...c.construidos, edificioNuevo] } : c;
+  const prioridad = new Set(plan?.filter((n) => n.tipo === 'tecnologia').map((n) => n.id) ?? []);
+  const quedan = disponibles(proyectada).filter((id) => !enCurso.has(id))
+    .sort((a, b) => Number(prioridad.has(b)) - Number(prioridad.has(a)) || orden(a, b));
   for (let libres = m.proyectos - c.proyectos.length; libres > 0 && quedan.length; libres--) o.push(`investigar ${TEC[quedan.shift()].nombre}`);
   let mensaje = '';
   if (E.capas?.comercio !== false) {

@@ -12,7 +12,7 @@ test('100 partidas de bots (al azar y de politica) cumplen todos los invariantes
   for (let seed = 1; partidas < 100; seed++) {
     const a = BOTS[seed % BOTS.length], b = BOTS[(seed * 3 + 1) % BOTS.length];
     const malos = [];
-    const p = await jugar(a, b, 1000 + seed, { alRegistrar: (_r, E) => { const m = comprobarInvariantes(E); if (m.length) malos.push(`turno ${E.turno}: ${m.join('; ')}`); } });
+    const p = await jugar(a, b, 1000 + seed, { opciones: { seedTemporada: seed }, alRegistrar: (_r, E) => { const m = comprobarInvariantes(E); if (m.length) malos.push(`turno ${E.turno}: ${m.join('; ')}`); } });
     assert.deepEqual(malos, [], `${a} vs ${b} seed ${1000 + seed}`);
     assert.equal(p.truncada, false);
     assert.equal(p.rondas.length, 30);

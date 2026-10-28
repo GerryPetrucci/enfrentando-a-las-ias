@@ -4,6 +4,7 @@ import { EDIFICIO, COSTO_EDIFICIO, COLONIZAR } from './constantes.js';
 import { ceilDiv } from './economia.js';
 import { tieneTipo } from './estado.js';
 import { fronteraDe } from './mundo.js';
+import { edificioDisponible } from './temporada.js';
 
 const alcanza = (civ, costo) => Object.entries(costo).every(([r, n]) => civ.stock[r] >= n);
 const pagar = (civ, costo) => { for (const [r, n] of Object.entries(costo)) civ.stock[r] -= n; };
@@ -24,7 +25,8 @@ export function construir(civ, region, tipo, t, m) {
   if (!civ.regiones.includes(region)) return 'la region no es tuya';
   const e = EDIFICIO[tipo];
   if (!e) return 'edificio desconocido';
-  if (!civ.tecnologias.includes(e.tec)) return `te falta la tecnologia ${e.tec}`;
+  if (civ.temporada && !edificioDisponible(civ, tipo)) return `faltan requisitos para ${tipo}`;
+  if (!civ.temporada && !civ.tecnologias.includes(e.tec)) return `te falta la tecnologia ${e.tec}`;
   if (tieneTipo(civ, tipo)) return civ.edificios[region]?.tipo === tipo ? 'ya esta construido en esa region' : 'ya tienes ese tipo de edificio';
   const costo = costoEdificio(tipo, m);
   if (!alcanza(civ, costo)) return 'no alcanzan los recursos';

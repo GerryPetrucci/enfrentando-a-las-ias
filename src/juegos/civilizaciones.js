@@ -27,11 +27,14 @@ export default {
   // 60 decisiones por partida (una llamada por civilizacion por turno): el corte duro del proyecto es 100 y los agentes no reintentan por dentro, asi que nunca se vuelven 180.
   llamadasMax: 100,
   limiteLlamadasDuro: 100,
-  versionReglas: 'civilizaciones-1.5.0', // Capa 4: comercio simultaneo; contrato de texto sin cambios.
+  versionReglas: 'civilizaciones-2.0.0', // Arbol variable por temporada, edificios como centros de investigacion.
   reglas: REGLAS,
   formatoRespuesta: FORMATO,
 
-  crear: (rng, opciones = {}) => crearEstado(rng, opciones),
+  crear: (rng, opciones = {}) => {
+    if (opciones.seedTemporada === null) throw new Error('civilizaciones-2.0.0 requiere temporada');
+    return crearEstado(rng, opciones);
+  },
   terminado: (E) => E.turno >= TURNOS,
   vista: (E, i) => vistaTexto(E, i),
   normalizar: normalizarRespuesta, // (respuesta, estado)

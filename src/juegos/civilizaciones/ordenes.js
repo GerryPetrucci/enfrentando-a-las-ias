@@ -23,7 +23,7 @@ export function limpiar(x, max) {
 // ---- catalogos: nombre normalizado -> id ----
 const catalogo = (items, claves) => items.map((it) => ({ id: it.id, claves: claves(it).map(normalizarTexto) }));
 const CAT_TEC = catalogo(TECNOLOGIAS, (t) => [t.nombre, t.id]);
-const CAT_EDIFICIO = catalogo(EDIFICIOS, (e) => [e.id]);
+const CAT_EDIFICIO = catalogo(EDIFICIOS, (e) => [e.id, `B${EDIFICIOS.indexOf(e) + 1}`]);
 const CAT_MARAVILLA = catalogo(MARAVILLAS, (m) => [m.id, m.nombre]);
 const CAT_RASGO = catalogo(RASGOS, (r) => [r.id, r.id.replace(/(es|s)$/, '')]);
 const CAT_EVENTO = [...catalogo(EVENTOS, (e) => [e.id, e.nombre]), { id: 'invasion', claves: ['invasion', 'invasiones'] }];
