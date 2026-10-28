@@ -16,7 +16,7 @@ import { edificioDisponible } from './civilizaciones/temporada.js';
 import { planDelBot } from './civilizaciones/plan-bot.js';
 
 const COMUNES = ['granero', 'templo', 'biblioteca', 'acueducto', 'academia', 'mercado', 'aserradero', 'cantera', 'universidad', 'anfiteatro', 'hospital', 'imprenta', 'laboratorio', 'museo', 'parlamento'];
-export const VERSION_BOTS = 'civilizaciones-bots-2.2';
+export const VERSION_BOTS = 'civilizaciones-bots-2.5'; // default conserva politica 2.2; sondas explicitas
 
 export const PERFILES = {
   cientifico: { reparto: [30, 10, 10, 0, 40, 10], ramas: ['S', 'E', 'T', 'C', 'M', 'D'], edificios: ['biblioteca', 'templo', 'academia', 'granero', 'universidad', 'imprenta', 'laboratorio', 'acueducto'], hasta: 8, rasgos: ['eruditos', 'constructores'] },

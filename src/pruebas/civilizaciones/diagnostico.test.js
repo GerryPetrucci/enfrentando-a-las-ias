@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import J from '../../juegos/civilizaciones.js';
 import { crearRng } from '../../rng.js';
 import { BOTS, PERFILES } from '../../juegos/civilizaciones-bots.js';
-import { diagnosticarDecision, resumirDiagnostico, analizarRutas } from '../../juegos/civilizaciones/diagnostico.js';
+import { diagnosticarDecision, resumirDiagnostico, analizarRutas, analizarBases } from '../../juegos/civilizaciones/diagnostico.js';
 import { OFICIOS } from '../../juegos/civilizaciones/constantes.js';
+import { combinarOpciones, planDelBot } from '../../juegos/civilizaciones/plan-bot.js';
+import { crearTemporada } from '../../juegos/civilizaciones/temporada.js';
 
 function escenario() {
   const E = J.crear(crearRng(5));
@@ -76,4 +78,33 @@ test('alternativas aparentes pueden compartir un requisito imprescindible', () =
   assert.deepEqual(analizarRutas(nodos, 'meta').imprescindibles, ['base']);
   assert.deepEqual(analizarRutas(nodos, 'meta').inalcanzables, []);
   assert.throws(() => analizarRutas(nodos, 'no existe'), /objetivo/);
+});
+
+test('el plan compara costos compartidos: dos opciones de diez pueden costar once juntas', () => {
+  const opciones = [new Set(['x', 'a']), new Set(['x', 'b']), new Set(['c']), new Set(['d'])];
+  const pesos = { x: 9, a: 1, b: 1, c: 6, d: 6 };
+  assert.deepEqual([...combinarOpciones(opciones, 2, (id) => pesos[id])].sort(), ['a', 'b', 'x']);
+  assert.equal(combinarOpciones(opciones, 0, (id) => pesos[id]).size, 0);
+  assert.throws(() => combinarOpciones(opciones, 5, () => 1), /umbral/);
+});
+
+test('la temporada 1 permite ocho especializaciones minimas de cuatro edificios iniciales', () => {
+  const r = analizarBases(crearTemporada(1).nodos);
+  assert.equal(r.minimo, 4);
+  assert.equal(r.bases.length, 6);
+  assert.equal(r.rutasMinimas.length, 8);
+  assert.ok(r.rutasMinimas.every((ruta) => ruta.length === 4 && new Set(ruta).size === 4));
+});
+
+test('las sondas son optativas: clasico y compartido miran A2, largo mira A6, sin mutar perfil ni estado', () => {
+  const E = escenario(), antes = structuredClone(E), perfil = structuredClone(PERFILES.cientifico);
+  const ids = (p) => planDelBot(E.civs[0], p).map((n) => n.id);
+  assert.deepEqual(ids(perfil), ids({ ...perfil, plan: 'clasico' }));
+  assert.ok(ids(perfil).includes('A2'));
+  assert.ok(!ids(perfil).includes('A6'));
+  assert.ok(ids({ ...perfil, plan: 'compartido' }).includes('A2'));
+  assert.ok(!ids({ ...perfil, plan: 'compartido' }).includes('A6'));
+  assert.ok(ids({ ...perfil, plan: 'largo' }).includes('A6'));
+  assert.deepEqual(perfil, PERFILES.cientifico);
+  assert.deepEqual(E, antes);
 });
