@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { crearRng } from '../../rng.js';
 import J from '../../juegos/civilizaciones.js';
 import { reconstruirVistas } from '../../juegos/civilizaciones/revision-contrato.js';
+import { vistaDetallada } from '../../juegos/civilizaciones/vista.js';
 
 function registro() {
   const seed = 102, E = J.crear(crearRng(seed)), vistas = [], rondas = [];
@@ -19,6 +20,15 @@ function registro() {
 test('reproduce vistas con las ordenes guardadas, conservando mensajes sin mutar la partida', () => {
   const { partida, vistas } = registro(), antes = structuredClone(partida);
   assert.deepEqual(reconstruirVistas(partida), vistas);
+  assert.deepEqual(partida, antes);
+});
+
+test('reconstruye la variante propia como contrafactual sin cambiar acciones ni resultados', () => {
+  const { partida, vistas } = registro(), antes = structuredClone(partida);
+  const nuevas = reconstruirVistas(partida, { vista: vistaDetallada });
+  assert.equal(nuevas[0].vista, vistas[0].vista);
+  assert.match(nuevas[2].vista, /Produccion REAL bruta T1/);
+  assert.match(nuevas[2].vista, /Resultado de tus ordenes T1/);
   assert.deepEqual(partida, antes);
 });
 

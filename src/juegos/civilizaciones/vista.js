@@ -1,5 +1,4 @@
-// Lo que ve cada civilizacion (spec 7). `vistaTexto(E, i)` es el UNICO lugar donde se decide que sabe cada una: del rival solo lo publico (nombre, lema, rasgos, era,
-// tecnologias, Estabilidad, edificios, Indice del cierre anterior y su ultimo mensaje). PROVISIONAL de la capa 0/1: la vista compacta y medida (capa 5) la reemplaza.
+// Vista activa 2.0 y variante de revision 2.1. La variante solo agrega informacion propia.
 
 import { TURNOS, RECURSOS_ALMACEN, OFICIOS, TEC, EDIFICIOS, DILEMAS, EVENTO, TRIBUTO_POR_FUERZA } from './constantes.js';
 import { avisosDe, opcionesEvento } from './avisos.js';
@@ -12,10 +11,53 @@ import { indiceDe } from './indice.js';
 import { disponibles } from './tecnologia.js';
 import { fronteraDe } from './mundo.js';
 import { costoColonizar, costoEdificio } from './edificios.js';
-import { modificadores } from './economia.js';
+import { modificadores, desgloseProduccion } from './economia.js';
+import { RASGO, RECURSOS } from './constantes.js';
 import { textoTemporada, edificioDisponible } from './temporada.js';
 
 const costoTexto = (c) => Object.entries(c).map(([r, n]) => `${n} ${r}`).join(' + ');
+
+export const VERSION_VISTA_DETALLADA = 'civilizaciones-vista-2.1.0';
+
+function lineasProduccion(d, titulo) {
+  return [titulo,
+    `Personas productoras: ${OFICIOS.map((o, k) => `${o} ${d.gente[k]}`).join(', ')}. Guardias ${d.guardias} fuera de los oficios.`,
+    'Por recurso: (territorio + trabajo + bonos planos) x (1 + bono - penalizacion); redondeo al entero mas cercano, empate arriba, minimo 0.',
+    ...RECURSOS.map((r) => {
+      const x = d.recursos[r];
+      return `${r}: (${x.territorio} + ${x.trabajo} + ${x.bonosPlanos}) x (1 + ${x.bono} - ${x.penalizacion}) = ${x.total}`;
+    })];
+}
+
+// Opt-in para revisar el contrato completo antes de adoptarlo. Sin mutaciones,
+// sin consultar saldos, decisiones ni modificadores privados del adversario.
+export function vistaDetallada(E, i) {
+  const base = vistaTexto(E, i), c = E.civs[i];
+  if (!c.fundada) return base;
+  const lineas = [base, `INFORMACION PROPIA (${VERSION_VISTA_DETALLADA})`,
+    `Tus rasgos: ${c.rasgos.map((id) => `${id} (${describir(RASGO[id].efectos)})`).join('; ') || 'ninguno'}.`,
+    `Tus dilemas elegidos: ${Object.entries(c.dilemas).map(([era, n]) => {
+      const o = DILEMAS[era].opciones[n - 1];
+      return `era ${era}, opcion ${n}: ${o.nombre} (${describir(o.efectos)})`;
+    }).join('; ') || 'ninguno'}.`];
+  const anterior = c.ultimaProduccion;
+  if (anterior) {
+    lineas.push(...lineasProduccion(anterior, `Produccion REAL bruta T${anterior.turno}, antes de comer y de investigacion/crecimiento/invasion/cierre:`));
+    lineas.push(`Consumo requerido ${anterior.consumo} Comida; hambre ${anterior.hambre ? 'si' : 'no'}; Comida justo despues de comer ${anterior.comidaTrasConsumo}. No es el saldo actual ni el balance neto del turno.`);
+  } else lineas.push('Produccion anterior: sin registro.');
+  if (E.turno < TURNOS) {
+    const proyeccion = desgloseProduccion(c, E.mundo, E.turno + 1);
+    lineas.push(...lineasProduccion(proyeccion, `Proyeccion bruta T${E.turno + 1} con el estado actual: NO incluye cambios por eventos, dilemas ni ordenes de hoy. No esta disponible para gastar antes de producir.`));
+    lineas.push(`Consumo proyectado ${c.poblacion + c.guardias} Comida; puede cambiar con eventos y reclutas.`);
+  }
+  const u = c.ultimasOrdenes;
+  if (u) {
+    lineas.push(`Resultado de tus ordenes T${u.turno}: ${u.aplicadas} aplicadas; ${u.descartadas.length + u.exceso} descartadas.${u.invalida ? ` Respuesta invalida: ${u.motivo}.` : ''}`);
+    for (const o of u.descartadas) lineas.push(`Descarte: ${JSON.stringify(o.texto)}: ${o.motivo}.`);
+    if (u.exceso) lineas.push(`Descartes por superar el limite de ordenes: ${u.exceso}; no se evaluaron, textos omitidos.`);
+  } else lineas.push('Resultado de tus ordenes: sin registro.');
+  return lineas.join('\n');
+}
 
 export function vistaTexto(E, i) {
   const c = E.civs[i], rival = E.civs[1 - i], t = E.turno + 1;

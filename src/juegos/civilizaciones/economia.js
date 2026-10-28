@@ -46,18 +46,30 @@ export function normalizarReparto(actual, parcial) {
 // produccion = redondear(base x (1 + S - penalizacion)) por recurso, con S la SUMA de los bonos de ese recurso; los bonos planos se suman a la base antes del
 // multiplicador; piso 0; redondeo al entero mas cercano (empate hacia arriba). La penalizacion (-20 %) rige con la Estabilidad DEL CIERRE DEL TURNO ANTERIOR.
 export function produccion(civ, mundo, t, m = modificadores(civ, t)) {
+  return desgloseProduccion(civ, mundo, t, m).total;
+}
+
+// Una sola formula para el motor y su explicacion. Todos los valores son copias.
+export function desgloseProduccion(civ, mundo, t, m = modificadores(civ, t)) {
   const gente = personasPorOficio(civ.poblacion, civ.reparto);
   const base = Object.fromEntries(RECURSOS.map((r) => [r, 0]));
   for (const id of civ.regiones) for (const r of RECURSOS) base[r] += mundo.regs[id].flujo[r];
+  const territorio = { ...base };
   OFICIOS.forEach((o, i) => { const [rec, tasa] = PRODUCE_OFICIO[o]; base[rec] += gente[i] * tasa; });
   base.Hierro += gente[OFICIOS.indexOf('mineros')] * m.mineroHierro;
+  const trabajo = Object.fromEntries(RECURSOS.map((r) => [r, base[r] - territorio[r]]));
   const hayMina = Object.values(civ.edificios).some((b) => b.tipo === 'mina' && b.desde <= t);
   if (hayMina) base.Hierro += m.hierroMina;
   const penal = civ.estabilidad < ESTABILIDAD.bajo ? ESTABILIDAD.penalizacionProduccion : 0;
-  return Object.fromEntries(RECURSOS.map((r) => {
-    const plano = base[r] + m.plano[r] + m.planoRegion[r] * civ.regiones.length;
-    return [r, Math.max(0, Math.round(plano * (1 + m.pct[r] - penal)))];
+  const recursos = Object.fromEntries(RECURSOS.map((r) => {
+    const bonosPlanos = base[r] - territorio[r] - trabajo[r] + m.plano[r] + m.planoRegion[r] * civ.regiones.length;
+    const plano = territorio[r] + trabajo[r] + bonosPlanos;
+    return [r, { territorio: territorio[r], trabajo: trabajo[r], bonosPlanos,
+      bono: m.pct[r], penalizacion: penal,
+      total: Math.max(0, Math.round(plano * (1 + m.pct[r] - penal))) }];
   }));
+  return { turno: t, poblacion: civ.poblacion, guardias: civ.guardias, gente,
+    recursos, total: Object.fromEntries(RECURSOS.map((r) => [r, recursos[r].total])) };
 }
 
 // Espacio para la gente: 6 + 3 por region + bonos de edificios y Maravillas.

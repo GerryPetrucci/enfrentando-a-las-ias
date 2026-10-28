@@ -9,7 +9,8 @@
 import { RECURSOS_ALMACEN, TURNOS, INDICE, HAMBRE } from '../constantes.js';
 import { fundar } from './fundacion.js';
 import { ejecutarOrdenes, contarOrdenes } from './ordenes.js';
-import { modificadores, produccion, espacioDe } from '../economia.js';
+import { modificadores, desgloseProduccion, espacioDe } from '../economia.js';
+import { resumenOrdenes } from '../informacion.js';
 import { resolverEstabilidad } from './estabilidad.js';
 import { resolverInvestigacion, actualizarEra } from '../tecnologia.js';
 import { indiceDe } from '../indice.js';
@@ -27,7 +28,8 @@ const sumaProducida = (prod) => RECURSOS_ALMACEN.reduce((a, r) => a + prod[r], 0
 // Fase 4: produccion y comida. Comen todos; si no alcanza, Comida = 0 y la gente baja 10 % (redondeo hacia arriba, sin bajar de 1).
 function producir(E, civ, t, rc) {
   const m = modificadores(civ, t);
-  const prod = produccion(civ, E.mundo, t, m);
+  const detalle = desgloseProduccion(civ, E.mundo, t, m);
+  const prod = detalle.total;
   civ.produccion = prod;
   for (const r of RECURSOS_ALMACEN) civ.stock[r] += prod[r];
   civ.reservaCiencia += prod.Ciencia;
@@ -42,6 +44,7 @@ function producir(E, civ, t, rc) {
     civ.hambres++;
     rc.eventos.push({ tipo: 'hambre', s: civ.s });
   } else civ.stock.Comida -= consumo;
+  civ.ultimaProduccion = { ...detalle, consumo, hambre: civ.hambre, comidaTrasConsumo: civ.stock.Comida };
 }
 
 // Fase 5: investigacion. Las dos civilizaciones leen la MISMA instantanea de difusion (lo que cada una conocia al cierre anterior), asi que el orden no importa.
@@ -105,6 +108,7 @@ export function aplicarTurno(E, jugadas) {
     rc.eventos.push({ tipo: 'indice', publicado: E.indices.at(-1).publicado });
   }
   if (t >= TURNOS) decidirGanador(E);
+  E.civs.forEach((c) => { c.ultimasOrdenes = resumenOrdenes(rc.civs[c.s], t); });
   rc.instantanea = instantanea(E);
   return rc;
 }

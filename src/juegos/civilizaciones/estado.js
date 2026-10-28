@@ -19,7 +19,7 @@ export function crearCivilizacion(s) {
     estabilidad: 50, sumaEstabilidad: 0, cierres: 0, hambre: false, hambres: 0, colapsos: 0,
     guardias: 0, temporales: [], maravillas: [], proyectosMaravillas: {}, descuentoIngeniero: false,
     respuestasEventos: {}, respuestasInvasiones: {}, ofertas: [],
-    nota: '', mensaje: '',
+    nota: '', mensaje: '', ultimaProduccion: null, ultimasOrdenes: null,
     stats: { validas: 0, total: 0, invalidas: 0, descartadas: 0, fundacionValida: null },
   };
 }

@@ -13,9 +13,9 @@ import { defensaDe, reclutar } from './turno/invasion.js';
 import { invertir } from './turno/maravillas.js';
 import { indiceDe } from './indice.js';
 
-export function ejemplosDeContrato() {
+export function ejemplosDeContrato(vista = vistaTexto) {
   const E = crearEstado(crearRng(101), { seedTemporada: 1 });
-  const inicio = vistaTexto(E, 0);
+  const inicio = vista(E, 0);
   const region = nombreRegion(E.mundo.sitios[0]);
   const centro = E.temporada.centros.T1;
   const respuestas = [0, 1].map((s) => normalizarRespuesta({
@@ -58,6 +58,6 @@ export function ejemplosDeContrato() {
       inversionRechazada, saldoTrasRechazo, inversionAceptada, saldoFinal: a.stock.Roca, invertidoFinal: a.proyectosMaravillas.piramide.invertido.Roca },
     primerTurno: { region, centro, ordenes: registro.civs[0].ordenes,
       proyectos: E.civs[0].proyectos, tecnologias: E.civs[0].tecnologias, indice: indiceDe(E.civs[0]) },
-    vistas: { inicio, despuesDelPrimerTurno: vistaTexto(E, 0) },
+    vistas: { inicio, despuesDelPrimerTurno: vista(E, 0) },
   };
 }

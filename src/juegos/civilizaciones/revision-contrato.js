@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { crearRng } from '../../rng.js';
 import J from '../civilizaciones.js';
 
-export function reconstruirVistas(partida) {
+export function reconstruirVistas(partida, { vista = J.vista } = {}) {
   if (partida?.juego?.id !== J.id || !Number.isInteger(partida.seed)
     || !partida.temporada || !Array.isArray(partida.rondas)
     || partida.fundaciones?.length !== J.jugadores) throw new Error('registro de Civilizaciones incompleto');
@@ -22,7 +22,7 @@ export function reconstruirVistas(partida) {
     const jugadas = E.civs.map((_, s) => {
       const f = partida.fundaciones[s], respuesta = r.respuestas[s];
       if (!respuesta || !f.valida) throw new Error('solo se admiten controles con respuestas y fundaciones validas');
-      vistas.push({ turno: r.turno, s, vista: J.vista(E, s) });
+      vistas.push({ turno: r.turno, s, vista: vista(E, s) });
       return J.normalizar({
         ...(r.turno === 1 ? { fundacion: { nombre: f.nombre, lema: f.lema, rasgos: [...f.rasgos], sitio: f.sitio + 1 } } : {}),
         ordenes: r.civs[s].ordenes.map((o) => o.texto),
