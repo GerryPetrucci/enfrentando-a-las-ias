@@ -7,6 +7,8 @@ import J from '../src/juegos/civilizaciones.js';
 import { comprobarInvariantes } from '../src/juegos/civilizaciones/estado.js';
 import { construirSistema, construirUsuario } from '../src/prompt.js';
 import { CARACTERES_POR_TOKEN, TOPE_TOKENS_ENTRADA } from '../src/juegos/civilizaciones/constantes.js';
+import { PERFILES, VERSION_BOTS } from '../src/juegos/civilizaciones-bots.js';
+import { diagnosticarDecision, resumirDiagnostico, analizarRutas } from '../src/juegos/civilizaciones/diagnostico.js';
 
 const args = new Map();
 for (const arg of process.argv.slice(2)) {
@@ -24,13 +26,16 @@ const seed = entero('seed', 5), seedTemporada = entero('temporada', 1);
 const ids = [args.get('a') ?? 'cientifico', args.get('b') ?? 'equilibrado'];
 for (const id of ids) if (!Object.hasOwn(J.bots, id)) throw new Error(`bot desconocido: ${id}`);
 let maxTokensEstimados = 0;
+const decisiones = [];
 const agentes = ids.map((id) => ({
   id, nombre: J.bots[id].nombre, tipo: 'bot', necesitaEstado: true,
   async jugar({ estado, i, vista, rng }) {
     const estimacion = Math.ceil((construirSistema(J) + '\n' + construirUsuario(vista)).length / CARACTERES_POR_TOKEN);
     maxTokensEstimados = Math.max(maxTokensEstimados, estimacion);
     if (estimacion > TOPE_TOKENS_ENTRADA) throw new Error(`entrada excedida: ${estimacion}`);
-    return { respuesta: J.bots[id].fn(estado, i, rng), crudo: null, uso: null };
+    const respuesta = J.bots[id].fn(estado, i, rng);
+    if (PERFILES[id]) decisiones.push(diagnosticarDecision(estado, i, PERFILES[id], respuesta));
+    return { respuesta, crudo: null, uso: null };
   },
 }));
 const fallos = [];
@@ -38,17 +43,19 @@ const partida = await correrPartida({ juego: J, agentes, seed, opciones: { seedT
   alRegistrar: (_r, E) => fallos.push(...comprobarInvariantes(E)),
 });
 const diagnostico = {
-  version: J.versionReglas, seed, seedTemporada, bots: ids, turnos: partida.rondas.length,
+  version: J.versionReglas, versionBots: VERSION_BOTS, seed, seedTemporada, bots: ids, turnos: partida.rondas.length,
   ganador: partida.ganador, indices: partida.metricas.map((m) => m.indice),
   eras: partida.metricas.map((m) => m.era), tecnologias: partida.metricas.map((m) => m.tecnologias),
   ordenes: partida.metricas.map((m) => ({ validas: m.ordenesValidas, total: m.ordenesTotal })),
   rutas: partida.metricas.map((m) => m.edificios),
+  desarrollo: resumirDiagnostico(decisiones),
+  estructura: analizarRutas(partida.temporada.nodos),
   invariantes: fallos, maxTokensEstimados, tokensReales: null,
   errores: partida.rondas.flatMap((r) => r.errores ?? []).filter(Boolean),
 };
 const carpeta = new URL('../privado/pruebas/', import.meta.url);
 await mkdir(carpeta, { recursive: true });
 const destino = new URL(`civilizaciones-temporada-${seedTemporada}-seed-${seed}-${Date.now()}.json`, carpeta);
-await writeFile(destino, JSON.stringify({ diagnostico, partida }, null, 2) + '\n', { flag: 'wx' });
+await writeFile(destino, JSON.stringify({ diagnostico, decisiones, partida }, null, 2) + '\n', { flag: 'wx' });
 console.log(JSON.stringify({ archivo: fileURLToPath(destino), ...diagnostico }, null, 2));
 if (fallos.length || diagnostico.errores.length || partida.truncada) process.exitCode = 1;

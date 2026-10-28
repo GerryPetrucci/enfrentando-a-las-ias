@@ -2,7 +2,7 @@
 // Un solo `jugar(E, s, perfil, rng)` escribe las ordenes COMO LAS ESCRIBIRIA UNA IA (texto que pasa por el parser). Leen solo SU civilizacion y el mundo (nunca la nota ni el
 // mensaje del rival: no hay modelo de lenguaje) y no modifican el estado. Todo lo aleatorio sale del rng que reciben.
 
-import { OFICIOS, TEC, TECNOLOGIAS, EDIFICIO, RECURSOS_ALMACEN, CRISIS, TRIBUTO_POR_FUERZA, INDICE, GUARDIAS } from './civilizaciones/constantes.js';
+import { OFICIOS, TEC, TECNOLOGIAS, EDIFICIO, RECURSOS_ALMACEN, CRISIS, TRIBUTO_POR_FUERZA, INDICE, GUARDIAS, COSTO_TECNOLOGIA } from './civilizaciones/constantes.js';
 import { avisosDe, opcionesEvento } from './civilizaciones/avisos.js';
 import { defensaDe } from './civilizaciones/turno/invasion.js';
 import { nombreRegion, fronteraDe } from './civilizaciones/mundo.js';
@@ -16,6 +16,7 @@ import { edificioDisponible } from './civilizaciones/temporada.js';
 import { planDelBot } from './civilizaciones/plan-bot.js';
 
 const COMUNES = ['granero', 'templo', 'biblioteca', 'acueducto', 'academia', 'mercado', 'aserradero', 'cantera', 'universidad', 'anfiteatro', 'hospital', 'imprenta', 'laboratorio', 'museo', 'parlamento'];
+export const VERSION_BOTS = 'civilizaciones-bots-2.2';
 
 export const PERFILES = {
   cientifico: { reparto: [30, 10, 10, 0, 40, 10], ramas: ['S', 'E', 'T', 'C', 'M', 'D'], edificios: ['biblioteca', 'templo', 'academia', 'granero', 'universidad', 'imprenta', 'laboratorio', 'acueducto'], hasta: 8, rasgos: ['eruditos', 'constructores'] },
@@ -106,30 +107,52 @@ export function jugar(E, s, perfil, rng) {
     if (invasion.turno === t && n === 2 && stock.Oro >= invasion.fuerza * TRIBUTO_POR_FUERZA) stock.Oro -= invasion.fuerza * TRIBUTO_POR_FUERZA;
   }
 
-  // El reparto de la politica en el turno 1; despues, si el turno anterior hubo hambre, 10 puntos de sabios, artistas o mercaderes pasan a granjeros.
-  const reparto = t === 1 ? [...perfil.reparto] : [...c.reparto];
+  const plan = c.temporada ? planDelBot(c, perfil) : null;
+  const listaEdificios = plan ? [...new Set([...plan.filter((n) => n.tipo === 'edificio').map((n) => n.nombre), ...perfil.edificios])] : perfil.edificios;
+  const centroPendiente = plan?.find((n) => n.tipo === 'edificio'
+    && !c.construidos.includes(n.nombre) && edificioDisponible(c, n.nombre));
+  const reservaCentro = centroPendiente ? costoEdificio(centroPendiente.nombre, m) : {};
+  const sinInvestigacion = c.proyectos.length === 0 && disponibles(c).length === 0;
+  // Ajuste temporal: evita acumular Ciencia mientras falta el recurso del centro.
+  // Al desaparecer el cuello vuelve al reparto del perfil; hambre tiene prioridad.
+  const reparto = t === 1 || c.temporada ? [...perfil.reparto] : [...c.reparto];
   if (perfil.adaptar) {
     const saturada = c.culturaAcumulada >= INDICE.cultura.referencia;
     reparto.splice(0, 6, ...(c.stock.Comida < c.poblacion * 2 ? [50, 10, 10, 10, 20, 0]
       : saturada ? [30, 10, 10, 20, 30, 0] : perfil.reparto));
   }
+  // Restaurar el perfil no debe borrar los aumentos de granjeros que evitaron
+  // hambre. Una escasez persistente puede exigir mas de diez puntos adicionales.
+  if (c.temporada && !perfil.adaptar) {
+    for (const k of [4, 5, 3, 1, 2]) {
+      while (reparto[0] < c.reparto[0] && reparto[k] >= 10) { reparto[k] -= 10; reparto[0] += 10; }
+    }
+  }
   if (c.hambre) { const j = [4, 5, 3].find((k) => reparto[k] >= 10); if (j !== undefined) { reparto[j] -= 10; reparto[0] += 10; } }
-  if (t === 1 || c.hambre || perfil.adaptar) o.push(textoReparto(reparto));
+  if (c.temporada && !c.hambre && sinInvestigacion && reparto[4] >= 20
+    && c.reservaCiencia >= COSTO_TECNOLOGIA[c.era - 1]) {
+    const oficio = stock.Madera < (reservaCentro.Madera ?? 0) ? 1
+      : stock.Roca < (reservaCentro.Roca ?? 0) || stock.Hierro < (reservaCentro.Hierro ?? 0) ? 2 : null;
+    if (oficio !== null) { reparto[4] -= 10; reparto[oficio] += 10; }
+  }
+  if (t === 1 || c.hambre || perfil.adaptar || reparto.some((n, i) => n !== c.reparto[i])) o.push(textoReparto(reparto));
 
-  // Expansion: coloniza la vecina mas rica mientras haya con que, hasta `hasta` regiones y sin pasar de 2 por turno.
+  // Reserva primero el centro que abre la ruta elegida. Sin esto, reponer
+  // colonias perdidas consume la Madera y deja Ciencia sin usar indefinidamente.
+  const alcanzaTrasReserva = (costo) => [...new Set([...Object.keys(costo), ...Object.keys(reservaCentro)])]
+    .every((r) => stock[r] >= (costo[r] ?? 0) + (reservaCentro[r] ?? 0));
+  // Expansion: coloniza la vecina mas rica sin consumir el presupuesto del centro.
   const regiones = [...c.regiones];
   const terremoto = evento?.turno === t && evento.id === 'terremoto';
   for (let n = 0; !terremoto && n < 2 && regiones.length < perfil.hasta && c.estabilidad >= (perfil.minEstabilidad ?? 0); n++) {
     const costo = costoColonizar({ ...c, regiones }, m);
-    if (!alcanza(costo)) break;
+    if (!alcanzaTrasReserva(costo)) break;
     const r = fronteraDe(E.mundo, regiones).sort((a, b) => valor(E, c, b) - valor(E, c, a) || a - b)[0];
     if (r === undefined) break;
     pagar(costo); regiones.push(r); o.push(`colonizar ${nombreRegion(r)}`);
   }
 
   // Un edificio por turno: el primero de su lista desbloqueado, que no tenga y que alcance, en una region sin edificio.
-  const plan = c.temporada ? planDelBot(c, perfil) : null;
-  const listaEdificios = plan ? [...new Set([...plan.filter((n) => n.tipo === 'edificio').map((n) => n.nombre), ...perfil.edificios])] : perfil.edificios;
   // Los hitos sobreviven al reemplazo: si falta espacio, cambia un edificio
   // que no es prioritario para la politica, conservando la investigacion lograda.
   const prioridadEdificio = (r) => { const k = perfil.edificios.indexOf(c.edificios[r].tipo); return k < 0 ? 100 : k; };
@@ -137,7 +160,8 @@ export function jugar(E, s, perfil, rng) {
     ? [...regiones].sort((a, b) => prioridadEdificio(b) - prioridadEdificio(a))[0] : undefined);
   let edificioNuevo = null;
   if (libre !== undefined && !terremoto) {
-    const tipo = listaEdificios.find((e) => (c.temporada ? edificioDisponible(c, e) && !c.construidos.includes(e) : c.tecnologias.includes(EDIFICIO[e].tec)) && !tieneTipo(c, e) && alcanza(costoEdificio(e, m)));
+    const tipo = listaEdificios.find((e) => (c.temporada ? edificioDisponible(c, e) && !c.construidos.includes(e) : c.tecnologias.includes(EDIFICIO[e].tec)) && !tieneTipo(c, e) && alcanza(costoEdificio(e, m))
+      && (!centroPendiente || plan.some((n) => n.tipo === 'edificio' && n.nombre === e) || alcanzaTrasReserva(costoEdificio(e, m))));
     if (tipo) { pagar(costoEdificio(tipo, m)); o.push(`construir ${nombreRegion(libre)} ${tipo}`); edificioNuevo = tipo; }
   }
   if (reclutas > 0) o.push(`reclutar ${reclutas}`);
