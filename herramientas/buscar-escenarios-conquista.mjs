@@ -22,6 +22,9 @@ const MEZCLAS = [
   ['agresivo', 'economico', 'pacifico', 'azar'],
   ['agresivo', 'agresivo', 'azar', 'azar'],
   ['agresivo', 'agresivo', 'azar'],
+  // Con la Maravilla de 25 de cada recurso (2.2.0) los bots de arriba casi nunca llegan a construirla: estos si (bots-v2, con `maravilla: true`).
+  ['leal', 'leal', 'leal', 'mixto-adaptativo'],
+  ['leal', 'leal', 'leal'],
 ];
 
 const candidatos = [];

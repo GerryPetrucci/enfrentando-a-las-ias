@@ -45,6 +45,15 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   cerrar cambios de codigo. `npm.cmd test` funciona en PowerShell. No repetirla
   si no hay nuevos cambios, fallos o dudas que lo justifiquen.
 
+- **Una sola partida por corrida, en cualquier juego:** el default es 1 partida (`--partidas=1`, siempre explícito). Nunca series (varias partidas, rotación de asientos) a menos que el usuario las pida.
+  Regla decidida 27-10-2026.
+- **Toda partida jugada con modelos termina con su voz y su paquete `jN`, sin que el usuario lo pida:** al acabar la corrida (oficial o de práctica, de cualquier juego) correr `node herramientas/narrar.mjs --archivo=...` y
+  `node herramientas/paquete.mjs --archivo=... --partida=1` (el `jN` es el siguiente libre del juego; si el usuario nombra uno, `--juego=N`), y decir dónde quedó (`grabaciones/listos/<juego>/<fecha>_seed-<seed>/paquete-jN`). Sin gasto de
+  API. No aplica a pruebas de bots ni a ensayos parciales. Regla decidida 28-10-2026.
+- **Prompt completo en cada juego (los hechos y los futuros):** el prompt de sistema explica el juego ENTERO y sin ambigüedad: reglas exactas con cifras, orden de resolución del turno, qué ve y qué no ve el modelo, cómo leer cada línea de su estado,
+  cada orden con su sintaxis y sus errores comunes, y el formato de respuesta explicado campo por campo (tipo, límites, significado) con un ejemplo de valores inventados y la advertencia de no copiarlos. Un prompt escaso hace que el modelo juegue a
+  «descifrar el juego» y no el juego diseñado: eso sesga. La claridad va primero y el costo se analiza DESPUÉS de escribirlo; nunca se recorta claridad para caber en un tope (subir el tope de tokens del prompt pide orden del usuario). Cada afirmación se
+  verifica contra el motor y el texto se prueba como variante sobre prompts reales antes de adoptarlo. Procedimiento y lista de verificación: `docs/guia-de-prompts.md`. Primero Guerra de territorios, luego los demás. Regla decidida 28-10-2026.
 - Sin sondeos al otro asistente: esperar su entrega y aviso final; no revisar archivos durante su trabajo ni duplicar sus comprobaciones sin un hallazgo concreto.
 
 ## Contexto por tarea

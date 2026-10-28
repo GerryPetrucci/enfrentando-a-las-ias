@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { nuevoEstado, contexto, R, frontera, fijarTropas } from './ayudas.js';
 import { sumarUni, limpiarRegion } from '../../juegos/conquista/estado.js';
 import { calcularFrentes, lineasDeFrentes, lineasDeCapacidad } from '../../juegos/conquista/frentes.js';
+import { disponibleAlGastar } from '../../juegos/conquista/previsto.js';
 import { ordenesEconomicas } from '../../juegos/conquista/turno/economia.js';
 import { rupturas } from '../../juegos/conquista/turno/diplomacia.js';
 import { movimientos } from '../../juegos/conquista/turno/movimiento.js';
@@ -172,7 +173,9 @@ test('CAPACIDAD con un cuartel (no aislado): una linea mas con el alcance a mita
   assert.equal(lineasDeCapacidad(F, 0).length, 1, 'sin cuartel una sola linea');
 });
 
-test('la linea de CAPACIDAD sale en la vista del propio reino', () => {
+test('la linea de CAPACIDAD sale en la vista del propio reino y se calcula con lo DISPONIBLE al gastar (produccion y hambre ya aplicadas), no con el almacen del cierre', () => {
   const E = nuevoEstado(4);
-  assert.ok(vistaTexto(E, 0).includes('Puedes reclutar hasta (sin cuartel): L 6, A 4.'), 'almacen inicial: 6 Comida, 4 Madera, sin Caballos');
+  const p = disponibleAlGastar(E, 0);
+  assert.ok(vistaTexto(E, 0).includes(lineasDeCapacidad(E, 0, p.stock)[0]));
+  assert.ok(vistaTexto(E, 0).includes(`Puedes reclutar hasta (sin cuartel): L ${Math.min(p.stock.Comida)}`), `con ${p.stock.Comida} de Comida disponibles se pueden reclutar ${p.stock.Comida} Lanceros`);
 });

@@ -1,5 +1,5 @@
 import { activosDe } from './estado.js';
-import { bandoDe, ROLES } from './constantes.js';
+import { bandoDe, REVELA_CUPIDO, ROLES } from './constantes.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { vistaCamara } from './vista.js';
 
@@ -80,12 +80,13 @@ function morir(E, muertes) {
     if (!E.vivos[i]) continue;
     E.vivos[i] = false;
     const comprobacion = comprobarDeclaracion(E, i);
-    evento(E, 'muerte', { asiento: i, rol: E.roles[i], causa, ...(comprobacion ? { comprobacion } : {}) });
+    const pareja = E.enamorados.includes(i) ? E.enamorados.find((j) => j !== i) : null;
+    // La primera muerte de un enamorado descubre la pareja si el modo la ocultaba: ese evento la trae, una sola vez.
+    const descubre = pareja !== null && !E.camaraVe.pareja;
+    if (descubre) E.camaraVe.pareja = true;
+    evento(E, 'muerte', { asiento: i, rol: E.roles[i], causa, ...(descubre ? { pareja } : {}), ...(comprobacion ? { comprobacion } : {}) });
     if (E.roles[i] === 'cazador') E.cazadoresPendientes.push(i);
-    if (E.enamorados.includes(i)) {
-      const pareja = E.enamorados.find((j) => j !== i);
-      if (E.vivos[pareja] && !cola.some((m) => m.asiento === pareja)) cola.push({ asiento: pareja, causa: 'amor' });
-    }
+    if (pareja !== null && E.vivos[pareja] && !cola.some((m) => m.asiento === pareja)) cola.push({ asiento: pareja, causa: 'amor' });
   }
 }
 
@@ -101,7 +102,8 @@ function cerrarSiCorresponde(E, tope = false, motivoCorte = null) {
     if (ganador && bandoDe(rol) === ganador) E.puntos[i] += 10;
     if (E.enamorados.includes(i) && E.enamorados.every((j) => E.vivos[j])) E.puntos[i] += 5;
   });
-  evento(E, 'final', { ganadorBando: ganador, motivo: E.motivoFin, roles: [...E.roles], puntos: [...E.puntos],
+  E.camaraVe = { cupido: true, pareja: true };
+  evento(E, 'final', { ganadorBando: ganador, motivo: E.motivoFin, roles: [...E.roles], puntos: [...E.puntos], enamorados: [...E.enamorados],
     comprobaciones: E.roles.flatMap((_, asiento) => { const c = comprobarDeclaracion(E, asiento); return c ? [{ asiento, ...c }] : []; }) });
   return true;
 }
@@ -171,7 +173,13 @@ export function aplicarTurno(E, respuestas = []) {
   });
   const a = acciones[0];
   switch (fase) {
-    case 'cupido': E.enamorados = [...a.enamorados]; E.cupidoRevelado = a.asiento; evento(E, 'enamorados', { asientos: [...E.enamorados], cupido: a.asiento }); E.fase = 'lobos'; break;
+    case 'cupido': {
+      // El evento público guarda SOLO lo que el modo revela: la elección completa queda en el registro privado (acciones).
+      E.enamorados = [...a.enamorados];
+      E.camaraVe = { ...REVELA_CUPIDO[E.modoCupido] };
+      evento(E, 'enamorados', { ...(E.camaraVe.pareja ? { asientos: [...E.enamorados] } : {}), ...(E.camaraVe.cupido ? { cupido: a.asiento } : {}), revela: E.modoCupido });
+      E.fase = 'lobos'; break;
+    }
     case 'lobos': E.victima = acciones.every((x) => x.objetivo === a.objetivo) ? a.objetivo : null; E.fase = 'bruja'; break;
     case 'bruja':
       E.salvada = a.salvar; E.veneno = a.matar;

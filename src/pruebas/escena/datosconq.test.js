@@ -66,6 +66,7 @@ test('las constantes que usa la escena son las del motor (la web no puede import
   assert.equal(web.HONOR_ROTURA, motor.HONOR.rotura);
   assert.equal(web.PACTO_TURNOS, motor.PACTO_TURNOS);
   assert.equal(web.MARAVILLA_TURNOS, motor.MARAVILLA.turnos);
+  assert.equal(web.MARAVILLA_OBRA, motor.MARAVILLA.obra);
   assert.deepEqual(web.TERRENO, motor.TERRENO);
   assert.equal(web.BONO_ARMAS, motor.MEJORAS.bono);
   assert.deepEqual(web.PUNTOS_POSICION, motor.PUNTOS_POSICION);

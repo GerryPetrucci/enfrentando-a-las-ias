@@ -98,9 +98,10 @@ function alcance(stock, factor, conIngenios) {
   return out;
 }
 
-// CAPACIDAD: lo que puedes reclutar con tu almacen (cada tipo por separado). Con un cuartel entero o danado y no aislado, otra linea a su costo (aqui tambien los Ingenios).
-export function lineasDeCapacidad(E, i) {
-  const stock = E.reinos[i].stock, t = E.turno + 1, aisladas = new Set(regionesAisladas(E, i, t));
+// CAPACIDAD: lo que puedes reclutar con un almacen (cada tipo por separado). Con un cuartel entero o danado y no aislado, otra linea a su costo (aqui tambien los Ingenios).
+// `stock`: el almacen con que se calcula; la vista pasa el DISPONIBLE AL GASTAR (con la produccion y el hambre de este turno, previsto.js) porque es con lo que se recluta de verdad.
+export function lineasDeCapacidad(E, i, stock = E.reinos[i].stock) {
+  const t = E.turno + 1, aisladas = new Set(regionesAisladas(E, i, t));
   const lineas = [], normal = alcance(stock, 1, false);
   if (normal.length) lineas.push(`Puedes reclutar hasta (sin cuartel): ${normal.join(', ')}.`);
   const cuarteles = regionesDe(E, i).filter((r) => E.edif[r] === 'cuartel' && !aisladas.has(r));

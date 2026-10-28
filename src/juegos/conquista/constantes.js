@@ -60,9 +60,14 @@ export const EDIFICIOS = {
   cuartel: { letra: 'c', costo: { Madera: 4, Roca: 3 } },
 };
 export const MAX_EDIFICIOS_POR_TIPO = 3;
-// Costos y plazo vigentes de 2.0.0. En 2.1.0 una fuerza enemiga de 3 unidades
-// en una region vecina pausa el avance; liberarla o pactar permite continuarlo.
-export const MARAVILLA = { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9, cerco: 3 };
+// Maravilla 2.2.0 (26-10-2026, spec privado/spec/guerra-maravilla-2.2.0.md): 25 de cada recurso, 3 turnos de obra y 7 de pie. `turnos` es el TOTAL de la cuenta (obra + enPie):
+// lo lee cierre.js para dar la victoria y la vista y la escena para mostrar el avance. Antes (2.0.0): 21 Roca + 17 Madera + 13 Hierro + 13 Oro y 9 turnos.
+// Desde 2.1.0 una fuerza enemiga de `cerco` unidades en una region vecina pausa la cuenta (obra o de pie); liberarla o pactar permite continuarla.
+export const MARAVILLA = {
+  costo: { Comida: 25, Madera: 25, Roca: 25, Hierro: 25, Oro: 25, Caballos: 25 },
+  obra: 3, enPie: 7, cerco: 3,
+  get turnos() { return this.obra + this.enPie; },
+};
 export const HONOR = { inicial: 5, maximo: 10, rotura: 3, cumplido: 1, cadaTurnos: 3, deshonrado: 2 };
 export const PACTO_TURNOS = 2;
 export const COMIDA = { tropasPorRacion: 4, regionesPorCosecha: 2, deserta: 0.1 };

@@ -6,6 +6,7 @@ import { RECURSOS, MARAVILLA, TURNOS, EDIFICIOS, UNIDADES, HEGEMON } from './con
 import { nombreRegion, pila as pilaDe, presentes, regionesDe } from './estado.js';
 import { eventoDe, NOMBRE_EVENTO } from './equilibrio.js';
 import { lineasDeFrentes, lineasDeCapacidad } from './frentes.js';
+import { disponibleAlGastar } from './previsto.js';
 import { sumaPila } from './unidades.js';
 import { regionesAisladas } from './suministro.js';
 
@@ -41,10 +42,22 @@ export function vistaTexto(E, i) {
   L.push(`Turno ${t} de ${TURNOS}. Eres ${yo.nombre}. Hay ${E.k} reinos y ${E.mapa.regs.length} regiones. Reinos vivos: ${R.filter((r) => r.vivo).map((r) => r.nombre).join(', ')}.`);
   L.push('Capitales: ' + R.map((r) => `${r.nombre} ${nombreRegion(r.capital)}`).join(SEP));
   L.push('Honor: ' + R.map((r) => `${r.nombre} ${r.honor}`).join(SEP));
-  L.push(E.maravilla ? `Maravilla de ${R[E.maravilla.k].nombre} en ${nombreRegion(E.maravilla.r)} (faltan ${Math.max(0, MARAVILLA.turnos - E.maravilla.n)} turnos)` : 'Maravilla: ninguna');
+  if (E.maravilla) {
+    const m = E.maravilla, dueno = `Maravilla de ${R[m.k].nombre} en ${nombreRegion(m.r)}`;
+    // En obra (los primeros MARAVILLA.obra turnos de la cuenta) y despues de pie hasta completar MARAVILLA.turnos.
+    L.push(m.n < MARAVILLA.obra
+      ? `${dueno} (en obra: faltan ${MARAVILLA.obra - m.n} turnos y luego ${MARAVILLA.enPie} de pie)`
+      : `${dueno} (de pie: faltan ${Math.max(0, MARAVILLA.turnos - m.n)} turnos)`);
+  } else L.push('Maravilla: ninguna');
   if (E.maravilla?.cercada) L.push('La cuenta de la Maravilla esta pausada por cerco. Debes despejarlo o pactar para que vuelva a avanzar.');
-  L.push(`Tu almacen: ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}mejoras ${UNIDADES.map((u, t) => u.id + yo.mejoras[t]).join(' ')}`);
-  L.push(...lineasDeCapacidad(E, i));
+  L.push(`Tu almacen (cierre del turno anterior): ${RECURSOS.map((r) => `${r} ${yo.stock[r]}`).join(SEP)}${SEP}mejoras ${UNIDADES.map((u, t) => u.id + yo.mejoras[t]).join(' ')}`);
+  // 2.3.0: lo que de verdad podras gastar, ya con la produccion y el hambre de este turno (previsto.js corre las mismas fases del motor); la aritmetica no es el juego.
+  const previsto = disponibleAlGastar(E, i);
+  if (previsto) {
+    const produccion = RECURSOS.filter((r) => previsto.produccion[r] > 0).map((r) => `+${previsto.produccion[r]} ${r}`).join(' ') || 'ninguna';
+    L.push(`Disponible al gastar (con la produccion y el hambre de este turno ya aplicadas): ${RECURSOS.map((r) => `${r} ${previsto.stock[r]}`).join(SEP)} (produccion ${produccion}; hambre -${previsto.hambre.come} Comida${previsto.hambre.faltaComida ? `; FALTA COMIDA: desertaran ${previsto.desertan} unidades` : ''})`);
+  }
+  L.push(...lineasDeCapacidad(E, i, previsto?.stock));
   const pactos = R.filter((r) => r.s !== i && yo.pactos[r.s] >= t).map((r) => `${r.nombre} (hasta el turno ${yo.pactos[r.s]})`);
   const abierta = yo.propuestaPrevia !== null && !(yo.pactos[yo.propuestaPrevia] >= t) ? ` Tu propuesta abierta: ${R[yo.propuestaPrevia].nombre}.` : '';
   L.push(`Pactos vigentes: ${pactos.length ? pactos.join(', ') : 'ninguno'}.${abierta}`);

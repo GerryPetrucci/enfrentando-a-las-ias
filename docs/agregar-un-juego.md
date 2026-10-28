@@ -67,6 +67,18 @@ En 9:16 las redes tapan arriba (285 px) y abajo (420 px) con su propia interfaz.
 ## Gancho «Próximamente» del juego (regla del 25 de octubre de 2026)
 
 Todo juego tiene gancho en cada parte: en video si sus partidas dan al menos 2 momentos con puntos (`destacadasDe`) y, si no, **en imagen** (`herramientas/gancho-imagen.mjs`: «Próximamente», el juego, «Juego N · Parte M de K»). No hace falta hacer nada para que funcione. Si el juego tiene arte que su escena ya usa (un panorama, personajes), registralo en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`) para que la imagen lo lleve; sin eso sale solo con la marca. Detalle en `docs/produccion-videos.md`.
+## El prompt del juego (regla del 28 de octubre de 2026)
+
+El prompt de sistema de tu juego tiene que explicar el juego ENTERO y sin ambigüedad (reglas con cifras, orden del turno, qué ve el modelo, cómo leer su estado, cada orden, formato de respuesta campo por campo con un ejemplo de valores inventados). La claridad va primero; el costo se analiza después. Sigue `docs/guia-de-prompts.md`.
+
+## Examen de ingreso de modelos (27 de octubre de 2026)
+
+Antes de gastar una partida entera con un modelo nuevo (o con uno que ya fallo) se le hace el examen del juego: `node herramientas/examen-modelos.mjs --juego=<id> --modelos=a,b` estima el costo sin llamar a nadie; con `--ejecutar --tope-usd=<dolares>` llama de verdad. Cada modelo contesta unos escenarios reales del juego (prompts de produccion congelados en 4 momentos de una partida de bots, dos veces cada uno) y el motor juzga sus respuestas: JSON valido, ordenes legales, cortes por `max_tokens`, tokens de salida frente al tope. Veredicto `apto` / `con reservas` / `no apto`; el resumen queda en `privado/planes/aptitud-modelos.md` (modelo × juego, con version de reglas, tope de tokens y fecha: **caduca** si cambia alguno) y el detalle, con el razonamiento de cada llamada, en `privado/pruebas/examen-<juego>-<fecha>.json`. «Apto» dice que el modelo permite jugar, no que juegue bien, y es una muestra corta: un modelo que se corta solo en el final de una partida larga puede aprobar.
+
+**Diagnóstico sobre una partida real.** Los escenarios de bots no reproducen lo que ven los modelos en una partida de verdad (mensajes, pactos, un reino que crece según sus propias decisiones): el 28 de octubre GLM Flash salió «apto» en el examen y se había cortado en 17 de 30 turnos de su partida real. Para repetir los prompts REALES de una partida guardada: `node herramientas/examen-modelos.mjs --juego=conquista --modelos=glm-flash --partida=pruebas/ARCHIVO.json --jugador=glm-flash --repeticiones=1 [--turnos=7,9,10] [--ejecutar --tope-usd=0.20]` (la ruta es relativa a `data/`). El motor rejuega las respuestas guardadas (`reconstruirPrompts`, con su comprobación de fidelidad: si la rejugada no coincide con los estados guardados, o la partida se jugó con otro prompt de sistema, se niega), repite cada turno con el modelo pedido y cuenta cuántos de los turnos que se cortaron en la real se vuelven a cortar y cuántos de los que salieron bien. No escribe la tabla de aptitud: es un diagnóstico de esa partida. Un juego lo soporta si ofrece `reconstruirPrompts` con el gancho `alTurno` (ver `src/juegos/conquista/replay.js`). Para probar una redacción nueva SIN tocar el juego: `--reemplazar="texto viejo=>texto nuevo"` cambia ese texto del prompt de usuario de cada escenario solo en memoria (se niega si el texto no aparece en alguno); `--sistema=privado/spec/<borrador>.txt` prueba un prompt de sistema completo distinto (solo archivos de `privado/`; el examen dice si el prompt usado es IGUAL o DISTINTO al de la partida real, por la huella); `--max-tokens=N` prueba otro tope de tokens de salida. Así se probó el prompt completo de Guerra 2.3.0 (`docs/guia-de-prompts.md`). Así se descartó el 28 de octubre que la falta de leyenda de `g/m/c/fN` fuera la causa de los cortes de GLM Flash: con la leyenda dejó de descifrar siglas y se cortó igual (9 de 14, como sin ella).
+
+Para sumar tu juego al examen agrega una entrada a `JUEGOS` en `herramientas/examen-modelos.mjs` con `escenarios(opciones)`: una lista de `{ id, tokensEstimados, sistema, usuario, evaluar(respuesta) }`, con `sistema` y `usuario` armados con `construirSistema` / `construirUsuario` (los de produccion), y `evaluar` devolviendo `{ ok, motivo, ordenes: { validas, total } }` segun el motor. Mira `escenariosDeConquista` como ejemplo.
+
 ## Colores de las IAs (global, no se definen por juego)
 
 El color de cada IA vive en [`web/paleta.js`](../web/paleta.js) y es el mismo en todos los juegos, el sitio y el
@@ -95,7 +107,7 @@ nuevo lo respeta. Con modelos de pago no hay tope de plataforma, pero cada llama
 | Llamadas por jugador por turno | **Una** (ordenes en lote). Nunca una por region o por unidad |
 | Turnos maximos | **30** |
 | Llamadas por partida de 4 jugadores | **<= 100** (~25 por jugador). Asi caben ~10 partidas al dia en modo gratis |
-| Tokens por llamada | Entrada **<= 3,500**, salida **<= 500** (`max_tokens` 4000 incluye el razonamiento) |
+| Tokens por llamada | Entrada **<= 3,500**, salida **<= 500** (`max_tokens` 8000 incluye el razonamiento) |
 | Costo con modelos de pago (mezcla de los 5) | Objetivo **<= $0.40** por partida (caso base), tope duro **$0.90** |
 | Reintentos | Cuentan como llamadas (`reintentos: 2` por defecto): presupuestar +10% |
 | Medicion | Cada partida imprime sus llamadas y tokens y avisa si pasa el presupuesto |

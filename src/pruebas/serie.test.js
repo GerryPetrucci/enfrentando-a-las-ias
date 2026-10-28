@@ -142,8 +142,9 @@ test('destinoDe: los modelos economicos de practica van a pruebas por defecto y 
 // ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
 test('errorDePrimeraRonda: la primera ronda sale entera, asi que se compara su peor caso contra el tope', () => {
   assert.equal(errorDePrimeraRonda({ lote: false, tope: null, peticiones: 100000 }), null, 'sin --lote no se valida nada');
-  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: 12 }), null);
-  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: Math.floor(0.10 / COSTO_MAXIMO_PETICION) }), null, 'justo en el limite cabe');
+  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.32, peticiones: 12 }), null);
+  assert.equal(errorDePrimeraRonda({ lote: true, tope: 0.15, peticiones: Math.floor(0.15 / COSTO_MAXIMO_PETICION) }), null, 'justo en el limite cabe');
+  assert.match(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: 12 }), /primera ronda envia 12 peticiones/, 'con 16000 tokens el ensayo minimo ya no cabe en 0.10');
   assert.match(errorDePrimeraRonda({ lote: true, tope: 0.10, peticiones: 1200 }), /primera ronda envia 1200 peticiones.*--tope=0\.1/);
 });
 

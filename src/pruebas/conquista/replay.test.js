@@ -53,6 +53,15 @@ test('hasta un turno: solo los turnos pedidos; un reino caido no recibe prompt',
   assert.equal(todo.turnos[0].prompts.every((p) => typeof p === 'string'), true);
 });
 
+test('alTurno entrega la mesa viva ANTES de cada turno y las jugadas rejugadas, sin cambiar lo reconstruido', async () => {
+  const { partida } = await conVistas(18, ['agresivo', 'pacifico', 'economico', 'azar']);
+  const vistos = [];
+  const r = reconstruirPrompts(partida, Infinity, { alTurno: ({ turno, E, jugadas }) => vistos.push({ turno, turnoMotor: E.turno, jugadas: jugadas.length }) });
+  assert.deepEqual(r, reconstruirPrompts(partida), 'el gancho no cambia el resultado');
+  assert.deepEqual(vistos.map((v) => v.turno), partida.rondas.map((x) => x.turno));
+  assert.ok(vistos.every((v) => v.turnoMotor + 1 === v.turno && v.jugadas === 4), 'el prompt de la mesa dice «Turno motor+1», igual que r.turno');
+});
+
 test('las tropas de visita tambien cuentan: si lo guardado cambia las unidades de un invitado la rejugada ya no es fiel', async () => {
   // una partida con aliados que dejan tropas de visita en tierra del otro (traidor y leal pactan y visitan)
   let partida = null;

@@ -1,7 +1,7 @@
 export const REGLAS = `Lobo en la aldea. Asientos numerados desde 0. Roles secretos repartidos con seed.
 8 jugadores: 2 lobos, 1 vidente, 1 bruja, 1 cazador, 1 cupido, 2 aldeanos; máximo 6 rondas.
 12 jugadores: 3 lobos, 2 videntes, 1 bruja, 1 cazador, 1 cupido, 4 aldeanos; máximo 6 rondas.
-Cupido elige dos enamorados la primera noche (puede incluirse); si uno muere el otro también. La cámara muestra la pareja y Cupido queda revelado públicamente desde esa elección.
+Cupido elige dos enamorados la primera noche (puede incluirse); si uno muere el otro también. Cada enamorado sabe quién es su pareja; nadie más sabe quién es Cupido ni quiénes son los enamorados hasta que una muerte lo revele.
 Cada noche los lobos eligen simultáneamente un no lobo vivo: solo el consenso unánime mata.
 La bruja conoce la víctima y puede salvarla (incluso a sí misma) y envenenar a otro vivo; una poción de cada tipo por partida, ambas en la misma noche si quiere.
 Cada vidente inspecciona a otro vivo: conoce en privado si es lobo. Las dos videntes de la mesa de 12 deciden simultánea e independientemente, sin reconocerse ni compartir hallazgos automáticamente. Pueden comunicarlos en sus mensajes públicos. Todas las inspecciones se resuelven antes de las muertes del amanecer.

@@ -20,16 +20,16 @@ function preparar({ muerenVidentes = 0, seed = 41 } = {}) {
   return { E, videntes, aldeanos, lobos };
 }
 
-test('producción 1.2.0 conserva dos Videntes y cuatro aldeanos en 12, reproducibles para cada seed', () => {
+test('producción 1.3.0 conserva dos Videntes y cuatro aldeanos en 12, reproducibles para cada seed', () => {
   for (let seed = 0; seed < 50; seed++) {
     const a = lobo.crear(crearRng(seed), { jugadores: 12 });
     assert.deepEqual(a, lobo.crear(crearRng(seed), { jugadores: 12 }));
     assert.equal(a.roles.length, 12); assert.equal(asientos(a, 'lobo').length, 3);
     assert.equal(asientos(a, 'vidente').length, 2); assert.equal(asientos(a, 'aldeano').length, 4);
     for (const r of ['bruja', 'cazador', 'cupido']) assert.equal(asientos(a, r).length, 1);
-    assert.equal(a.maxRondas, 6); assert.equal(a.versionReglas, 'lobo-1.2.0');
+    assert.equal(a.maxRondas, 6); assert.equal(a.versionReglas, 'lobo-1.3.0');
   }
-  assert.equal(lobo.versionReglas, 'lobo-1.2.0');
+  assert.equal(lobo.versionReglas, 'lobo-1.3.0');
   const ocho = lobo.crear(crearRng(123), { jugadores: 8 });
   assert.deepEqual(ocho.roles, ['lobo', 'bruja', 'cupido', 'cazador', 'aldeano', 'vidente', 'lobo', 'aldeano']);
   assert.equal(ocho.maxRondas, 6);
@@ -50,7 +50,8 @@ test('ambas inspecciones se resuelven en producción y quedan aisladas en sus vi
     { asiento: b, ronda: 1, objetivo: aldeanos[0], esLobo: false },
   ]);
   assert.equal(camara.inspecciones, undefined); assert.equal(registro.publico.inspecciones, undefined);
-  assert.ok(camara.jugadores.every((j) => j.rol === (j.asiento === E.cupidoRevelado ? 'cupido' : undefined)));
+  const cupidoVisible = E.camaraVe.cupido ? asientos(E, 'cupido')[0] : null; // segun el modo del seed, la camara ve o no a Cupido
+  assert.ok(camara.jugadores.every((j) => j.rol === (j.asiento === cupidoVisible ? 'cupido' : undefined)));
   assert.deepEqual(vistaDe(E, aldeanos[0]).inspecciones, []);
   va.inspecciones[0].objetivo = -1;
   assert.equal(E.inspecciones[a][0].objetivo, lobos[0]);

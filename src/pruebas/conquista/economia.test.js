@@ -216,20 +216,38 @@ test('construir edificios: uno por region, maximo 3 de cada tipo, con su costo',
 
 test('maravilla: solo en la propia capital, una sola, y se paga con MARAVILLA.costo', () => {
   const E = nuevoEstado(4), c = capital(E, 0), otra = regionesDe(E, 0).find((r) => r !== c);
-  vaciar(E, 0, { Roca: 30, Madera: 30, Hierro: 30, Oro: 30 });
+  vaciar(E, 0, { Comida: 30, Madera: 30, Roca: 30, Hierro: 30, Oro: 30, Caballos: 30 });
   const ctx = correr(E, { 0: { ordenes: [`construir ${R(otra)} maravilla`, `construir ${R(c)} maravilla`, `construir ${R(c)} maravilla`] } });
   assert.deepEqual(E.maravilla, { r: c, k: 0, n: 0, t0: 1 });
   assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['la maravilla solo se construye en tu capital', 'ya existe una maravilla']);
   const { costo } = MARAVILLA;
-  assert.deepEqual(E.reinos[0].stock, { Comida: 0, Madera: 30 - costo.Madera, Roca: 30 - costo.Roca, Hierro: 30 - costo.Hierro, Oro: 30 - costo.Oro, Caballos: 0 });
+  assert.deepEqual(E.reinos[0].stock, Object.fromEntries(Object.keys(costo).map((r) => [r, 30 - costo[r]])));
   assert.ok(ctx.eventos.some((e) => e.tipo === 'maravilla' && e.k === 0));
 });
 
-test('maravilla: los valores de la regla (21 Roca + 17 Madera + 13 Hierro + 13 Oro y cuenta de 9 turnos, calibrados con bots el 22 de octubre de 2026; 15/12/9/9 y 8 turnos desde el 18) y el prompt los dicen igual', async () => {
+test('maravilla: sin los seis recursos completos no se construye, aunque sobren los demas, y no se cobra nada', () => {
+  for (const falta of Object.keys(MARAVILLA.costo)) {
+    const E = nuevoEstado(4), c = capital(E, 0);
+    const stock = Object.fromEntries(Object.keys(MARAVILLA.costo).map((r) => [r, 99]));
+    stock[falta] = MARAVILLA.costo[falta] - 1;
+    vaciar(E, 0, stock);
+    const ctx = correr(E, { 0: { ordenes: [`construir ${R(c)} maravilla`] } });
+    assert.equal(E.maravilla, null, `falta ${falta}`);
+    assert.deepEqual(ctx.descartes[0].map((d) => d.motivo), ['recursos insuficientes para la maravilla'], `falta ${falta}`);
+    assert.deepEqual(E.reinos[0].stock, stock, `no cobra si falta ${falta}`);
+  }
+});
+
+test('maravilla 2.2.0: 25 de cada recurso, obra de 3 turnos y 7 de pie (10 en total), y el prompt los dice igual', async () => {
   const { REGLAS } = await import('../../juegos/conquista/reglas-texto.js');
-  assert.deepEqual(MARAVILLA, { costo: { Roca: 21, Madera: 17, Hierro: 13, Oro: 13 }, turnos: 9, cerco: 3 });
-  assert.ok(REGLAS.includes('21 Roca + 17 Madera + 13 Hierro + 13 Oro. Completar 9 turnos de avance gana.'), 'el prompt dice el costo y la cuenta');
-  assert.ok(REGLAS.includes('al menos 3 unidades') && REGLAS.includes('se pausa sin perder el progreso'), 'explica el contrajuego sin cambiar costo/plazo');
+  assert.deepEqual(MARAVILLA.costo, { Comida: 25, Madera: 25, Roca: 25, Hierro: 25, Oro: 25, Caballos: 25 });
+  assert.equal(MARAVILLA.obra, 3);
+  assert.equal(MARAVILLA.enPie, 7);
+  assert.equal(MARAVILLA.turnos, 10, 'turnos = obra + enPie: es el total de la cuenta que lee el motor');
+  assert.equal(MARAVILLA.cerco, 3);
+  assert.ok(REGLAS.includes('Cuesta 25 de CADA uno de los seis recursos') && REGLAS.includes('3 turnos de obra y luego 7 de pie; al completar los 10 turnos GANAS la partida'), 'el prompt dice el costo, la obra y los turnos de pie');
+  assert.ok(REGLAS.includes('la Maravilla pasa al conquistador y la cuenta vuelve a cero'), 'y que la conquista reinicia la cuenta');
+  assert.ok(REGLAS.includes('al menos 3 unidades') && REGLAS.includes('la cuenta se PAUSA (no se pierde lo avanzado)'), 'explica el contrajuego');
 });
 
 test('regalar descuenta ya y entrega al final de la fase; a un reino que no existe se descarta', () => {

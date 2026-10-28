@@ -29,9 +29,17 @@ export function conversacionDeLobo(partida) {
     for (const e of eventos) {
       const hechos = actual.hechos;
       switch (e?.tipo) {
-        case 'enamorados':
-          if (valido(e.cupido) && lista(e.asientos).length === 2 && e.asientos.every(valido)) hechos.push({ tipo: 'hecho', texto: `${nombre(e.cupido)} se revela como Cupido. ${nombre(e.asientos[0])} y ${nombre(e.asientos[1])} quedan unidos: si uno muere, el otro también.` });
+        case 'enamorados': {
+          // Lobo 1.3.0: el evento trae solo lo que revela el modo del seed (la pareja, a Cupido, las dos cosas o ninguna); sin `revela` es de lobo 1.2.0 y trae las dos.
+          const conPareja = lista(e.asientos).length === 2 && e.asientos.every(valido), conCupido = valido(e.cupido);
+          if (e.asientos !== undefined && !conPareja) break;
+          const unidos = conPareja ? `${nombre(e.asientos[0])} y ${nombre(e.asientos[1])} quedan unidos: si uno muere, el otro también.` : '';
+          const texto = conCupido ? (conPareja ? `${nombre(e.cupido)} se revela como Cupido. ${unidos}` : `${nombre(e.cupido)} se revela como Cupido y ha elegido a sus enamorados en secreto.`)
+            : conPareja ? `Cupido une a ${nombre(e.asientos[0])} y a ${nombre(e.asientos[1])}: si uno muere, el otro también.`
+              : e.revela === 'nada' ? 'Cupido ha elegido a dos enamorados. Nadie sabe quiénes son.' : '';
+          if (texto) hechos.push({ tipo: 'hecho', texto });
           break;
+        }
         case 'amanecer': hechos.push({ tipo: 'hecho', texto: 'Amanece en la aldea.' }); break;
         case 'mensaje': {
           if (!valido(e.asiento)) break;
@@ -49,7 +57,8 @@ export function conversacionDeLobo(partida) {
         case 'muerte': {
           if (!valido(e.asiento)) break;
           const c = e.comprobacion, verdad = c ? (c.coincide ? ` Decía la verdad: era ${nombreRol(c.rolReal)}.` : ` Había mentido: decía ser ${nombreRol(c.rolDeclarado)}, pero era ${nombreRol(c.rolReal)}.`) : '';
-          hechos.push({ tipo: 'hecho', texto: `${nombre(e.asiento)} ${CAUSAS[e.causa] ?? 'muere'}: su rol era ${nombreRol(e.rol)}.${verdad}` });
+          const enamorado = valido(e.pareja) ? ` Era uno de los enamorados: su pareja era ${nombre(e.pareja)}.` : ''; // la primera muerte de un enamorado descubre la pareja oculta (lobo 1.3.0)
+          hechos.push({ tipo: 'hecho', texto: `${nombre(e.asiento)} ${CAUSAS[e.causa] ?? 'muere'}: su rol era ${nombreRol(e.rol)}.${verdad}${enamorado}` });
           break;
         }
         case 'disparo':

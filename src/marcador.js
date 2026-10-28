@@ -13,7 +13,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parsearArgumentos } from './serie.js';
-import { POR_PUBLICARSE, PUBLICADA } from './publicacion.js';
+import { POR_PUBLICARSE, PUBLICADA, ELIMINADA } from './publicacion.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -108,7 +108,11 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
     const J = juegos[ep.juego.id];
     if (ep.prompt?.reglas) { J.versionReglas = ep.prompt.reglas; J.sistema = ep.prompt.sistema ?? J.sistema; }
 
-    for (const p of ep.partidas) {
+    // Las partidas ELIMINADAS (publicacion.js) no existen para el sitio: ni en las tablas, ni en el detalle, ni en la lista; las demas conservan su numero.
+    const vigentes = ep.partidas.map((p, i) => ({ p, n: i + 1 })).filter(({ p }) => p?.eliminada !== true && p?.estadoPublicacion !== ELIMINADA);
+    if (!vigentes.length) continue;
+
+    for (const { p } of vigentes) {
       if (!cuenta(p)) continue;
       categorias[cat] ??= { nombre: cat, juegos: new Set(), tabla: {} };
       categorias[cat].juegos.add(ep.juego.nombre);
@@ -116,16 +120,16 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
       acumular(J.tabla, p);
     }
 
-    const detalle = ep.partidas.map((p, i) => detalleDe(p, i + 1));
+    const detalle = vigentes.map(({ p, n }) => detalleDe(p, n));
     const infoJugadores = (p) => (Array.isArray(p?.jugadores) ? p.jugadores : []).map((j) => ({ id: j?.id, nombre: j?.nombre, color: j?.color, inicial: j?.inicial }));
     grupos.push({ fecha: ep.fecha, items: detalle.map((d, i) => ({
       juego: { id: ep.juego.id, nombre: ep.juego.nombre, categoria: cat },
       serie: ep.etiqueta, n: d.n, fecha: ep.fecha, seed: d.seed, estado: d.estado, hastaTurno: d.hastaTurno, turnos: d.turnos,
-      jugadores: infoJugadores(ep.partidas[i]), ganador: d.ganador, puntos: d.puntos, ganoPorMaravilla: d.ganoPorMaravilla,
+      jugadores: infoJugadores(vigentes[i].p), ganador: d.ganador, puntos: d.puntos, ganoPorMaravilla: d.ganoPorMaravilla,
       versionReglas: ep.prompt?.reglas ?? null, modo: ep.modo ?? null,
     })) });
     const todas = detalle.length > 0 && detalle.every((d) => d.estado === PUBLICADA);
-    const primera = ep.partidas[0];
+    const primera = vigentes[0].p;
     episodios.push({
       etiqueta: ep.etiqueta,
       archivo,
@@ -134,7 +138,7 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
       seedBase: ep.seedBase,
       serie: ep.serie ?? null,
       enfrentamiento: (primera?.jugadores ?? []).map((j) => j.nombre).join(' vs '),
-      partidas: ep.partidas.length,
+      partidas: vigentes.length,
       estado: todas ? PUBLICADA : POR_PUBLICARSE,
       modo: ep.modo ?? null,
       versionReglas: ep.prompt?.reglas ?? null,

@@ -1,9 +1,9 @@
 {
- "reglas": "conquista-2.0.0",
+ "reglas": "conquista-2.2.0",
  "escenarios": [
   {"id":"guerra-284","seed":284,"bots":["azar","azar","agresivo","economico","pacifico"],"cubre":["empate","dos bandos con defensor","pacto formado","repelido","ruptura con privado previo","pacto cumplido","caida de capital"]},
   {"id":"guerra-188","seed":188,"bots":["agresivo","agresivo","agresivo","agresivo","agresivo"],"cubre":["dos bandos con defensor","caida de capital","repelido","decisiva por diferencia","maximo 4 combates en un turno","dos turnos con movimientos dobles"]},
-  {"id":"guerra-442","seed":442,"bots":["azar","azar","agresivo","economico","pacifico"],"cubre":["dos bandos con defensor","repelido","pacto formado","pacto cumplido","maravilla","caida de capital"]},
+  {"id":"guerra-119","seed":119,"bots":["leal","leal","leal","mixto-adaptativo"],"cubre":["empate","pacto formado","dos bandos con defensor","pacto cumplido","maximo 4 combates en un turno","decisiva por diferencia","repelido","caida de capital","maravilla","tres bandos","dos turnos con movimientos dobles"]},
   {"id":"guerra-67","seed":67,"bots":["agresivo","agresivo","agresivo","agresivo","agresivo"],"cubre":["dos bandos con defensor","repelido","maximo 4 combates en un turno","tres bandos","dos turnos con movimientos dobles"]}
  ]
 }

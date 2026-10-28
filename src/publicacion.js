@@ -10,6 +10,9 @@
 
 export const POR_PUBLICARSE = 'por-publicarse';
 export const PUBLICADA = 'publicada';
+// 28-10-2026: una partida que el usuario decidio no publicar nunca (se borra del sitio y de los JSON). Su lugar en la serie se conserva como una marca vacia para no mover el numero
+// de las demas (enlaces `partida.html?id=..&partida=N`, paquetes y carpetas de voz usan ese numero).
+export const ELIMINADA = 'eliminada';
 
 // Lo UNICO que sale de una partida a medio publicar. Todo lo demas (puntos, ganador, orden, metricas, duracion, tokens, avisos, cuantos turnos tuvo en total...) adelanta el resultado.
 const CLAVES_PARCIALES = ['seed', 'juego', 'jugadores', 'mapa', 'reinos', 'rotacion', 'invertido', 'rondas'];
@@ -46,6 +49,7 @@ export function registrarParte(registro, { etiqueta, partida, parte, hastaTurno,
   r.series ??= {};
   r.series[etiqueta] ??= { partidas: {} };
   const actual = r.series[etiqueta].partidas[partida] ?? { estado: POR_PUBLICARSE, hastaTurno: 0, partes: [] };
+  if (actual.estado === ELIMINADA) throw new Error(`La partida ${partida} de la serie ${etiqueta} esta eliminada: ya no se publica.`);
   const partes = [...actual.partes.filter((p) => p.parte !== parte), { parte, hastaTurno, final: final === true, fecha }].sort((a, b) => a.parte - b.parte);
   r.series[etiqueta].partidas[partida] = { estado: final === true ? PUBLICADA : POR_PUBLICARSE, hastaTurno: Math.max(actual.hastaTurno, hastaTurno), partes };
   return r;
@@ -56,10 +60,12 @@ export function registrarParte(registro, { etiqueta, partida, parte, hastaTurno,
 export function armarSeriePublica(crudo, registroSerie, { sistema = null, porPartida = () => null } = {}) {
   const partidas = (Array.isArray(crudo?.partidas) ? crudo.partidas : []).map((p, i) => {
     const n = i + 1, reg = registroSerie?.partidas?.[n] ?? null;
+    if (reg?.estado === ELIMINADA || p?.eliminada === true) return { eliminada: true, estadoPublicacion: ELIMINADA, truncada: true, rondas: [] }; // nada del juego: ni su seed
     if (reg?.estado === PUBLICADA) return partidaCompleta(p, porPartida(n, null));
     return partidaParcial(p, reg?.hastaTurno ?? 0, reg?.hastaTurno ? porPartida(n, reg.hastaTurno) : null);
   });
-  const todas = partidas.length > 0 && partidas.every((p) => p.estadoPublicacion === PUBLICADA);
+  const vigentes = partidas.filter((p) => p.eliminada !== true);
+  const todas = vigentes.length > 0 && vigentes.every((p) => p.estadoPublicacion === PUBLICADA);
   const { partidas: _crudas, evaluacion, ...resto } = crudo ?? {};
   return {
     ...copia(resto),

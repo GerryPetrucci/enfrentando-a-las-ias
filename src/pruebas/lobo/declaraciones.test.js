@@ -21,14 +21,13 @@ function dia(E, declaraciones = {}, expulsar = null) {
 }
 function abrir() { const E = crear(); paso(E, () => ({ enamorados:[6,7] })); noche(E); return E; }
 
-test('Cupido se revela al elegir, antes no: todos conocen solo esa excepción pública', () => {
-  const E = crear(); assert.ok(vistaCamara(E).jugadores.every((j) => !j.rol));
+test('en el modo «ambos» la cámara ve a Cupido al elegir, antes no; las IAs nunca lo ven', () => {
+  const E = crear(); E.modoCupido = 'ambos'; assert.ok(vistaCamara(E).jugadores.every((j) => !j.rol));
   const r = paso(E, () => ({ enamorados:[6,7] }));
-  assert.deepEqual(r.publico.eventos[0], { ronda:1, tipo:'enamorados', asientos:[6,7], cupido:5 });
-  for (const v of [vistaCamara(E), vistaDe(E, 0), vistaDe(E, 7)]) {
-    assert.equal(v.jugadores[5].rol,'cupido');
-    assert.ok(v.jugadores.filter((j) => j.asiento !== 5).every((j) => !j.rol));
-  }
+  assert.deepEqual(r.publico.eventos[0], { ronda:1, tipo:'enamorados', asientos:[6,7], cupido:5, revela:'ambos' });
+  assert.equal(vistaCamara(E).jugadores[5].rol,'cupido');
+  assert.ok(vistaCamara(E).jugadores.filter((j) => j.asiento !== 5).every((j) => !j.rol));
+  for (const i of [0, 5, 7]) assert.ok(vistaDe(E, i).jugadores.every((j) => !j.rol), 'ninguna vista de IA trae roles de vivos');
 });
 
 test('afirmaRol opcional: mensaje libre no declara; mentira viva no revela ni verifica rol', () => {

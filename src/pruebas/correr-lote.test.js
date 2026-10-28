@@ -61,7 +61,7 @@ test('serie por lote con la mezcla de practica: un lote por modelo y por turno, 
   assert.equal(datos.partidas.length, 4);
   assert.ok(datos.partidas.every((p) => p.truncada && p.rondas.length === 2 && p.seed === 7));
   assert.deepEqual(datos.partidas.map((p) => p.jugadores[0].id), ['haiku', 'luna', 'flash-lite', 'deepseek']);
-  assert.deepEqual(datos.parametros, { temperatura: 0.7, maxTokens: 4000, razonamiento: { haiku: 'medium', luna: 'medium', 'flash-lite': 'medium', deepseek: null } });
+  assert.deepEqual(datos.parametros, { temperatura: 0.7, maxTokens: 16000, razonamiento: { haiku: 'medium', luna: 'medium', 'flash-lite': 'medium', deepseek: null } });
   // lo que se ve: el saldo, cada envio y el resumen
   assert.match(texto, /Saldo de OpenRouter: \$10\.00/);
   assert.match(texto, /\[lote\] enviado lote-1 · anthropic\/claude-haiku-5\.5 · 4 peticion/);
@@ -76,9 +76,10 @@ test('--turnos manda el resultado a pruebas aunque nadie lo pida, y no deja mand
 });
 
 test('si se alcanza el tope de gasto, la serie incompleta se guarda en pruebas aunque fuera oficial y lo dice', async () => {
-  const cliente = clienteFalso({ costoPorLote: 0.02 });
+  const cliente = clienteFalso({ costoPorLote: 0.06 });
   const { datos, texto } = await correrAqui(
-    ['--juego=conquista', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.05', '--destino=oficial', '--seed=3'],
+    // la primera ronda (2 partidas x 3 modelos con lote = 6 peticiones, peor caso 6 x $0.025) cabe en el tope; los 3 lotes que cuestan $0.18 lo pasan
+    ['--juego=conquista', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.16', '--destino=oficial', '--seed=3'],
     { cliente },
   );
   assert.equal(datos.lote.topeAlcanzado, true);
@@ -157,8 +158,8 @@ test('banderas del lote: --ritmo no se combina con --lote, --sondeo solo con --l
 test('la primera ronda sale entera, asi que se rechaza una serie cuya primera ronda podria costar mas que el tope', async () => {
   // 400 partidas x 3 modelos con lote = 1,200 peticiones de golpe: en el peor caso mucho mas que $0.10
   await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=400', '--modo=pago', '--lote', '--tope=0.10'], /primera ronda envia 1200 peticiones/);
-  // el ensayo minimo de siempre (4 partidas, 3 modelos con lote, tope 0.10) si cabe, e imprime cuantas peticiones lleva la primera ronda
-  const ok = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.10', '--turnos=1'];
+  // el ensayo minimo de siempre (4 partidas, 3 modelos con lote = 12 peticiones, peor caso $0.30 con 16000 tokens) cabe en un tope de 0.32, e imprime cuantas peticiones lleva la primera ronda
+  const ok = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.32', '--turnos=1'];
   return correrAqui(ok).then(({ texto }) => assert.match(texto, /primera ronda: 12 peticiones/));
 });
 

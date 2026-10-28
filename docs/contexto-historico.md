@@ -120,8 +120,8 @@ Los resultados con modelos gratis van a data/pruebas/ (no se versionan ni entran
 ### Razonamiento de los modelos: siempre medio, nunca el maximo (decidido el 9 de octubre de 2026)
 
 Todos los modelos se llaman con razonamiento **medio** (`reasoning.effort = "medium"`) o, si no tiene niveles, con su valor por defecto; **nunca `high` ni `xhigh`** (cuesta mucho mas y no cambia lo que se mide). Igual para todas
-las IAs y congelado junto con el prompt y los demas parametros (`src/parametros.js`; cada contendiente declara `razonamiento` en `src/modelos.js`). `max_tokens` 4000 (decidido el 10 de octubre de 2026: con 2000 GPT Luna
-se cortaba); si aun asi se cortan, se mide y se decide con el usuario, sin subir el razonamiento. Correr `node herramientas/verificar-modelos.mjs` antes de cada corrida con modelos y antes de gastar. Detalle y mediciones: `docs/decisiones-detalle.md`.
+las IAs y congelado junto con el prompt y los demas parametros (`src/parametros.js`; cada contendiente declara `razonamiento` en `src/modelos.js`). `max_tokens` 8000 (4000 desde el 10 de octubre de 2026, cuando con 2000 GPT Luna
+se cortaba; 8000 desde el 26 de octubre por orden del usuario, «calidad antes que cantidad»: con 4000 se cortaban jugadas del final de Guerra y de Lobo); si aun asi se cortan, se mide y se decide con el usuario, sin subir el razonamiento. Correr `node herramientas/verificar-modelos.mjs` antes de cada corrida con modelos y antes de gastar. Detalle y mediciones: `docs/decisiones-detalle.md`.
 
 ### Juegos y escenas (resumen; el detalle esta en `docs/decisiones-detalle.md`: leerlo solo al tocar ese juego)
 

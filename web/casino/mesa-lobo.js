@@ -184,14 +184,23 @@ export class Mesa extends MesaBase {
     switch (paso.tipo) {
       case 'preparacion': await this.mostrarPreparacion(paso.casas, ms, ficha); break;
       case 'noche': this.rotular(`Noche ${beat.mano}`, 'Las identidades siguen ocultas.'); break;
-      case 'enamorados':
-        this.rotular(Number.isInteger(paso.cupido) ? `${n(paso.cupido)} · Cupido` : 'Unidos por el destino', paso.asientos.map(n).join('  ♥  '));
-        paso.asientos.forEach((i) => this.asientos[i].nodo.classList.add('objetivo-lobo')); break;
+      case 'enamorados': {
+        // Lobo 1.3.0: el paso trae solo lo que el modo del seed revela (la pareja, a Cupido, las dos cosas o ninguna).
+        const unidos = Array.isArray(paso.asientos);
+        this.rotular(Number.isInteger(paso.cupido) ? `${n(paso.cupido)} · Cupido` : unidos ? 'Unidos por el destino' : 'Cupido ha elegido', unidos ? paso.asientos.map(n).join('  ♥  ') : 'Sus enamorados son un secreto');
+        if (unidos) paso.asientos.forEach((i) => this.asientos[i].nodo.classList.add('objetivo-lobo'));
+        break;
+      }
       case 'amanecer': this.rotular('Amanece', beat.texto); break;
       case 'muerte':
       case 'identidad':
         this.rotular(paso.comprobacion?.coincide === false ? '¡Había mentido!' : n(paso.asiento), paso.comprobacion ? textoDeComprobacion(this.nombre(paso.asiento), paso.comprobacion) : `Era ${nombreRol(paso.rol)}`, `revelacion-lobo${paso.comprobacion?.coincide === false ? ' mentira-lobo' : ''}`);
-        this.asientos[paso.asiento].nodo.classList.add('sale-lobo'); break;
+        this.asientos[paso.asiento].nodo.classList.add('sale-lobo');
+        if (Number.isInteger(paso.pareja)) { // la primera muerte de un enamorado descubre la pareja oculta
+          const enamorado = document.createElement('small'); enamorado.textContent = `Era uno de los enamorados · pareja: ${n(paso.pareja)}`; this.escenaTexto.append(enamorado);
+          this.asientos[paso.pareja].nodo.classList.add('objetivo-lobo');
+        }
+        break;
       case 'disparo':
         this.rotular('La venganza del cazador', `${n(paso.asiento)}  →  ${n(paso.objetivo)}`);
         this.asientos[paso.objetivo].nodo.classList.add('objetivo-lobo'); break;
@@ -214,7 +223,7 @@ export class Mesa extends MesaBase {
         }
         if (paso.expulsado !== null) this.asientos[paso.expulsado].nodo.classList.add('objetivo-lobo');
         this.rotular(paso.empate ? 'Empate en la votación' : 'La aldea ha decidido', paso.empate ? 'Nadie es expulsado.' : paso.expulsado === null ? '' : `${n(paso.expulsado)} será expulsado.`); break;
-      case 'final': this.rotular(paso.ganadorBando === 'aldea' ? 'Victoria de la aldea' : paso.ganadorBando === 'lobos' ? 'Victoria de los lobos' : 'Empate entre bandos', paso.parejaViva ? 'Los enamorados sobreviven · bono +5 cada uno' : 'Se revelan todas las identidades.'); break;
+      case 'final': this.rotular(paso.ganadorBando === 'aldea' ? 'Victoria de la aldea' : paso.ganadorBando === 'lobos' ? 'Victoria de los lobos' : 'Empate entre bandos', paso.parejaViva ? (Array.isArray(paso.pareja) ? `Los enamorados eran ${paso.pareja.map(n).join('  ♥  ')} · bono +5 cada uno` : 'Los enamorados sobreviven · bono +5 cada uno') : 'Se revelan todas las identidades.'); break;
       case 'elenco': await this.mostrarElenco(paso.jugadores, ficha); break;
     }
     // La identidad se hace visible exactamente en su beat, no antes durante

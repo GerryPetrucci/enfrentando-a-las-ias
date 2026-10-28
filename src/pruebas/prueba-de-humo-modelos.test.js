@@ -16,6 +16,7 @@ import {
   ejecutarPrueba, veredicto, correrPrueba, costoDeUso, razonamientoDe,
 } from '../../herramientas/prueba-de-humo-modelos.mjs';
 import { CONTENDIENTES } from '../modelos.js';
+import { PARAMETROS } from '../parametros.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const mesa = armarMesa();
@@ -51,7 +52,7 @@ test('las fixtures son reproducibles: dos armados dan exactamente los mismos pro
 test('la vista de la noche no filtra roles ajenos que la IA no debe ver', () => {
   const vista = JSON.parse(prueba('lobo-noche').usuario.split('\n\n')[1]);
   const conRol = vista.jugadores.filter((j) => j.rol);
-  assert.deepEqual(conRol.map((j) => j.rol), ['cupido'], 'en la noche 1 nadie ha muerto: el unico rol publico es Cupido, revelado por regla');
+  assert.deepEqual(conRol.map((j) => j.rol), [], 'en la noche 1 nadie ha muerto: ningun rol es publico, tampoco el de Cupido (lobo 1.3.0)');
   assert.equal(vista.manada.length, 2);
 });
 
@@ -236,7 +237,7 @@ test('correrPrueba: un error de llave o de credito (401/402) detiene todo', asyn
 });
 
 test('sin costo conocido (uso ausente, vacio o parcial, o un fallo que pudo cobrarse) se reserva el peor caso', async () => {
-  const peor = (prueba('dilema').sistema.length + prueba('dilema').usuario.length) / 3 * 1 / 1e6 + 4000 * 4 / 1e6;
+  const peor = (prueba('dilema').sistema.length + prueba('dilema').usuario.length) / 3 * 1 / 1e6 + PARAMETROS.maxTokens * 4 / 1e6;
   const bien = '{"jugada":"C","promesa":"C"}';
   for (const uso of [null, {}, { prompt_tokens: 1000 }]) {
     const llamar = async () => ({ texto: bien, uso, finishReason: 'stop' });
@@ -339,7 +340,7 @@ test('resolverCandidatos: razonamiento "medium" solo si lo admite; avisa context
 test('estimarModelo: el peor caso cuenta max_tokens enteros en 3 llamadas + la repeticion mas cara', () => {
   const e = estimarModelo(candidato, pruebas);
   const entradas = pruebas.map((p) => Math.ceil((p.sistema.length + p.usuario.length) / 3));
-  const llamada = (n) => (n * 1 + 4000 * 4) / 1e6;
+  const llamada = (n) => (n * 1 + PARAMETROS.maxTokens * 4) / 1e6;
   assert.equal(e.tokensEntrada, entradas.reduce((a, b) => a + b, 0));
   assert.ok(Math.abs(e.peorCaso - (entradas.map(llamada).reduce((a, b) => a + b, 0) + Math.max(...entradas.map(llamada)))) < 1e-12);
   assert.ok(e.tipico < e.peorCaso);

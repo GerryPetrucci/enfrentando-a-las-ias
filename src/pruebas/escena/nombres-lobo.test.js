@@ -115,7 +115,7 @@ test('la declaración de rol de un mensaje largo se dice al terminar de leerlo, 
 });
 
 test('con 8 modelos distintos la voz y los subtitulos dicen solo el nombre: ningun numero de asiento ni separador', () => {
-  const partida = conNombres(jugarLobo(3, 8, { declaraciones: true }), OCHO);
+  const partida = conNombres(jugarLobo(3, 8, { declaraciones: true, modoCupido: 'ambos' }), OCHO); // 'ambos': Cupido y la pareja con nombre (los otros modos: cupido-oculto-lobo.test.js)
   const beats = construirLineaDeTiempo(partida);
   assert.ok(beats.length > 20);
   for (const b of beats.filter((b) => b.tipo !== 'mensaje')) {

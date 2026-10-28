@@ -116,9 +116,10 @@ export function errorDeLote({ lote, modo, tope, agentes, contendientes = null, j
   return null;
 }
 
-// Cota generosa (no un precio) de lo que puede costar UNA peticion por lote en el peor caso: 4000 tokens de salida al precio de
-// lote mas alto del registro (Gemini Flash-Lite, ~$1.25 por millon) mas la entrada. Sirve para que el tope no sea solo una promesa.
-export const COSTO_MAXIMO_PETICION = 0.006;
+// Cota generosa (no un precio) de lo que puede costar UNA peticion por lote en el peor caso: 16000 tokens de salida (PARAMETROS.maxTokens; eran 4000
+// hasta el 26 de octubre de 2026 y 8000 hasta el 28) al precio de lote mas alto del registro (Gemini Flash-Lite, ~$1.25 por millon) mas la entrada
+// (hasta ~15000 tokens con el prompt completo de Guerra). Sirve para que el tope no sea solo una promesa.
+export const COSTO_MAXIMO_PETICION = 0.025;
 
 // La primera ronda de un lote sale ENTERA antes de conocer ningun costo (el tope se revisa entre rondas): si en el peor caso ya
 // cuesta mas que el tope, no tiene sentido empezar. `peticiones` = partidas x modelos con variante de lote.

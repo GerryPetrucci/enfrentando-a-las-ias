@@ -36,12 +36,18 @@ export function crearNarrador({ nombre = (i) => `Jugador ${i + 1}`, nombres = []
     switch (tipo) {
       case 'preparacion': voz = 'La aldea se prepara para dormir. Cada habitante vuelve a su casa; las identidades permanecen ocultas.'; break;
       case 'noche': voz = NOCHES[(ronda - 1) % NOCHES.length]; break;
-      case 'enamorados': voz = `${Number.isInteger(paso.cupido) ? `${nombre(paso.cupido)} se revela como Cupido. ` : ''}Cupido une a ${nombre(paso.asientos[0])} y a ${nombre(paso.asientos[1])}: si uno cae, el otro cae con él.`; break;
+      case 'enamorados': {
+        // Lobo 1.3.0: el paso trae solo lo que el modo revela (la pareja, a Cupido, las dos cosas o ninguna).
+        const esCupido = Number.isInteger(paso.cupido) ? `${nombre(paso.cupido)} se revela como Cupido. ` : '';
+        voz = Array.isArray(paso.asientos) ? `${esCupido}Cupido une a ${nombre(paso.asientos[0])} y a ${nombre(paso.asientos[1])}: si uno cae, el otro cae con él.`
+          : esCupido ? `${esCupido}Ya ha elegido a sus enamorados en secreto.` : 'Cupido ha elegido a dos enamorados. Nadie sabe quiénes son.';
+        break;
+      }
       case 'amanecer': voz = paso.hayMuertes ? 'Amanece en la aldea.' : 'Amanece, y para sorpresa de todos, nadie falta hoy.'; break;
       case 'muerte': {
         const causa = { noche: 'ya no despierta', veneno: 'ya no despierta', amor: 'cae por su vínculo de amor',
           voto: 'recibe más votos y es expulsado', disparo: 'cae por el disparo del cazador' }[paso.causa] ?? 'muere';
-        voz = `${nombre(paso.asiento)} ${causa}: era ${nombreRol(paso.rol)}.${paso.comprobacion ? ` ${textoDeComprobacion(nombre(paso.asiento), paso.comprobacion)}` : ''}`; break;
+        voz = `${nombre(paso.asiento)} ${causa}: era ${nombreRol(paso.rol)}.${paso.comprobacion ? ` ${textoDeComprobacion(nombre(paso.asiento), paso.comprobacion)}` : ''}${Number.isInteger(paso.pareja) ? ` Era uno de los enamorados: su pareja era ${nombre(paso.pareja)}.` : ''}`; break;
       }
       case 'disparo': voz = `${nombre(paso.asiento)}, con su último aliento, se lleva a ${nombre(paso.objetivo)} con él.`; break;
       case 'mensaje':
@@ -73,7 +79,7 @@ export function crearNarrador({ nombre = (i) => `Jugador ${i + 1}`, nombres = []
             : paso.motivo === 'extincion' ? 'La aldea queda vacía. Empate por extinción.'
               : paso.motivo === 'llamadas' ? 'Se alcanza el límite de llamadas. Empate entre bandos.'
                 : 'Se alcanza el tope de rondas. Empate entre bandos.';
-        voz += ` Se revelan todas las identidades.${paso.parejaViva ? ' Los dos enamorados sobreviven y ganan su bono.' : ''}`;
+        voz += ` Se revelan todas las identidades.${Array.isArray(paso.pareja) ? ` Los enamorados eran ${nombre(paso.pareja[0])} y ${nombre(paso.pareja[1])}, y sobreviven: ganan su bono.` : paso.parejaViva ? ' Los dos enamorados sobreviven y ganan su bono.' : ''}`;
         break;
       }
     }

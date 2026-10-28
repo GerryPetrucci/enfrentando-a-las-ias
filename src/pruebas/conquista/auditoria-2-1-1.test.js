@@ -6,7 +6,7 @@ import { crearRng } from '../../rng.js';
 import { ponerPila, clasificar } from '../../juegos/conquista/estado.js';
 import { resolverBatalla } from '../../juegos/conquista/batalla.js';
 import { resultadoDe } from '../../juegos/conquista/resultado.js';
-import { PUNTOS_POSICION } from '../../juegos/conquista/constantes.js';
+import { PUNTOS_POSICION, MARAVILLA } from '../../juegos/conquista/constantes.js';
 import { nuevoEstado } from './ayudas.js';
 
 // k reinos, k*2 regiones todas vecinas entre si, sin fortalezas ni eventos: la capital de s es la region s y su segunda region es s + k.
@@ -70,7 +70,7 @@ test('Maravilla simultanea: gana el primero de la lista de reinos y los demas no
   assert.equal(E.maravilla.k, 0);
   for (const s of [1, 2, 3]) {
     assert.ok(r.descartes[s].some((d) => /ya existe una maravilla/.test(d.motivo)), `el reino ${s} recibe el descarte`);
-    assert.equal(E.reinos[s].stock.Roca - E.reinos[0].stock.Roca, 21, `el reino ${s} no pago nada`);
+    assert.equal(E.reinos[s].stock.Roca - E.reinos[0].stock.Roca, MARAVILLA.costo.Roca, `el reino ${s} no pago nada`);
   }
 });
 
@@ -85,11 +85,11 @@ test('bajas: el registro cuenta TODAS las unidades que desaparecen, tambien las 
 
 test('el texto de reglas dice lo que el motor aplica: puntos, desempates, extincion mutua y que produccion y hambre van antes de gastar', () => {
   const r = conquista.reglas;
-  assert.match(r, /PUNTOS por posicion final: 5 al 1o, 3 al 2o, 1 al 3o y 0 al resto/);
-  assert.match(r, /desempate: unidades, almacen y sorteo/);
-  assert.match(r, /Si los ultimos reinos caen a la vez, acaba ahi y gana el de mas regiones al caer/);
-  assert.match(r, /la produccion y el hambre van antes de tus gastos; tu almacen y "Puedes reclutar hasta" son los de antes/);
-  assert.match(r, /desertan el 10% de cada pila \(minimo 1\)/);
+  assert.match(r, /Puntos por posicion final: 5 al 1o, 3 al 2o, 1 al 3o y 0 al resto/);
+  assert.match(r, /Desempates: mas unidades \(todas, tambien las de visita\), luego mas recursos en el almacen \(suma de los seis\) y por ultimo un sorteo/);
+  assert.match(r, /Si los ultimos reinos caen en el mismo turno, la partida acaba ahi y gana el que mas regiones tenia al caer/);
+  assert.match(r, /"Disponible al gastar" \(ya con la produccion y el hambre de este turno aplicadas\)/);
+  assert.match(r, /en cada region donde tengas tropas desertan el 10% \(redondeado, minimo 1; empezando por los Lanceros\)/);
   assert.match(r, /^[\x00-\x7F]*$/, 'sin acentos');
-  assert.equal(conquista.versionReglas, 'conquista-2.1.1');
+  assert.equal(conquista.versionReglas, 'conquista-2.3.0'); // 2.2.0 hasta el 28-10-2026 (prompt completo; el motor no cambio)
 });

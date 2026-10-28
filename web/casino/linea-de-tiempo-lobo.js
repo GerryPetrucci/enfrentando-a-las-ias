@@ -61,10 +61,16 @@ export function construirLineaDeTiempo(partida) {
       const antes = copiar(estado), valido = (i) => asientoValido(i, n);
       switch (e.tipo) {
         case 'enamorados': {
-          if (e.asientos?.length !== 2 || !e.asientos.every(valido)) break;
-          estado.enamorados = [...e.asientos];
-          if (valido(e.cupido)) estado.jugadores[e.cupido].rol = 'cupido';
-          crear('enamorados', r, indice, `${valido(e.cupido) ? `${hecho(e.cupido)} se revela como Cupido. ` : ''}${hecho(e.asientos[0])} y ${hecho(e.asientos[1])} quedan unidos: si uno muere, el otro también.`, { tipo: 'enamorados', asientos: [...e.asientos], ...(valido(e.cupido) ? { cupido: e.cupido } : {}) }, antes); break;
+          // Lobo 1.3.0: el evento trae SOLO lo que el modo del seed revela (`asientos` = la pareja, `cupido` = quien es Cupido; sin ninguno, `revela: 'nada'`).
+          // Un evento sin `revela` es de lobo 1.2.0 y trae las dos cosas.
+          const conPareja = e.asientos !== undefined, conCupido = valido(e.cupido);
+          if (conPareja && (e.asientos?.length !== 2 || !e.asientos.every(valido))) break;
+          if (!conPareja && !conCupido && e.revela !== 'nada') break;
+          if (conPareja) estado.enamorados = [...e.asientos];
+          if (conCupido) estado.jugadores[e.cupido].rol = 'cupido';
+          const unidos = conPareja ? `${hecho(e.asientos[0])} y ${hecho(e.asientos[1])} quedan unidos: si uno muere, el otro también.` : '';
+          const texto = conCupido ? `${hecho(e.cupido)} se revela como Cupido. ${unidos || 'Ya ha elegido a sus enamorados en secreto.'}` : unidos || 'Cupido ha elegido a dos enamorados. Nadie sabe quiénes son.';
+          crear('enamorados', r, indice, texto, { tipo: 'enamorados', ...(conPareja ? { asientos: [...e.asientos] } : {}), ...(conCupido ? { cupido: e.cupido } : {}) }, antes); break;
         }
         case 'amanecer':
           crear('amanecer', r, indice, eventos.some((e) => e.tipo === 'muerte') ? 'Amanece en la aldea.' : 'Amanece en la aldea. Nadie ha muerto esta noche.', { tipo: 'amanecer', hayMuertes: eventos.some((e) => e.tipo === 'muerte') }); break;
@@ -73,7 +79,10 @@ export function construirLineaDeTiempo(partida) {
           estado.jugadores[e.asiento] = { ...estado.jugadores[e.asiento], vivo: false, rol: e.rol };
           const comprobacion = comprobar(e.asiento, e.rol);
           const causa = { amor: 'muere por su vínculo de amor', voto: 'es expulsado por la aldea', disparo: 'cae por el disparo del cazador', veneno: 'muere por el veneno', noche: 'muere durante la noche' }[e.causa] ?? 'muere';
-          crear('muerte', r, indice, `${hecho(e.asiento)} ${causa}. Su rol era ${nombreRol(e.rol)}.`, { tipo: 'muerte', asiento: e.asiento, rol: e.rol, causa: e.causa, ...(comprobacion ? { comprobacion } : {}) }, antes); break;
+          // La primera muerte de un enamorado descubre la pareja cuando el modo la ocultaba (lobo 1.3.0).
+          const pareja = valido(e.pareja) && e.pareja !== e.asiento ? e.pareja : null;
+          if (pareja !== null) estado.enamorados = [e.asiento, pareja];
+          crear('muerte', r, indice, `${hecho(e.asiento)} ${causa}. Su rol era ${nombreRol(e.rol)}.${pareja !== null ? ` Era uno de los enamorados: su pareja es ${hecho(pareja)}.` : ''}`, { tipo: 'muerte', asiento: e.asiento, rol: e.rol, causa: e.causa, ...(pareja !== null ? { pareja } : {}), ...(comprobacion ? { comprobacion } : {}) }, antes); break;
         }
         case 'disparo':
           if (valido(e.asiento) && valido(e.objetivo)) crear('disparo', r, indice, `${hecho(e.asiento)}, el cazador, dispara a ${hecho(e.objetivo)}.`, { tipo: 'disparo', asiento: e.asiento, objetivo: e.objetivo });
@@ -104,8 +113,12 @@ export function construirLineaDeTiempo(partida) {
           estado.fin = true; estado.ganadorBando = e.ganadorBando; estado.puntos = listas(e.puntos).slice(0, n);
           estado.jugadores = estado.jugadores.map((j, i) => ({ ...j, rol: e.roles[i] }));
           const texto = e.ganadorBando === 'aldea' ? 'La aldea gana: no quedan lobos.' : e.ganadorBando === 'lobos' ? 'Los lobos ganan: no quedan otros habitantes.' : e.motivo === 'extincion' ? 'La aldea queda vacía. Empate.' : 'Se alcanza el tope de rondas. Empate entre bandos.';
+          // Si la pareja seguía oculta, el final la nombra (el evento `final` de lobo 1.3.0 trae `enamorados`).
+          const secreta = estado.enamorados.length === 0 && listas(e.enamorados).length === 2 && e.enamorados.every(valido);
+          if (secreta) estado.enamorados = [...e.enamorados];
           const parejaViva = estado.enamorados.length === 2 && estado.enamorados.every((i) => estado.jugadores[i].vivo);
-          crear('final', r, indice, `${texto} Se revelan todas las identidades.${parejaViva ? ' Los dos enamorados sobreviven y ganan su bono.' : ''}`, { tipo: 'final', ganadorBando: e.ganadorBando, motivo: e.motivo, parejaViva }, antes);
+          const revelada = secreta && parejaViva ? [...estado.enamorados] : null;
+          crear('final', r, indice, `${texto} Se revelan todas las identidades.${revelada ? ` Los enamorados eran ${hecho(revelada[0])} y ${hecho(revelada[1])}, y sobreviven: ganan su bono.` : parejaViva ? ' Los dos enamorados sobreviven y ganan su bono.' : ''}`, { tipo: 'final', ganadorBando: e.ganadorBando, motivo: e.motivo, parejaViva, ...(revelada ? { pareja: revelada } : {}) }, antes);
           for (const j of estado.jugadores.filter((j) => j.vivo)) {
             const comprobacion = comprobar(j.asiento, j.rol);
             if (comprobacion) crear('identidad', r, indice, `${hecho(j.asiento)} revela su identidad.`, { tipo: 'identidad', asiento: j.asiento, rol: j.rol, comprobacion });

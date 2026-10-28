@@ -14,7 +14,8 @@ test('la vista trae lo tuyo y lo publico', () => {
   assert.match(v, /Capitales: Azur R\d\d/);
   assert.ok(v.includes('Honor: Azur 5 | Ambar 5 | Violeta 5 | Rosa 5'));
   assert.match(v, /Maravilla: ninguna/);
-  assert.ok(v.includes('Tu almacen: Comida 6 | Madera 4 | Roca 2 | Hierro 0 | Oro 4 | Caballos 0 | mejoras L0 A0 J0 I0'));
+  assert.ok(v.includes('Tu almacen (cierre del turno anterior): Comida 6 | Madera 4 | Roca 2 | Hierro 0 | Oro 4 | Caballos 0 | mejoras L0 A0 J0 I0'));
+  assert.match(v, /Disponible al gastar \(con la produccion y el hambre de este turno ya aplicadas\): Comida \d+ \| Madera \d+ .*\(produccion .*; hambre -\d+ Comida\)/);
   assert.match(v, /Pactos vigentes: ninguno/);
   assert.match(v, /Tu nota del turno anterior: \(ninguna\)/);
   assert.match(v, /MAPA \(terreno, recurso y vecinas por numero: 5 = R05\):\nR01 /);
@@ -90,10 +91,23 @@ test('lo publico lo ve todo el mundo: mensajes, resumen y estado de la Maravilla
     const v = vistaTexto(E, i);
     assert.ok(v.includes('Ambar: "Paz a todos"'));
     assert.ok(v.includes('Sucedio el turno anterior: Azur conquisto R05 de Ambar.'));
-    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (faltan ${MARAVILLA.turnos - 2} turnos)`)); // lleva 2 de la cuenta
+    assert.ok(v.includes(`Maravilla de Violeta en ${R(E.reinos[2].capital)} (en obra: faltan ${MARAVILLA.obra - 2} turnos y luego ${MARAVILLA.enPie} de pie)`)); // lleva 2 de la cuenta
   }
   assert.ok(vistaTexto(E, 0).includes('Ambar te regalo 3 Madera'));
   assert.ok(!vistaTexto(E, 2).includes('te regalo'));
+});
+
+test('la Maravilla pasa de «en obra» a «de pie» al cumplir la obra, y de pie cuenta lo que falta para el total', () => {
+  const E = nuevoEstado(4), c = E.reinos[2].capital;
+  for (const [n, texto] of [
+    [0, `(en obra: faltan ${MARAVILLA.obra} turnos y luego ${MARAVILLA.enPie} de pie)`],
+    [MARAVILLA.obra - 1, `(en obra: faltan 1 turnos y luego ${MARAVILLA.enPie} de pie)`],
+    [MARAVILLA.obra, `(de pie: faltan ${MARAVILLA.enPie} turnos)`],
+    [MARAVILLA.turnos - 1, '(de pie: faltan 1 turnos)'],
+  ]) {
+    E.maravilla = { r: c, k: 2, n, t0: 3 };
+    assert.ok(vistaTexto(E, 0).includes(`Maravilla de Violeta en ${R(c)} ${texto}`), `n=${n}`);
+  }
 });
 
 test('pactos, propuesta abierta, ofertas y privados recibidos aparecen solo para su dueno', () => {
@@ -134,10 +148,14 @@ test('el resumen publico (lo que ven las IAs del turno anterior) ignora el event
 // 22 de octubre de 2026 (etapa 7): el mapa pasa al principio de la vista (prefijo cacheable) y se agregan CAPACIDAD y FRENTES. Huellas anteriores: 8296b274..., cf5a43e7..., 171ab1f2...
 // 22 de octubre de 2026 (etapa 8, calibracion con bots): Maravilla 21/17/13/13 y 9 turnos, Hegemon +50 %, y se quitan la Reconquista y la Patria (ya no hay sus lineas). Huellas anteriores: a6bbe609..., 02564353..., d5a4c3a2...
 // (la 2 y la 3 no cambiaron con la poda de la Reconquista y la Patria: en esas partidas las vistas nunca llevaron esas lineas).
+// 26 de octubre de 2026 (2.2.0): la linea de la Maravilla dice «en obra» / «de pie» y su costo (25 de todo) cambia lo que construyen los bots. Solo se movio la huella de la partida 2 (la 1 y la 3 no
+// construyen Maravilla). Huella anterior de la 2: 595d4ce4...
+// 28 de octubre de 2026 (2.3.0, prompt completo): las tres huellas cambian A PROPOSITO en todas las vistas: «Tu almacen» dice de cuando es y aparece «Disponible al gastar» (produccion y hambre ya
+// aplicadas, previsto.js) y «Puedes reclutar hasta» se calcula con ese almacen. Huellas anteriores: 48593316..., ad539979..., fc152e4d...
 const HUELLAS_DE_LAS_VISTAS = {
-  1: '48593316e5fe995d7fafacd835f74146c323e808',
-  2: '595d4ce454a0ad3a4ad16742afa254a0959a7e13',
-  3: 'fc152e4d7d11692f7869e9fc1b7b1149d8bfc23a',
+  1: '723161c214ed881b990aa1eb158062aa11b69fac',
+  2: '6d1ed17ada55b044115cb2ed57883dd40153f0d1',
+  3: '00f8d517b509c8b585b99d8ad811221338d924de',
 };
 
 test('el texto que ven las IAs no cambia: la huella de todas las vistas de 3 partidas coincide con la de antes de los datos de la escena', () => {

@@ -14,7 +14,9 @@ import { vistaTexto } from './vista.js';
 const igual = (a, b) => JSON.stringify(Array.from(a ?? [])) === JSON.stringify(Array.from(b ?? []));
 
 // -> { fiel, turnos: [{ turno, prompts: [texto del reino 0, ...] }] } hasta `hastaTurno` (null en el reino que no jugaba ese turno). Nunca lanza: si algo no se puede rejugar, { fiel: false, turnos: [] }.
-export function reconstruirPrompts(partida, hastaTurno = Infinity) {
+// `alTurno({ turno, E, jugadas })` (opcional, para herramientas como el examen de modelos) se llama con la mesa VIVA justo antes de aplicar cada turno y las jugadas ya rejugadas:
+// quien la quiera conservar debe clonarla. No cambia nada de lo reconstruido.
+export function reconstruirPrompts(partida, hastaTurno = Infinity, { alTurno = null } = {}) {
   try {
     if (!Array.isArray(partida?.rondas) || !Array.isArray(partida?.jugadores)) return { fiel: false, turnos: [] };
     const k = partida.jugadores.length;
@@ -36,6 +38,7 @@ export function reconstruirPrompts(partida, hastaTurno = Infinity) {
           nota: r.estado?.notas?.[s] ?? '', razon: resp.razon ?? '',
         }, E);
       });
+      alTurno?.({ turno: r.turno, E, jugadas });
       aplicarTurno(E, jugadas);
       if (!igual(E.dueno, r.estado?.dueno) || !igual(Array.from({ length: E.dueno.length }, (_, x) => tropasDe(E, x)), r.estado?.tropas)) fiel = false;
       if (r.estado?.uni !== undefined && JSON.stringify(instantanea(E).uni) !== JSON.stringify(r.estado.uni)) fiel = false; // las partidas 2.0.0 guardan las unidades de cada reino por region

@@ -9,7 +9,7 @@ import { resultadoDe } from './conquista/resultado.js';
 import { nombresDeReinos } from './conquista/nombres.js';
 import { evaluarSerie } from './conquista/evaluacion.js';
 import { reconstruirPrompts } from './conquista/replay.js';
-import { REGLAS, FORMATO } from './conquista/reglas-texto.js';
+import { PRESENTACION, REGLAS, GUIA_ESTADO, FORMATO, EXPLICACION_RESPUESTA, ERRORES_FRECUENTES } from './conquista/reglas-texto.js';
 import { TURNOS } from './conquista/constantes.js';
 import { BOTS, INFO_BOTS } from './conquista-bots.js';
 
@@ -28,9 +28,14 @@ export default {
   // Bots de control que la consola acepta por nombre: { id: { nombre, color, fn(estado, asiento, rng) } }
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   rondas: TURNOS,
-  versionReglas: 'conquista-2.1.1', // 2.1.1: auditoria del 25-10-2026: extincion mutua termina la partida, prioridad de la Maravilla simultanea, puntos, desempates, orden del turno y redondeos dentro del texto; el cerco 2.1.0 no cambia.
+  versionReglas: 'conquista-2.3.0', // 2.3.0 (28-10-2026): prompt COMPLETO (presentacion, orden del turno, ordenes con sintaxis, combate con ejemplo, como leer el estado, formato campo por campo, errores frecuentes); las reglas del motor NO cambian (privado/spec/guerra-prompt-2.3.0.md). 2.2.0 (26-10-2026): Maravilla de 25 de cada recurso, 3 turnos de obra y 7 de pie (privado/spec/guerra-maravilla-2.2.0.md). 2.1.1: auditoria del 25-10-2026: extincion mutua termina la partida, prioridad de la Maravilla simultanea, puntos, desempates, orden del turno y redondeos dentro del texto; el cerco 2.1.0 no cambia.
+  // Secciones del prompt (el envoltorio comun es src/prompt.js; guia: docs/guia-de-prompts.md)
+  presentacion: PRESENTACION,
   reglas: REGLAS,
+  guiaDelEstado: GUIA_ESTADO,
   formatoRespuesta: FORMATO,
+  explicacionDeRespuesta: EXPLICACION_RESPUESTA,
+  erroresFrecuentes: ERRORES_FRECUENTES,
 
   crear: (rng, opciones = {}) => crearEstado(rng, opciones),
   // El nombre de reino de cada asiento sale del modelo que lo ocupa (nombres.js): la arena lo pide antes de crear la partida.

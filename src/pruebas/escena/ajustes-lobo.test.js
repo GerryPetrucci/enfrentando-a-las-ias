@@ -21,7 +21,7 @@ test('preparación anónima antes de primera noche y elenco separado después de
 
 test('Cupido se revela en su evento, declaraciones vivas no certifican identidad; mentira al morir/final',()=>{
   for(const [n,seed] of [[8,107],[12,4]]){
-    const p=jugarLobo(seed,n,{declaraciones:true}),beats=construirLineaDeTiempo(p);
+    const p=jugarLobo(seed,n,{declaraciones:true,modoCupido:'ambos'}),beats=construirLineaDeTiempo(p); // 'ambos': la camara ve a Cupido en su evento (los otros modos: cupido-oculto-lobo.test.js)
     assert.deepEqual(beats,construirLineaDeTiempo(structuredClone(p)));
     assert.ok(beats.some((b)=>b.pasos[1].comprobacion?.coincide===false));
     assert.ok(beats.some((b)=>b.pasos[1].comprobacion?.coincide===true));

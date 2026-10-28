@@ -1,8 +1,9 @@
 # Guerra de territorios 2.1.0: cerco de la Maravilla
 
-La Maravilla mantiene el costo 21 Roca, 17 Madera, 13 Hierro y 13 Oro y necesita
-nueve turnos de avance. La nueva regla permite interrumpirla **sin conquistar
-la capital ni eliminar a su propietario**:
+En 2.1.0 la Maravilla mantuvo el costo 21 Roca, 17 Madera, 13 Hierro y 13 Oro y
+nueve turnos de avance; **desde 2.2.0 cuesta 25 de cada recurso y se cuenta 3 turnos
+de obra + 7 de pie** (ver `docs/decisiones-detalle.md`, «Guerra 2.2.0»). El cerco no cambió.
+La regla permite interrumpirla **sin conquistar la capital ni eliminar a su propietario**:
 
 - Un ejercito enemigo de al menos tres unidades, situado en una region vecina,
   bloquea el avance mientras siga ahi. No se suman pilas menores de reinos distintos.

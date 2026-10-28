@@ -92,6 +92,12 @@ try {
   error(id ? 'No encuentro esa partida. Puede que todavía no se haya publicado.' : 'Falta indicar la partida.');
 }
 
+// Una partida ELIMINADA (decision del 28-10-2026) ya no se publica: su lugar en la serie es una marca vacia que conserva el numero de las demas.
+if (serie && serie.partidas[Math.min(Math.max(Number(q.get('partida')) || 1, 1), serie.partidas.length) - 1]?.eliminada === true) {
+  error('Esa partida se eliminó y ya no se publica.');
+  serie = null;
+}
+
 if (serie) {
   const n = Math.min(Math.max(Number(q.get('partida')) || 1, 1), serie.partidas.length);
   const p = serie.partidas[n - 1];
@@ -104,8 +110,8 @@ if (serie) {
   const esLobo = serie.juego?.id === 'lobo', conversacion = esLobo ? conversacionDeLobo(p) : [];
   const unidad = unidadDeJuego(serie.juego?.id);
   const enlaceEscena = `escena.html?archivo=${encodeURIComponent(`publicas/${id}.json`)}&partida=${n}`;
-  const tanda = serie.partidas.map((x, i) => ({ juego: serie.juego, serie: id, n: i + 1, seed: x.seed ?? serie.seedBase, jugadores: x.jugadores }));
-  const etiqueta = etiquetaDePartida(tanda[n - 1], tanda);
+  const tanda = serie.partidas.map((x, i) => ({ juego: serie.juego, serie: id, n: i + 1, seed: x.seed ?? serie.seedBase, jugadores: x.jugadores, eliminada: x.eliminada === true }));
+  const etiqueta = etiquetaDePartida(tanda[n - 1], tanda.filter((t) => !t.eliminada)); // las eliminadas no son «partidas hermanas»
   const estado = pendiente ? 'por-publicarse' : 'publicada';
   const aviso = pendiente ? `<div class="aviso-publicacion"><b>Por publicarse.</b> ${p.parcial?.hastaTurno ? `Aquí está la conversación y ${esLobo ? 'lo que pasó' : 'lo que recibió cada IA'} ${esc(unidad.hasta)} ${esc(p.parcial.hastaTurno)}, que es donde llega lo subido en video.` : 'Todavía no se ha subido el video de esta partida: por ahora solo se conoce su seed.'} El resultado y el resto de la partida se publican cuando se suba su parte final.</div>` : '';
   contenido.innerHTML = `

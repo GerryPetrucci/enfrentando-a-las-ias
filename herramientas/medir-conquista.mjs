@@ -1,6 +1,6 @@
 // Mide el balance de la Guerra de territorios con bots de control (sin API ni dinero): partidas con los asientos rotados y las metricas de privado/spec/guerra-2.0.0-diseno.md (seccion 9).
 //   node herramientas/medir-conquista.mjs [--partidas=200] [--jugadores=4] [--mezcla=tipos|clasicos|diplomacia|todos|a,b,c,d] [--semilla=1] [--sin=hegemon,eventos,tierra]
-//        [--tierra=0.85] [--hegemon=entra,sale,bono] [--maravilla=turnos,factorDeCosto] [--bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas] [--json]
+//        [--tierra=0.85] [--hegemon=entra,sale,bono] [--maravilla=obra,enPie[,costoPorRecurso]] [--cerco=N] [--bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas] [--json]
 //
 // Metricas (definiciones de la linea base de 1.1.0: el que va arriba = unico con mas regiones; "gana" = el ganador de la partida):
 //   lider T10/T15/T20 gana · cambios de lider por partida · victorias por bot · % que termina por Maravilla · turnos por partida · unidades reclutadas por tipo y bot · % de ordenes validas por bot.
@@ -10,7 +10,7 @@
 import { crearRng } from '../src/rng.js';
 import conquista from '../src/juegos/conquista.js';
 import { regionesDe, clasificar } from '../src/juegos/conquista/estado.js';
-import { HEGEMON, EVENTOS, TIERRA, MARAVILLA, PUNTOS_POSICION } from '../src/juegos/conquista/constantes.js';
+import { HEGEMON, EVENTOS, TIERRA, MARAVILLA, PUNTOS_POSICION, TURNOS } from '../src/juegos/conquista/constantes.js';
 import { BIOMAS } from '../src/mapa.js';
 
 const arg = (nombre, defecto) => { const a = process.argv.find((x) => x.startsWith(`--${nombre}=`)); return a ? a.split('=')[1] : defecto; };
@@ -29,7 +29,12 @@ if (sin.has('hegemon')) HEGEMON.activo = false;
 if (sin.has('eventos')) EVENTOS.activo = false;
 if (sin.has('tierra')) TIERRA.factor = 1;
 if (arg('tierra', null) !== null) TIERRA.factor = Number(arg('tierra'));
-if (arg('maravilla', null) !== null) { const [turnos, costo] = arg('maravilla').split(',').map(Number); MARAVILLA.turnos = turnos; if (costo) for (const r of Object.keys(MARAVILLA.costo)) MARAVILLA.costo[r] = Math.round(MARAVILLA.costo[r] * costo); }
+if (arg('maravilla', null) !== null) {
+  const [obra, enPie, costo] = arg('maravilla').split(',').map(Number);
+  if (!Number.isInteger(obra) || obra < 0 || !Number.isInteger(enPie) || enPie < 1 || (costo !== undefined && !(costo >= 0))) { console.error('--maravilla=OBRA,ENPIE[,COSTO_POR_RECURSO]: obra entera >= 0, enPie entero >= 1 y un costo >= 0 (el mismo para los seis recursos).'); process.exit(2); }
+  MARAVILLA.obra = obra; MARAVILLA.enPie = enPie;
+  if (costo !== undefined) for (const r of Object.keys(MARAVILLA.costo)) MARAVILLA.costo[r] = costo;
+}
 if (arg('cerco', null) !== null) {
   const cerco = Number(arg('cerco'));
   if (!Number.isInteger(cerco) || cerco < 0) { console.error('--cerco requiere un entero no negativo; 0 apaga el cerco para comparar.'); process.exit(2); }
@@ -43,7 +48,7 @@ const lider = (E) => { let m = -1, q = -1, empate = false; for (const r of E.rei
 const cuenta = (ids) => Object.fromEntries(ids.map((i) => [i, 0]));
 const ids = [...new Set(mezcla)];
 const R = {
-  partidas: 0, turnos: 0, maravilla: 0, hastaT30: 0, cambiosLider: 0, lideres: { 10: [0, 0], 15: [0, 0], 20: [0, 0] }, // [gana el lider, partidas con lider unico]
+  partidas: 0, turnos: 0, maravilla: 0, construidas: 0, tardias: 0, turnoConstruccion: 0, conquistadas: 0, cercadas: 0, hastaT30: 0, cambiosLider: 0, lideres: { 10: [0, 0], 15: [0, 0], 20: [0, 0] }, // [gana el lider, partidas con lider unico]
   porAsiento: Array(jugadores).fill(0), // victorias por asiento del mapa (el bot de cada asiento rota)
   gana: cuenta(ids), asientos: cuenta(ids), puntos: cuenta(ids), reclutadas: Object.fromEntries(ids.map((i) => [i, [0, 0, 0, 0]])), ordenes: Object.fromEntries(ids.map((i) => [i, [0, 0]])),
   rupturas: cuenta(ids), pactos: cuenta(ids), eventos: 0, hegemones: 0, caidas: 0, caidasAntesT10: 0, turnoPrimeraCaida: 0, conCaida: 0,
@@ -55,7 +60,7 @@ for (let g = 0; g < partidas; g++) {
   const E = conquista.crear(crearRng(seed * 7919 + 13), { jugadores, bioma });
   const rngs = asientos.map((_, i) => crearRng((seed * 31 + i * 977) >>> 0));
   const lideres = {};
-  let previo = -1, cambios = 0;
+  let previo = -1, cambios = 0, construidaEn = 0, conquistada = false, cercada = false; // la Maravilla se construye una sola vez por partida
   while (!conquista.terminado(E)) {
     const jugadas = E.reinos.map((r, s) => (r.vivo ? conquista.normalizar(conquista.bots[asientos[s]].fn(E, s, rngs[s]), E) : null));
     jugadas.forEach((j, s) => {
@@ -65,6 +70,11 @@ for (let g = 0; g < partidas; g++) {
     const reg = conquista.aplicar(E, jugadas);
     reg.obediencia.forEach((ob, s) => { R.ordenes[asientos[s]][0] += ob.validas; R.ordenes[asientos[s]][1] += ob.total; });
     R.eventos += reg.eventos.filter((e) => e.tipo === 'evento').length; R.hegemones += reg.eventos.filter((e) => e.tipo === 'hegemon').length;
+    for (const e of reg.eventos) {
+      if (e.tipo === 'maravilla') construidaEn = E.turno;
+      else if (e.tipo === 'maravilla_cae') conquistada = true;
+      else if (e.tipo === 'maravilla_cerco') cercada = true;
+    }
     const l = lider(E);
     if (E.turno in R.lideres) lideres[E.turno] = l;
     if (l >= 0 && previo >= 0 && l !== previo) cambios++;
@@ -75,6 +85,9 @@ for (let g = 0; g < partidas; g++) {
   R.caidas += caidos.length;
   if (caidos.length) { R.conCaida++; const primera = Math.min(...caidos.map((r) => r.cayoEn)); R.turnoPrimeraCaida += primera; if (primera < 10) R.caidasAntesT10++; }
   if (E.ganoPorMaravilla) R.maravilla++;
+  if (construidaEn) { R.construidas++; R.turnoConstruccion += construidaEn; if (construidaEn + MARAVILLA.turnos > TURNOS) R.tardias++; } // tardia: ordenada tan tarde que la cuenta no cabe antes del turno 30
+  if (conquistada) R.conquistadas++;
+  if (cercada) R.cercadas++;
   if (E.turno >= 30) R.hastaT30++;
   R.gana[asientos[E.ganador]]++; R.porAsiento[E.ganador]++;
   asientos.forEach((a) => { R.asientos[a]++; });
@@ -88,6 +101,9 @@ const salida = {
   reglas: conquista.versionReglas, partidas: R.partidas, jugadores, mezcla, ablacion: [...sin], tierra: TIERRA.factor, cercoMaravilla: MARAVILLA.cerco, bioma: bioma ?? 'del seed', victoriasPorAsiento: R.porAsiento.map((n) => pc(n, R.partidas)),
   liderGana: Object.fromEntries([10, 15, 20].map((t) => [`T${t}`, { porciento: pc(...R.lideres[t]), de: R.lideres[t][1] }])),
   cambiosDeLider: +(R.cambiosLider / R.partidas).toFixed(2), turnosPorPartida: +(R.turnos / R.partidas).toFixed(1), terminanAntesDelTurno30: pc(R.partidas - R.hastaT30, R.partidas), maravilla: pc(R.maravilla, R.partidas),
+  // La Maravilla paso por: construida (partidas donde alguien la paga), turno medio de esa orden, ganada (de las construidas), cercada alguna vez y conquistada alguna vez (porcentajes de todas las partidas).
+  construida: pc(R.construidas, R.partidas), turnoMedioDeConstruccion: R.construidas ? +(R.turnoConstruccion / R.construidas).toFixed(1) : null,
+  ganadaDeLasConstruidas: pc(R.maravilla, R.construidas), tardiasDeLasConstruidas: pc(R.tardias, R.construidas), cercada: pc(R.cercadas, R.partidas), conquistada: pc(R.conquistadas, R.partidas),
   porBot: Object.fromEntries(ids.map((i) => {
     const rec = R.reclutadas[i], tot = rec.reduce((a, b) => a + b, 0);
     return [i, {
@@ -106,6 +122,7 @@ else {
   console.log(`  victorias por asiento del mapa: ${salida.victoriasPorAsiento.map((n, s) => `${s + 1}: ${f(n)}`).join('  ')}   [parejo = ${Math.round(100 / jugadores)}% cada uno]`);
   console.log(`  el que va arriba en regiones gana: T10 ${f(salida.liderGana.T10.porciento)} (de ${salida.liderGana.T10.de})  T15 ${f(salida.liderGana.T15.porciento)} (de ${salida.liderGana.T15.de})  T20 ${f(salida.liderGana.T20.porciento)} (de ${salida.liderGana.T20.de})   [objetivo <= 65 / 75 / 85]`);
   console.log(`  cambios de lider por partida: ${salida.cambiosDeLider} [objetivo >= 1.5]   turnos por partida: ${salida.turnosPorPartida}   terminan antes del turno 30: ${f(salida.terminanAntesDelTurno30)}   Maravilla decide: ${f(salida.maravilla)} [objetivo <= 25]`);
+  console.log(`  Maravilla: construida en ${f(salida.construida)} de las partidas (turno medio de la orden: ${salida.turnoMedioDeConstruccion ?? 'n/d'})  gana el ${f(salida.ganadaDeLasConstruidas)} de las construidas (${f(salida.tardiasDeLasConstruidas)} se ordenan tan tarde que no caben antes del turno ${TURNOS})  cercada alguna vez: ${f(salida.cercada)}  conquistada alguna vez: ${f(salida.conquistada)}`);
   console.log(`  eventos del mundo por partida: ${salida.eventosPorPartida}   cambios de Hegemon por partida: ${salida.hegemonesPorPartida}   reinos caidos por partida: ${salida.caidasPorPartida}   con alguna caida antes del turno 10: ${f(salida.conCaidaAntesDelT10)}   turno medio de la primera caida: ${salida.turnoMedioDeLaPrimeraCaida ?? 'n/d'}`);
   console.log('  bot                  victorias  puntos/partida  ordenes validas   reclutadas L/A/J/I      rupturas  pactos');
   for (const [i, b] of Object.entries(salida.porBot)) console.log(`  ${i.padEnd(20)} ${String(f(b.victorias)).padStart(9)}  ${String(b.puntosPorPartida).padStart(14)}  ${String(f(b.ordenesValidas)).padStart(15)}   ${(b.reclutadasPorTipo ? b.reclutadasPorTipo.map((n) => `${n}%`).join('/') : '-').padEnd(22)} ${String(b.rupturas).padStart(8)} ${String(b.pactos).padStart(7)}`);

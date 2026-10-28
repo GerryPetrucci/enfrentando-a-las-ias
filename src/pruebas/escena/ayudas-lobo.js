@@ -1,7 +1,8 @@
 import juego from '../../juegos/lobo.js';
 import { crearRng } from '../../rng.js';
-export function jugarLobo(seed = 3, jugadores = 8, { declaraciones = false } = {}) {
-  const E = juego.crear(crearRng(seed), { jugadores });
+// `modoCupido` fuerza lo que el publico ve de Cupido (si no, lo sortea el seed, como en produccion).
+export function jugarLobo(seed = 3, jugadores = 8, { declaraciones = false, modoCupido } = {}) {
+  const E = juego.crear(crearRng(seed), { jugadores, modoCupido });
   const rngs = E.roles.map((_, i) => crearRng(seed + i + 100));
   while (!E.fin) juego.aplicar(E, juego.activos(E).map((activo, i) => {
     if (!activo) return null;

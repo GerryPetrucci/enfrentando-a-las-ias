@@ -154,14 +154,14 @@ test('rechaza objetivos muertos, propios, fraccionarios, pociones sin víctima y
 });
 
 test('vistas aíslan información: manada, pareja, pociones y roles ocultos', () => {
-  const E = estado(); abrir(E, [0, 6]);
+  const E = estado(); E.modoCupido = 'ambos'; abrir(E, [0, 6]); // en 'ambos' la camara ve a Cupido; las IAs nunca (cupido-oculto.test.js cubre los cuatro modos)
   const lobo = vistaDe(E, 0), aldeano = vistaDe(E, 7), amante = vistaDe(E, 6), camara = vistaCamara(E);
   assert.deepEqual(lobo.manada, [0, 1]); assert.equal(amante.pareja, 0);
   assert.equal(aldeano.manada, undefined); assert.equal(aldeano.pociones, undefined); assert.equal(aldeano.pareja, null);
   assert.ok(aldeano.eventos.every((e) => e.tipo !== 'enamorados'));
   assert.equal(aldeano.enamoradosElegidos, undefined);
   assert.deepEqual(vistaDe(E, 5).enamoradosElegidos, [0, 6]);
-  assert.ok(aldeano.jugadores.every((j) => j.rol === (j.asiento === 5 ? 'cupido' : undefined)));
+  assert.ok(aldeano.jugadores.every((j) => j.rol === undefined), 'las IAs no saben quien es Cupido');
   assert.ok(camara.jugadores.every((j) => j.rol === (j.asiento === 5 ? 'cupido' : undefined)));
   assert.equal(camara.roles, undefined);
   lobo.manada.push(7); camara.eventos.length = 0;
@@ -169,7 +169,7 @@ test('vistas aíslan información: manada, pareja, pociones y roles ocultos', ()
 });
 
 test('registro público nocturno no revela actores, víctima ni inspección; revela muertos', () => {
-  const E = estado(); abrir(E, [5, 6]);
+  const E = estado(); E.modoCupido = 'ambos'; abrir(E, [5, 6]);
   const r = paso(E, { 0: { accion: 'matar', objetivo: 7 }, 1: { accion: 'matar', objetivo: 7 } });
   assert.equal(r.publico.acciones, undefined); assert.equal(r.publico.victima, undefined);
   assert.deepEqual(r.publico.eventos, []);

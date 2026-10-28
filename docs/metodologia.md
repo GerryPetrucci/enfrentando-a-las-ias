@@ -55,7 +55,7 @@ y la fecha. Los modelos se actualizan cada pocos meses, asi que **el marcador es
 una foto del momento, no un veredicto permanente.** Eso no es una debilidad del
 formato: es el motivo por el que puedes volver a medir cuando salgan modelos nuevos.
 
-Los parametros de llamada (temperatura 0.7, 4000 tokens maximos y razonamiento en nivel medio, o el valor por defecto del
+Los parametros de llamada (temperatura 0.7, 8000 tokens maximos —4000 hasta el 26 de octubre de 2026— y razonamiento en nivel medio, o el valor por defecto del
 modelo si no tiene niveles) son iguales para todas las IAs y se congelan junto con el prompt. Lo que se le mando a cada
 modelo queda en `parametros` de cada resultado. Segun el catalogo de OpenRouter del 9 de octubre de 2026, Claude (Sonnet y
 Haiku 5.5) y GPT-6 ignoran la temperatura: se manda igual a todos, pero con ellos no tiene efecto.

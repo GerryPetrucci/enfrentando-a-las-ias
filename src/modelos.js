@@ -145,6 +145,9 @@ export function mensajeDeError(json, cuerpo) {
     .slice(0, 240);
 }
 
+// Proveedores que solo cachean el prefijo si la peticion lo marca (los demas lo hacen solos). Ver cuerpoDeLlamada en src/parametros.js.
+const PROVEEDORES_CON_CACHE_MARCADA = ['anthropic/', 'google/'];
+
 export async function llamarModelo({
   modelo,
   sistema,
@@ -169,7 +172,7 @@ export async function llamarModelo({
       const respuesta = await fetch(URL_OPENROUTER, {
         method: 'POST',
         headers: cabecerasOpenRouter(clave),
-        body: JSON.stringify({ model: modelo, ...cuerpoDeLlamada({ sistema, usuario, maxTokens, temperatura, razonamiento }) }),
+        body: JSON.stringify({ model: modelo, ...cuerpoDeLlamada({ sistema, usuario, maxTokens, temperatura, razonamiento, cachearSistema: PROVEEDORES_CON_CACHE_MARCADA.some((p) => modelo.startsWith(p)) }) }),
       });
 
       const cuerpo = await respuesta.text();
@@ -191,6 +194,9 @@ export async function llamarModelo({
         uso: json?.usage ?? null,
         // "length" = el modelo se quedo sin max_tokens (tipico de los que razonan antes de contestar).
         finishReason: eleccion?.finish_reason ?? null,
+        // Texto del razonamiento oculto, si el proveedor lo manda. Las partidas NO lo guardan (data/ es publico): lo usan las herramientas
+        // de diagnostico y el examen de modelos, que lo dejan en privado/. En una respuesta cortada es lo unico que explica el corte.
+        razonamiento: eleccion?.message?.reasoning ?? null,
       };
     } catch (err) {
       ultimoError = err;

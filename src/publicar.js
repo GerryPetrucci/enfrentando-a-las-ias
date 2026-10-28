@@ -19,6 +19,7 @@ export function publicarParte({ raiz, archivo, partida, parte = null, hasta, fin
   const crudo = JSON.parse(readFileSync(ruta, 'utf8'));
   const p = crudo.partidas?.[partida - 1];
   if (!p) throw new Error(`La serie no tiene la partida ${partida} (tiene ${crudo.partidas?.length ?? 0}).`);
+  if (p.eliminada === true) throw new Error(`La partida ${partida} de esta serie esta eliminada: ya no se publica.`);
 
   const juego = obtenerJuego(crudo.juego?.id), avisos = [];
   const sistema = construirSistema(juego);
