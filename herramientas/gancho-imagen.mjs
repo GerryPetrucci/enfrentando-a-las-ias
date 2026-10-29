@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-// Genera el gancho en IMAGEN de una parte (regla del 25 de octubre de 2026: un juego que no puede tener gancho en video tiene uno en imagen): «PRÓXIMAMENTE», el nombre del juego, su numero de juego
-// (jN) y el de la parte, con el arte del juego si lo tiene (web/casino/gancho-imagen.js). Abre web/gancho-imagen.html con Chrome o Edge sin cabeza y guarda un PNG por formato (9x16 y 16x9) con el nombre
-// de los videos: j1_hk1_9x16_fb-ig-tk-yt.png. No llama a ningun modelo, no sube nada y no gasta saldo. herramientas/paquete.mjs lo llama solo cuando una parte no tiene gancho en video.
+// Genera el gancho de IMAGEN FIJA de una parte (regla del 25 de octubre de 2026: un juego que no puede tener gancho en video —Lobo, o uno muy corto— tiene uno de imagen): «PRÓXIMAMENTE», el nombre del juego,
+// su numero de juego (jN) y el de la parte, con el arte del juego si lo tiene (web/casino/gancho-imagen.js). Abre web/gancho-imagen.html con Chrome o Edge sin cabeza, captura la imagen de cada formato (9x16 y
+// 16x9) y, desde el 28 de octubre de 2026, la vuelve un VIDEO CORTO que repite esa misma imagen en cada cuadro (con ffmpeg), para poder compartirlo como short de YouTube: j1_hk1_9x16_fb-ig-tk-yt.mp4. Ya no deja
+// el PNG junto a los videos que se suben (con --imagen se queda el PNG, para verlo). No llama a ningun modelo, no sube nada y no gasta saldo. herramientas/paquete.mjs lo llama solo cuando una parte no tiene gancho en video.
 //
 //   node herramientas/gancho-imagen.mjs --juego=lobo --numero=1 --parte=1 [--de=2] --salida=grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-3441676158/por-subir/j1 [--formato=9x16,16x9] [--chrome=RUTA]
 //
 // --juego   id del juego (el del archivo guardado: lobo, conquista...)   --numero   su numero de juego jN   --parte   la parte que anuncia   --de   cuantas partes tiene (2 por omision)
+// --duracion   segundos del video (6 por omision)   --ffmpeg   ruta de ffmpeg (el del PATH por omision)   --imagen   deja el PNG en vez del video
 // Para verla en el navegador sin generar nada: node src/servidor.js y abrir http://localhost:4321/gancho-imagen.html?juego=lobo&numero=1&parte=1&de=2&formato=9x16
 
 import { createServer } from 'node:http';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { resolve, join, extname, dirname, sep } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, join, extname, dirname, basename, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buscarChrome } from './capturar-escena.mjs';
 import { direccionDeGanchoImagen, modeloDeGanchoImagen, FORMATOS_IMAGEN } from '../web/casino/gancho-imagen.js';
@@ -57,6 +60,26 @@ export function medidasDePng(ruta) {
 // El nombre del archivo de una imagen de gancho: el de los videos (j1_hk1_9x16_fb-ig-tk-yt) con extension png.
 export const nombreDeImagen = ({ juegoNumero, parte, formato }) => `${nombreDeVideo(nombreDePieza({ juego: juegoNumero, pieza: `gancho-${parte}` }), formato)}.png`;
 
+// El nombre del video de un gancho de imagen fija: el mismo que el de la imagen, con extension mp4.
+export const nombreDeVideoDeGancho = ({ juegoNumero, parte, formato }) => nombreDeImagen({ juegoNumero, parte, formato }).replace(/\.png$/, '.mp4');
+
+export const DURACION_GANCHO_IMAGEN_S = 6; // un video corto, apto para un short, que repite la imagen
+
+// Los argumentos de ffmpeg que vuelven UNA imagen un video: la misma imagen en cada cuadro (30 por segundo), H.264 listo para subir a cualquier red (yuv420p, faststart) y una pista de audio en silencio
+// (la musica la pone quien lo sube, como en el gancho en video). La salida va al final.
+export function argumentosDeFfmpeg({ imagen, salida, duracionS = DURACION_GANCHO_IMAGEN_S, fps = 30 }) {
+  return ['-y', '-hide_banner', '-loglevel', 'error', '-loop', '1', '-framerate', String(fps), '-i', imagen, '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-t', String(duracionS),
+    '-c:v', 'libx264', '-tune', 'stillimage', '-pix_fmt', 'yuv420p', '-r', String(fps), '-c:a', 'aac', '-b:a', '64k', '-shortest', '-movflags', '+faststart', salida];
+}
+
+// Corre ffmpeg: una imagen -> su video. Lanza si ffmpeg no esta o falla (con lo que dijo).
+export function convertirImagenEnVideo({ imagen, salida, duracionS = DURACION_GANCHO_IMAGEN_S, ffmpeg = 'ffmpeg' }) {
+  mkdirSync(dirname(resolve(salida)), { recursive: true });
+  const r = spawnSync(ffmpeg, argumentosDeFfmpeg({ imagen, salida, duracionS }), { encoding: 'utf8' });
+  if (r.error || r.status !== 0) throw new Error(`ffmpeg no pudo hacer el video: ${r.error?.message ?? String(r.stderr).trim().slice(-300)}`);
+  return { destino: salida };
+}
+
 // Captura una imagen. `servidor` (opcional) reutiliza un servidor ya abierto (varias imagenes seguidas). Lanza si no hay navegador o si la imagen no sale del tamano del formato.
 export async function renderizarGanchoImagen({ juegoId, juegoNumero = 1, parte = 1, de = 2, formato = '9x16', destino, chrome = buscarChrome(), servidor = null, raiz = RAIZ }) {
   const m = modeloDeGanchoImagen({ juegoId, juegoNumero, parte, de, formato }); // valida antes de abrir nada
@@ -94,6 +117,28 @@ export async function generarImagenesDeGancho({ piezas, juegoId, juegoNumero, de
   }
 }
 
+// Los VIDEOS de gancho de un paquete: uno por formato para cada pieza `gancho-imagen`. Cada imagen se captura en una carpeta temporal (que se borra) y se vuelve un mp4 en `carpeta`: junto a los videos que se
+// suben solo quedan los mp4. `render` y `convertir` se pueden cambiar (las pruebas no abren un navegador ni ffmpeg). Sin navegador o sin ffmpeg devuelve el motivo y lo que ya hizo.
+export async function generarVideosDeGancho({ piezas, juegoId, juegoNumero, de = 2, carpeta, chrome = buscarChrome(), render = renderizarGanchoImagen, convertir = convertirImagenEnVideo, ffmpeg = 'ffmpeg', duracionS = DURACION_GANCHO_IMAGEN_S, formatos = FORMATOS_IMAGEN }) {
+  const hechas = [];
+  if (!(piezas ?? []).some((p) => p.tipo === 'gancho-imagen')) return { hechas, error: null };
+  const tmp = mkdtempSync(join(tmpdir(), 'gancho-video-'));
+  try {
+    const imagenes = await generarImagenesDeGancho({ piezas, juegoId, juegoNumero, de, carpeta: tmp, chrome, render, formatos });
+    if (imagenes.error) return { hechas, error: imagenes.error };
+    for (const h of imagenes.hechas) {
+      const salida = join(carpeta, basename(h.destino).replace(/\.png$/, '.mp4'));
+      convertir({ imagen: h.destino, salida, duracionS, ffmpeg });
+      hechas.push({ ...h, destino: salida, duracionS });
+    }
+    return { hechas, error: null };
+  } catch (err) {
+    return { hechas, error: `No pude hacer los videos de gancho de imagen fija: ${err.message}. Con ffmpeg instalado, corre node herramientas/gancho-imagen.mjs (el LEEME dice el comando).` };
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 async function principal() {
   const a = Object.fromEntries(process.argv.slice(2).map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
   const salir = (m) => { console.error(`\n  ${m}\n`); process.exit(1); };
@@ -101,12 +146,18 @@ async function principal() {
   if (String(a.salida).split(/[\\/]/).includes('..')) salir('La salida no puede contener «..».');
   const formatos = String(a.formato ?? FORMATOS_IMAGEN.join(',')).split(',');
   const parte = Number(a.parte ?? 1), juegoNumero = Number(a.numero ?? 1), de = Number(a.de ?? 2);
-  for (const formato of formatos) {
-    try {
-      const r = await renderizarGanchoImagen({ juegoId: a.juego, juegoNumero, parte, de, formato, chrome: a.chrome ?? buscarChrome(), destino: join(resolve(a.salida), nombreDeImagen({ juegoNumero, parte, formato })) });
-      console.log(`  ${r.formato.padEnd(5)} ${r.ancho}x${r.alto}  ${r.destino}`);
-    } catch (err) { salir(err.message); }
+  if (a.imagen) { // --imagen: solo el PNG de cada formato (para verlo)
+    for (const formato of formatos) {
+      try {
+        const r = await renderizarGanchoImagen({ juegoId: a.juego, juegoNumero, parte, de, formato, chrome: a.chrome ?? buscarChrome(), destino: join(resolve(a.salida), nombreDeImagen({ juegoNumero, parte, formato })) });
+        console.log(`  ${r.formato.padEnd(5)} ${r.ancho}x${r.alto}  ${r.destino}`);
+      } catch (err) { salir(err.message); }
+    }
+    return;
   }
+  const r = await generarVideosDeGancho({ piezas: [{ tipo: 'gancho-imagen', parte }], juegoId: a.juego, juegoNumero, de, formatos, carpeta: resolve(a.salida), chrome: a.chrome ?? buscarChrome(), ffmpeg: a.ffmpeg || 'ffmpeg', duracionS: Number(a.duracion ?? DURACION_GANCHO_IMAGEN_S) });
+  for (const h of r.hechas) console.log(`  ${h.formato.padEnd(5)} ${h.ancho}x${h.alto}  ${h.duracionS} s  ${h.destino}`);
+  if (r.error) salir(r.error);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) principal();

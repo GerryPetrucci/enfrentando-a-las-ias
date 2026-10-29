@@ -10,7 +10,8 @@
 //
 // --archivo   partida de un juego con escena dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
-// --gancho=auto|10,6,14  captura el gancho «Proximamente» (con auto elige los cortes de la parte; --parte=1 --de=2): sus tarjetas y el primer momento de cada corte
+// --numero=N [--parte=1 --de=2 --clip=K]  abre la parte o el clip con su tarjeta de identificacion «Juego N · Parte M de K» (el beat 0)
+// --gancho=auto|10,6,14  captura el gancho «Proximamente» (con auto elige los cortes de la parte; --parte=1 --de=2 --numero=N con el jN del juego para sus tarjetas): sus tarjetas y el primer momento de cada corte
 // --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
 // --grabar    modo grabar=1: comprueba que la pagina empieza en negro (margen), pasa al contenido y termina cerrada en negro (data-fundido, data-cierre)
@@ -25,7 +26,7 @@ import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { escenaDe, motivoDeNoReproducible, armarLinea, destacadasDe } from '../web/casino/lineas.js';
 import { FUNDIDOS, segundos, dividirEnDos } from '../web/casino/escena-config.js';
-import { elegirCortes, cortesPedidos, armarGancho } from '../web/casino/gancho.js';
+import { elegirCortes, cortesPedidos, armarGancho, conIdentificador } from '../web/casino/gancho.js';
 
 const TAMANOS = { '9x16': '1080,1920', '16x9': '1920,1080', hoja: '3840,2160' };
 export function tamanoDeFormato(formato) {
@@ -34,9 +35,10 @@ export function tamanoDeFormato(formato) {
 }
 
 // La direccion de la escena lista para capturar: sin sonido ni barra, arranca sola y (con `beat`) avanza al instante hasta ese momento y se queda ahi.
-export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null, grabar = false, sonido = false, gancho = null }) {
+export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null, grabar = false, sonido = false, gancho = null, pieza = null }) {
   const q = new URLSearchParams({ archivo, partida: String(partida), formato, limpio: '1', auto: '1', sonido: sonido ? '1' : '0', escala: '1' });
-  if (gancho) { q.set('gancho', '1'); q.set('cortes', gancho.cortes.join(',')); q.set('parte', String(gancho.parte)); q.set('de', String(gancho.de)); } // el gancho «Proximamente»: los beats son los suyos (gancho.js)
+  if (gancho) { q.set('gancho', '1'); q.set('cortes', gancho.cortes.join(',')); q.set('parte', String(gancho.parte)); q.set('de', String(gancho.de)); if (gancho.numero) q.set('numero', String(gancho.numero)); } // el gancho «Proximamente»: los beats son los suyos (gancho.js)
+  if (pieza?.numero) for (const [clave, valor] of [['numero', pieza.numero], ['parte', pieza.parte], ['de', pieza.de], ['clip', pieza.clip]]) if (valor) q.set(clave, String(valor)); // una parte o un clip abre con su tarjeta «Juego N · Parte M de K»
   if (grabar) q.set('grabar', '1');
   if (beat !== null && beat !== undefined) q.set('detener', String(beat));
   if (vel) q.set('vel', String(vel));
@@ -191,24 +193,32 @@ async function principal() {
   // con --gancho, los beats son los del gancho «Proximamente» (apertura, etiquetas, cortes y cierre) y no los de la partida
   let gancho = null, beatsDeCaptura = beats;
   if (a.gancho) {
-    const parte = Number(a.parte ?? 1), de = Number(a.de ?? 2), destacadas = await destacadasDe(juego, guardada, 10);
+    const parte = Number(a.parte ?? 1), de = Number(a.de ?? 2), destacadas = await destacadasDe(juego, guardada, 40); // 40, como el paquete y la pagina: con menos, un corte pierde su momento
     let unidades = a.gancho === 'auto' ? null : a.gancho.split(',').map(Number);
     if (!unidades) {
       const partes = dividirEnDos(beats);
       if (!partes) { console.error('La partida es muy corta para partirla en dos: no hay gancho que elegir.'); process.exit(1); }
-      unidades = elegirCortes({ beats, destacadas, rango: parte === 1 ? partes.parte1 : partes.parte2 }).map((c) => c.unidad);
+      unidades = elegirCortes({ beats, destacadas, rango: parte === 1 ? partes.parte1 : partes.parte2, juegoId: juego }).map((c) => c.unidad);
     }
-    const cortes = cortesPedidos(beats, unidades, destacadas);
+    const cortes = cortesPedidos(beats, unidades, destacadas, juego);
     if (!cortes.length) { console.error('El gancho no tiene cortes validos.'); process.exit(1); }
-    gancho = { cortes: cortes.map((c) => c.unidad), parte, de };
-    beatsDeCaptura = armarGancho(beats, cortes, { juegoId: juego, partidaNumero: partida, parte, de });
+    const numero = Number.isInteger(Number(a.numero)) && Number(a.numero) >= 1 ? Number(a.numero) : null; // --numero=N: el jN del juego, que dicen las tarjetas
+    gancho = { cortes: cortes.map((c) => c.unidad), parte, de, numero };
+    beatsDeCaptura = armarGancho(beats, cortes, { juegoId: juego, juegoNumero: gancho.numero, parte, de });
     console.log(`  Gancho de la parte ${parte}: cortes ${gancho.cortes.join(', ')} (${cortes.map((c) => c.etiqueta).join(' · ')})`);
+  }
+
+  // con --numero=N (y --parte=1 --de=2, y --clip=K para un clip) la pieza abre con su tarjeta de identificacion (gancho.js: conIdentificador): el indice de cada beat cuenta esa tarjeta
+  let pieza = null;
+  if (!a.gancho && Number(a.numero) >= 1) {
+    pieza = { numero: Number(a.numero), parte: Number(a.parte) || null, de: Number(a.de) || null, clip: Number(a.clip) || null };
+    beatsDeCaptura = conIdentificador(beats, { juegoId: juego, juegoNumero: pieza.numero, parte: pieza.parte, de: pieza.de, clip: pieza.clip });
   }
 
   if (a.completa) {
     for (const formato of formatos) {
       const vel = Number(a.vel ?? 8);
-      const r = ejecutarChrome(chrome, argsChrome(formato, 600000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel, voz: a.voz, gancho })));
+      const r = ejecutarChrome(chrome, argsChrome(formato, 600000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel, voz: a.voz, gancho, pieza })));
       const termino = /data-terminada="1"/.test(r.salida);
       console.log(`  ${formato}: ${termino ? 'la partida termino de reproducirse' : 'NO termino de reproducirse'}`);
       if (!termino) fallos++;
@@ -231,7 +241,7 @@ async function principal() {
     for (const formato of formatos) {
       for (const [cuando, ms, velocidad, fundido, negra, sufijo, conSonido] of momentos) {
         const ruta = join(carpeta, `${nombre}-${formato}-grabar-${sufijo}.png`);
-        const r = ejecutarChrome(chrome, argsChrome(formato, ms, '--dump-dom', `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true, sonido: conSonido })));
+        const r = ejecutarChrome(chrome, argsChrome(formato, ms, '--dump-dom', `--screenshot=${ruta}`, urlDeCaptura({ base, archivo: a.archivo, formato, partida, vel: velocidad, voz: a.voz, grabar: true, sonido: conSonido, pieza })));
         const visto = leerFundido(r.salida);
         informar(visto?.fundido === fundido, `${formato} ${cuando}: ${visto?.fundido ?? 'sin modo grabar'} (esperado ${fundido})`);
         if (fundido === 'negro' && !visto?.cerrada) { console.error(`  ERROR en ${formato}: la pagina no marco el cierre (data-cierre)`); fallos++; }
@@ -243,7 +253,7 @@ async function principal() {
   } else if (a.estado) {
     for (const formato of formatos) {
       for (const beat of linea.beatsDeEstado(beats, Number(a.manos ?? 6))) {
-        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida })));
+        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, '--dump-dom', urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida, pieza })));
         const errores = linea.erroresDeEstado(leerEstado(r.salida), beats[beat]);
         console.log(`  ${errores.length ? 'FALLO' : 'ok   '} ${formato} ${beats[beat].id}`);
         for (const e of errores) console.error(`  ERROR: ${e}`);
@@ -254,11 +264,11 @@ async function principal() {
   } else {
     // con --gancho se capturan las tarjetas del gancho y el primer momento de cada corte
     const claves = (lista) => lista.flatMap((b, i) => (b.tipo === 'tarjeta-gancho' || (b.corte !== undefined && lista[i - 1]?.corte !== b.corte) ? [i] : []));
-    const lista = a.beats && a.beats !== 'auto' ? a.beats.split(',').map(Number) : gancho ? claves(beatsDeCaptura) : beatsClave(beats);
+    const lista = a.beats && a.beats !== 'auto' ? a.beats.split(',').map(Number) : gancho ? claves(beatsDeCaptura) : pieza ? [0, ...beatsClave(beats).map((i) => i + 1)] : beatsClave(beats);
     for (const formato of formatos) {
       for (const beat of lista) {
         const archivo = join(carpeta, `${nombre}-${formato}-${gancho ? 'gancho-' : ''}beat${String(beat).padStart(3, '0')}-${beatsDeCaptura[beat]?.tipo ?? 'x'}.png`);
-        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, `--screenshot=${archivo}`, urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida, gancho })));
+        const r = ejecutarChrome(chrome, argsChrome(formato, 10000, `--screenshot=${archivo}`, urlDeCaptura({ base, archivo: a.archivo, formato, beat, partida, gancho, pieza })));
         const hecho = existsSync(archivo) && statSync(archivo).size > 5000;
         console.log(`  ${hecho ? 'ok ' : 'FALLO'} ${archivo}`);
         if (!hecho) fallos++;

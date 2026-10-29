@@ -21,12 +21,24 @@ test('los seis recursos, las tropas y la Maravilla usan los PNG de los iconos de
   }
   assert.deepEqual(Object.keys(hashes).sort(),Object.values(PNG_RECURSOS).sort());
 });
-test('la carpeta del arte solo guarda los PNG que se usan (arco y espada de la hoja esperan en privado/)',()=>{
+test('la carpeta del arte solo guarda los PNG que se usan: los recursos y la espada del choque de las batallas (el arco de la hoja espera en privado/)',()=>{
   const png=readdirSync(new URL(CARPETA,import.meta.url)).filter(n=>n.endsWith('.png')).sort();
-  assert.deepEqual(png,Object.values(PNG_RECURSOS).sort());
-  assert.ok(ICONOS.filter(i=>i.tipo===null).map(i=>i.nombre).join()==='arco,espada');
+  assert.deepEqual(png,[...Object.values(PNG_RECURSOS),'espada.png'].sort());
+  assert.deepEqual(ICONOS.filter(i=>i.tipo===null&&!i.uso).map(i=>i.nombre),['arco']);
+  assert.deepEqual(ICONOS.filter(i=>i.uso).map(i=>[i.nombre,i.uso]),[['espada','batalla']],'la espada de la hoja es la de las dos espadas que chocan en el zoom de una disputa');
   assert.deepEqual(SUELTOS.map(i=>i.tipo),['Roca'],'Roca llego en su propio archivo, no en la hoja');
   assert.deepEqual(cajaDelDibujo({ancho:10,alto:6}),{x0:0,y0:0,x1:9,y1:5});
+});
+test('la espada del choque de las batallas es el PNG que sale de la hoja del usuario: RGBA, recortada al dibujo y en diagonal (punta arriba a la derecha, empunadura abajo a la izquierda)',()=>{
+  const png=readFileSync(new URL(CARPETA+'espada.png',import.meta.url)), {ancho,alto,datos}=decodificarPNG(png);
+  assert.equal(createHash('sha256').update(png).digest('hex'),'e628bceb841ea92e66b9e8d2ae1b096b1d9c6ac1c9d23240c575b7a47d8279a4','es el que sale de la hoja con herramientas/recortar-iconos-conquista.mjs (si cambia, se regenera y se actualiza este hash)');
+  assert.equal(png[25],6,'conserva transparencia RGBA');
+  assert.ok(Math.max(ancho,alto)<=128,'no pasa del tamaño que se dibuja');
+  assert.equal(datos[3],0,'la esquina es transparente');
+  const opaco=(x,y)=>datos[(y*ancho+x)*4+3]>=250, cuenta=(x0,y0,x1,y1)=>{let n=0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)if(opaco(x,y))n++;return n;};
+  const mx=Math.floor(ancho/2), my=Math.floor(alto/2);
+  assert.ok(cuenta(mx,0,ancho,my)>0&&cuenta(0,my,mx,alto)>0,'hay dibujo arriba a la derecha (la hoja) y abajo a la izquierda (la empunadura)');
+  assert.ok(cuenta(0,0,mx,my)<cuenta(mx,0,ancho,my)*0.6,'la esquina de arriba a la izquierda esta casi vacia: la espada va en diagonal');
 });
 test('los sprites conservan proporciones y encajan en el marcador sin estirarse',()=>{
   assert.deepEqual(encajarSprite({ancho:100,alto:200},80,120,60,60),{x:65,y:90,ancho:30,alto:60});

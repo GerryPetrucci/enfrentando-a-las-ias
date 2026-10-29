@@ -90,7 +90,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   for (const p of paquete.piezas) {
     const base = nombreDePieza({ juego: 1, pieza: p.id });
     if (p.tipo === 'gancho-imagen') { // una imagen no se graba: el LEEME da su pagina (vista previa), los PNG que ya genero y el comando para regenerarla (lo prueba paquete.test.js)
-      assert.ok(texto.includes(`### ${p.id} ·`) && texto.includes(`http://localhost:4321/${p.grabar.url}`) && texto.includes(`${base}_9x16_fb-ig-tk-yt.png`), `${p.id}: falta su seccion de imagen`);
+      assert.ok(texto.includes(`### ${p.id} ·`) && texto.includes(`http://localhost:4321/${p.grabar.url}`) && texto.includes(`${base}_9x16_fb-ig-tk-yt.mp4`), `${p.id}: falta su seccion de imagen`);
       continue;
     }
     assert.ok(texto.includes(`http://localhost:4321/${p.grabar.url}`), `${p.id}: falta su direccion`);
@@ -102,7 +102,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   }
   // el nombre de cada video dice el juego, la pieza, el formato y las redes: j1_pt1_9x16_fb-ig-tk-yt.mp4
   assert.ok(texto.includes('j1_pt1_convoz_9x16_fb-ig-tk-yt.mp4') && texto.includes('j1_pt2_sinvoz_16x9_fb-x-yt.mp4'));
-  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_(hk|pt|clp)\d_(convoz|sinvoz)_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`);
+  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_((hk|pt|clp)\d_(convoz|sinvoz)|hk\d)_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`); // el video de un gancho de imagen fija no tiene voz: j1_hk2_9x16_fb-ig-tk-yt.mp4
   assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/guerra)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
   assert.match(texto, /subidos\//, 'dice que lo subido se mueve a subidos/');
   assert.ok(texto.includes('textos/parte-1.txt'), 'lista el texto unico');

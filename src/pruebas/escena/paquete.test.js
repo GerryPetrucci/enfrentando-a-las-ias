@@ -10,6 +10,7 @@ import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
 import { dividirEnDos, duracionDeBeat, planDeGrabacion, momentosSinVoz } from '../../../web/casino/escena-config.js';
 import { textoDeJuego } from '../../../web/casino/textos-juego.js';
 import { claveDeCierre, duracionDeCierre } from '../../../web/casino/cierre.js';
+import { IDENTIFICADOR_MS } from '../../../web/casino/gancho.js';
 import { jugar as jugarDuda } from './ayudas.js';
 import { jugarMM } from './ayudas-mm.js';
 import { jugarSol } from './ayudas-sol.js';
@@ -86,11 +87,11 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
     const [p1, p2] = paquete.piezas;
     assert.deepEqual([p1.grabar.desde, p1.grabar.hasta, p2.grabar.desde, p2.grabar.hasta], [d.parte1.mano, d.parte1.hasta, d.parte2.mano, d.parte2.hasta]);
     const cierreDe = (g) => duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: 1, desde: g.desde, hasta: g.hasta }), null);
-    assert.equal(p1.grabar.ms, d.parte1.ms + cierreDe(p1.grabar), `${id}: lo que dura la pieza incluye el cierre`);
+    assert.equal(p1.grabar.ms, d.parte1.ms + IDENTIFICADOR_MS + cierreDe(p1.grabar), `${id}: lo que dura la pieza incluye la tarjeta de identificacion del inicio y el cierre`);
     const ocupadas = [];
     for (const c of clips) {
       assert.ok(c.grabar.desde > beats[0].mano, `${id}: un clip no lleva el intro`);
-      const contenido = c.grabar.ms - cierreDe(c.grabar); // el cierre se suma aparte: la ventana de 20 a 40 s es del contenido
+      const contenido = c.grabar.ms - IDENTIFICADOR_MS - cierreDe(c.grabar); // la tarjeta de identificacion y el cierre se suman aparte: la ventana de 20 a 40 s es del contenido
       assert.ok(contenido >= 20000 && contenido <= 40000 || /fuera de/.test(c.grabar.nota), `${id}: ${c.id} dura ${contenido}`);
       for (const [a, z] of ocupadas) assert.ok(c.grabar.hasta < a || c.grabar.desde > z, `${id}: ${c.id} se encima con otro clip`);
       ocupadas.push([c.grabar.desde, c.grabar.hasta]);
@@ -309,10 +310,42 @@ test('un gancho por parte (gancho-1, gancho-2) cuando esa parte tiene momentos p
     assert.ok(cortes.length >= 2 && cortes.length <= 5, `${g.id}: ${cortes.length} cortes`);
     for (const u of cortes) assert.ok(u >= rango.mano && u <= rango.hasta && u !== unidades[0] && u !== unidades.at(-1), `${g.id}: la unidad ${u} no vale (parte ${rango.mano}..${rango.hasta}; sin la primera ni la ultima de la partida)`);
     const contenido = g.grabar.ms - duracionDeCierre(claveDeCierre({ seed: PARTIDAS.conquista.seed, partida: 1, gancho: n }), null); // el cierre se suma aparte
-    assert.ok(contenido >= 12000 && contenido <= 26000, `${g.id}: dura ${contenido} sin el cierre`);
+    assert.ok(contenido >= 12000 && contenido <= 42000, `${g.id}: dura ${contenido} sin el cierre`); // 12 a 26 s en los juegos de siempre; hasta 42 s en Guerra, con sus cortes mas lentos
     assert.deepEqual(g.grabar.plan, planDeGrabacion(g.grabar.ms));
     assert.equal(g.comentarioFijado, null, 'un gancho no lleva comentario fijado');
   }
+});
+
+test('TODA pieza que se graba (parte, clip y gancho en video) lleva el jN en su direccion (numero=N), y las partes y los clips tambien su parte (parte y de) y, el clip, su numero (clip): asi abren con su identificacion', async () => {
+  for (const [id, partida] of Object.entries(PARTIDAS)) {
+    const { paquete } = await paqueteDe(id, partida, { juegoNumero: 7 });
+    const grabables = paquete.piezas.filter((p) => p.tipo !== 'gancho-imagen');
+    assert.ok(grabables.length >= 2, id);
+    for (const p of grabables) {
+      const q = params(p.grabar.url);
+      assert.equal(q.numero, '7', `${id} ${p.id}: sin jN la pieza no se identifica`);
+      assert.deepEqual([q.parte, q.de], [String(p.parte), '2'], `${id} ${p.id}: la parte a la que pertenece`);
+      assert.equal(q.clip, p.tipo === 'clip' ? p.id.split('-')[1] : undefined, `${id} ${p.id}: el numero de clip, solo en los clips`);
+    }
+  }
+  const sinJN = (await paqueteDe('conquista', PARTIDAS.conquista, { partidaNumero: 4 })).paquete;
+  for (const p of sinJN.piezas.filter((x) => x.tipo !== 'gancho-imagen')) assert.equal(params(p.grabar.url).numero, '4', `${p.id}: sin jN se usa el numero de partida, como el gancho en imagen`);
+});
+
+test('el gancho en video lleva el numero de JUEGO (jN) en su direccion y en sus textos —«Juego 7 · Parte n de 2»—, nunca «Partida»: ya no son partidas, son juegos', async () => {
+  const { paquete } = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40), juegoNumero: 7 });
+  const ganchos = paquete.piezas.filter((p) => p.tipo === 'gancho');
+  assert.ok(ganchos.length >= 1);
+  for (const g of ganchos) {
+    const q = params(g.grabar.url);
+    assert.deepEqual([q.numero, q.parte], ['7', String(g.parte)], `${g.id}: el numero de juego y el de la parte que anuncia`);
+    for (const [red, texto] of [['tiktok', g.textos.tiktok], ['instagram', g.textos.instagram], ['facebook', g.textos.facebook], ['x', g.textos.x], ['youtube', g.textos.youtube.descripcion]]) {
+      assert.ok(texto.includes(`Juego 7 · Parte ${g.parte} de 2`), `${g.id} ${red}: ${texto}`);
+      assert.doesNotMatch(texto, /Partida/, `${g.id} ${red}`);
+    }
+  }
+  const sinJN = await paqueteDe('conquista', PARTIDAS.conquista, { destacadas: await destacadasDe('conquista', PARTIDAS.conquista, 40), partidaNumero: 4 });
+  assert.equal(params(sinJN.paquete.piezas.find((p) => p.tipo === 'gancho').grabar.url).numero, '4', 'sin jN se usa el numero de partida, como en el gancho en imagen');
 });
 
 test('el texto de un gancho, en cada red: «Próximamente», la parte que anuncia, la linea de gancho marcada, el aviso de IA, dentro de cada limite y NUNCA un resultado', async () => {
@@ -423,13 +456,14 @@ test('el LEEME de un paquete con ganchos en imagen los lista como imagenes ya ge
   const paquete = construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 7, enlace: ENLACE });
   const piezasGrabables = paquete.piezas.filter((p) => p.tipo !== 'gancho-imagen').length;
   const leeme = leemeDe(paquete, { archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 7, enlace: ENLACE, fecha: fechaDe('2026-10-25-lobo.json'), carpetaSerie: 'grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-1' });
-  assert.match(leeme, new RegExp(`## Paso 1 · Grabar las ${piezasGrabables} piezas \\(y subir las 2 imágenes de gancho, que no se graban\\)`));
-  assert.match(leeme, /### gancho-1 · Lobo en la aldea · Gancho de la parte 1 \(imagen\)/);
-  assert.match(leeme, /imagen fija\*\*: no se graba con OBS/);
-  assert.ok(leeme.includes('`j7_hk1_9x16_fb-ig-tk-yt.png` → Facebook, Instagram, TikTok, YouTube') && leeme.includes('`j7_hk2_16x9_fb-x-yt.png` → Facebook, X, YouTube'));
+  assert.match(leeme, new RegExp(`## Paso 1 · Grabar las ${piezasGrabables} piezas \\(y subir los 2 videos de gancho de imagen fija, que no se graban\\)`));
+  assert.match(leeme, /### gancho-1 · Lobo en la aldea · Gancho de la parte 1 \(video de imagen fija\)/);
+  assert.match(leeme, /video de imagen fija\*\*: no se graba con OBS/);
+  assert.ok(leeme.includes('`j7_hk1_9x16_fb-ig-tk-yt.mp4` → Facebook, Instagram, TikTok, YouTube') && leeme.includes('`j7_hk2_16x9_fb-x-yt.mp4` → Facebook, X, YouTube'), 'el gancho de imagen fija sale como VIDEO (mp4), ya no como PNG');
+  assert.doesNotMatch(leeme, /_hk\d_[0-9x]+_[a-z-]+\.png/, 'ya no se listan imagenes PNG de gancho');
   assert.ok(leeme.includes('node herramientas/gancho-imagen.mjs --juego=lobo --numero=7 --parte=2 --de=2 "--salida=grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-1/por-subir/j7"'));
   assert.ok(leeme.includes('http://localhost:4321/gancho-imagen.html?juego=lobo&numero=7&parte=1&de=2&formato=9x16'));
-  assert.match(leeme, /Cada imagen de gancho se ve completa/);
+  assert.match(leeme, /Cada video de gancho de imagen fija se ve completo/);
   assert.ok(leeme.indexOf('### gancho-1') < leeme.indexOf('### parte-1') && leeme.indexOf('### gancho-2') < leeme.indexOf('### parte-2'));
   assert.ok(!/gancho-1[^\n]*\n- Dirección para abrir y grabar/.test(leeme), 'una imagen no tiene direccion de OBS');
   // un paquete sin imagenes no cambia

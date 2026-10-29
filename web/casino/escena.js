@@ -11,7 +11,8 @@
 import { POSICION_EN_HOJA } from './layout.js';
 import { htmlDefs } from './kit.js';
 import { escenaDe, juegosConEscena, armarLinea, destacadasDe } from './lineas.js';
-import { cortesPedidos, armarGancho } from './gancho.js';
+import { cortesPedidos, armarGancho, conIdentificador } from './gancho.js';
+import { RUTA_INDICE, identidadDeIndice } from './indice-paquetes.js';
 import { claveDeCierre, conCierre, vozSoloCierre } from './cierre.js';
 import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, listaDeArchivos, catalogarPartidas, primeraValida, esRutaRelativa, entradaDeVoz, resumenDeVoz, crearReproductorDeVoz, FUNDIDOS } from './escena-config.js';
 import { crearSonido } from './sonido.js';
@@ -40,6 +41,7 @@ export async function iniciar() {
   let voz = null;
   let vozDePieza = null; // la voz que usa la pieza montada: toda, o solo la del cierre en un gancho
   let avisoVoz = ''; // se queda en la barra: grabar sin voz sin enterarse seria peor que un aviso
+  const traerIndice = async () => { try { const r = await fetch(RUTA_INDICE); return r.ok ? await r.json() : null; } catch { return null; } }; // el indice de paquetes (data/paquetes.json); sin el, no hay identidad que recuperar
   if (params.voz) { try { voz = await (await fetch(params.voz)).json(); } catch { avisoVoz = ' · No pude leer la voz: se usan los tiempos mínimos.'; } }
 
   let catalogo = [];
@@ -70,17 +72,26 @@ export async function iniciar() {
     if (miGeneracion !== generacion) return; // mientras se cargaban los modulos se abrio otra partida
     const camara = params.camara ?? escena.camaraPorDefecto;
     let beats, llegaAlFinal = false;
+    // Que juego (jN) y que pieza es: lo dice la direccion (numero=N&parte=M&de=K). Al GRABAR, una direccion que no lo trae (la de un LEEME anterior) no se queda sin identificar: el jN se busca en el indice de
+    // paquetes (indice-paquetes.js); si esa partida no tiene paquete, no se inventa uno y la pieza sale como antes.
+    let numero = params.numero, pieza = params.pieza;
+    if (!numero && params.grabar) {
+      const dato = identidadDeIndice(await traerIndice(), { archivo: entrada.archivo, partida: entrada.numero, gancho: params.gancho, desde: params.mano, hasta: Number.isFinite(params.hasta) ? params.hasta : null });
+      if (dato) ({ numero, pieza } = dato);
+    }
     if (params.gancho) {
       // el gancho «Proximamente» (gancho.js): tarjetas y cortes rapidos de las unidades pedidas (cortes=), sin voz ni razones
       const todos = await armarLinea(entrada.juego, partida, { camara });
-      const cortes = cortesPedidos(todos, params.gancho.cortes, await destacadasDe(entrada.juego, partida, 10));
-      beats = cortes.length ? armarGancho(todos, cortes, { juegoId: entrada.juego, partidaNumero: entrada.numero, parte: params.gancho.parte, de: params.gancho.de }) : [];
+      const cortes = cortesPedidos(todos, params.gancho.cortes, await destacadasDe(entrada.juego, partida, 40), entrada.juego); // 40, como el paquete que planeo el gancho: con menos, un corte pierde su momento
+      beats = cortes.length ? armarGancho(todos, cortes, { juegoId: entrada.juego, juegoNumero: numero, parte: params.gancho.parte, de: params.gancho.de }) : [];
       if (!beats.length) { marco.innerHTML = ''; actual = null; habilitar(false); return aviso(`El gancho no tiene cortes válidos (${escena.unidad === 'turno' ? 'turnos' : `${escena.unidad}s`} pedidos: ${params.gancho.cortes.join(', ') || 'ninguno'}; no valen el primero ni el último).`); }
     } else {
       const todos = await armarLinea(entrada.juego, partida, { camara });
       beats = recortarClip(todos, params.mano, params.hasta);
       llegaAlFinal = beats.length > 0 && beats.at(-1).mano === todos.at(-1)?.mano; // la pieza llega al ultimo turno: el juego termina en ella
       if (params.razon && linea.conRazones) beats = linea.conRazones(beats, partida);
+      // cada parte y cada clip abre con su tarjeta «Juego N · Parte M de K» (gancho.js: conIdentificador) cuando la direccion trae numero=N; el gancho ya la lleva en sus tarjetas
+      beats = conIdentificador(beats, { juegoId: entrada.juego, juegoNumero: numero, ...pieza });
     }
     if (params.cierre && beats.length) {
       // el cierre de cada video (cierre.js): la frase se elige con el seed de la pieza, asi el mismo video es siempre igual y cada pieza dice la suya.

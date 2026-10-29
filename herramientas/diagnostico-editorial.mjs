@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { lineaDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
 import { dividirEnDos, duracionDeBeat, momentosSinVoz, direccionDeGrabacion, planDeGrabacion, formatoDeTiempo } from '../web/casino/escena-config.js';
 import { claveDeCierre, duracionDeCierre } from '../web/casino/cierre.js';
+import { IDENTIFICADOR_MS } from '../web/casino/gancho.js';
 import { carpetaDeVoz } from './narrar.mjs';
 
 // Solo corta entre unidades completas. Minimiza el numero de piezas que caben;
@@ -33,7 +34,7 @@ export function diagnosticar(beats, { voz = null, objetivoMs = 90000, seed = 0, 
     const desde = unidades[i].mano, hasta = unidades[j - 1].mano;
     const contenidoMs = acumulados[j] - acumulados[i];
     const cierreMs = duracionDeCierre(claveDeCierre({ seed, partida: partidaNumero, desde, hasta }), voz);
-    const ms = contenidoMs + cierreMs;
+    const ms = contenidoMs + IDENTIFICADOR_MS + cierreMs; // cada pieza abre con su tarjeta «Juego N · Parte M de K» (gancho.js) y termina con el cierre
     return { desde, hasta, contenidoMs, cierreMs, ms, excedeObjetivo: ms > objetivoMs, grabacionMs: planDeGrabacion(ms).totalMs };
   };
   const mejores = [{ cantidad: 0, dispersion: 0, anterior: null, pieza: null }];

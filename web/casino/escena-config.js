@@ -12,6 +12,7 @@ const entero = (v) => {
   return Number.isInteger(n) ? n : null;
 };
 const bandera = (v) => v !== null && v !== '' && v !== '0' && v !== 'false';
+const positivo = (v) => { const n = entero(v); return n !== null && n >= 1 ? n : null; };
 
 export const FORMATOS_PAGINA = ['9x16', '16x9', 'hoja']; // 'hoja' dibuja los dos formatos juntos en la hoja maestra de OBS
 
@@ -63,17 +64,21 @@ export const segundos = (ms) => Number((ms / 1000).toFixed(1));
 
 // La direccion de la escena para abrirla y grabar una pieza (rondas desde..hasta): sin barra (limpio=1), arranca sola (auto=1) y con margenes y fundidos de negro (grabar=1). La usan el paquete
 // (su LEEME) y herramientas/partes.mjs; `formato` por omision es la hoja maestra de 4K del OBS del proyecto.
-export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, formato = 'hoja', voz = null, cierre = null }) {
+// `juegoNumero` (jN, numero=N) y la pieza (`parte` y `de`, y `clip` si es un clip) hacen que la pagina abra la pieza con su tarjeta de identificacion («Juego N · Parte M de K», gancho.js).
+export function direccionDeGrabacion({ archivo, partida = 1, desde, hasta, formato = 'hoja', voz = null, cierre = null, juegoNumero = null, parte = null, de = null, clip = null }) {
   // cierre=1: la tarjeta final con el logo y las redes (cierre.js); con `cierre` (final | parte | clip) la pagina sabe que frase le toca a la pieza (sin ella la deduce: llega al ultimo turno o no)
   const q = new URLSearchParams({ archivo, partida: String(partida), ronda: String(desde), hasta: String(hasta), formato, auto: '1', limpio: '1', grabar: '1', cierre: TIPOS_DE_CIERRE.includes(cierre) ? cierre : '1' });
+  for (const [clave, valor] of [['numero', juegoNumero], ['parte', parte], ['de', de], ['clip', clip]]) if (Number.isInteger(valor) && valor >= 1) q.set(clave, String(valor));
   if (voz) q.set('voz', voz);
   return `escena.html?${q}`;
 }
 
 // La direccion para grabar el gancho «Próximamente» de una parte (gancho.js): los cortes son unidades (manos, rondas o turnos) de la partida. El gancho no se narra: con `voz` la pagina usa solo
 // el audio del cierre (cierre.js: vozSoloCierre), nunca el de los cortes.
-export function direccionDeGancho({ archivo, partida = 1, cortes, parte = 1, de = 2, formato = 'hoja', voz = null }) {
+// `juegoNumero` es el jN del paquete (numero=N): las tarjetas dicen «Juego N · Parte M de K»; la `partida` es solo cual del archivo se abre.
+export function direccionDeGancho({ archivo, partida = 1, cortes, parte = 1, de = 2, formato = 'hoja', voz = null, juegoNumero = null }) {
   const q = new URLSearchParams({ archivo, partida: String(partida), gancho: '1', cortes: (cortes ?? []).join(','), parte: String(parte), de: String(de), formato, auto: '1', limpio: '1', grabar: '1', cierre: 'gancho' });
+  if (Number.isInteger(juegoNumero) && juegoNumero >= 1) q.set('numero', String(juegoNumero));
   if (voz) q.set('voz', voz);
   return `escena.html?${q}`;
 }
@@ -111,6 +116,9 @@ export function leerParametros(search) {
     cierre: bandera(q.get('cierre')), // cierre=1: se agrega al final la tarjeta con el logo, los @ de las redes y la pagina de resultados (cierre.js)
     tipoCierre: TIPOS_DE_CIERRE.includes(q.get('cierre')) ? q.get('cierre') : null, // cierre=parte|final|clip|gancho: que frase le toca a la pieza; null (cierre=1) = la pagina lo deduce
     gancho: bandera(q.get('gancho')) ? { cortes: cortesDe(q.get('cortes')), parte: Math.max(1, entero(q.get('parte')) ?? 1), de: Math.max(1, entero(q.get('de')) ?? 2) } : null,
+    // numero=N: el jN del juego; parte/de/clip: que pieza es. Con numero, la pagina abre la pieza con su tarjeta de identificacion (gancho.js: conIdentificador); sin el (una direccion vieja) no pone nada.
+    numero: positivo(q.get('numero')),
+    pieza: { parte: positivo(q.get('parte')), de: positivo(q.get('de')), clip: positivo(q.get('clip')) },
   };
 }
 

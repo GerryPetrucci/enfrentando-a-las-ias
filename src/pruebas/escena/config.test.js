@@ -15,13 +15,13 @@ import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { jugar, CASOS } from './ayudas.js';
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
-  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, audioSeparado: false, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null, cierre: false, tipoCierre: null });
+  assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, audioSeparado: false, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null, cierre: false, tipoCierre: null, numero: null, pieza: { parte: null, de: null, clip: null } });
   assert.deepEqual(leerParametros(undefined), leerParametros(''));
 });
 
 test('los parametros se leen y se validan: lo ilegible vuelve al valor por defecto, nada lanza', () => {
   const p = leerParametros('?archivo=duda-1.json&partida=3&mano=4&hasta=9&formato=16x9&camara=4&sonido=0&vel=2.5&razon=1&auto=1&limpio=1&voz=voz.json&escala=1');
-  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, audioSeparado: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1, gancho: null, cierre: false, tipoCierre: null });
+  assert.deepEqual(p, { archivo: 'duda-1.json', partida: 3, mano: 4, hasta: 9, formato: '16x9', camara: 4, sonido: false, audioSeparado: false, vel: 2.5, razon: true, auto: true, grabar: false, detener: null, limpio: true, voz: 'voz.json', escala: 1, gancho: null, cierre: false, tipoCierre: null, numero: null, pieza: { parte: null, de: null, clip: null } });
   assert.equal(leerParametros('?cierre=1').cierre, true);
   assert.equal(leerParametros('?cierre=0').cierre, false);
   for (const tipo of ['final', 'parte', 'clip', 'gancho']) assert.deepEqual([leerParametros('?cierre=' + tipo).cierre, leerParametros('?cierre=' + tipo).tipoCierre], [true, tipo], 'cierre=' + tipo + ' dice que frase le toca a la pieza');
@@ -51,6 +51,16 @@ test('gancho=1 pide el gancho «Próximamente»: sus cortes (unidades, sin repet
   assert.deepEqual(leerParametros('gancho=1&cortes=1,2,3,4,5,6,7,8,9,10').gancho.cortes, [1, 2, 3, 4, 5, 6, 7, 8], 'a lo mas 8 cortes');
   assert.deepEqual(leerParametros('gancho=1').gancho, { cortes: [], parte: 1, de: 2 }, 'sin cortes la pagina lo dice, no lo adivina');
   for (const q of ['', 'cortes=3', 'gancho=0&cortes=3', 'gancho=false']) assert.equal(leerParametros(q).gancho, null, q);
+});
+
+test('numero=N es el jN del juego y parte/de/clip dicen que pieza es: la pagina los lee para abrir la pieza con su tarjeta de identificacion; lo ilegible se ignora', () => {
+  const p = leerParametros('archivo=a.json&ronda=3&hasta=9&numero=3&parte=2&de=2&clip=1');
+  assert.deepEqual([p.numero, p.pieza], [3, { parte: 2, de: 2, clip: 1 }]);
+  assert.equal(leerParametros('numero=3').pieza.parte, null, 'sin parte la tarjeta dice solo el juego');
+  assert.deepEqual(leerParametros('numero=3&parte=1&de=2').pieza, { parte: 1, de: 2, clip: null });
+  assert.equal(leerParametros('numero=3&gancho=1&cortes=4&parte=2&de=2').numero, 3, 'el gancho usa el mismo numero');
+  for (const q of ['', 'numero=0', 'numero=-2', 'numero=x', 'numero=']) assert.equal(leerParametros(q).numero, null, `«${q}»: sin numero valido no hay tarjeta`);
+  assert.deepEqual(leerParametros('numero=3&parte=0&de=x&clip=-1').pieza, { parte: null, de: null, clip: null });
 });
 
 test('el clip por manos recorta los beats y no inventa final ni se cuelga con un rango fuera de la partida', async () => {

@@ -23,7 +23,7 @@ import { parsearArgumentos } from '../src/serie.js';
 export const ICONOS = [
   { nombre: 'comida', tipo: 'Comida', lado: 128 }, { nombre: 'madera', tipo: 'Madera', lado: 128 }, { nombre: 'oro', tipo: 'Oro', lado: 128 },
   { nombre: 'hierro', tipo: 'Hierro', lado: 128 }, { nombre: 'caballos', tipo: 'Caballos', lado: 128 }, { nombre: 'arco', tipo: null, lado: 128 },
-  { nombre: 'espada', tipo: null, lado: 128 }, { nombre: 'tropas', tipo: 'Tropas', lado: 128 }, { nombre: 'maravilla', tipo: 'Maravilla', lado: 256 },
+  { nombre: 'espada', tipo: null, lado: 128, uso: 'batalla' }, { nombre: 'tropas', tipo: 'Tropas', lado: 128 }, { nombre: 'maravilla', tipo: 'Maravilla', lado: 256 },
 ];
 // Los iconos que llegaron en su propio archivo (un solo dibujo, fondo transparente): Roca, que la hoja no traia (el usuario la entrego el 26 de octubre de 2026).
 export const SUELTOS = [{ nombre: 'roca', tipo: 'Roca', lado: 128, origen: 'privado/prototipos/conquista-iconos/roca.png' }];
@@ -103,7 +103,7 @@ function principal() {
   const hoja = decodificarPNG(readFileSync(origen)), bloques = bloquesDeLaHoja(hoja);
   mkdirSync(salida, { recursive: true });
   ICONOS.forEach((icono, i) => {
-    if (icono.tipo === null && !o.todos) return;
+    if (icono.tipo === null && !icono.uso && !o.todos) return; // sin tipo de recurso solo se escribe si tiene uso (la espada del choque de las batallas) o con --todos
     const png = reducir(recortarBloque(hoja, bloques[i]), icono.lado);
     writeFileSync(join(salida, `${icono.nombre}.png`), codificarPNG(png));
     console.log(`  ${icono.nombre}.png  ${png.ancho} x ${png.alto}${icono.tipo ? `  (${icono.tipo})` : ''}`);

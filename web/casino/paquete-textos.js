@@ -5,7 +5,7 @@
 
 import { claveDeCierre, duracionDeCierre } from './cierre.js';
 import { dividirEnDos, duracionDeBeat, formatoDeTiempo, planDeGrabacion, direccionDeGrabacion, direccionDeGancho, marcarTiempos, momentosSinVoz } from './escena-config.js';
-import { elegirCortes, armarGancho } from './gancho.js';
+import { elegirCortes, armarGancho, IDENTIFICADOR_MS } from './gancho.js';
 import { direccionDeGanchoImagen, ARTE_GANCHO } from './gancho-imagen.js';
 import { escenaDe, juegosConEscena } from './lineas.js';
 import { textoDeJuego } from './textos-juego.js';
@@ -131,15 +131,18 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
   // lo que hay que saber para grabar una pieza: la direccion de la escena, sus rondas, lo que dura y el plan de la grabacion (con los margenes de negro)
   // la pieza termina con el cierre (cierre.js: logo, redes y pagina de resultados): lo que dura se suma a lo que dura la pieza
   // `cierre` = el tipo de la pieza para la frase final (cierre.js): parte (deja el juego a medias), final (la parte que lo termina) o clip
-  const grabarDe = (desde, hasta, ms, nota, cierre) => {
-    const total = Math.round(ms + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz, cierre));
-    return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz, cierre }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
+  // Cada parte y cada clip abre con una tarjeta «Juego N · Parte M de K» (gancho.js: conIdentificador): la direccion lleva el jN (numero), la parte (parte y de) y, un clip, su numero (clip), y la tarjeta suma su duracion.
+  // El jN es el del paquete; sin el (un paquete sin juegoNumero) se usa el numero de partida, como en el gancho en imagen.
+  const juegoN = Number.isInteger(juegoNumero) && juegoNumero >= 1 ? juegoNumero : partidaNumero;
+  const grabarDe = (desde, hasta, ms, nota, cierre, pieza = {}) => {
+    const total = Math.round(ms + IDENTIFICADOR_MS + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz, cierre));
+    return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz, cierre, juegoNumero: juegoN, de: 2, ...pieza }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
   };
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : partida.extincionMutua === true ? `Ganó ${ganador} tras una extinción mutua` : `Ganó ${ganador}`) : 'Terminó en empate';
     piezas.push({
       id: `parte-${n}`, tipo: 'parte', parte: n, titulo: `${t.nombre} · Parte ${n} de 2`, cierre: n === 2 ? 'final' : 'parte',
-      grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.', n === 2 ? 'final' : 'parte'),
+      grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.', n === 2 ? 'final' : 'parte', { parte: n }),
       textos: textosDe({ sug, encabezado: `${t.nombre} · Parte ${n} de 2`, parte: n, tipo: 'parte' }), comentarioFijado,
     });
   }
@@ -164,19 +167,18 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const motivos = (d.motivos ?? []).join(', ');
     piezas.push({
       id: `clip-${i + 1}`, tipo: 'clip', parte, titulo: `${t.nombre} · ${etiqueta}`, cierre: 'clip',
-      grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`, 'clip'),
+      grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`, 'clip', { parte, clip: i + 1 }),
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
   });
   // los ganchos «Proximamente» (gancho.js), uno por parte, para subirlos ANTES de esa parte: cortes rapidos de momentos de esa parte, sin voz (la musica la pone quien lo sube) y sin resultado.
   // REGLA (25 de octubre de 2026): ninguna parte se queda sin gancho. Si no hay al menos 2 cortes buenos para uno en video (Lobo en la aldea, o cualquier juego sin momentos con puntos),
   // el gancho es una IMAGEN fija (gancho-imagen.js): «Próximamente», el nombre del juego, su numero de juego (jN) y el de la parte, con el arte del juego si lo tiene.
-  const juegoN = Number.isInteger(juegoNumero) && juegoNumero >= 1 ? juegoNumero : partidaNumero;
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
-    const cortes = elegirCortes({ beats: lista, destacadas, rango: p });
+    const cortes = elegirCortes({ beats: lista, destacadas, rango: p, juegoId: juego });
     const enImagen = cortes.length < 2;
-    if (enImagen) advertencias.push(`No hay momentos buenos para armar el gancho de la parte ${n} en video (menos de 2 cortes que quepan): se genera el gancho de la parte ${n} como IMAGEN (regla del proyecto: ninguna parte sale sin gancho).`);
-    const encabezado = enImagen ? `${t.nombre} · Juego ${juegoN} · Parte ${n} de 2` : `${t.nombre} · Partida ${partidaNumero} · Parte ${n} de 2`;
+    if (enImagen) advertencias.push(`No hay momentos buenos para armar el gancho de la parte ${n} en video (menos de 2 cortes que quepan): se genera el gancho de la parte ${n} como un VIDEO de IMAGEN FIJA (la misma imagen en cada cuadro, para compartirlo como short; regla del proyecto: ninguna parte sale sin gancho).`);
+    const encabezado = `${t.nombre} · Juego ${juegoN} · Parte ${n} de 2`; // el gancho dice el numero de JUEGO (jN), en video y en imagen: ya no son partidas
     const sug = n === 1 ? `Próximamente: ${nombres.length} IAs se enfrentan en ${t.nombre}` : `Próximamente: la parte 2 de ${t.nombre}`;
     const cuerpo = `Próximamente: ${encabezado}. Síguenos para no perdértela.`;
     const gancho = (resto, limite) => `[GANCHO: ${cabeGancho(sug, resto, limite)}]`;
@@ -190,19 +192,19 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     };
     if (enImagen) {
       piezas.push({
-        id: `gancho-${n}`, tipo: 'gancho-imagen', parte: n, titulo: `${t.nombre} · Gancho de la parte ${n} (imagen)`,
-        // Una imagen no se graba: `url` es la pagina que la dibuja (sirve para verla en el navegador) y no hay plan de grabacion.
+        id: `gancho-${n}`, tipo: 'gancho-imagen', parte: n, titulo: `${t.nombre} · Gancho de la parte ${n} (video de imagen fija)`,
+        // Un gancho de imagen fija no se graba con OBS: `url` es la pagina que dibuja la imagen (sirve para verla en el navegador), la herramienta la vuelve un video corto que la repite en cada cuadro y no hay plan de grabacion.
         grabar: { url: direccionDeGanchoImagen({ juegoId: juego, juegoNumero: juegoN, parte: n, de: 2, formato: '9x16' }), desde: null, hasta: null, ms: 0, plan: null,
-          nota: `Imagen fija «Próximamente · Juego ${juegoN} · Parte ${n} de 2»${ARTE_GANCHO[juego] ? ' con el arte del juego' : ' (el juego aún no tiene arte registrado: lleva solo la marca)'}. Se sube antes de la parte ${n}.` },
+          nota: `Video corto de imagen fija «Próximamente · Juego ${juegoN} · Parte ${n} de 2»${ARTE_GANCHO[juego] ? ' con el arte del juego' : ' (el juego aún no tiene arte registrado: lleva solo la marca)'}: la misma imagen en cada cuadro, sin voz (ponle tu música al subirlo, nada con derechos). Se sube antes de la parte ${n}.` },
         textos, comentarioFijado: null,
       });
       continue;
     }
-    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, partidaNumero, parte: n, de: 2 }), null, 1).at(-1).finMs + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, gancho: n }), voz, 'gancho');
+    const ms = marcarTiempos(armarGancho(lista, cortes, { juegoId: juego, juegoNumero: juegoN, parte: n, de: 2 }), null, 1).at(-1).finMs + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, gancho: n }), voz, 'gancho');
     piezas.push({
       id: `gancho-${n}`, tipo: 'gancho', parte: n, titulo: `${t.nombre} · Gancho de la parte ${n}`, cierre: 'gancho',
       grabar: {
-        url: direccionDeGancho({ archivo, partida: partidaNumero, cortes: cortes.map((c) => c.unidad), parte: n, de: 2, formato, voz: rutaVoz }), desde: null, hasta: null, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)),
+        url: direccionDeGancho({ archivo, partida: partidaNumero, cortes: cortes.map((c) => c.unidad), parte: n, de: 2, formato, voz: rutaVoz, juegoNumero: juegoN }), desde: null, hasta: null, ms: Math.round(ms), plan: planDeGrabacion(Math.round(ms)),
         nota: `La voz solo dice el cierre (los cortes no se narran): ponle tu música al subirlo (nada con derechos). Cortes: ${cortes.map((c) => `${c.etiqueta} (${unidad.toLowerCase()} ${c.unidad})`).join(', ')}. Se sube antes de la parte ${n}.`,
       },
       textos, comentarioFijado: null,

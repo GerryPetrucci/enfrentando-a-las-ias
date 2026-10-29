@@ -1,4 +1,4 @@
-Muestras de sonido de web/audio: tomadas de tres paquetes de Kenney (kenney.nl), todos con licencia Creative Commons Zero (CC0, dominio publico).
+Muestras de sonido de web/audio, todas con licencia Creative Commons Zero (CC0, dominio publico). Las de cartas, fichas, dados y avisos salen de tres paquetes de Kenney (kenney.nl); las de gana, pierde, batalla y maravilla, de grabaciones reales de Freesound (al final).
 Se pueden usar en proyectos personales y comerciales y redistribuir; el credito (Kenney o www.kenney.nl) es agradable pero no obligatorio.
 Abajo, el texto de licencia que trae cada paquete, sin cambios. Las muestras se recortaron de nivel con herramientas/preparar-sonidos.mjs (solo volumen y recodificacion a OGG).
 
@@ -44,3 +44,24 @@ Music Jingles
 	Request:  http://request.kenney.nl
 	Follow on Twitter for updates:
 	@KenneyNL
+
+=== Grabaciones reales (Freesound, CC0) ===
+Las muestras de gana, pierde, batalla, choque y maravilla son grabaciones reales de Freesound (https://freesound.org), todas con licencia Creative Commons Zero (CC0 1.0, dominio publico):
+http://creativecommons.org/publicdomain/zero/1.0/  Se pueden usar en proyectos personales y comerciales y redistribuir; el credito no es obligatorio (aqui se da igual). La licencia se verifico en la pagina
+de cada sonido el 28 de octubre de 2026 (el programa que las bajo se niega a bajar uno cuya pagina no diga CC0). Cada muestra se recorto y se llevo de nivel con herramientas/preparar-sonidos.mjs
+(volumen, fundido y recodificacion a OGG mono); el sonido no se altera de otra forma.
+
+Archivo de web/audio  <-  sonido original (numero, titulo, autor y pagina):
+  gana-aplauso.ogg       <- #875909 "Crowd Applause 7" de CAT-FOX_ALEX: https://freesound.org/people/CAT-FOX_ALEX/sounds/875909/
+  gana-vitoreo.ogg       <- #353185 "Crowd of Boys Cheering" de Jofae: https://freesound.org/people/Jofae/sounds/353185/
+  gana-ovacion.ogg       <- #455659 "applause cheer ext medium crowd enthusiastic whistling for outdoor show nice if take out close claps.flac" de kyles: https://freesound.org/people/kyles/sounds/455659/
+  pierde-suspiro.ogg     <- #764106 "CRWDReac_Crowd Sigh In Disappointment_ShaneVincent_GSC24_FUMA-AmbeoVR.wav" de ShangusBurger: https://freesound.org/people/ShangusBurger/sounds/764106/
+  pierde-trombon.ogg     <- #175409 "wah wah sad trombone.wav" de kirbydx: https://freesound.org/people/kirbydx/sounds/175409/
+  pierde-abucheo.ogg     <- #264378 "crowd booing" de HowardV: https://freesound.org/people/HowardV/sounds/264378/
+  batalla-grito.ogg      <- #563011 "People screaming in agony when charging into battle" de florianreichelt: https://freesound.org/people/florianreichelt/sounds/563011/
+  batalla-multitud.ogg   <- #353185 "Crowd of Boys Cheering" de Jofae: https://freesound.org/people/Jofae/sounds/353185/
+  choque-1.ogg           <- #326868 "Sword_Clash (7).wav" de JohnBuhr: https://freesound.org/people/JohnBuhr/sounds/326868/
+  choque-2.ogg           <- #364531 "Swords Clash - High Quality #3" de Christopherderp: https://freesound.org/people/Christopherderp/sounds/364531/
+  choque-3.ogg           <- #471095 "Sword clash 1.wav" de spycrah: https://freesound.org/people/spycrah/sounds/471095/
+  maravilla-cuerno.ogg   <- #512490 "Distant War Horn.wav" de DeVern: https://freesound.org/people/DeVern/sounds/512490/
+  maravilla-gong.ogg     <- #486629 "Gong Brilliant Paiste 32"" de JensZygar: https://freesound.org/people/JensZygar/sounds/486629/

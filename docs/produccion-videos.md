@@ -61,12 +61,27 @@ node herramientas/paquete.mjs --archivo=SERIE.json --corte=5 --momentos=4,8
 Conservar esas opciones al regenerar el paquete. Ninguna de ellas cambia las
 reglas, los resultados o las partidas guardadas.
 
-## Gancho en imagen (regla del 25 de octubre de 2026)
+## Gancho en video, gancho de imagen fija e identificacion de cada pieza (reglas del 25 y 28 de octubre de 2026)
+
+**Todo gancho, clip y parte se identifica con el `jN` (28-10-2026).** Rótulo: «Juego N · Parte M de K», con N = el `jN` del paquete y M = la parte; nunca «Partida N» (ya no son partidas, son juegos, y el
+numero de partida dentro del archivo casi siempre es 1).
+- **Gancho** (video o imagen): sus tarjetas de apertura y de cierre dicen «Juego N · Parte M de K».
+- **Parte y clip:** abren con una tarjeta de 2.5 s (`IDENTIFICADOR_MS`, `conIdentificador` en `web/casino/gancho.js`): «JUEGO N», el nombre del juego y debajo «Parte M de K» o «Clip K · Parte M de K»; va antes de la tarjeta de arranque
+  de la parte 1. La duracion de cada pieza en el LEEME ya la suma.
+- **Como llega el numero:** en la direccion de cada pieza (`numero=N&parte=M&de=K`, y `clip=K` en un clip; `direccionDeGrabacion` y `direccionDeGancho`). Para verlo: `node herramientas/capturar-escena.mjs --archivo=... --numero=3 --parte=1 --de=2 --beats=0`.
+- **Una direccion vieja no graba una pieza sin identificar:** si al GRABAR (`grabar=1`) la direccion no trae `numero` (la de un LEEME anterior), la pagina busca el jN de esa partida en `data/paquetes.json` (el indice de paquetes,
+  `web/casino/indice-paquetes.js`; no se versiona) y, si la pieza esta en su paquete, tambien su parte y su clip. `paquete.mjs` lo actualiza cada vez que genera un paquete; `node herramientas/paquete.mjs --indexar` lo rehace con los
+  paquetes que ya hay en `grabaciones/listos/`. Si esa partida no tiene paquete, no se inventa un numero. Aun asi, lo correcto es regenerar el paquete con `--forzar` y grabar con el LEEME nuevo.
+
+**Gancho en video de Guerra de territorios, mas lento (28-10-2026).** Los cortes del gancho se aceleraban hasta 8x y un turno de 40 a 65 s cabia en ~5 s: no se distinguia nada. En Guerra (`GANCHO_POR_JUEGO.conquista` en
+`gancho.js`) la aceleracion maxima es 3x, un corte dura ~6 s (hasta 12 s), el gancho llega a 4 cortes (36 s de cortes) y cada corte muestra SOLO el momento —la batalla (la decisiva primero), la traicion o la resolucion de la
+Maravilla/caida/conquista—, no el turno entero: una batalla se ve a ~1.8x. Los demas juegos conservan los parametros de siempre. La pagina y el paquete piden las mismas destacadas (40) para planear los mismos cortes.
 
 Ninguna parte sale sin gancho. El gancho en video (`gancho.js`) necesita al menos 2 momentos buenos (con puntos, dentro de la parte, sin la primera ni la ultima
-unidad); cuando no los hay (Lobo en la aldea, o un juego cuyas destacadas no puntuan), `paquete.mjs` crea en su lugar una pieza `gancho-imagen` y **genera los PNG**
-junto a los videos que se suben, con el mismo nombre (`j1_hk1_9x16_fb-ig-tk-yt.png`, `j1_hk1_16x9_fb-x-yt.png`). No se graba con OBS: el LEEME la lista antes de su
-parte con su vista previa y el comando para regenerarla, y `textos/gancho-N.txt` trae el titulo y la descripcion.
+unidad); cuando no los hay (Lobo en la aldea, o un juego cuyas destacadas no puntuan), `paquete.mjs` crea en su lugar una pieza `gancho-imagen` y la vuelve un **VIDEO DE IMAGEN FIJA** (28-10-2026): un video corto
+(6 s, `DURACION_GANCHO_IMAGEN_S`) que repite la imagen en cada cuadro, para poder compartirlo como short de YouTube. Se genera con ffmpeg junto a los videos que se suben, con el mismo nombre en mp4
+(`j1_hk1_9x16_fb-ig-tk-yt.mp4`, `j1_hk1_16x9_fb-x-yt.mp4`); **ya no se deja el PNG** (la imagen se captura en una carpeta temporal y se borra). Va en silencio (con una pista de audio vacia): la musica la pone quien lo sube.
+No se graba con OBS: el LEEME lo lista antes de su parte con su vista previa y el comando para regenerarlo, y `textos/gancho-N.txt` trae el titulo y la descripcion.
 
 - **Que dice:** «PRÓXIMAMENTE», el nombre del juego, «Juego N · Parte M de K» (N es el `jN` del paquete, no el numero de partida del archivo) y «Contenido generado por IA ·
   Proyecto independiente». La ultima parte invita a seguir «para ver el desenlace». Nunca adelanta el resultado.
@@ -76,7 +91,7 @@ parte con su vista previa y el comando para regenerarla, y `textos/gancho-N.txt`
 - **Diseno:** marca del sitio (`web/sitio.css`: Barlow Condensed e Inter locales, `--oro`, `--hueso`, `--noche`) y todo lo que se lee dentro de la zona segura del formato
   (`FORMATOS_ESCENA`: 9:16 con 285 px arriba y 420 abajo reservados). La pagina se autocomprueba (`data-fuera`: elementos fuera de la zona o con texto desbordado, debe ser 0) y
   una prueba con navegador lo verifica en 9:16 y 16:9, con y sin arte.
-- **A mano:** `node herramientas/gancho-imagen.mjs --juego=lobo --numero=1 --parte=1 --de=2 --salida=<carpeta>` (necesita Chrome o Edge; no llama a ningun modelo). Para verla en el
+- **A mano:** `node herramientas/gancho-imagen.mjs --juego=lobo --numero=1 --parte=1 --de=2 --salida=<carpeta>` (necesita Chrome o Edge y ffmpeg; no llama a ningun modelo; `--duracion=S` cambia los segundos, `--imagen` deja el PNG en vez del video). Para ver la imagen en el
   navegador: `node src/servidor.js` y `http://localhost:4321/gancho-imagen.html?juego=lobo&numero=1&parte=1&de=2&formato=9x16`.
 ## Un texto por pieza
 
@@ -146,6 +161,16 @@ Si no hay `voz.json`, ambas versiones solo tendran efectos y se avisa. Cargar
 voz no equivale a reproducirla: `--sinvoz` en el generador del paquete elimina
 tambien sus tiempos, por lo que no debe usarse para preparar la version muda de
 una partida narrada. Para esa version se usa el recorte por canales.
+
+## Si en OBS desaparece o se queda pegada una parte de la pantalla (28 de octubre de 2026)
+
+Dos grabaciones de Guerra j3 fallaron en OBS (33, Chromium 150, aceleración por hardware, 4K) y nunca en un Chrome de escritorio, y el DOM estaba bien (opacidad 1, sin la clase del zoom, `transform: none`):
+(1) la cabecera con la marca y el turno, el aviso de IA, el marcador, el feed y los subtítulos desaparecieron ~27 s tras ciertas batallas; (2) al terminar el zoom el mapa se quedó con el zoom puesto y sin recorte, cubriendo la hoja.
+En los dos, una animación del navegador (`animate()` con `fill: 'forwards'`) cancelada dejaba su valor viejo en el compositor de OBS. En los otros juegos no se nota porque el valor viejo coincide con el final; en Guerra no.
+**Regla:** en la escena de Guerra, lo que debe quedar puesto (HUD, zoom del mapa, lo que se apaga: tarjetas, feed, subtítulos) lo mueve `web/casino/animador-estilo.js` (requestAnimationFrame, estilo en línea; el estado final lo escribe
+él), sin Web Animations con `fill` ni transiciones de CSS de opacidad/transform. Una prueba lo exige (`src/pruebas/escena/hud-conquista.test.js`). Si en otro juego algo se queda pegado o invisible solo en OBS, es lo primero que hay que sospechar.
+Al regrabar: «Actualizar caché de la página actual» en OBS. Si aun así falla, probar con la aceleración por hardware del navegador apagada (OBS → Ajustes → Avanzado → «Aceleración por hardware del navegador», pide reiniciar OBS).
+Para diagnosticar: sacar de la grabación el brillo de la zona (ffmpeg `signalstats`) segundo a segundo, casarlo con los momentos de la partida y comparar con el DOM en una reproducción en tiempo real.
 
 ## Guion para narracion humana
 

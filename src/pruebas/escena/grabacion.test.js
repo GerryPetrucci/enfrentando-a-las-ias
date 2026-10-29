@@ -82,9 +82,27 @@ test('direccionDeGancho: la direccion para grabar el gancho de una parte (cortes
   assert.deepEqual(Object.fromEntries(d.searchParams), { archivo: 'pruebas/a b.json', partida: '2', gancho: '1', cortes: '10,6,14', parte: '2', de: '2', formato: 'hoja', auto: '1', limpio: '1', grabar: '1', cierre: 'gancho' });
   const p = leerParametros(d.search);
   assert.deepEqual(p.gancho, { cortes: [10, 6, 14], parte: 2, de: 2 });
+  assert.equal(p.numero, null, 'sin numero de juego en la direccion, la tarjeta no inventa uno');
   assert.deepEqual([p.formato, p.auto, p.limpio, p.grabar, p.voz, p.cierre], ['hoja', true, true, true, null, true]);
   assert.equal(p.tipoCierre, 'gancho', 'el gancho cierra con las frases del gancho');
   const conVoz = new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', cortes: [3], parte: 1, de: 2, voz: 'data/voz/a-p1/voz.json' })}`);
   assert.equal(conVoz.searchParams.get('voz'), 'data/voz/a-p1/voz.json', 'la voz del cierre');
   assert.equal(new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', cortes: [3], parte: 1, de: 2, formato: '9x16' })}`).searchParams.get('formato'), '9x16');
+  // el numero de JUEGO (jN) viaja en la direccion: las tarjetas dicen «Juego N · Parte M de K», no la partida del archivo
+  const conNumero = new URL(`http://x/${direccionDeGancho({ archivo: 'a.json', partida: 1, cortes: [3, 5], parte: 2, de: 2, juegoNumero: 3 })}`);
+  assert.equal(conNumero.searchParams.get('numero'), '3');
+  assert.deepEqual(leerParametros(conNumero.search).gancho, { cortes: [3, 5], parte: 2, de: 2 });
+  assert.equal(leerParametros(conNumero.search).numero, 3);
+  assert.equal(leerParametros('?gancho=1&cortes=3&numero=0&parte=1').numero, null, 'un numero de juego invalido se ignora');
+});
+
+test('direccionDeGrabacion: una parte o un clip llevan el jN (numero), la parte a la que pertenecen (parte y de) y, un clip, su numero (clip); sin ellos la direccion queda como siempre', () => {
+  const base = { archivo: 'a.json', partida: 1, desde: 3, hasta: 9, formato: 'hoja' };
+  const vieja = Object.fromEntries(new URL(`http://x/${direccionDeGrabacion(base)}`).searchParams);
+  assert.deepEqual(Object.keys(vieja), ['archivo', 'partida', 'ronda', 'hasta', 'formato', 'auto', 'limpio', 'grabar', 'cierre'], 'sin jN, la direccion de siempre');
+  const parte = new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 3, parte: 1, de: 2 })}`);
+  assert.deepEqual([parte.searchParams.get('numero'), parte.searchParams.get('parte'), parte.searchParams.get('de'), parte.searchParams.get('clip')], ['3', '1', '2', null]);
+  const clip = leerParametros(new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 3, parte: 2, de: 2, clip: 4, cierre: 'clip' })}`).search);
+  assert.deepEqual([clip.numero, clip.pieza], [3, { parte: 2, de: 2, clip: 4 }]);
+  assert.equal(new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 0, parte: 1, de: 2 })}`).searchParams.get('numero'), null, 'un jN invalido no se escribe');
 });

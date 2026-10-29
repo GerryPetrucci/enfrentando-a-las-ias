@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { diagnosticar, leerDiagnosticos } from '../../herramientas/diagnostico-editorial.mjs';
 import { claveDeCierre, beatDeCierre, duracionDeCierre } from '../../web/casino/cierre.js';
+import { IDENTIFICADOR_MS } from '../../web/casino/gancho.js';
 import { construirPaquete } from '../../web/casino/paquete-textos.js';
 import { armarLinea } from '../../web/casino/lineas.js';
 import { jugarMM } from './escena/ayudas-mm.js';
@@ -16,7 +17,7 @@ test('los cortes conservan cada unidad una sola vez, incluyen cierre y no mutan 
   assert.deepEqual(beats, copia);
   assert.equal(d.propuestas.length, 3, 'dos ventanas de 90 s no contienen 175 s mas tres cierres');
   assert.deepEqual(d.propuestas.flatMap((p) => Array.from({ length: p.hasta - p.desde + 1 }, (_, i) => p.desde + i)), [1, 2, 3, 4, 5]);
-  assert.ok(d.propuestas.every((p) => p.ms <= 90000 && p.ms === p.contenidoMs + p.cierreMs && p.cierreMs > 0));
+  assert.ok(d.propuestas.every((p) => p.ms <= 90000 && p.ms === p.contenidoMs + IDENTIFICADOR_MS + p.cierreMs && p.cierreMs > 0), 'cada pieza suma su tarjeta de identificacion y su cierre');
   assert.equal(d.propuestas.reduce((s, p) => s + p.contenidoMs, 0), d.ms);
 });
 
@@ -43,7 +44,8 @@ test('una unidad que no cabe queda sola y marcada, incluso si solo el cierre cau
 
 test('el limite exacto incluye el cierre y una linea invalida o un objetivo invalido fallan', () => {
   const cierreMs = duracionDeCierre(claveDeCierre({ seed: 0, partida: 1, desde: 1, hasta: 1 }));
-  assert.equal(diagnosticar(beatsDe([90000 - cierreMs])).propuestas[0].excedeObjetivo, false);
+  assert.equal(diagnosticar(beatsDe([90000 - IDENTIFICADOR_MS - cierreMs])).propuestas[0].excedeObjetivo, false);
+  assert.equal(diagnosticar(beatsDe([90000 - IDENTIFICADOR_MS - cierreMs + 1])).propuestas[0].excedeObjetivo, true, 'un milisegundo mas ya no cabe');
   for (const objetivoMs of [0, -1, NaN, Infinity]) assert.throws(() => diagnosticar(beatsDe([1]), { objetivoMs }));
   assert.throws(() => diagnosticar([]));
   assert.throws(() => diagnosticar([{ mano: 1, minMs: NaN }]));

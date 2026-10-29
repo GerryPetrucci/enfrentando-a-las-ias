@@ -37,6 +37,7 @@
     fila.cells[0].className = 'efecto';
     const grabadas = fila.insertCell();
     ev.muestras.forEach((m, i) => { const b = boton(`▶ ${m.replace('audio/', '')}`, () => sfx.probar(nombre, i)); botones.push(b); grabadas.append(b); });
+    if (ev.paisaje) { const b = boton('▶ TODAS JUNTAS (6 s, como en el zoom de la batalla)', () => sfx.batalla(6000)); botones.push(b); grabadas.append(b); } // el paisaje: camas repetidas y espadazos al azar
     const respaldo = fila.insertCell();
     const b = boton('▶ sintetizado', () => sfx.probar(nombre, -1)); botones.push(b); respaldo.append(b);
   }

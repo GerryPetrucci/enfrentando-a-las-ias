@@ -14,7 +14,7 @@
 // La voz: si ya corriste herramientas/narrar.mjs para esa partida, se usa sola (la ruta que ese programa deja en data/voz/); --voz la indica a mano y --sinvoz no usa ninguna.
 // Escribe `<serie>/paquete-j<N>/` (LEEME.md, paquete.json y textos/). Si la carpeta ya existe se niega, a menos que pases --forzar (que vuelve a escribir los archivos del paquete; lo que sobre de una corrida anterior se queda). `grabaciones/` no se versiona.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { resolve, join, relative, isAbsolute, basename, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { armarLinea, destacadasDe, motivoDeNoReproducible } from '../web/casino/lineas.js';
@@ -25,10 +25,11 @@ import { carpetaDeVoz } from './narrar.mjs';
 import { FORMATOS } from './formatos.mjs';
 import { REDES, SUBCARPETAS, fechaDe, nombreDePieza, nombreDeVideo, carpetaDeSerie, juegoDeCarpeta, elegirJuego } from './nombres.mjs';
 import { ordenDePublicacion } from '../web/casino/editorial-paquete.js';
-import { armarGancho, cortesPedidos } from '../web/casino/gancho.js';
+import { armarGancho, cortesPedidos, conIdentificador } from '../web/casino/gancho.js';
 import { conCierre, claveDeCierre } from '../web/casino/cierre.js';
+import { RUTA_INDICE, entradaDePaquete } from '../web/casino/indice-paquetes.js';
 import { marcarTiempos } from '../web/casino/escena-config.js';
-import { generarImagenesDeGancho, nombreDeImagen } from './gancho-imagen.mjs';
+import { generarVideosDeGancho, nombreDeVideoDeGancho, nombreDeImagen } from './gancho-imagen.mjs';
 
 const ENLACE_DEL_SITIO = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const SERVIDOR = 'http://localhost:4321';
@@ -76,12 +77,12 @@ export function leemeDe(paquete, contexto = {}) {
     if (p.tipo === 'gancho-imagen') {
       return [
         `### ${p.id} · ${p.titulo}`,
-        '- Es una **imagen fija**: no se graba con OBS. Regla del proyecto: si una parte no puede tener gancho en video, su gancho es una imagen («Próximamente», el juego, su número y la parte).',
-        `- Ya se generó en \`${pendientes}/\` (un archivo por formato):`,
-        ...Object.entries(FORMATOS).map(([k, f]) => `  - \`${nombreDeImagen({ juegoNumero, parte: p.parte, formato: k })}\` → ${f.redes.map((r) => REDES[r]).join(', ')}`),
-        '- Si falta o quieres regenerarla (PowerShell, en la carpeta del proyecto):',
+        '- Es un **video de imagen fija**: no se graba con OBS. Regla del proyecto: si una parte no puede tener gancho en video, su gancho es un video corto que repite una imagen en cada cuadro («Próximamente», el juego, su número y la parte), para compartirlo como short.',
+        `- Ya se generó en \`${pendientes}/\` (un video por formato; sin voz ni música: pon la tuya al subirlo):`,
+        ...Object.entries(FORMATOS).map(([k, f]) => `  - \`${nombreDeVideoDeGancho({ juegoNumero, parte: p.parte, formato: k })}\` → ${f.redes.map((r) => REDES[r]).join(', ')}`),
+        '- Si falta o quieres regenerarlo (PowerShell, en la carpeta del proyecto; necesita Chrome o Edge y ffmpeg):',
         ...codigo(`node herramientas/gancho-imagen.mjs --juego=${new URL(p.grabar.url, 'http://local').searchParams.get('juego')} --numero=${juegoNumero} --parte=${p.parte} --de=2 "--salida=${pendientes}"`, 'powershell'),
-        '- Vista previa en el navegador (con el servidor abierto):',
+        '- Vista previa de la imagen en el navegador (con el servidor abierto):',
         ...codigo(`${SERVIDOR}/${p.grabar.url}`),
         `- Nota: ${p.grabar.nota}`,
         `- Texto único: \`textos/${p.id}.txt\` (título + descripción). YouTube usa ambos; las demás redes, la descripción.`,
@@ -147,7 +148,7 @@ export function leemeDe(paquete, contexto = {}) {
     '   ```',
     '2. OBS ya debe estar en el perfil «Enfrentando-Hoja4K»: la hoja maestra de 3840 × 2160 a 30 fps, con una fuente de navegador de 3840 × 2160 (sin «Archivo local») que tenga marcado «Controlar audio mediante OBS». Si algo no coincide, mira el paso 0.1 de privado/contenido/guia-paso-a-paso.md.',
     '',
-    `## Paso 1 · Grabar las ${grabables} piezas${imagenes.length ? ` (y subir ${imagenes.length === 1 ? 'la imagen' : `las ${imagenes.length} imágenes`} de gancho, que no se graban)` : ''}`,
+    `## Paso 1 · Grabar las ${grabables} piezas${imagenes.length ? ` (y subir ${imagenes.length === 1 ? 'el video' : `los ${imagenes.length} videos`} de gancho de imagen fija, que no se graban)` : ''}`,
     'Para cada pieza: (a) pon su dirección en la *URL* de la fuente de navegador de OBS (la página arranca sola al cargar y termina en negro: no pasa nada si se reproduce una vez antes de grabar); (b) pulsa «Iniciar grabación»; (c) en las propiedades de la fuente pulsa «Actualizar caché de la página actual»: la pantalla se queda en negro ' + segundos(margenMs) + ' segundos, se aclara y empieza la pieza; (d) al terminar verás un fundido a negro: espera a ver la pantalla en negro al menos ' + segundos(colaMs) + ' segundos (la página se queda negra: no hay prisa; el recorte necesita ese negro para encontrar el final) y entonces detén la grabación; (e) renombra el `.mkv` que dejó OBS como se indica y muévelo a `originales/`; (f) recórtalo con el comando de la pieza (necesita ffmpeg; si no encuentra el negro de los márgenes, no recorta ese lado y lo dice).',
     '',
     ...piezas,
@@ -157,7 +158,7 @@ export function leemeDe(paquete, contexto = {}) {
     '- [ ] Se lee bien en una pantalla pequeña (míralo en tu teléfono) y el texto no se corta.',
     '- [ ] Revisé a mano los mensajes y las razones de las IAs de esta partida. Si algo es ofensivo o raro, elegí otra partida y anoté por qué.',
     '- [ ] La etiqueta «Contenido generado por IA» se ve en el video.',
-    ...(imagenes.length ? ['- [ ] Cada imagen de gancho se ve completa (nada cortado), dice «Próximamente», el juego y la parte, y lleva la etiqueta de IA. Ábrela en el teléfono antes de subirla.'] : []),
+    ...(imagenes.length ? ['- [ ] Cada video de gancho de imagen fija se ve completo (nada cortado), dice «Próximamente», el juego y la parte, y lleva la etiqueta de IA. Ábrelo en el teléfono antes de subirlo.'] : []),
     '- [ ] No lleva marca de agua de otra app ni música con derechos: es el archivo limpio que grabó OBS. Revisa el `_9x16` de `por-subir/` (el de TikTok, Reels y Shorts): arranca dentro del fundido y termina en negro, sin segundos de negro de sobra.',
     '',
     '## Paso 3 · Poner el gancho, publicar y fijar el comentario',
@@ -200,13 +201,13 @@ export function escribirPaquete(paquete, carpeta, contexto = {}) {
   return escritos;
 }
 
-export function guionDePaquete(paquete, beats, { voz = null, seed, partidaNumero = 1 } = {}) {
+export function guionDePaquete(paquete, beats, { voz = null, seed, partidaNumero = 1, destacadas = [] } = {}) {
   const texto = ['# Guion propuesto para narracion humana', '', 'Texto fiel a lo que muestra esta partida. Tiempos relativos al inicio del contenido de cada pieza; no incluyen negros ni fundidos. Cada pieza se puede narrar por separado.', ''];
   for (const p of ordenDePublicacion(paquete.piezas)) {
-    if (p.tipo === 'gancho-imagen') { texto.push(`## ${p.id} · ${p.titulo}`, '', '[Imagen fija: no se narra ni se graba.]', ''); continue; }
+    if (p.tipo === 'gancho-imagen') { texto.push(`## ${p.id} · ${p.titulo}`, '', '[Video de imagen fija: no se narra ni se graba con OBS.]', ''); continue; }
     const q = new URL(p.grabar.url, 'http://local').searchParams;
-    const cortes = cortesPedidos(beats, (q.get('cortes') ?? '').split(',').filter(Boolean).map(Number), []);
-    const base = p.tipo === 'gancho' ? armarGancho(beats, cortes, { juegoId: paquete.juego, partidaNumero, parte: p.parte, de: 2 }) : beats.filter((b) => b.mano >= p.grabar.desde && b.mano <= p.grabar.hasta);
+    const cortes = cortesPedidos(beats, (q.get('cortes') ?? '').split(',').filter(Boolean).map(Number), destacadas, paquete.juego); // con las destacadas y el juego: los mismos cortes (con su foco) que graba la pagina
+    const base = p.tipo === 'gancho' ? armarGancho(beats, cortes, { juegoId: paquete.juego, juegoNumero: Number(q.get('numero')) || null, parte: p.parte, de: 2 }) : conIdentificador(beats.filter((b) => b.mano >= p.grabar.desde && b.mano <= p.grabar.hasta), { juegoId: paquete.juego, juegoNumero: Number(q.get('numero')) || null, parte: Number(q.get('parte')) || null, de: Number(q.get('de')) || null, clip: Number(q.get('clip')) || null }); // la pieza abre con su tarjeta de identificacion: los tiempos del guion la cuentan
     const clave = claveDeCierre({ seed, partida: partidaNumero, desde: p.grabar.desde, hasta: p.grabar.hasta, gancho: p.tipo === 'gancho' ? p.parte : null });
     const linea = conCierre(base, clave, p.cierre), audio = p.tipo === 'gancho' ? Object.fromEntries(Object.entries(voz ?? {}).filter(([id]) => id.startsWith('cierre-'))) : voz;
     texto.push(`## ${p.id} · ${p.titulo}`, '', ...(p.tipo === 'gancho' ? ['[Los cortes van sin narración; solo se lee el cierre.]', ''] : []));
@@ -215,9 +216,40 @@ export function guionDePaquete(paquete, beats, { voz = null, seed, partidaNumero
   return texto.join('\n');
 }
 
+// El indice de paquetes (data/paquetes.json; web/casino/indice-paquetes.js): agrega o reemplaza la entrada de la partida de un paquete.json y conserva las demas. Un indice ilegible se rehace; un paquete roto no lo toca.
+export function registrarEnIndice(ruta, paquete) {
+  const entrada = entradaDePaquete(paquete);
+  if (!entrada) return false;
+  let indice = {};
+  try { const previo = JSON.parse(readFileSync(ruta, 'utf8')); if (previo && typeof previo === 'object' && !Array.isArray(previo)) indice = previo; } catch { /* sin indice o ilegible: se rehace con lo nuevo */ }
+  indice[entrada[0]] = entrada[1];
+  mkdirSync(dirname(ruta), { recursive: true });
+  writeFileSync(ruta, `${JSON.stringify(indice, null, 2)}\n`);
+  return true;
+}
+
+// El indice con TODOS los paquetes que hay en `raiz` (grabaciones/listos/<juego>/<serie>/paquete-jN/paquete.json). Un paquete.json ilegible o sin lo necesario no entra; sin carpeta, vacio.
+export function indexarPaquetes(raiz) {
+  const indice = {};
+  const subcarpetas = (ruta) => { try { return readdirSync(ruta, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; } };
+  for (const juego of subcarpetas(raiz)) for (const serie of subcarpetas(join(raiz, juego))) for (const paq of subcarpetas(join(raiz, juego, serie))) {
+    if (!/^paquete-j\d+$/.test(paq)) continue;
+    try { const entrada = entradaDePaquete(JSON.parse(readFileSync(join(raiz, juego, serie, paq, 'paquete.json'), 'utf8'))); if (entrada) indice[entrada[0]] = entrada[1]; } catch { /* un paquete.json ilegible no entra */ }
+  }
+  return indice;
+}
+
 async function principal() {
   const a = Object.fromEntries(process.argv.slice(2).map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
   const salir = (m) => { console.error(m); process.exit(1); };
+  if (a.indexar) { // --indexar: rehace data/paquetes.json con los paquetes que ya hay (los generados antes del indice)
+    const indice = indexarPaquetes(resolve(a.listos ?? 'grabaciones/listos')), ruta = resolve(RUTA_INDICE);
+    mkdirSync(dirname(ruta), { recursive: true });
+    writeFileSync(ruta, `${JSON.stringify(indice, null, 2)}\n`);
+    console.log(`Indice de paquetes: ${Object.keys(indice).length} partida(s) en ${RUTA_INDICE}.`);
+    for (const [clave, e] of Object.entries(indice)) console.log(`  ${clave} → j${e.juego}`);
+    return;
+  }
   if (!a.archivo) salir('Falta --archivo=NOMBRE.json (una partida guardada en data/, por ejemplo pruebas/NOMBRE.json).');
   if (String(a.salida ?? '').split(/[\\/]/).includes('..')) salir('La salida no puede contener «..»: indica una carpeta dentro del proyecto, por ejemplo --salida=grabaciones/listos/guerra-de-territorios/2026-10-19_seed-552912962.');
   const numero = Number(a.partida ?? 1);
@@ -266,13 +298,21 @@ async function principal() {
   if (existsSync(carpeta) && !a.forzar) salir(`La carpeta ${carpeta} ya existe: usa --forzar para reescribirla (se pierden los cambios que hayas hecho en ella).`);
   for (const sub of SUBCARPETAS) mkdirSync(join(serie, sub, `j${juegoNumero}`), { recursive: true });
   const relativa = relative(process.cwd(), serie).replaceAll('\\', '/'); // en los comandos del LEEME: relativa al proyecto si cae dentro de el
-  // Los ganchos en imagen se generan ANTES de escribir el LEEME (no se graban): un PNG por formato junto a los videos que se suben. Sin navegador se avisa, en el LEEME tambien, y trae el comando.
-  const imagenes = await generarImagenesDeGancho({ piezas: paquete.piezas, juegoId, juegoNumero, de: 2, carpeta: join(serie, 'por-subir', `j${juegoNumero}`) });
+  // Los ganchos de imagen fija se generan ANTES de escribir el LEEME (no se graban con OBS): un VIDEO corto por formato (la misma imagen en cada cuadro) junto a los videos que se suben; ya no se deja el PNG (28-10-2026).
+  // Sin navegador o sin ffmpeg se avisa, en el LEEME tambien, y trae el comando.
+  const destinoDeGanchos = join(serie, 'por-subir', `j${juegoNumero}`);
+  const imagenes = await generarVideosDeGancho({ piezas: paquete.piezas, juegoId, juegoNumero, de: 2, carpeta: destinoDeGanchos });
   if (imagenes.error) paquete.advertencias.push(imagenes.error);
-  escribirPaquete(paquete, carpeta, { archivo: a.archivo, partidaNumero: numero, juegoNumero, enlace, fecha, guion: guionDePaquete(paquete, beats, { voz, seed: partida.seed, partidaNumero: numero }), carpetaSerie: relativa.startsWith('..') || isAbsolute(relativa) ? serie.replaceAll('\\', '/') : relativa });
+  for (const p of paquete.piezas) if (p.tipo === 'gancho-imagen' || p.tipo === 'gancho') for (const formato of Object.keys(FORMATOS)) { // lo que sobra de un paquete anterior se quita: los PNG de un gancho de imagen fija (de ellos solo queda el video) y el video de imagen fija de un gancho que ahora es de video
+    for (const viejo of p.tipo === 'gancho-imagen' ? [nombreDeImagen({ juegoNumero, parte: p.parte, formato })] : [nombreDeVideoDeGancho({ juegoNumero, parte: p.parte, formato }), nombreDeImagen({ juegoNumero, parte: p.parte, formato })]) {
+      if (existsSync(join(destinoDeGanchos, viejo))) rmSync(join(destinoDeGanchos, viejo));
+    }
+  }
+  escribirPaquete(paquete, carpeta, { archivo: a.archivo, partidaNumero: numero, juegoNumero, enlace, fecha, guion: guionDePaquete(paquete, beats, { voz, seed: partida.seed, partidaNumero: numero, destacadas }), carpetaSerie: relativa.startsWith('..') || isAbsolute(relativa) ? serie.replaceAll('\\', '/') : relativa });
+  registrarEnIndice(resolve(RUTA_INDICE), JSON.parse(readFileSync(join(carpeta, 'paquete.json'), 'utf8'))); // la pagina de grabacion recupera el jN de una direccion vieja (indice-paquetes.js)
   console.log(`Paquete de ${paquete.piezas[0].titulo.split(' · ')[0]} listo en ${carpeta}`);
-  for (const p of paquete.piezas) console.log(`  ${p.id.padEnd(8)} ${p.tipo === 'gancho-imagen' ? 'imagen' : formatoDeTiempo(p.grabar.ms)}  ${p.titulo}`);
-  for (const h of imagenes.hechas) console.log(`  imagen  ${h.formato.padEnd(5)} ${relative(process.cwd(), h.destino).replaceAll('\\', '/')}`);
+  for (const p of paquete.piezas) console.log(`  ${p.id.padEnd(8)} ${p.tipo === 'gancho-imagen' ? 'video de imagen fija' : formatoDeTiempo(p.grabar.ms)}  ${p.titulo}`);
+  for (const h of imagenes.hechas) console.log(`  video   ${h.formato.padEnd(5)} ${h.duracionS} s  ${relative(process.cwd(), h.destino).replaceAll('\\', '/')}`);
   for (const adv of paquete.advertencias) console.log(`  AVISO: ${adv}`);
   console.log('Empieza por LEEME.md.');
 }

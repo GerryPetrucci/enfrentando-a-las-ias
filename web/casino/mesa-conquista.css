@@ -120,7 +120,8 @@
 
 /* ---------- zoom de batalla/Maravilla: ventana grande arriba (mapa-zoom recortado con clip-path), tarjeta compacta debajo (L.zoomTarjeta) ---------- */
 .mesa-conquista.cinematica-conq .fieltro { background:var(--noche); } /* fondo oscuro mientras solo se ve el zoom y la tarjeta */
-.mesa-conquista .destello-conq { position:absolute; width:70px; height:70px; border-radius:50%; background:radial-gradient(circle, var(--hueso) 0%, var(--oro) 45%, transparent 75%); opacity:0; pointer-events:none; z-index:5; }
+/* las dos espadas reales que chocan sobre el territorio disputado (espadas.js): el conjunto se CENTRA en su punto con este translate, que es el de reposo (la animacion solo toca su opacidad: no hay salto al terminar) */
+.mesa-conquista .destello-conq { position:absolute; width:74px; height:74px; transform:translate(-50%,-50%); opacity:0; pointer-events:none; z-index:5; filter:drop-shadow(0 3px 3px var(--noche)); }
 /* la tarjeta compacta de L.zoomTarjeta (360 px en vertical, 320 en horizontal): menos alto por columna, letra mas chica para caber debajo del zoom */
 .mesa-conquista .tarjeta-conq.zoom-tarjeta { padding:12px 18px; gap:6px; }
 .zoom-tarjeta .tc-titulo { font-size:28px; }
@@ -138,8 +139,10 @@
 .mesa-conquista .zoom-tarjeta .tc-veredicto { font-size:25px; }
 .mesa-conquista .zoom-tarjeta .tc-col, .mesa-conquista .zoom-tarjeta .vs-col { gap:3px; min-width:0; }
 
-.mesa-conquista .destello-conq { color:var(--oro); background:none; filter:drop-shadow(0 2px 2px var(--noche)); }
-.mesa-conquista .destello-conq svg { width:100%; height:100%; }
+.mesa-conquista .destello-conq .par { position:absolute; inset:0; transform-origin:50% 85%; }
+.mesa-conquista .destello-conq .espada { display:block; width:100%; height:100%; image-rendering:pixelated; }
+.mesa-conquista .destello-conq .espada.espejo { transform:scaleX(-1); }
+.mesa-conquista .destello-conq .chispa { position:absolute; left:50%; top:50%; width:70%; height:70%; margin:-35% 0 0 -35%; border-radius:50%; background:radial-gradient(circle, #fff 0%, var(--oro) 38%, transparent 70%); opacity:0; transform:scale(.3); pointer-events:none; }
 
 /* El contenido ocupa un área explícita: ningún nombre se contrae a cero en horizontal. */
 .mesa-conquista .zoom-tarjeta .tc-col { display:grid; grid-template-columns:1fr 1fr; grid-template-areas:'rol rol' 'nom nom' 'trp fuerza' 'chips chips'; align-content:center; }

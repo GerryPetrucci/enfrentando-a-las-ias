@@ -21,8 +21,8 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   grabacion/reproduccion, incluyen velocidad ajustable y una barra de avance con
   retroceso/adelanto, no solo Reproducir/Reiniciar. Regla decidida 24-10-2026.
 - Ninguna parte se queda sin gancho «Próximamente»: en video si hay al menos 2 cortes buenos (`web/casino/gancho.js`); si no (Lobo, o cualquier juego sin momentos
-  con puntos) el paquete genera un **gancho en imagen** (`herramientas/gancho-imagen.mjs`, página `web/gancho-imagen.html`): «Próximamente», nombre del juego,
-  «Juego N · Parte M de K» (N = el jN del paquete) y la etiqueta de IA, con el arte del juego si está en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`; sin él, solo la
+  con puntos) el paquete genera un **video corto de imagen fija** (6 s, la misma imagen en cada cuadro, para compartirlo como short; ya no se deja el PNG): `herramientas/gancho-imagen.mjs` (con ffmpeg), página `web/gancho-imagen.html`: «Próximamente», nombre del juego,
+  «Juego N · Parte M de K» (N = el jN del paquete; igual en las tarjetas del gancho en video, nunca «Partida N») y la etiqueta de IA, con el arte del juego si está en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`; sin él, solo la
   marca), dentro de la zona segura. Al agregar un juego, registrar su arte allí (ver `docs/produccion-videos.md`). Regla decidida 25-10-2026.
 - Narración (voz y subtítulos): nunca se lee el número de jugador/asiento. Se dice el nombre del modelo («Grok»); si un modelo ocupa varios asientos lleva letra por
   orden de asiento («Grok A», «Grok B», «Grok C»). El número solo se escribe en pantalla, desde 1 y sin cero a la izquierda. Lo que un modelo cita de otro en su mensaje («asiento 5»,
@@ -30,6 +30,12 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   25-10-2026 (Lobo: `web/casino/lobo-nombres.js`; el motor y el prompt siguen contando asientos desde 0: es solo presentación).
 - Cierre de cada video (`web/casino/cierre.js`): la frase depende de la pieza. `final` (la parte que llega al último turno: seguir para ver más juegos), `parte` (deja el juego a medias:
   «no te pierdas la siguiente parte»), `clip` (ver la partida completa) y `gancho` (estar al pendiente). No todas piden «síguenos». La dirección de grabación lo lleva en `cierre=parte|final|clip|gancho`.
+- **Todo gancho, clip y parte se identifica en pantalla con su `jN`** («Juego N · Parte M de K»; nunca «Partida N»): el gancho en sus tarjetas, y la parte y el clip con una tarjeta inicial de 2.5 s (`conIdentificador`). El `jN`
+  viaja en la dirección de la escena (`numero=N&parte=M&de=K`, y `clip=K`); si una dirección vieja no lo trae, al grabar la página lo recupera de `data/paquetes.json` (lo mantiene `paquete.mjs`; `--indexar` lo rehace), y un paquete anterior se
+  regenera con `--forzar` antes de grabar. Regla decidida 28-10-2026 (`docs/produccion-videos.md`).
+- **Sonidos: grabaciones reales con licencia CC0 (28-10-2026).** Los efectos de la escena son grabaciones reales (lo sintetizado de `sonido.js` es solo respaldo) y todos CC0, porque el repo es público: la licencia se verifica en la página de
+  cada sonido y se anota en `web/audio/LICENCIAS.txt` (autor, página, licencia); `herramientas/preparar-sonidos.mjs` se niega a bajar/usar lo que no diga CC0. Cómo cambiar una muestra y qué archivo es cada efecto: `web/audio/LEEME.md`
+  (`web/sonidos.html` para escucharlas). En Guerra, el zoom de una disputa suena como un **paisaje** (`sfx.batalla(ms)`: cinco grabaciones a la vez, espadazos al azar) y la Maravilla suena cada turno de obra y al quedar construida.
 - Título y descripción de cada pieza, en todas las redes, empiezan igual: `Juego JN - Parte 1/2 - Seed S` (clip: `Clip 2 (Parte 1/2)`; gancho: `Próximamente Parte 2/2`). Regla decidida 25-10-2026 (`web/casino/editorial-paquete.js`).
 - **Hashtags en todo texto para subir:** toda descripción que se genere para publicar (parte, clip, gancho, de cualquier juego) termina con hashtags en su última línea: `#IAvsIA`
   primero, los del juego (`textos-juego.js`) y los de los modelos que juegan; de 1 a 5, nunca omitidos (si falta lugar se quitan los del final, nunca `#IAvsIA`). El **título mide
