@@ -1,12 +1,12 @@
 {
-  "generado": "2026-10-28T02:49:08.555Z",
+  "generado": "2026-10-30T01:22:20.154Z",
   "juegos": [
     {
       "id": "conquista",
       "nombre": "Guerra de territorios",
       "categoria": "Estrategia y conquista",
-      "versionReglas": "conquista-1.1.0",
-      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Guerra de territorios ===\nObjetivo: ser el unico reino triunfante.\nMapa de regiones (R01, R02, ...) con terreno (ll = llanura, bo = bosque, mo = montana) y a veces un recurso. De 2 a 5 reinos, cada uno con una capital. 30 turnos; todos actuan a la vez.\n\nRECURSOS: Comida, Madera, Roca, Hierro, Oro y Caballos. Cada region tuya con recurso da +2 de ese recurso por turno; ademas 1 Comida por cada 2 regiones.\n\nORDENES (maximo 12 por turno):\n- reclutar REGION N: N tropas en region tuya (1 Comida c/u).\n- mover DESDE HASTA N: N tropas a region vecina (si es enemiga, atacas). Con Caballos (1 por 3 tropas) llegas a 2 regiones.\n- fortificar REGION: nivel 1: 3 Madera + 2 Roca; 2: 4 Roca + 3 Madera; 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa.\n- armar: +25% de ataque (4 Hierro + 2 Madera; maximo 2 veces).\n- mercenarios REGION N: N tropas a 2 Oro c/u (maximo 3 por turno).\n- regalar RECURSO CANTIDAD REINO: das recursos a otro reino.\n- ofrecer REINO RECURSO CANT RECURSO CANT: das lo primero por lo segundo (maximo 10 por lado, 2 por turno); el otro la ve el turno siguiente y la acepta con: aceptar REINO. Todo o nada.\n- construir REGION EDIFICIO: granja (4 Madera: +2 Comida), mercado (3 Madera + 3 Roca: +2 Oro), cuartel (4 Madera + 3 Roca: reclutar ahi cuesta la mitad). Uno por region, maximo 3 por tipo; si conquistan la region, pasa al conquistador a mitad de efecto.\n- construir REGION maravilla (solo en tu capital; solo existe una): 15 Roca + 12 Madera + 9 Hierro + 9 Oro. Quien la conserve 8 turnos seguidos gana. Si conquistan esa capital pasa intacta al conquistador y la cuenta se reinicia.\n- romper REINO: rompes tu pacto y puedes atacarlo este turno.\n\nCOMBATE: gana el lado con mas fuerza y conserva tropas x (1 - fuerza del segundo / la suya); los demas se eliminan. Ataque = tropas x armas. Defensa = tropas x (1 + 0.5 por nivel de fortaleza), +25% en bosque o +50% en montana. Si pierdes tu capital, caes.\nHAMBRE: cada 4 tropas comen 1 Comida por turno; si falta, desertan el 10%.\nDIPLOMACIA: un mensaje publico y hasta 2 privados por turno (maximo 140 caracteres; los privados llegan el turno siguiente, solo al destinatario). Pacto de no agresion: dura 2 turnos y se forma si dos reinos se lo proponen (tu propuesta queda abierta un turno mas). Atacar a un aliado exige romper el pacto ese turno. En los ultimos 2 turnos no hay alianzas.\nHONOR (publico, 0 a 10): empiezas en 5. Romper un pacto resta 3; cumplirlo hasta el final suma 1; cada 3 turnos suma 1. Con 2 o menos, mercenarios a 3 Oro y no firmas pactos nuevos.\nMEMORIA: cada turno puedes dejar una nota de plan (maximo 250 caracteres); solo tu la ves, el turno siguiente.\nVICTORIA: gana el unico reino vivo, quien complete la maravilla o, al turno 30, quien controle mas regiones (desempate: tropas).\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\n{\"ordenes\": [\"reclutar R03 4\", \"mover R07 R12 5\", \"construir R03 granja\"], \"pacto_con\": \"reino o null\", \"mensaje\": \"texto breve\", \"privados\": [{\"a\": \"reino\", \"texto\": \"texto breve\"}], \"nota\": \"tu plan\", \"razon\": \"una frase\"}\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
+      "versionReglas": "conquista-2.3.0",
+      "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\nEres el gobernante de un reino en \"Guerra de territorios\", un juego de estrategia por turnos. Compites contra otros reinos, cada uno controlado por otra inteligencia artificial, y todos reciben exactamente este mismo texto. Un motor arbitra la partida: tus respuestas son PROPUESTAS que el motor valida y aplica; una orden que no se puede cumplir se descarta sin avisarte y las demas siguen. No puedes cambiar el estado del juego de ninguna otra manera.\n\nCada turno recibes un mensaje \"Estado actual de la partida\" con lo que sabe tu reino (la seccion COMO LEER TU ESTADO explica cada linea) y respondes con un JSON (la seccion COMO RESPONDER lo explica campo por campo). Estas reglas son COMPLETAS: no hay reglas ocultas ni excepciones fuera de este texto, y si algo no esta aqui, no existe en el juego.\n\n=== REGLAS DEL JUEGO: Guerra de territorios ===\n1. LO ESENCIAL\n- Hay de 2 a 5 reinos sobre un mapa de regiones (R01, R02, ...). Cada reino empieza con una CAPITAL (10 Lanceros y fortaleza nivel 1) y unas regiones vecinas (3 Lanceros cada una). Todos empiezan con 6 Comida, 4 Madera, 2 Roca, 0 Hierro, 4 Oro, 0 Caballos y Honor 5.\n- Dura 30 turnos. Todos los reinos deciden A LA VEZ: nadie ve lo que hacen los demas antes de decidir.\n- Con los recursos de tus regiones reclutas tropas, construyes y comercias; con las tropas conquistas regiones; con los pactos te proteges de algunos vecinos.\n- Ganas si eres el unico reino vivo, si completas la Maravilla o si, al terminar el turno 30, estas en primer lugar (mas regiones).\n- Tu PUNTAJE depende de tu posicion final: 5 al 1o, 3 al 2o, 1 al 3o y 0 al resto. Caer (que tomen tu capital) te deja por debajo de todos los reinos que siguen vivos.\n\n2. COMO SE RESUELVE UN TURNO (orden exacto)\nTodos los reinos envian sus ordenes a la vez y el motor las aplica en este orden:\n 1) Evento del mundo, si toca (se anuncia un turno antes: Presagio).\n 2) Produccion: cada reino recibe los recursos de sus regiones.\n 3) Honor (+1 cada 3 turnos) y fin de los pactos que vencen.\n 4) Hambre: tus tropas comen; si falta Comida, desertan.\n 5) Ordenes de gasto, reino por reino y en el orden en que las escribiste: reclutar, mercenarios, fortificar, mejorar, construir, regalar, ofrecer.\n 6) Llegan los regalos y se ejecutan los \"aceptar\".\n 7) Rupturas de pacto (\"romper\").\n 8) Movimientos: todos los \"mover\" salen a la vez; despues los \"atacar\" donde ya estabas; despues se resuelve cada region con llegadas o ataques.\n 9) Pactos nuevos, mensajes y notas.\n 10) Cuenta de la Maravilla, victoria y cierre del turno.\nLo que conviene recordar de este orden:\n- Tu estado trae dos almacenes: \"Tu almacen\" (el del CIERRE del turno anterior) y \"Disponible al gastar\" (ya con la produccion y el hambre de este turno aplicadas). Tus ordenes de gasto se pagan de este ultimo, que ya viene calculado: no tienes que calcular la produccion ni el hambre.\n- Lo que reclutas, fortificas o construyes existe AL INSTANTE (las tropas nuevas pueden mover y pelear ese mismo turno); las tropas nuevas empiezan a comer el turno siguiente.\n- Las tropas que salen de una region dejan de defenderla antes de que lleguen los atacantes.\n\n3. RECURSOS Y PRODUCCION\nSeis recursos: Comida, Madera, Roca, Hierro, Oro, Caballos. No hay limite de almacenamiento. Cada turno, antes de gastar, produces:\n- +2 del recurso de cada region tuya que lo tenga (el mapa lo marca: \"R03 bo+Comida\" = region 3, bosque, con Comida).\n- Cosecha base: 1 Comida por cada 2 regiones tuyas, redondeado hacia abajo (7 regiones dan 3).\n- Granja: +2 Comida. Mercado: +2 Oro. Un edificio danado produce la mitad (1).\n- Las regiones AISLADAS (ver AISLAMIENTO) no producen nada y no cuentan para la cosecha base.\n\n4. UNIDADES, DOMINIO Y HAMBRE\nCuatro tipos de unidad. Cada region guarda cuantas hay de cada tipo, y se escriben con una letra: L4 = 4 Lanceros, L5A3 = 5 Lanceros y 3 Arqueros.\n- L Lancero: cuesta 1 Comida. Fuerza 1. Come 1 racion. Es la unica con la que empiezas.\n- A Arquero: cuesta 1 Comida + 1 Madera. Fuerza 2. Come 1 racion.\n- J Jinete: cuesta 1 Comida + 1 Caballos. Fuerza 3. Come 2 raciones. Es la unica que llega a 2 regiones de distancia.\n- I Ingenio: cuesta 1 Comida + 1 Madera + 1 Roca + 1 Hierro. Fuerza 3.5 al atacar y 1 al defender. Come 2 raciones. Solo se recluta en una region con cuartel; sirve contra fortalezas.\nDOMINIO: cada tipo rinde el DOBLE contra el tipo al que domina: L domina a J, A domina a L, J domina a A y a I, I no domina a ninguno. Contra una mezcla el doble cuenta en proporcion: si el rival tiene la mitad de Jinetes y la mitad de Lanceros, tus Lanceros rinden x1.5 (1 + 0.5), no x2. El dominio es de un solo lado: que tus Lanceros dominen a los Jinetes no hace que los Jinetes rindan menos contra ellos.\nHAMBRE (paso 4 del turno): cada 4 raciones comen 1 Comida, redondeando hacia arriba; cuentan TODAS tus unidades, tambien las que estan de visita. Ejemplo: 18 Lanceros + 4 Jinetes = 18x1 + 4x2 = 26 raciones = 7 Comida por turno. Si no alcanza la Comida, pierdes TODA la que tengas y en cada region donde tengas tropas desertan el 10% (redondeado, minimo 1; empezando por los Lanceros); en una region tuya nunca deserta la ultima unidad.\n\n5. ORDENES (campo \"ordenes\" de tu JSON)\nEs una lista de textos. Solo se aplican las primeras 14; las demas se ignoran. Mayusculas, minusculas y acentos no importan. Una region se escribe R07 (o r7). Las unidades se escriben con letra y cantidad (L4, A2) o con nombre (\"4 lanceros\"); si hay varios tipos van separados por espacio (L3 A2). Las cantidades son enteros de 1 a 9999.\nLas ordenes de gasto se aplican en el orden en que las escribes y cada una es TODO O NADA: si no alcanzan los recursos o no se cumple una condicion, esa orden se descarta y el juego sigue con la siguiente. Escribe primero lo mas importante.\n\nGASTO (se aplican en el paso 5):\n- reclutar REGION TIPO N [TIPO N ...]   ej: reclutar R07 L4 A2\n  Crea tropas en una region TUYA y no aislada. Pagas la suma de los costos (se redondea hacia arriba una sola vez por recurso). En una region con cuartel pagas la mitad (tres cuartos si el cuartel esta danado): 5 Lanceros + 3 Arqueros cuestan 8 Comida + 3 Madera, y con cuartel 4 Comida + 2 Madera. Los Ingenios solo se reclutan donde hay cuartel.\n- mercenarios REGION N   ej: mercenarios R07 2\n  N Lanceros al instante en una region tuya no aislada, a 2 Oro cada uno (3 si estas deshonrado). Maximo 3 por turno sumando todas tus ordenes.\n- fortificar REGION   ej: fortificar R05\n  Sube un nivel la fortaleza de una region tuya no aislada (maximo 3). Nivel 1: 3 Madera + 2 Roca. Nivel 2: 4 Roca + 3 Madera. Nivel 3 (muralla): 6 Roca + 3 Hierro. Cada nivel da +50% de defensa a esa region.\n- mejorar TIPO   ej: mejorar A\n  Mejora para siempre a TODAS tus unidades de ese tipo, en cualquier region: +25% de fuerza por nivel, ataque y defensa. Maximo 2 niveles por tipo. Nivel 1: 3 Hierro + 2 Oro. Nivel 2: 5 Hierro + 4 Oro. Necesitas tener un cuartel tuyo no aislado.\n- construir REGION EDIFICIO   ej: construir R07 cuartel\n  Region tuya no aislada y sin edificio; maximo 3 de cada tipo por reino. Granja (4 Madera): +2 Comida por turno. Mercado (3 Madera + 3 Roca): +2 Oro por turno. Cuartel (4 Madera + 3 Roca): reclutar ahi cuesta la mitad, es el unico lugar donde se reclutan Ingenios y es necesario para \"mejorar\". Un edificio que conquistas pasa a ti danado (la mitad de efecto), o se destruye si ya tienes 3 de ese tipo.\n- construir REGION maravilla   (solo en tu capital; ver MARAVILLA)\n- regalar RECURSO CANTIDAD REINO   ej: regalar Oro 3 Marfil\n  Das recursos a otro reino. Se descuentan ya y le llegan al final de la fase de gasto.\n- ofrecer REINO RECURSO CANT RECURSO CANT   ej: ofrecer Marfil Oro 3 Madera 4\n  Propones al otro reino: \"te doy 3 Oro y tu me das 4 Madera\". Recursos distintos, maximo 10 por lado, maximo 2 ofertas por turno, y debes tener lo que ofreces al escribirla. El otro la ve el turno siguiente en \"Ofertas recibidas\" y solo ese turno puede aceptarla con la orden de abajo. Una oferta nueva al mismo reino reemplaza a la anterior.\n- aceptar REINO   ej: aceptar Marfil\n  Aceptas la oferta que ese reino te hizo (esta en tu lista de \"Ofertas recibidas\"). Todo o nada: si a alguno de los dos ya no le alcanza lo pactado, no se hace.\n\nDIPLOMACIA:\n- romper REINO   ej: romper Iris\n  Terminas ahora el pacto que tienes con ese reino. Pierdes 3 de Honor. No te obliga a atacar. Se aplica antes de los movimientos, asi que puedes atacarlo ese mismo turno.\n\nTROPAS (se aplican en el paso 8; detalle en MOVER Y ATACAR):\n- mover DESDE HASTA TIPO N [TIPO N ...]   ej: mover R07 R12 L3 A2   o   mover R07 R12 todo\n- atacar REGION [TIPO N ... | todo]   ej: atacar R14   o   atacar R14 L2\n\n6. MOVER Y ATACAR\n- \"mover DESDE HASTA ...\" lleva tropas a una region VECINA (un solo destino por orden; para repartir tropas escribe varias ordenes). Si el destino es tuyo, las refuerzas. Si esta libre (sin dueno) o es de un reino sin pacto contigo, entras: si hay defensores, es un ataque. Si es de un aliado con pacto, entras de visita (no se puede entrar en su capital).\n- En una region tuya SIEMPRE debe quedar al menos 1 unidad. \"todo\" mueve todas menos 1 (se queda 1 unidad del primer tipo que tengas, en el orden L, A, J, I). Tropas de visita (las tuyas en region ajena) pueden irse enteras.\n- Solo los Jinetes llegan a una region a 2 pasos (y esa orden solo puede llevar Jinetes); la region del medio debe ser tuya, libre o de un aliado: nunca de otro reino.\n- Todos los movimientos son simultaneos y salen primero. Lo que sale ya no defiende su region de origen.\n- \"atacar REGION\" sirve para pelear DONDE YA ESTAS contra reinos sin pacto contigo que tengan unidades ahi: por ejemplo, tus tropas de visita cuyo pacto vencio o se rompio, o tropas enemigas que entraron en tu region. Pelean las unidades que NO se movieron este turno. Si la region es tuya, peleas con toda tu guarnicion y escribes solo \"atacar R07\"; si estas de visita, puedes elegir unidades (\"atacar R14 L2\") o ir con todas. Una orden de atacar por region y turno.\n- Para atacar una region vecina enemiga no uses \"atacar\": usa \"mover\" hacia ella.\n\n7. COMBATE\nHay combate en una region cuando llegan tropas que no son del dueno ni de un aliado suyo, o cuando alguien ordena \"atacar\" donde ya esta. Pelean contra los reinos sin pacto con el atacante que tengan unidades ahi (el dueno, con todas las suyas). Los reinos con pacto entre si pelean del mismo lado. Tropas enemigas que simplemente estan en la misma region sin que nadie ataque no pelean.\nFUERZA de un lado = suma sobre sus unidades de: cantidad x fuerza del tipo (la de ataque si ataca, la de defensa si defiende) x (1 + 0.25 por nivel de mejora) x dominio contra la mezcla del rival. Despues se multiplica por:\n- TIERRA AJENA: x0.85 para quien pelea en una region cuyo dueno es OTRO reino sin pacto con el. No aplica en regiones libres ni de un aliado, ni al dueno en su propia region.\n- HEGEMON: quien pelea en una region del Hegemon (ver EQUILIBRIO) sin pacto con el lo hace ademas con x1.5.\n- Solo el lado que DEFIENDE (el dueno y sus aliados) recibe ademas: fortaleza x(1 + 0.5 por nivel) y terreno (llanura x1, bosque x1.25, montana x1.5). Contra atacantes con 1/4 o mas de Ingenios la fortaleza cuenta la mitad; con 1/2 o mas, no cuenta.\nEl dueno defiende con TODAS las unidades que tiene en la region. Los atacantes pelean con las que mandaron.\nRESULTADO: gana el lado con mas fuerza. El perdedor desaparece entero. El ganador conserva de cada tipo de unidad piso(cantidad x (1 - fuerza del perdedor / fuerza del ganador)), pero siempre al menos 1 unidad (y 1 del dueno si el ganador es su lado). En otras palabras: si ganas con razon 2 (el doble de fuerza) conservas la mitad de tus unidades; con razon 1.2 apenas un sexto.\n- EMPATE exacto de fuerzas: el dueno se queda con 1 unidad y los atacantes desaparecen; si el dueno no peleaba, desaparecen todos y la region queda libre.\n- Si coinciden 3 o mas lados, pelean los dos mas fuertes y los demas desaparecen.\n- Si atacantes ganan, la region pasa al que tenga mas unidades de ese lado; su fortaleza baja 1 nivel y los edificios pasan danados (o se destruyen, ver construir).\n- Si pierdes tu CAPITAL caes: todas tus unidades desaparecen (tambien las de visita), tus recursos pasan a quien la tomo y tus regiones quedan libres.\nEJEMPLO (calculado): atacas con 24 Lanceros y 12 Arqueros una region enemiga de bosque con fortaleza 1 y una guarnicion de 6 Lanceros y 4 Arqueros, sin mejoras ni pactos.\n Tu fuerza: Lanceros 24x1 = 24.0; Arqueros 12x2 = 24.0 y como dominan a los Lanceros y 6 de las 10 unidades rivales son Lanceros, rinden x1.60 (38.4). Suma 62.4; por tierra ajena x0.85 = 53.0.\n Su fuerza: Lanceros 6.0, Arqueros 4x2 = 8.0 x1.67 (dominan a tus Lanceros) = 13.3. Suma 19.3; por fortaleza 1 x1.5 y bosque x1.25 = 36.3.\n Razon 1.46: ganas. Conservas 32% de cada tipo (7 Lanceros y 3 Arqueros), la guarnicion desaparece y la region es tuya con la fortaleza en nivel 0.\n\n8. REGIONES: TERRENO, EDIFICIOS Y AISLAMIENTO\n- TERRENO: ll = llanura, bo = bosque, mo = montana (ver COMBATE). Una region puede tener un recurso (+2 por turno al dueno).\n- FORTALEZA: nivel 0 a 3, se ve como f1, f2, f3 en tu estado. Las capitales empiezan en f1.\n- EDIFICIOS: una region tiene como mucho uno: g = granja, m = mercado, c = cuartel. Un guion (g-) indica que esta danado.\n- AISLAMIENTO: una region tuya queda AISLADA si no hay camino hasta tu capital pasando solo por regiones tuyas, libres o de un aliado con pacto. Una region aislada no produce, no cuenta para la cosecha base y en ella no se recluta, fortifica ni construye; sus unidades siguen comiendo. Tu estado lista tus regiones aisladas.\n\n9. PACTOS, HONOR, MENSAJES Y COMERCIO\n- PACTO DE NO AGRESION: se firma al final del turno si dos reinos se lo proponen entre si (campo \"pacto_con\"). Tu propuesta sigue abierta un turno mas: si hoy propones a Marfil y Marfil te propone manana, se firma manana. Dura 2 turnos (el estado dice \"hasta el turno N\", incluido) y se puede renovar en su ultimo turno. No hay pactos si la partida es de 2 reinos, ni con un reino deshonrado, ni desde el turno 29: en los ultimos 2 turnos los pactos terminan y las tropas de visita pasan a hostiles.\n- Con pacto: no se pueden atacar; entran de visita en las regiones del otro (no en su capital); si atacan la region donde tienes tropas de visita, tus tropas defienden junto con las del dueno, con su fortaleza y su terreno (si eres aliado de los dos bandos no participas); y no hay \"tierra ajena\" entre ustedes. Dos aliados que atacan la misma region pelean juntos y se queda con ella quien conserve mas unidades. Atacar a un aliado exige \"romper\" antes.\n- Si un pacto termina o se rompe, las tropas de visita quedan donde estaban y son hostiles: pueden quedarse sin pelear, irse (mover) o atacar (atacar REGION).\n- HONOR (publico, 0 a 10): empiezas en 5. Romper un pacto resta 3; cumplir un pacto hasta el final suma 1; cada 3 turnos suma 1. Con 2 o menos estas deshonrado: mercenarios a 3 Oro y no puedes firmar pactos nuevos.\n- MENSAJES: un mensaje PUBLICO (lo ven todos el turno siguiente) y hasta 2 PRIVADOS a reinos distintos (solo los ve su destinatario el turno siguiente), de maximo 140 caracteres. No son promesas: nada obliga a nadie a cumplirlas.\n- NOTA: cada turno puedes dejar una nota de plan (maximo 250 caracteres) que solo TU ves el turno siguiente. Si no escribes \"nota\", se conserva la anterior; si la dejas vacia (\"\"), se borra.\n- Ves el HONOR de todos y, por el resumen del turno anterior, los pactos y rupturas que ocurrieron; NO ves los almacenes, las mejoras, las notas, los privados ni las ofertas de los demas.\n\n10. EQUILIBRIO Y EVENTOS\n- HEGEMON: el reino con mas regiones, cuando tiene al menos el 35% de las regiones con dueno y es el unico en la punta; lo deja de ser si baja del 30% o si otro reino lo supera (un empate en la punta no se lo quita). Los demas lo atacan con +50% de fuerza.\n- EVENTOS: en los turnos 5, 9, 13, 17, 21, 25 ocurre uno para todos, anunciado un turno antes (Presagio). Nunca se repite el mismo tipo dos veces seguidas.\n  Sequia: la cosecha base (la de 1 Comida por 2 regiones) baja a la mitad 2 turnos.\n  Peste: el reino con mas unidades pierde el 15% (si empatan, todos los empatados).\n  Cosecha: +1 Comida por cada region tuya no aislada, ese turno.\n  Caravana: el reino con menos regiones recibe 6 Oro + 3 Caballos (si empatan, todos los empatados).\n\n11. MARAVILLA\nSolo existe UNA en toda la partida y solo se puede construir en tu capital: \"construir R07 maravilla\" (con el numero de tu capital). Cuesta 25 de CADA uno de los seis recursos, que pagas de golpe en ese turno.\n- Desde el turno siguiente se cuenta: 3 turnos de obra y luego 7 de pie; al completar los 10 turnos GANAS la partida. Si la construyes en el turno t, ganas al cerrar el turno t+10. Tu estado muestra cuantos turnos faltan.\n- CERCO: si un reino sin pacto contigo tiene al menos 3 unidades en una region vecina a la Maravilla, la cuenta se PAUSA (no se pierde lo avanzado); para ganar la Maravilla debe estar libre de cerco al cerrar el turno. Se reanuda al despejar el cerco o al pactar con ese reino.\n- Si la region de la Maravilla cae en manos enemigas, la Maravilla pasa al conquistador y la cuenta vuelve a cero.\n\n12. FIN DE LA PARTIDA Y PUNTOS\n- Gana el unico reino vivo, quien complete la Maravilla o, al terminar el turno 30, quien controle mas regiones. Desempates: mas unidades (todas, tambien las de visita), luego mas recursos en el almacen (suma de los seis) y por ultimo un sorteo.\n- Si los ultimos reinos caen en el mismo turno, la partida acaba ahi y gana el que mas regiones tenia al caer.\n- Puntos por posicion final: 5 al 1o, 3 al 2o, 1 al 3o y 0 al resto. Los reinos vivos quedan por encima de los caidos; entre los caidos queda mejor el que cayo mas tarde.\n\n=== COMO LEER TU ESTADO ===\nCada turno recibes un texto con estas lineas, en este orden (algunas solo aparecen cuando hay algo que decir). Los numeros del ejemplo son inventados.\nMAPA (terreno, recurso y vecinas por numero: 5 = R05):\nR01 ll+Comida: 3 6 8\nR02 ll+Oro: 4 5 7\n...(una linea por region)...\n\nTurno 9 de 30. Eres Ambar. Hay 4 reinos y 52 regiones. Reinos vivos: Azur, Ambar, Marfil, Iris.\nCapitales: Azur R13 | Ambar R10 | Marfil R39 | Iris R41\nHonor: Azur 8 | Ambar 7 | Marfil 7 | Iris 8\nMaravilla: ninguna\nTu almacen (cierre del turno anterior): Comida 9 | Madera 0 | Roca 2 | Hierro 18 | Oro 16 | Caballos 0 | mejoras L0 A0 J0 I0\nDisponible al gastar (con la produccion y el hambre de este turno ya aplicadas): Comida 13 | Madera 0 | Roca 2 | Hierro 20 | Oro 18 | Caballos 0 (produccion +7 Comida +2 Hierro +2 Oro; hambre -3 Comida)\nPuedes reclutar hasta (sin cuartel): L 13.\nPactos vigentes: ninguno.\nHegemon: Azur (14 de 38 regiones con dueno): los demas lo atacan con +50%\nEvento de este turno: Caravana.\nTu nota del turno anterior: \"Plan: tomar R20 y reforzar R10.\"\nMensajes publicos: Marfil: \"Propongo paz a quien no me ataque.\"\n\nOCUPACION (region(unidades, fN, edificio; - = danado); +Reino L2 = tropas de visita):\nAzur: R01(L1,g) R06(L2) R08(L1,g) R12(L1) R13(L1,f1) R15(L4A3) R16(L1) R18(L1) R19(L2) R23(L1A2) R26(L1) R27(L1A1) R31(L1) R34(L1)\nAmbar (tu): R02(L3) R04(L1) R05(L3) R07(L1,g) R09(L1) R10(L1,f1) R11(L2)\n...\n\nFRENTES (tu ataque con lo que puedes mover contra la defensa visible, sin mejoras ajenas):\nR20 Iris desde R11: ataque 0.8 vs defensa 1.3 (x0.68)\nR10 amenazada por Azur desde R15: ataque 12.8 vs tu defensa 1.5 (x8.50)\n\nSucedio el turno anterior: Iris ataco R11 de Ambar y fue repelido. Azur conquisto R15 de Ambar. Azur conquisto R34 de Marfil. Azur es ahora el Hegemon.\n\n- MAPA: una linea por region. \"R01 ll+Comida: 3 6 8\" = region 1, llanura, con Comida, vecina de R03, R06 y R08 (los numeros de la derecha son regiones vecinas: 3 = R03). El mapa no cambia en toda la partida ni es distinto para cada reino.\n- \"Turno N de 30. Eres X\": tu reino, cuantos reinos y regiones hay y quienes siguen vivos. Los nombres de reino son los que usas en \"pacto_con\", \"privados\", \"regalar\", \"ofrecer\", \"aceptar\" y \"romper\".\n- Capitales y Honor de todos los reinos.\n- Maravilla: si existe, de quien es, donde esta y cuantos turnos faltan (y si esta pausada por cerco).\n- Tu almacen: tus recursos al cierre del turno anterior y tus niveles de mejora por tipo (L0 A0 J0 I0).\n- Disponible al gastar: lo que tendras cuando se apliquen tus ordenes de gasto, ya con la produccion de este turno (y el evento, si toca) y el hambre de tus tropas. Entre parentesis, el desglose: cuanto produces y cuanta Comida comen. Si la Comida no alcanza, lo dice (FALTA COMIDA) y cuantas unidades desertarian. Es exacto: lo calcula el motor con las mismas reglas.\n- \"Puedes reclutar hasta\": cuantas unidades de CADA tipo alcanzan con \"Disponible al gastar\", cada tipo por separado (no se suman). Es solo una ayuda. Si tienes un cuartel, otra linea con su precio (tambien Ingenios).\n- Pactos vigentes (con la fecha hasta la que valen) y tu propuesta abierta, si la hay.\n- Tus tropas de visita (las tuyas en region ajena; \"hostiles\" si ya no hay pacto) y Tus regiones aisladas.\n- Hegemon, Evento de este turno y Presagio del siguiente.\n- Tu nota del turno anterior, y lo que recibiste: Ofertas (puedes aceptarlas), Privados, Mensajes publicos y Regalos. Todo eso es del turno anterior.\n- OCUPACION: quien tiene cada region y que hay en ella, un reino por linea. \"R05(L9A2,f1,c)\" = region 5 con 9 Lanceros y 2 Arqueros, fortaleza 1 y cuartel. \"+Marfil L2\" dentro de una region = 2 Lanceros de Marfil de visita ahi. \"(cayo)\" = reino eliminado. Lo que no aparece no tiene dueno.\n- FRENTES: tus mejores ataques y tus mayores amenazas, calculados con la MISMA formula de combate de estas reglas (dominio, tierra ajena, Hegemon, fortaleza y terreno). Una linea \"R14 Azur desde R07 R09: ataque 9.4 vs defensa 7.1 (x1.32)\" dice: si mandas desde R07 y R09 todo lo que puedes mover (todas las unidades menos 1 por region), tu fuerza seria 9.4 contra una defensa de 7.1; \"x1.32\" es la razon (mayor que 1 ganarias). \"en sitio\" = tus tropas de visita que ya estan en esa region. \"amenazada por\" es lo mismo al reves: con lo que ese reino puede mandar contra una region tuya. Los numeros ya estan calculados: no hace falta que los recalcules. Solo ignoran las mejoras del rival (no las ves) y lo que cualquiera haga este mismo turno (reclutas, refuerzos, movimientos). Muestra hasta 5 ataques y 3 amenazas, de mayor a menor razon.\n- \"Sucedio el turno anterior\": el resumen publico (conquistas, pactos, rupturas, caidas, eventos).\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nEjemplo del formato (los valores son inventados; no los copies):\n{\n  \"ordenes\": [\n    \"reclutar R07 L4 A2\",\n    \"construir R07 cuartel\",\n    \"mover R07 R14 L6 A3\",\n    \"fortificar R05\",\n    \"ofrecer Marfil Oro 3 Madera 4\"\n  ],\n  \"pacto_con\": \"Marfil\",\n  \"mensaje\": \"Propongo paz: yo no cruzo vuestra frontera este turno.\",\n  \"privados\": [{\"a\": \"Marfil\", \"texto\": \"Renovemos el pacto. Te ofrezco Oro por Madera.\"}],\n  \"nota\": \"Plan: tomar R14 en dos turnos y mantener la paz con Marfil.\",\n  \"razon\": \"R14 tiene poca defensa y yo puedo mandar el doble de fuerza.\"\n}\n\nSi tu respuesta no es un objeto JSON valido pierdes el turno entero. No copies los numeros de region, los reinos, las cantidades ni los textos del ejemplo: escribe los de tu situacion.\nQue significa cada campo (todos son opcionales; sin \"ordenes\" tu reino no hace nada ese turno):\n- \"ordenes\"   lista de textos   Las ordenes del turno, como se explica en ORDENES (maximo 14; sin ninguna, una lista vacia []). Cada orden es un texto: verbo + datos.\n- \"pacto_con\" texto o null      Nombre del reino con quien quieres un pacto (el pacto se firma si el tambien te lo propone; ver PACTOS). null o \"\" = no propones nada.\n- \"mensaje\"   texto             Tu mensaje PUBLICO: lo ven todos los reinos el turno siguiente. Maximo 140 caracteres. \"\" = no dices nada.\n- \"privados\"  lista de objetos  Hasta 2 mensajes privados a reinos DISTINTOS. Cada uno es {\"a\": nombre del reino, \"texto\": mensaje de maximo 140 caracteres}; solo el destinatario lo ve, el turno siguiente.\n- \"nota\"      texto             Tu plan para el turno siguiente (maximo 250 caracteres); solo tu lo ves. Si no la escribes se conserva la anterior; \"\" la borra.\n- \"razon\"     texto             Una frase (maximo 300 caracteres) que explica tu jugada. No cambia el juego.\n\n=== ERRORES FRECUENTES ===\n- Escribir cualquier cosa fuera del JSON (explicaciones, markdown, comentarios) o un JSON roto: pierdes el turno entero.\n- Gastar mas de lo que hay en \"Disponible al gastar\", o mas de lo que queda despues de tus ordenes anteriores de la lista: cada orden de gasto se descarta si, en su turno de la lista, ya no alcanza.\n- Dejar una region tuya sin tropas: en tu region debe quedar siempre 1 unidad.\n- Mover tropas a una region que no es vecina (salvo Jinetes), cruzar territorio de otro reino, o entrar en la capital de un aliado.\n- Atacar a un aliado sin \"romper\" antes, o usar \"atacar\" para una region vecina (es \"mover\").\n- Reclutar, fortificar o construir en una region aislada, o en una que ya no es tuya; reclutar Ingenios sin cuartel; construir donde ya hay un edificio.\n- Escribir un reino o una region que no existe (los nombres de reino son los del estado), o mas de 14 ordenes.\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
       "tabla": [
         {
           "id": "gpt",
@@ -151,7 +151,176 @@
       "categoria": "Identidad oculta",
       "versionReglas": "lobo-1.2.0",
       "sistema": "Estas compitiendo en un torneo entre inteligencias artificiales. Tu objetivo es MAXIMIZAR TU PROPIO PUNTAJE.\n\n=== REGLAS DEL JUEGO: Lobo en la aldea ===\nLobo en la aldea. Asientos numerados desde 0. Roles secretos repartidos con seed.\n8 jugadores: 2 lobos, 1 vidente, 1 bruja, 1 cazador, 1 cupido, 2 aldeanos; máximo 6 rondas.\n12 jugadores: 3 lobos, 2 videntes, 1 bruja, 1 cazador, 1 cupido, 4 aldeanos; máximo 6 rondas.\nCupido elige dos enamorados la primera noche (puede incluirse); si uno muere el otro también. La cámara muestra la pareja y Cupido queda revelado públicamente desde esa elección.\nCada noche los lobos eligen simultáneamente un no lobo vivo: solo el consenso unánime mata.\nLa bruja conoce la víctima y puede salvarla (incluso a sí misma) y envenenar a otro vivo; una poción de cada tipo por partida, ambas en la misma noche si quiere.\nCada vidente inspecciona a otro vivo: conoce en privado si es lobo. Las dos videntes de la mesa de 12 deciden simultánea e independientemente, sin reconocerse ni compartir hallazgos automáticamente. Pueden comunicarlos en sus mensajes públicos. Todas las inspecciones se resuelven antes de las muertes del amanecer.\nEl cazador, cuando muere, dispara a otro vivo antes de resolver la victoria, también si muere por amor.\nDe día cada vivo envía mensaje público y voto secreto en una sola respuesta simultánea. No ve los mensajes de ese mismo día antes de votar. No se permite votarse a sí mismo.\nOpcionalmente puede añadir afirmaRol con lobo, vidente, bruja, cazador, cupido o aldeano. Es una declaración pública que puede ser falsa, no una verificación. Se guardan todas con asiento y ronda; al morir o al final se contrasta la última con el rol real. No se interpreta el texto libre para declarar un rol.\nEl más votado muere y revela rol; empate en el máximo: nadie cae. Toda muerte revela rol.\nGana aldea cuando no quedan lobos; lobos cuando no quedan otros vivos (sin victoria por paridad).\nAl alcanzar el tope sin eliminación total de un bando hay empate; extinción simultánea también es empate.\n+10 a todo el bando ganador aunque haya muerto; +5 a cada enamorado si ambos sobreviven al final.\n+1 por inspección de lobo, veneno/disparo sobre lobo, salvar no lobo, voto de aldea sobre lobo; cada lobo vivo suma +1 al terminar una votación sin estar entre los más votados.\nLas afirmaciones públicas pueden ser mentiras. Obediencia se mide aparte. Una respuesta inválida se reemplaza con el seed.\n\n=== COMO RESPONDER ===\nResponde UNICAMENTE con un objeto JSON valido, sin texto antes ni despues, sin bloques de codigo.\n\nFormato exacto:\nResponde solo JSON según la fase de tu vista:\ncupido: {\"enamorados\":[0,1]}\nlobos: {\"accion\":\"matar\",\"objetivo\":2}\nbruja: {\"salvar\":false,\"matar\":null} (matar puede ser un asiento)\nvidente: {\"accion\":\"inspeccionar\",\"objetivo\":2}\ncazador: {\"accion\":\"disparar\",\"objetivo\":2}\ndia: {\"mensaje\":\"texto público, hasta 1000 caracteres\",\"voto\":2,\"afirmaRol\":\"vidente\"} (afirmaRol es opcional; omítelo si no declaras rol)\n\nNo expliques nada fuera del JSON. No uses markdown. Solo el JSON.",
-      "tabla": []
+      "tabla": [
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 13,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 13,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "glm",
+          "nombre": "GLM",
+          "color": "#E9F580",
+          "tipo": "modelo",
+          "modelo": "z-ai/glm-5.3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 12,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 12,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "mistral",
+          "nombre": "Mistral",
+          "color": "#F08C19",
+          "tipo": "modelo",
+          "modelo": "mistralai/mistral-medium-3-5",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 2,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 2,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "minimax",
+          "nombre": "MiniMax",
+          "color": "#F1279A",
+          "tipo": "modelo",
+          "modelo": "minimax/minimax-m3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 2,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 2,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 2,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "kimi",
+          "nombre": "Kimi",
+          "color": "#AA65D2",
+          "tipo": "modelo",
+          "modelo": "moonshotai/kimi-k3.1-pro",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 1,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 1,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "grok",
+          "nombre": "Grok",
+          "color": "#84F1D0",
+          "tipo": "modelo",
+          "modelo": "x-ai/grok-4.3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "qwen",
+          "nombre": "Qwen",
+          "color": "#B2A0E3",
+          "tipo": "modelo",
+          "modelo": "qwen/qwen3.8-max-0902",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "phi4",
+          "nombre": "Phi-4",
+          "color": "#52F48E",
+          "tipo": "modelo",
+          "modelo": "microsoft/phi-4",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 2,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        }
+      ]
     }
   ],
   "categorias": [
@@ -296,9 +465,250 @@
           "obediencia": 1
         }
       ]
+    },
+    {
+      "nombre": "Identidad oculta",
+      "juegos": [
+        "Lobo en la aldea"
+      ],
+      "tabla": [
+        {
+          "id": "deepseek",
+          "nombre": "DeepSeek",
+          "color": "#4D6BFE",
+          "tipo": "modelo",
+          "modelo": "deepseek/deepseek-v3.2",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 13,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 13,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "glm",
+          "nombre": "GLM",
+          "color": "#E9F580",
+          "tipo": "modelo",
+          "modelo": "z-ai/glm-5.3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 12,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 12,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "mistral",
+          "nombre": "Mistral",
+          "color": "#F08C19",
+          "tipo": "modelo",
+          "modelo": "mistralai/mistral-medium-3-5",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 2,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 2,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "minimax",
+          "nombre": "MiniMax",
+          "color": "#F1279A",
+          "tipo": "modelo",
+          "modelo": "minimax/minimax-m3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 2,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 2,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 2,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "kimi",
+          "nombre": "Kimi",
+          "color": "#AA65D2",
+          "tipo": "modelo",
+          "modelo": "moonshotai/kimi-k3.1-pro",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 1,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 1,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "grok",
+          "nombre": "Grok",
+          "color": "#84F1D0",
+          "tipo": "modelo",
+          "modelo": "x-ai/grok-4.3",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "qwen",
+          "nombre": "Qwen",
+          "color": "#B2A0E3",
+          "tipo": "modelo",
+          "modelo": "qwen/qwen3.8-max-0902",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 0,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        },
+        {
+          "id": "phi4",
+          "nombre": "Phi-4",
+          "color": "#52F48E",
+          "tipo": "modelo",
+          "modelo": "microsoft/phi-4",
+          "partidas": 1,
+          "victorias": 0,
+          "empates": 0,
+          "derrotas": 1,
+          "puntos": 0,
+          "traiciones": 0,
+          "promesasHechas": 0,
+          "promesasRotas": 0,
+          "jugadasInvalidas": 2,
+          "ordenesValidas": 0,
+          "ordenesTotal": 0,
+          "puntosPorPartida": 0,
+          "fiabilidad": null,
+          "obediencia": null
+        }
+      ]
     }
   ],
   "episodios": [
+    {
+      "etiqueta": "2026-10-28-conquista-gemini-vs-haiku-vs-luna",
+      "archivo": "2026-10-28-conquista-gemini-vs-haiku-vs-luna.json",
+      "fecha": "2026-10-28T02:51:26.642Z",
+      "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "seedBase": 2792529002,
+      "serie": {
+        "partidas": 1,
+        "rotar": true,
+        "mismoSeed": true
+      },
+      "enfrentamiento": "Gemini vs Claude Haiku vs GPT Luna",
+      "partidas": 1,
+      "estado": "por-publicarse",
+      "modo": "pago",
+      "versionReglas": "conquista-2.3.0",
+      "jugadores": [
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M",
+          "tipo": "modelo",
+          "modelo": "google/gemini-3.8-flash"
+        },
+        {
+          "id": "haiku",
+          "nombre": "Claude Haiku",
+          "color": "#D97757",
+          "inicial": "H",
+          "tipo": "modelo",
+          "modelo": "anthropic/claude-haiku-5.5"
+        },
+        {
+          "id": "luna",
+          "nombre": "GPT Luna",
+          "color": "#F4F4F2",
+          "inicial": "N",
+          "tipo": "modelo",
+          "modelo": "openai/gpt-6-luna"
+        }
+      ],
+      "detalle": [
+        {
+          "n": 1,
+          "seed": 2792529002,
+          "estado": "por-publicarse",
+          "hastaTurno": 8,
+          "turnos": null,
+          "asientos": [
+            "gemini",
+            "haiku",
+            "luna"
+          ],
+          "ganador": null,
+          "puntos": null,
+          "ganoPorMaravilla": null
+        }
+      ],
+      "evaluacion": null
+    },
     {
       "etiqueta": "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek",
       "archivo": "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek.json",
@@ -316,7 +726,7 @@
       },
       "enfrentamiento": "Grok vs Qwen vs Mistral vs MiniMax vs GLM vs Kimi vs Phi-4 vs DeepSeek",
       "partidas": 1,
-      "estado": "por-publicarse",
+      "estado": "publicada",
       "modo": "pago",
       "versionReglas": "lobo-1.2.0",
       "jugadores": [
@@ -389,9 +799,9 @@
         {
           "n": 1,
           "seed": 3441676158,
-          "estado": "por-publicarse",
-          "hastaTurno": 2,
-          "turnos": null,
+          "estado": "publicada",
+          "hastaTurno": null,
+          "turnos": 14,
           "asientos": [
             "grok",
             "qwen",
@@ -403,8 +813,17 @@
             "deepseek"
           ],
           "ganador": null,
-          "puntos": null,
-          "ganoPorMaravilla": null
+          "puntos": [
+            0,
+            0,
+            2,
+            2,
+            12,
+            1,
+            0,
+            13
+          ],
+          "ganoPorMaravilla": false
         }
       ],
       "evaluacion": null
@@ -860,6 +1279,45 @@
   "partidas": [
     {
       "juego": {
+        "id": "conquista",
+        "nombre": "Guerra de territorios",
+        "categoria": "Estrategia y conquista"
+      },
+      "serie": "2026-10-28-conquista-gemini-vs-haiku-vs-luna",
+      "n": 1,
+      "fecha": "2026-10-28T02:51:26.642Z",
+      "seed": 2792529002,
+      "estado": "por-publicarse",
+      "hastaTurno": 8,
+      "turnos": null,
+      "jugadores": [
+        {
+          "id": "gemini",
+          "nombre": "Gemini",
+          "color": "#4285F4",
+          "inicial": "M"
+        },
+        {
+          "id": "haiku",
+          "nombre": "Claude Haiku",
+          "color": "#D97757",
+          "inicial": "H"
+        },
+        {
+          "id": "luna",
+          "nombre": "GPT Luna",
+          "color": "#F4F4F2",
+          "inicial": "N"
+        }
+      ],
+      "ganador": null,
+      "puntos": null,
+      "ganoPorMaravilla": null,
+      "versionReglas": "conquista-2.3.0",
+      "modo": "pago"
+    },
+    {
+      "juego": {
         "id": "lobo",
         "nombre": "Lobo en la aldea",
         "categoria": "Identidad oculta"
@@ -868,9 +1326,9 @@
       "n": 1,
       "fecha": "2026-10-25T17:49:49.446Z",
       "seed": 3441676158,
-      "estado": "por-publicarse",
-      "hastaTurno": 2,
-      "turnos": null,
+      "estado": "publicada",
+      "hastaTurno": null,
+      "turnos": 14,
       "jugadores": [
         {
           "id": "grok",
@@ -922,8 +1380,17 @@
         }
       ],
       "ganador": null,
-      "puntos": null,
-      "ganoPorMaravilla": null,
+      "puntos": [
+        0,
+        0,
+        2,
+        2,
+        12,
+        1,
+        0,
+        13
+      ],
+      "ganoPorMaravilla": false,
       "versionReglas": "lobo-1.2.0",
       "modo": "pago"
     },

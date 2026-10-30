@@ -53,14 +53,36 @@
     "2026-10-25-lobo-grok-vs-qwen-vs-mistral-vs-minimax-vs-glm-vs-kimi-vs-phi4-vs-deepseek": {
       "partidas": {
         "1": {
-          "estado": "por-publicarse",
-          "hastaTurno": 2,
+          "estado": "publicada",
+          "hastaTurno": 4,
           "partes": [
             {
               "parte": 1,
               "hastaTurno": 2,
               "final": false,
               "fecha": "2026-10-26"
+            },
+            {
+              "parte": 2,
+              "hastaTurno": 4,
+              "final": true,
+              "fecha": "2026-10-29"
+            }
+          ]
+        }
+      }
+    },
+    "2026-10-28-conquista-gemini-vs-haiku-vs-luna": {
+      "partidas": {
+        "1": {
+          "estado": "por-publicarse",
+          "hastaTurno": 8,
+          "partes": [
+            {
+              "parte": 1,
+              "hastaTurno": 8,
+              "final": false,
+              "fecha": "2026-10-29"
             }
           ]
         }
