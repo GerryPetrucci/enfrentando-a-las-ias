@@ -75,14 +75,20 @@
     "2026-10-28-conquista-gemini-vs-haiku-vs-luna": {
       "partidas": {
         "1": {
-          "estado": "por-publicarse",
-          "hastaTurno": 8,
+          "estado": "publicada",
+          "hastaTurno": 17,
           "partes": [
             {
               "parte": 1,
               "hastaTurno": 8,
               "final": false,
               "fecha": "2026-10-29"
+            },
+            {
+              "parte": 2,
+              "hastaTurno": 17,
+              "final": true,
+              "fecha": "2026-10-31"
             }
           ]
         }
