@@ -27,10 +27,11 @@ export function hechosDePieza(beats, pieza, destacadas = []) {
 //   «Guerra de territorios J3 - Parte 1/2 - Seed 1704202488»   (parte)
 //   «Guerra de territorios J3 - Clip 2 (Parte 1/2) - Seed 1704202488»   (clip)
 //   «Guerra de territorios J3 - Próximamente Parte 2/2 - Seed 1704202488»   (gancho, en video o en imagen)
+//   «Guerra de territorios J3 - Episodio completo - Seed 1704202488»   (el juego entero, que se sube al final)
 // `juegoNumero` es el jN del juego (el que lleva el nombre de sus videos); sin el, se omite. Nunca se recorta: lo demas se acota para que quepa.
 export function identificadorDePieza(pieza, { juego, juegoNumero = null, seed, partes = 2 }) {
   const n = pieza.parte ?? Number(pieza.id.split('-').at(-1));
-  const tramo = esGancho(pieza) ? `Próximamente Parte ${n}/${partes}` : pieza.tipo === 'parte' ? `Parte ${n}/${partes}` : `Clip ${pieza.id.split('-').at(-1)} (Parte ${n}/${partes})`;
+  const tramo = pieza.tipo === 'episodio' ? 'Episodio completo' : esGancho(pieza) ? `Próximamente Parte ${n}/${partes}` : pieza.tipo === 'parte' ? `Parte ${n}/${partes}` : `Clip ${pieza.id.split('-').at(-1)} (Parte ${n}/${partes})`;
   return `${juego}${Number.isInteger(juegoNumero) ? ` J${juegoNumero}` : ''} - ${tramo} - Seed ${seed}`;
 }
 
@@ -41,8 +42,10 @@ const MIN_DETALLE = 12; // si no queda lugar para decir algo ademas de lo obliga
 // Un mismo titulo/descripcion para todas las redes. Empiezan siempre con el identificador (arriba); el resto cambia con los hechos. TODA descripcion lleva hashtags (decidido por el usuario
 // el 26 de octubre de 2026): `hashtags` son los que arma el paquete (#IAvsIA, los del juego y los de los modelos que juegan) y, si no llegan, al menos #IAvsIA. Si no cabe todo en
 // MAX_DESCRIPCION, primero se quita la linea de la ventana, luego hashtags (nunca el primero) y por ultimo se acota el detalle.
-export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNumero = null, unidad = 'Ronda', enlace = '', destacadas = [], hashtags = [] }) {
+// `resultado` ("Ganó Gemini", "Terminó en empate") solo lo usa el episodio completo: es lo ultimo que se sube y puede contar como termino el juego; en las demas piezas no se dice (spoilers).
+export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNumero = null, unidad = 'Ronda', enlace = '', destacadas = [], hashtags = [], resultado = '' }) {
   const hechos = hechosDePieza(beats, pieza, destacadas), n = pieza.parte ?? Number(pieza.id.split('-').at(-1));
+  const cuentaResultado = pieza.tipo === 'episodio' && Boolean(resultado);
   const identificador = identificadorDePieza(pieza, { juego, juegoNumero, seed });
   const rivales = nombres.map((s) => acotar(s, 22)).join(' vs ');
   const ventana = esGancho(pieza) ? `Próximamente · Parte ${n} de 2` : pieza.grabar.desde === pieza.grabar.hasta ? `${unidad} ${pieza.grabar.desde}` : `${unidad}s ${pieza.grabar.desde}–${pieza.grabar.hasta}`;
@@ -50,11 +53,11 @@ export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNu
   // Con muchos participantes la lista de nombres no cabe en el titulo (se cortaria a media palabra): se dice cuantos son. La descripcion trae la lista si cabe.
   const detalleCon = (quien) => hechos[0] ? `${unidad} ${hechos[0].unidad}: ${hechos[0].texto}`
     : pieza.tipo === 'gancho-imagen' ? `${quien}: la partida llega pronto.` : pieza.tipo === 'gancho' ? `${quien}. Un adelanto de las ${unidad.toLowerCase()}s ${cortes ?? ''}.` : `${quien}.`;
-  const detalle = detalleCon(nombres.length > 4 ? `${nombres.length} IAs frente a frente` : rivales);
+  const detalle = cuentaResultado ? resultado : detalleCon(nombres.length > 4 ? `${nombres.length} IAs frente a frente` : rivales);
   const lugarTitulo = MAX_TITULO - identificador.length - ' | '.length;
   const titulo = acotar(lugarTitulo >= MIN_DETALLE ? `${identificador} | ${acotar(detalle.replace(/\.$/, ''), lugarTitulo)}` : identificador, MAX_TITULO); // solo el identificador de un juego de nombre absurdo se corta
   const etiquetas = [...new Set(['#IAvsIA', ...(Array.isArray(hashtags) ? hashtags : []).filter((h) => /^#\S+$/.test(h))])].slice(0, MAX_HASHTAGS); // #IAvsIA siempre, y primero
-  const conNombres = detalleCon(rivales);
+  const conNombres = cuentaResultado ? `${resultado}. ${rivales}.` : detalleCon(rivales);
   const aviso = 'Generado por IA · Proyecto independiente';
   for (const cuantas of Array.from({ length: etiquetas.length }, (_, i) => etiquetas.length - i)) {
     for (const conVentana of [true, false]) {
@@ -69,7 +72,9 @@ export function publicacionDePieza(pieza, { beats, nombres, seed, juego, juegoNu
   return { titulo, descripcion: [identificador, aviso, etiquetas[0]].join('\n').slice(0, MAX_DESCRIPCION), evidencia: hechos.slice(0, 3) };
 }
 
+// El episodio completo (el juego entero de corrido) cuenta el resultado: se sube despues de todo lo demas.
 export function ordenDePublicacion(piezas) {
   const rango = { gancho: 0, 'gancho-imagen': 0, parte: 1, clip: 2 };
-  return [...piezas].sort((a, b) => (a.parte ?? 1) - (b.parte ?? 1) || (rango[a.tipo] - rango[b.tipo]) || a.grabar.desde - b.grabar.desde);
+  const alFinal = (p) => (p.tipo === 'episodio' ? 1 : 0);
+  return [...piezas].sort((a, b) => alFinal(a) - alFinal(b) || (a.parte ?? 1) - (b.parte ?? 1) || (rango[a.tipo] - rango[b.tipo]) || a.grabar.desde - b.grabar.desde);
 }

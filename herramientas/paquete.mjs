@@ -26,7 +26,7 @@ import { FORMATOS } from './formatos.mjs';
 import { REDES, SUBCARPETAS, fechaDe, nombreDePieza, nombreDeVideo, carpetaDeSerie, juegoDeCarpeta, elegirJuego } from './nombres.mjs';
 import { ordenDePublicacion } from '../web/casino/editorial-paquete.js';
 import { armarGancho, cortesPedidos, conIdentificador } from '../web/casino/gancho.js';
-import { conCierre, claveDeCierre } from '../web/casino/cierre.js';
+import { conCierre, claveDeCierre, esBeatDeCierre } from '../web/casino/cierre.js';
 import { RUTA_INDICE, entradaDePaquete } from '../web/casino/indice-paquetes.js';
 import { marcarTiempos } from '../web/casino/escena-config.js';
 import { generarVideosDeGancho, nombreDeVideoDeGancho, nombreDeImagen } from './gancho-imagen.mjs';
@@ -67,6 +67,7 @@ export function leemeDe(paquete, contexto = {}) {
   const nombreJuego = paquete.piezas[0]?.titulo.split(' · ')[0] ?? paquete.juego ?? 'juego';
   const { margenMs, colaMs } = paquete.piezas.find((p) => p.grabar.plan)?.grabar.plan ?? FUNDIDOS; // los margenes que se le piden a quien graba: los del plan de las piezas (que salen de FUNDIDOS)
   const imagenes = paquete.piezas.filter((p) => p.tipo === 'gancho-imagen'), grabables = paquete.piezas.length - imagenes.length;
+  const conEpisodio = paquete.piezas.some((p) => p.tipo === 'episodio'); // el juego entero de corrido: la ultima pieza que se sube
   // Lo que se copia (direcciones, nombres de archivo y comandos) va en bloques de codigo: el visor de Markdown los distingue del resto y los deja copiar con un clic.
   // Los bloques van sangrados 2 espacios para que sigan dentro de su vineta.
   const codigo = (texto, lenguaje = 'text') => [`  \`\`\`${lenguaje}`, ...String(texto).split('\n').map((l) => `  ${l}`), '  ```'];
@@ -159,10 +160,11 @@ export function leemeDe(paquete, contexto = {}) {
     '- [ ] Revisé a mano los mensajes y las razones de las IAs de esta partida. Si algo es ofensivo o raro, elegí otra partida y anoté por qué.',
     '- [ ] La etiqueta «Contenido generado por IA» se ve en el video.',
     ...(imagenes.length ? ['- [ ] Cada video de gancho de imagen fija se ve completo (nada cortado), dice «Próximamente», el juego y la parte, y lleva la etiqueta de IA. Ábrelo en el teléfono antes de subirlo.'] : []),
+    ...(conEpisodio ? ['- [ ] El episodio completo abre con la tarjeta de arranque y la de «Juego N · Episodio completo», cuenta la partida entera sin cortes y cierra como un final. Su título y su descripción cuentan el resultado: no lo subas antes que lo demás.'] : []),
     '- [ ] No lleva marca de agua de otra app ni música con derechos: es el archivo limpio que grabó OBS. Revisa el `_9x16` de `por-subir/` (el de TikTok, Reels y Shorts): arranca dentro del fundido y termina en negro, sin segundos de negro de sobra.',
     '',
     '## Paso 3 · Poner el gancho, publicar y fijar el comentario',
-    '0. Orden de subida: primero el gancho (hk), luego la parte (pt) y al final los clips (clp) de ESA parte; después se repite con la parte 2. Las secciones de este LEEME ya siguen ese orden.',
+    `0. Orden de subida: primero el gancho (hk), luego la parte (pt) y al final los clips (clp) de ESA parte; después se repite con la parte 2.${conEpisodio ? ' Al final de todo, pasado un tiempo, el episodio completo (ep): cuenta el resultado, por eso se sube el último.' : ''} Las secciones de este LEEME ya siguen ese orden.`,
     '1. Revisa el título y la descripción de cada pieza contra su video. Son propuestas extraídas de los hechos, sin GANCHO pendiente ni llamadas a modelos.',
     '2. Usa el archivo único de cada pieza. No pegues los encabezados TÍTULO y DESCRIPCIÓN. Marca la opción de contenido generado con IA de cada red.',
     `3. Si quieres enlazar el marcador en una respuesta: ${contexto.enlace || ENLACE_DEL_SITIO}`,
@@ -185,7 +187,7 @@ export function escribirPaquete(paquete, carpeta, contexto = {}) {
   // los textos viejos permite recuperar anotaciones manuales sin mezclarlos.
   const vigentes = new Set(paquete.piezas.map((p) => `${p.id}.txt`));
   for (const nombre of readdirSync(textos)) {
-    if (!/^(parte|clip|gancho)-\d+(?:-(?:tiktok|instagram|facebook|x|youtube|comentario))?\.txt$/.test(nombre) || vigentes.has(nombre)) continue;
+    if (!/^(?:(?:parte|clip|gancho)-\d+|episodio-completo)(?:-(?:tiktok|instagram|facebook|x|youtube|comentario))?\.txt$/.test(nombre) || vigentes.has(nombre)) continue;
     const archivo = join(textos, 'anteriores', `${Date.now()}-${nombre}`);
     mkdirSync(join(textos, 'anteriores'), { recursive: true });
     renameSync(join(textos, nombre), archivo);
@@ -211,7 +213,7 @@ export function guionDePaquete(paquete, beats, { voz = null, seed, partidaNumero
     const clave = claveDeCierre({ seed, partida: partidaNumero, desde: p.grabar.desde, hasta: p.grabar.hasta, gancho: p.tipo === 'gancho' ? p.parte : null });
     const linea = conCierre(base, clave, p.cierre), audio = p.tipo === 'gancho' ? Object.fromEntries(Object.entries(voz ?? {}).filter(([id]) => id.startsWith('cierre-'))) : voz;
     texto.push(`## ${p.id} · ${p.titulo}`, '', ...(p.tipo === 'gancho' ? ['[Los cortes van sin narración; solo se lee el cierre.]', ''] : []));
-    for (const m of marcarTiempos(linea, audio)) if (m.texto && (p.tipo !== 'gancho' || m.tipo === 'cierre')) texto.push(`**${formatoDeTiempo(m.inicioMs)} — ${formatoDeTiempo(m.finMs)} · ${m.tipo}**`, '', m.texto, '');
+    for (const m of marcarTiempos(linea, audio)) if (m.texto && (p.tipo !== 'gancho' || esBeatDeCierre(m))) texto.push(`**${formatoDeTiempo(m.inicioMs)} — ${formatoDeTiempo(m.finMs)} · ${m.tipo}**`, '', m.texto, '');
   }
   return texto.join('\n');
 }

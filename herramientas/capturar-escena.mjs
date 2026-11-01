@@ -10,7 +10,7 @@
 //
 // --archivo   partida de un juego con escena dentro de data/ (obligatorio)      --partida   cual del archivo (1 = la primera)
 // --formato   9x16, 16x9 o hoja, separados por coma (por defecto 9x16,16x9) --beats     auto (los momentos clave) o los numeros separados por coma
-// --numero=N [--parte=1 --de=2 --clip=K]  abre la parte o el clip con su tarjeta de identificacion «Juego N · Parte M de K» (el beat 0)
+// --numero=N [--parte=1 --de=2 --clip=K | --episodio]  abre la parte, el clip o el episodio completo con su tarjeta de identificacion «Juego N · Parte M de K» (el beat 0)
 // --gancho=auto|10,6,14  captura el gancho «Proximamente» (con auto elige los cortes de la parte; --parte=1 --de=2 --numero=N con el jN del juego para sus tarjetas): sus tarjetas y el primer momento de cada corte
 // --voz=data/voz/NOMBRE-pN/voz.json   con --completa, reproduce con la voz (herramientas/narrar.mjs) y comprueba que lo medido coincide con la linea de tiempo con voz
 // --estado    en el reparto de cada mano desde la segunda comprueba que no queda nada de la anterior (sello, anuncio, pastillas, medallas); --manos=N cuantas
@@ -38,7 +38,7 @@ export function tamanoDeFormato(formato) {
 export function urlDeCaptura({ base, archivo, formato, beat = null, partida = 1, vel = null, voz = null, grabar = false, sonido = false, gancho = null, pieza = null }) {
   const q = new URLSearchParams({ archivo, partida: String(partida), formato, limpio: '1', auto: '1', sonido: sonido ? '1' : '0', escala: '1' });
   if (gancho) { q.set('gancho', '1'); q.set('cortes', gancho.cortes.join(',')); q.set('parte', String(gancho.parte)); q.set('de', String(gancho.de)); if (gancho.numero) q.set('numero', String(gancho.numero)); } // el gancho «Proximamente»: los beats son los suyos (gancho.js)
-  if (pieza?.numero) for (const [clave, valor] of [['numero', pieza.numero], ['parte', pieza.parte], ['de', pieza.de], ['clip', pieza.clip]]) if (valor) q.set(clave, String(valor)); // una parte o un clip abre con su tarjeta «Juego N · Parte M de K»
+  if (pieza?.numero) for (const [clave, valor] of [['numero', pieza.numero], ['parte', pieza.parte], ['de', pieza.de], ['clip', pieza.clip], ['episodio', pieza.episodio ? 1 : 0]]) if (valor) q.set(clave, String(valor)); // una parte o un clip abre con su tarjeta «Juego N · Parte M de K»
   if (grabar) q.set('grabar', '1');
   if (beat !== null && beat !== undefined) q.set('detener', String(beat));
   if (vel) q.set('vel', String(vel));
@@ -211,8 +211,8 @@ async function principal() {
   // con --numero=N (y --parte=1 --de=2, y --clip=K para un clip) la pieza abre con su tarjeta de identificacion (gancho.js: conIdentificador): el indice de cada beat cuenta esa tarjeta
   let pieza = null;
   if (!a.gancho && Number(a.numero) >= 1) {
-    pieza = { numero: Number(a.numero), parte: Number(a.parte) || null, de: Number(a.de) || null, clip: Number(a.clip) || null };
-    beatsDeCaptura = conIdentificador(beats, { juegoId: juego, juegoNumero: pieza.numero, parte: pieza.parte, de: pieza.de, clip: pieza.clip });
+    pieza = { numero: Number(a.numero), parte: Number(a.parte) || null, de: Number(a.de) || null, clip: Number(a.clip) || null, episodio: a.episodio === 'true' }; // --episodio: el juego entero de corrido («Episodio completo»)
+    beatsDeCaptura = conIdentificador(beats, { juegoId: juego, juegoNumero: pieza.numero, parte: pieza.parte, de: pieza.de, clip: pieza.clip, episodio: pieza.episodio });
   }
 
   if (a.completa) {

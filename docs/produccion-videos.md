@@ -28,6 +28,13 @@ sus clips, gancho de la parte 2, parte 2 y sus clips. Una pieza solo se genera
 si hay momentos adecuados; no se inventan clips para llenar un cupo. Cada clip
 queda dentro de su parte, sin la primera unidad de la partida ni la ultima.
 
+**Episodio completo (31-10-2026).** Ademas de las partes, el paquete trae una pieza `episodio-completo` (`j1_ep`):
+el juego entero de corrido, una sola grabacion de la primera a la ultima unidad, con la tarjeta «Juego N · Episodio
+completo», sin gancho y con el cierre de `final`. Va **al final** del LEEME y del orden de subida, pasado un tiempo
+(los dias, en la estrategia de publicacion): su `textos/episodio-completo.txt` cuenta el resultado, asi que no se
+sube antes. Se graba y se recorta igual que las demas (`episodio=1` en la direccion). Un paquete anterior la suma
+al regenerarlo con `--forzar` (`--juego=N` conserva su numero).
+
 Para organizar grabaciones ya existentes, sin cambiar su audio ni los textos:
 
 ```powershell
@@ -171,6 +178,13 @@ En los dos, una animación del navegador (`animate()` con `fill: 'forwards'`) ca
 él), sin Web Animations con `fill` ni transiciones de CSS de opacidad/transform. Una prueba lo exige (`src/pruebas/escena/hud-conquista.test.js`). Si en otro juego algo se queda pegado o invisible solo en OBS, es lo primero que hay que sospechar.
 Al regrabar: «Actualizar caché de la página actual» en OBS. Si aun así falla, probar con la aceleración por hardware del navegador apagada (OBS → Ajustes → Avanzado → «Aceleración por hardware del navegador», pide reiniciar OBS).
 Para diagnosticar: sacar de la grabación el brillo de la zona (ffmpeg `signalstats`) segundo a segundo, casarlo con los momentos de la partida y comparar con el DOM en una reproducción en tiempo real.
+
+## Un panel vacío que tapa la mesa al terminar cada mano o ronda (29 de octubre de 2026): NO era OBS
+
+En Duda y apuesta (j1, parte 1) las cartas de la mano 2 se veían negras y «ya nada se veía» justo después de «Y el anuncio era cierto»; en Triple dado, antes de la ronda 2. Se reproducía igual en Chrome (a los 64 s un panel oscuro con borde dorado cubría las dos mesas) y se midió con `elementsFromPoint`: era `.cierre-juego` con opacidad 1 y texto vacío.
+Causa: Duda y Triple dado llaman `cierre` a su propio fin de mano o de ronda (con su animación en `METODOS`) y el cierre de cada VIDEO (`cierre.js`) también era un beat de tipo `cierre`. `MesaBase.ejecutar` desviaba el del juego a la tarjeta del video (vacía, sin paso `cierre`) y nunca corría `cerrar`/`cerrarRonda`; además `conCierre` creía que la pieza ya traía su cierre cuando el último beat era el del juego, así que la tarjeta final real (logo, @ de las redes, sitio) tampoco se agregaba.
+**Regla:** el cierre del video se reconoce por su id `cierre-N` (`esBeatDeCierre` en `cierre.js`), NUNCA por el tipo; ningún beat de un juego puede llevar un id `cierre-N`. Lo exige `src/pruebas/escena/cierre-del-video-y-cierre-de-juego.test.js`. Un beat con el tipo de otra cosa de la base (`intro`, `tarjeta-gancho`) tendría el mismo problema: antes de nombrar un tipo de beat nuevo, buscarlo en `mesa-base.js`.
+Las piezas ya grabadas de esos juegos no sirven (no traen el fin de mano ni el cierre): regenerar la voz de los cierres (`node herramientas/narrar.mjs --archivo=... --solo-cierres`) y el paquete (`paquete.mjs --forzar`) y volver a grabar. Para revisar TODAS las piezas de un paquete antes de grabar: `node herramientas/auditar-cubiertas.mjs grabaciones/listos/<juego>/<carpeta>/paquete-jN/LEEME.md` (abre cada dirección del LEEME en Chrome a velocidad 4 en su propio servidor del puerto 4325, y exige que las tarjetas de arranque, gancho y cierre estén visibles solo en su beat, que la pieza cierre sin errores y que traiga la tarjeta final del video; lo decide `problemasDePieza`, probada en `src/pruebas/escena/auditar-cubiertas.test.js`). No sustituye mirar la grabación de OBS.
 
 ## Guion para narracion humana
 

@@ -1,4 +1,4 @@
-// El paquete de publicacion de una partida guardada: las piezas que se graban (las dos partes y hasta 3 clips destacados), la direccion exacta de cada una para abrirla y grabarla, y el
+// El paquete de publicacion de una partida guardada: las piezas que se graban (las dos partes, hasta 3 clips destacados y el episodio completo), la direccion exacta de cada una para abrirla y grabarla, y el
 // texto de cada red (TikTok, Instagram, Facebook, YouTube y X). Funcion PURA sobre lo que ya esta guardado: solo hechos (quien jugo, el resultado, el seed, las reglas publicas del juego); la linea de
 // gancho va marcada `[GANCHO: ...]` con una sugerencia sacada de los datos, para que alguien la confirme o la cambie. Nunca lleva un mensaje privado ni la razon de una IA, y los hashtags de
 // modelos son solo de quienes juegan. Lo escribe a disco herramientas/paquete.mjs. Sin DOM ni red.
@@ -138,8 +138,9 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const total = Math.round(ms + IDENTIFICADOR_MS + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz, cierre));
     return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz, cierre, juegoNumero: juegoN, de: 2, ...pieza }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
   };
+  const resultadoCorto = hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : partida.extincionMutua === true ? `Ganó ${ganador} tras una extinción mutua` : `Ganó ${ganador}`) : 'Terminó en empate';
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
-    const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : partida.extincionMutua === true ? `Ganó ${ganador} tras una extinción mutua` : `Ganó ${ganador}`) : 'Terminó en empate';
+    const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : resultadoCorto;
     piezas.push({
       id: `parte-${n}`, tipo: 'parte', parte: n, titulo: `${t.nombre} · Parte ${n} de 2`, cierre: n === 2 ? 'final' : 'parte',
       grabar: grabarDe(p.mano, p.hasta, p.ms, n === 1 ? `Empieza con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s).` : 'Sin tarjeta de arranque.', n === 2 ? 'final' : 'parte', { parte: n }),
@@ -170,6 +171,13 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       grabar: grabarDe(w.mano, w.hasta, w.ms, `${etiqueta}${motivos ? ` · motivos: ${motivos}` : ''}${w.ajustada ? '' : ` · fuera de ${MIN_CLIP_MS / 1000} a ${MAX_CLIP_MS / 1000} s (una unidad de este juego ya dura ${Math.round(w.ms / 1000)} s): recórtalo al momento clave al editar`}`, 'clip', { parte, clip: i + 1 }),
       textos: textosDe({ sug: `${etiqueta}: el momento más intenso`, encabezado: t.nombre, parte: 0, tipo: 'clip' }), comentarioFijado: null,
     });
+  });
+  // El episodio completo (31-10-2026): el juego entero de corrido, una sola grabacion de la primera a la ultima unidad, con la tarjeta «Juego N · Episodio completo», sin gancho y con el cierre de final. Se sube AL FINAL,
+  // pasado un tiempo: cuenta el resultado (su texto lo dice, como la parte 2), asi que no se adelanta nada a nadie. Reusa los textos de la parte 2 (la que cuenta el final) con su propio encabezado.
+  piezas.push({
+    id: 'episodio-completo', tipo: 'episodio', titulo: `${t.nombre} · Episodio completo`, cierre: 'final',
+    grabar: grabarDe(partes.parte1.mano, partes.parte2.hasta, partes.parte1.ms + partes.parte2.ms, `El juego entero de corrido (${unidad.toLowerCase()}s ${partes.parte1.mano} a ${partes.parte2.hasta}), con la tarjeta de arranque (${(introMs / 1000).toFixed(0)} s). Cuenta el resultado: se sube al final, pasado un tiempo.`, 'final', { episodio: true, de: null }), // sin `de`: no es una parte de K
+    textos: textosDe({ sug: resultadoCorto, encabezado: `${t.nombre} · Episodio completo`, parte: 2, tipo: 'episodio' }), comentarioFijado,
   });
   // los ganchos «Proximamente» (gancho.js), uno por parte, para subirlos ANTES de esa parte: cortes rapidos de momentos de esa parte, sin voz (la musica la pone quien lo sube) y sin resultado.
   // REGLA (25 de octubre de 2026): ninguna parte se queda sin gancho. Si no hay al menos 2 cortes buenos para uno en video (Lobo en la aldea, o cualquier juego sin momentos con puntos),
@@ -210,6 +218,6 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       textos, comentarioFijado: null,
     });
   }
-  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, juegoNumero: juegoN, unidad, enlace, destacadas, hashtags });
+  for (const p of piezas) p.publicacion = publicacionDePieza(p, { beats: lista, nombres, seed: partida.seed, juego: t.nombre, juegoNumero: juegoN, unidad, enlace, destacadas, hashtags, resultado: p.tipo === 'episodio' ? resultadoCorto : '' });
   return { juego, piezas, ordenPublicacion: ordenDePublicacion(piezas).map((p) => p.id), advertencias };
 }

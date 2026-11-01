@@ -1,5 +1,7 @@
 // El cierre de CADA video (parte, clip o gancho): la voz pide seguirnos y reaccionar con una frase que cambia de un video a otro, y en pantalla queda el logo, el @ de cada red y la pagina donde se
 // publican los resultados. Es un beat mas al final de la pieza (tipo 'cierre'), como la tarjeta de arranque lo es al principio (intro.js); la pagina lo agrega con cierre=1 (escena.js).
+// OJO: el TIPO `cierre` no basta para reconocerlo: Duda y apuesta y Triple dado llaman `cierre` a su propio fin de mano o de ronda (con su animacion en METODOS). El cierre del video se
+// reconoce SOLO por su id `cierre-N` (esBeatDeCierre); con el tipo, la mesa mostraba esta tarjeta vacia sobre la mesa al terminar cada mano (29-10-2026, grabaciones de OBS).
 // La frase se elige con un seed sacado de la pieza (nunca Math.random: el mismo video es siempre igual) y el id del beat dice cual es (`cierre-N`): la voz se genera para TODAS las frases
 // (herramientas/narrar.mjs) y cada pieza usa el audio que le toca. Puro: sin DOM ni red. Los @ y la pagina salen de web/redes.js (una sola fuente).
 
@@ -97,6 +99,7 @@ export function claveDeCierre(p) {
 // El numero global de la frase (`cierre-N`): se elige entre las frases del tipo de pieza con el seed de la clave.
 export const indiceDeCierre = (clave, tipo = 'final') => DESDE[tipoDe(tipo)] + seedDeTexto(`cierre:${clave}`) % FRASES_POR_TIPO[tipoDe(tipo)].length;
 export const esCierre = (id) => /^cierre-\d+$/.test(String(id ?? ''));
+export const esBeatDeCierre = (beat) => esCierre(beat?.id); // el cierre del VIDEO (no el `cierre` de mano o de ronda de un juego, que comparte el tipo pero no el id)
 
 // El beat que va al final de la pieza. `mano` es la unidad del ultimo beat (asi un recorte por unidades no lo pierde). `tipo`: final | parte | clip | gancho (que frase le toca).
 export function beatDeCierre(clave, mano = 0, tipo = 'final') {
@@ -112,7 +115,7 @@ export function beatDeCierre(clave, mano = 0, tipo = 'final') {
 // Los beats con el cierre al final; si ya lo traen, tal cual. Lista vacia o basura -> lista vacia (no hay pieza a la que cerrar).
 export function conCierre(beats, clave, tipo = 'final') {
   if (!Array.isArray(beats) || !beats.length) return [];
-  if (beats.at(-1)?.tipo === 'cierre') return beats;
+  if (esBeatDeCierre(beats.at(-1))) return beats;
   return [...beats, beatDeCierre(clave, beats.at(-1)?.mano ?? 0, tipo)];
 }
 

@@ -137,10 +137,11 @@ export const IDENTIFICADOR_MS = 2500; // lo que dura la tarjeta que abre cada pa
 // Sin numero de juego (una direccion vieja) o sin beats, los beats quedan tal cual; si ya la traen, no se duplica. Sin DOM.
 export function conIdentificador(beats, contexto) {
   if (!Array.isArray(beats) || !beats.length) return [];
-  const { juegoId, juegoNumero, parte = null, de = null, clip = null } = contexto && typeof contexto === 'object' ? contexto : {};
+  const { juegoId, juegoNumero, parte = null, de = null, clip = null, episodio = false } = contexto && typeof contexto === 'object' ? contexto : {};
   if (!Number.isInteger(juegoNumero) || juegoNumero < 1 || beats[0]?.id === 'identificador') return beats;
   const entero = (n) => Number.isInteger(n) && n >= 1;
-  const detalle = [entero(clip) ? `Clip ${clip}` : null, entero(parte) && entero(de) && de > 1 ? `Parte ${parte} de ${de}` : null].filter(Boolean).join(' · ');
+  // el episodio completo (el juego entero de corrido) no es una parte ni un clip: dice solo «Episodio completo»
+  const detalle = episodio === true ? 'Episodio completo' : [entero(clip) ? `Clip ${clip}` : null, entero(parte) && entero(de) && de > 1 ? `Parte ${parte} de ${de}` : null].filter(Boolean).join(' · ');
   const datos = { kicker: `Juego ${juegoNumero}`, nombre: textoDeJuego(juegoId)?.nombre ?? 'Enfrentando a las IAs', detalle, aviso: AVISO };
   return [{ ...tarjeta('identificador', 'apertura', IDENTIFICADOR_MS, datos), mano: beats[0].mano }, ...beats];
 }

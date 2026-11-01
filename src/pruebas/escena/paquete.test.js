@@ -100,7 +100,7 @@ test('el paquete de cada juego: dos partes que cubren la partida y de 1 a 3 clip
       const q = params(pieza.grabar.url);
       assert.match(pieza.grabar.url, /^escena\.html\?/);
       assert.deepEqual([q.archivo, q.partida, q.ronda, q.hasta, q.formato, q.auto, q.limpio, q.grabar, q.cierre], [`pruebas/${id}.json`, '1', String(pieza.grabar.desde), String(pieza.grabar.hasta), 'hoja', '1', '1', '1', pieza.cierre], `${id}: ${pieza.id} termina con el cierre`);
-      assert.equal(pieza.cierre, pieza.tipo === 'clip' ? 'clip' : pieza.parte === 2 ? 'final' : 'parte', `${id}: ${pieza.id} lleva la frase de su tipo`);
+      assert.equal(pieza.cierre, pieza.tipo === 'clip' ? 'clip' : pieza.tipo === 'episodio' || pieza.parte === 2 ? 'final' : 'parte', `${id}: ${pieza.id} lleva la frase de su tipo`);
     }
   }
 });
@@ -181,8 +181,10 @@ test('los textos de cada red caben en su limite, llevan el aviso de IA y de inde
 test('el resultado solo sale en la parte 2 y dice "en esta partida"; las partes y los clips no lo adelantan; el comentario fijado solo va en las partes', async () => {
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida);
-    const gan = partida.jugadores[partida.ganador]?.nombre, [p1, p2, ...clips] = paquete.piezas;
+    const gan = partida.jugadores[partida.ganador]?.nombre, [p1, p2, ...otras] = paquete.piezas;
+    const clips = otras.filter((p) => p.tipo !== 'episodio'), episodio = otras.find((p) => p.tipo === 'episodio'); // el episodio completo es lo ultimo que se sube: SI cuenta el resultado
     const todo = (p) => textosPlanos(p).join('\n');
+    if (gan && partida.empate !== true) assert.match(episodio.textos.instagram, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: el episodio completo dice quien gano`);
     assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(p1)), `${id}: la parte 1 adelanta el resultado`);
     for (const c of clips) assert.ok(!/Puntos:|Orden final:|En esta partida ganó/.test(todo(c)), `${id}: un clip adelanta el resultado`);
     if (gan && partida.empate !== true) assert.match(p2.textos.instagram, new RegExp(`En esta partida ganó ${gan.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${id}: la parte 2 dice quien gano`);
@@ -324,6 +326,7 @@ test('TODA pieza que se graba (parte, clip y gancho en video) lleva el jN en su 
     for (const p of grabables) {
       const q = params(p.grabar.url);
       assert.equal(q.numero, '7', `${id} ${p.id}: sin jN la pieza no se identifica`);
+      if (p.tipo === 'episodio') { assert.deepEqual([q.parte, q.de, q.episodio], [undefined, undefined, '1'], `${id} ${p.id}: el juego entero no es una parte`); continue; }
       assert.deepEqual([q.parte, q.de], [String(p.parte), '2'], `${id} ${p.id}: la parte a la que pertenece`);
       assert.equal(q.clip, p.tipo === 'clip' ? p.id.split('-')[1] : undefined, `${id} ${p.id}: el numero de clip, solo en los clips`);
     }
@@ -410,14 +413,14 @@ test('Lobo no tiene momentos con puntos para cortes: cada parte lleva un gancho 
   assert.equal(construirPaquete({ partida, beats, destacadas, archivo: 'pruebas/lobo.json', partidaNumero: 3 }).piezas.find((p) => p.id === 'gancho-1').textos.tiktok.includes('Juego 3'), true, 'sin jN se usa el numero de partida');
 });
 
-const IDENTIFICADOR = /^(.+) J(\d+) - (Parte \d\/2|Clip \d+ \(Parte \d\/2\)|Próximamente Parte \d\/2) - Seed (\d+)/;
+const IDENTIFICADOR = /^(.+) J(\d+) - (Parte \d\/2|Clip \d+ \(Parte \d\/2\)|Próximamente Parte \d\/2|Episodio completo) - Seed (\d+)/;
 
 test('el titulo y la descripcion de CADA pieza empiezan igual en todas las redes: Juego, jN, parte (o clip, o gancho) y seed', async () => {
   for (const [id, partida] of Object.entries(PARTIDAS)) {
     const { paquete } = await paqueteDe(id, partida, { juegoNumero: 3 });
     assert.ok(paquete.piezas.length >= 4, id);
     for (const p of paquete.piezas) {
-      const tramo = p.tipo === 'parte' ? `Parte ${p.parte}/2` : p.tipo === 'clip' ? `Clip ${p.id.split('-').at(-1)} (Parte ${p.parte}/2)` : `Próximamente Parte ${p.parte}/2`;
+      const tramo = p.tipo === 'parte' ? `Parte ${p.parte}/2` : p.tipo === 'clip' ? `Clip ${p.id.split('-').at(-1)} (Parte ${p.parte}/2)` : p.tipo === 'episodio' ? 'Episodio completo' : `Próximamente Parte ${p.parte}/2`;
       const identificador = `${textoDeJuego(id).nombre} J3 - ${tramo} - Seed ${partida.seed}`;
       assert.ok(p.publicacion.titulo.startsWith(identificador), `${id}/${p.id}: título «${p.publicacion.titulo}»`);
       assert.ok(p.publicacion.descripcion.startsWith(identificador), `${id}/${p.id}: descripción «${p.publicacion.descripcion}»`);

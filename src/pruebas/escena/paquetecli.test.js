@@ -53,11 +53,11 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   assert.ok(existsSync(join(carpeta, 'LEEME.md')));
   for (const sub of SUBCARPETAS) assert.ok(existsSync(join(salida, sub, 'j1')), `la serie nace con su carpeta ${sub}/j1/`);
   const archivos = readdirSync(join(carpeta, 'textos')).sort();
-  for (const pieza of ['parte-1', 'parte-2', 'clip-1']) assert.ok(archivos.includes(`${pieza}.txt`), `falta ${pieza}.txt`);
+  for (const pieza of ['parte-1', 'parte-2', 'clip-1', 'episodio-completo']) assert.ok(archivos.includes(`${pieza}.txt`), `falta ${pieza}.txt`);
   assert.ok(!archivos.some((n) => /-(facebook|instagram|youtube|tiktok|x|comentario)\.txt$/.test(n)));
   assert.ok(!archivos.includes('clip-1-comentario.txt'), 'un clip no lleva comentario fijado');
   const leeme = readFileSync(join(carpeta, 'LEEME.md'), 'utf8');
-  for (const pieza of ['parte-1', 'parte-2', 'clip-1']) assert.match(leeme, new RegExp(`### .*${pieza}`), `el LEEME no habla de ${pieza}`);
+  for (const pieza of ['parte-1', 'parte-2', 'clip-1', 'episodio-completo']) assert.match(leeme, new RegExp(`### .*${pieza}`), `el LEEME no habla de ${pieza}`);
   assert.match(leeme, /http:\/\/localhost:4321\/escena\.html\?archivo=[^\s)]*ronda=\d+&hasta=\d+/, 'direccion exacta con ronda= y hasta=');
   assert.match(leeme, /node src\/servidor\.js/, 'dice como abrir el servidor');
   assert.match(leeme, /Texto único/, 'hay un solo texto por pieza');
@@ -102,7 +102,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   }
   // el nombre de cada video dice el juego, la pieza, el formato y las redes: j1_pt1_9x16_fb-ig-tk-yt.mp4
   assert.ok(texto.includes('j1_pt1_convoz_9x16_fb-ig-tk-yt.mp4') && texto.includes('j1_pt2_sinvoz_16x9_fb-x-yt.mp4'));
-  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_((hk|pt|clp)\d_(convoz|sinvoz)|hk\d)_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`); // el video de un gancho de imagen fija no tiene voz: j1_hk2_9x16_fb-ig-tk-yt.mp4
+  for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_(((hk|pt|clp)\d|ep)_(convoz|sinvoz)|hk\d)_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`); // el video de un gancho de imagen fija no tiene voz: j1_hk2_9x16_fb-ig-tk-yt.mp4
   assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/guerra)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
   assert.match(texto, /subidos\//, 'dice que lo subido se mueve a subidos/');
   assert.ok(texto.includes('textos/parte-1.txt'), 'lista el texto unico');
@@ -129,7 +129,7 @@ test('el LEEME pone los nombres de archivo, las direcciones y los comandos en bl
   const fuera = texto.replace(/^( *)```(\w*)\n[\s\S]*?\n\1```$/gm, '');
   // lo que se copia solo aparece dentro de bloques: nunca suelto en una frase
   assert.doesNotMatch(fuera, /\bnode herramientas\/(recortar-formatos|gancho-imagen)\.mjs/, 'un comando de recorte fuera de un bloque');
-  assert.doesNotMatch(fuera, /\bj\d+_(hk|pt|clp)\d\.mkv\b/, 'el nombre de una grabación fuera de un bloque');
+  assert.doesNotMatch(fuera, /\bj\d+_((hk|pt|clp)\d|ep)\.mkv\b/, 'el nombre de una grabación fuera de un bloque');
   assert.doesNotMatch(fuera, /http:\/\/localhost:4321\/(escena|gancho-imagen)\.html/, 'una dirección de grabación fuera de un bloque');
   const grabables = paquete.piezas.filter((p) => p.tipo !== 'gancho-imagen');
   // el resumen va antes del paso 0: los nombres (en el orden de grabacion) y los comandos, un renglon por pieza
@@ -139,7 +139,7 @@ test('el LEEME pone los nombres de archivo, las direcciones y los comandos en bl
   const nombres = resumen.match(/```text\n([\s\S]*?)\n```/)[1].split('\n'), comandos = resumen.match(/```powershell\n([\s\S]*?)\n```/)[1].split('\n');
   assert.equal(nombres.length, grabables.length);
   assert.equal(comandos.length, grabables.length);
-  nombres.forEach((n, i) => { assert.match(n, /^j1_(hk|pt|clp)\d\.mkv$/, n); assert.ok(comandos[i].startsWith('node herramientas/recortar-formatos.mjs "') && comandos[i].includes(` ${n.replace(/\.mkv$/, '')} `), `${n} → ${comandos[i]}`); });
+  nombres.forEach((n, i) => { assert.match(n, /^j1_((hk|pt|clp)\d|ep)\.mkv$/, n); assert.ok(comandos[i].startsWith('node herramientas/recortar-formatos.mjs "') && comandos[i].includes(` ${n.replace(/\.mkv$/, '')} `), `${n} → ${comandos[i]}`); });
   assert.ok(bloques.some((b) => b.lenguaje === 'powershell' && b.cuerpo === 'node src/servidor.js'), 'el comando del servidor tambien es un bloque');
   // cada pieza: su direccion, el nombre a ponerle y su comando de recorte, cada cosa en su propio bloque
   for (const p of grabables) {

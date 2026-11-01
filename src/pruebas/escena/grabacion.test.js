@@ -103,6 +103,6 @@ test('direccionDeGrabacion: una parte o un clip llevan el jN (numero), la parte 
   const parte = new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 3, parte: 1, de: 2 })}`);
   assert.deepEqual([parte.searchParams.get('numero'), parte.searchParams.get('parte'), parte.searchParams.get('de'), parte.searchParams.get('clip')], ['3', '1', '2', null]);
   const clip = leerParametros(new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 3, parte: 2, de: 2, clip: 4, cierre: 'clip' })}`).search);
-  assert.deepEqual([clip.numero, clip.pieza], [3, { parte: 2, de: 2, clip: 4 }]);
+  assert.deepEqual([clip.numero, clip.pieza], [3, { parte: 2, de: 2, clip: 4, episodio: false }]);
   assert.equal(new URL(`http://x/${direccionDeGrabacion({ ...base, juegoNumero: 0, parte: 1, de: 2 })}`).searchParams.get('numero'), null, 'un jN invalido no se escribe');
 });

@@ -3,7 +3,7 @@
 //   j1_pt1_9x16_fb-ig-tk-yt.mp4
 //   |  |   |    '-- redes a las que ese archivo sirve (siglas de REDES, orden alfabetico; salen de FORMATOS)
 //   |  |   '------- formato
-//   |  '----------- pieza: hkN = gancho «Proximamente» (hook) de la parte N, ptN = parte N, clpN = clip N (se sube en ese orden)
+//   |  '----------- pieza: hkN = gancho «Proximamente» (hook) de la parte N, ptN = parte N, clpN = clip N (se sube en ese orden), ep = el episodio completo (se sube al final, pasado un tiempo)
 //   '-------------- numero de juego (una partida jugada y empaquetada): sube de uno en uno en cada juego nuevo de la carpeta del juego (elegirJuego); sin fecha
 //
 // La grabacion original de OBS lleva el mismo nombre SIN formato ni redes (j1_pt1.mkv): sus recortes quedan juntos y se reconocen de un vistazo. El paquete de cada juego se llama paquete-jN.
@@ -17,10 +17,11 @@ export const SUBCARPETAS = ['originales', 'por-subir', 'subidos', 'revision'];
 
 const ABREVIATURAS = { parte: 'pt', clip: 'clp', gancho: 'hk' };
 
-// 'parte-2' -> 'pt2', 'clip-1' -> 'clp1', 'gancho-1' -> 'hk1' (hook: el «Proximamente» que se sube antes de una parte). Un id desconocido se limpia a letras y numeros; nunca lanza ni queda vacio.
+// 'parte-2' -> 'pt2', 'clip-1' -> 'clp1', 'gancho-1' -> 'hk1' (hook: el «Proximamente» que se sube antes de una parte), 'episodio-completo' -> 'ep' (el juego entero, que se sube al final). Un id desconocido se limpia a letras y numeros; nunca lanza ni queda vacio.
 export function abreviarPieza(id) {
   const m = /^(parte|clip|gancho)-(\d+)$/.exec(String(id ?? ''));
   if (m) return `${ABREVIATURAS[m[1]]}${m[2]}`;
+  if (id === 'episodio-completo') return 'ep';
   return String(id ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '') || 'pieza';
 }
 
