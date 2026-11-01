@@ -1,4 +1,8 @@
-export const VERSION = 'lobo-1.3.0';
+// 1.4.0 (29-10-2026): prompt COMPLETO (src/juegos/lobo/reglas-texto.js, docs/guia-de-prompts.md); las reglas del motor no cambian. 1.3.0: Cupido oculto.
+export const VERSION = 'lobo-1.4.0';
+export const LARGO_MENSAJE = 1000; // caracteres maximos del mensaje del dia; un mensaje mas largo invalida TODA la respuesta
+export const PUNTOS = Object.freeze({ bando: 10, enamorados: 5, acierto: 1 });
+export const LIMITE_LLAMADAS = 100; // presupuesto de llamadas por partida; si la fase siguiente no cabe, la partida cierra en empate
 // Qué ve el público (cámara y video) de lo que Cupido elige en la noche 1; las IAs no ven ninguno de los dos. Se sortea por seed (25 % cada modo).
 export const MODOS_CUPIDO = Object.freeze(['pareja', 'cupido', 'ambos', 'nada']);
 export const REVELA_CUPIDO = Object.freeze({ pareja: { pareja: true, cupido: false }, cupido: { pareja: false, cupido: true }, ambos: { pareja: true, cupido: true }, nada: { pareja: false, cupido: false } });

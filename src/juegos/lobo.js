@@ -3,8 +3,8 @@ import { normalizarRespuesta } from './lobo/ordenes.js';
 import { aplicarTurno, cerrarPorLimiteLlamadas } from './lobo/turno.js';
 import { vistaTexto } from './lobo/vista.js';
 import { resultadoDe } from './lobo/resultado.js';
-import { REGLAS, FORMATO } from './lobo/reglas-texto.js';
-import { VERSION } from './lobo/constantes.js';
+import { PRESENTACION, REGLAS, GUIA_ESTADO, FORMATO, EXPLICACION_RESPUESTA, ERRORES_FRECUENTES } from './lobo/reglas-texto.js';
+import { VERSION, LIMITE_LLAMADAS } from './lobo/constantes.js';
 import { BOTS, INFO_BOTS } from './lobo-bots.js';
 
 export default {
@@ -14,8 +14,14 @@ export default {
   // Ocho rondas narrativas requieren hasta 4*8 + Cupido + cazador = 34
   // pasos de decisión. 48 deja 14 de margen (y la arena admite otros dos).
   // No modifica los topes narrativos aceptados de CONFIGURACIONES.
-  rondas: 48, llamadasMax: 100, limiteLlamadasDuro: 100, versionReglas: VERSION,
-  reglas: REGLAS, formatoRespuesta: FORMATO,
+  rondas: 48, llamadasMax: LIMITE_LLAMADAS, limiteLlamadasDuro: LIMITE_LLAMADAS, versionReglas: VERSION,
+  // Secciones del prompt (el envoltorio comun es src/prompt.js; guia: docs/guia-de-prompts.md)
+  presentacion: PRESENTACION,
+  reglas: REGLAS,
+  guiaDelEstado: GUIA_ESTADO,
+  formatoRespuesta: FORMATO,
+  explicacionDeRespuesta: EXPLICACION_RESPUESTA,
+  erroresFrecuentes: ERRORES_FRECUENTES,
   bots: Object.fromEntries(Object.entries(BOTS).map(([id, fn]) => [id, { ...INFO_BOTS[id], fn }])),
   crear: crearEstado, terminado: (E) => E.fin, vista: vistaTexto,
   normalizar: normalizarRespuesta, aplicar: aplicarTurno, resultado: resultadoDe, activos: activosDe,

@@ -1,12 +1,12 @@
 import { activosDe } from './estado.js';
-import { bandoDe, REVELA_CUPIDO, ROLES } from './constantes.js';
+import { bandoDe, REVELA_CUPIDO, ROLES, LARGO_MENSAJE, PUNTOS } from './constantes.js';
 import { normalizarRespuesta } from './ordenes.js';
 import { vistaCamara } from './vista.js';
 
 const vivos = (E, i = null) => E.vivos.flatMap((v, j) => v && j !== i ? [j] : []);
 const objetivoValido = (E, j, i) => Number.isInteger(j) && E.vivos[j] === true && j !== i;
 const evento = (E, tipo, datos = {}) => E.eventos.push({ ronda: E.ronda, tipo, ...datos });
-const acierto = (E, i) => { E.puntos[i]++; E.stats[i].aciertos++; };
+const acierto = (E, i) => { E.puntos[i] += PUNTOS.acierto; E.stats[i].aciertos++; };
 
 const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida (igual que Guerra, Duda y apuesta y La Fuga)
 // Lo recibido, corto y con comillas: "3" (texto) no es 3 (numero), y eso es justo lo que suele fallar.
@@ -45,7 +45,7 @@ export function motivoInvalido(E, i, r) {
     }
     case 'cazador': return motivoDeAccion(r, 'disparar') ?? motivoDeObjetivo(E, r.objetivo, i);
     case 'dia':
-      if (typeof r.mensaje === 'string' && r.mensaje.length > 1000) return `mensaje de ${r.mensaje.length} caracteres: el máximo es 1000`;
+      if (typeof r.mensaje === 'string' && r.mensaje.length > LARGO_MENSAJE) return `mensaje de ${r.mensaje.length} caracteres: el máximo es ${LARGO_MENSAJE}`;
       return motivoDeObjetivo(E, r.voto, i, 'voto')
         ?? (typeof r.mensaje !== 'string' ? `mensaje debe ser texto (recibió ${ver(r.mensaje)})` : null)
         ?? (r.afirmaRol === undefined || ROLES.includes(r.afirmaRol) ? null : `afirmaRol debe ser uno de ${ROLES.join(', ')} (recibió ${ver(r.afirmaRol)})`);
@@ -99,8 +99,8 @@ function cerrarSiCorresponde(E, tope = false, motivoCorte = null) {
   E.ganadorBando = ganador;
   E.motivoFin = motivoCorte ?? (!restantes.length ? 'extincion' : ganador ? 'eliminacion' : 'tope');
   E.roles.forEach((rol, i) => {
-    if (ganador && bandoDe(rol) === ganador) E.puntos[i] += 10;
-    if (E.enamorados.includes(i) && E.enamorados.every((j) => E.vivos[j])) E.puntos[i] += 5;
+    if (ganador && bandoDe(rol) === ganador) E.puntos[i] += PUNTOS.bando;
+    if (E.enamorados.includes(i) && E.enamorados.every((j) => E.vivos[j])) E.puntos[i] += PUNTOS.enamorados;
   });
   E.camaraVe = { cupido: true, pareja: true };
   evento(E, 'final', { ganadorBando: ganador, motivo: E.motivoFin, roles: [...E.roles], puntos: [...E.puntos], enamorados: [...E.enamorados],

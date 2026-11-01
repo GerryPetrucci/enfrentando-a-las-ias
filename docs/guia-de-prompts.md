@@ -82,7 +82,7 @@ Tamaño del prompt de sistema el 28-10-2026 (medido con 2.71 caracteres por toke
 | Triple dado | tripledado-1.0.0 | 4 027 | 1 490 | Pendiente |
 | Mayor o menor | mayormenor-2.0.0 | 3 810 | 1 410 | Pendiente |
 | La Fuga | fuga-2.1.0 | 3 640 | 1 340 | Pendiente |
-| Lobo | lobo-1.3.0 | 3 115 | 1 150 | Pendiente |
+| Lobo | lobo-1.4.0 | 19 458 (antes 3 115) | 7 200 (antes 1 150) | HECHO el 29-10-2026: prompt completo con pruebas contra el motor; SIN medir con modelos (poco crédito): la primera partida real es la medición (ver `docs/decisiones-detalle.md`) |
 | El número solitario | solitario-1.0.0 | 2 398 | 885 | Pendiente |
 | Subasta de tiempo | subasta-1.0.0 | 2 072 | 765 | Pendiente |
 | Dilema del prisionero | (sin versión de reglas) | 1 257 | 465 | Pendiente |

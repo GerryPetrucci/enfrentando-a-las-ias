@@ -72,5 +72,5 @@ test('declaraciones deterministas, sin cambiar reparto, votos, puntos ni número
   assert.deepEqual(a,b);
   for(const k of ['roles','vivos','puntos','stats','reemplazos','ronda','fase'])assert.deepEqual(a[k],c[k]);
   assert.deepEqual(a.eventos.find((e)=>e.tipo==='votacion'),c.eventos.find((e)=>e.tipo==='votacion'));
-  assert.match(juego.formatoRespuesta,/afirmaRol.*opcional/);assert.match(juego.reglas,/No se interpreta el texto libre/);
+  assert.match(juego.formatoRespuesta,/afirmaRol/);assert.match(juego.explicacionDeRespuesta,/"afirmaRol": opcional/);assert.match(juego.reglas,/el motor NO interpreta su texto/);
 });

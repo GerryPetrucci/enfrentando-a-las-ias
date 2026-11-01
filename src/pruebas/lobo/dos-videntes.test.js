@@ -27,9 +27,9 @@ test('producción 1.3.0 conserva dos Videntes y cuatro aldeanos en 12, reproduci
     assert.equal(a.roles.length, 12); assert.equal(asientos(a, 'lobo').length, 3);
     assert.equal(asientos(a, 'vidente').length, 2); assert.equal(asientos(a, 'aldeano').length, 4);
     for (const r of ['bruja', 'cazador', 'cupido']) assert.equal(asientos(a, r).length, 1);
-    assert.equal(a.maxRondas, 6); assert.equal(a.versionReglas, 'lobo-1.3.0');
+    assert.equal(a.maxRondas, 6); assert.equal(a.versionReglas, 'lobo-1.4.0');
   }
-  assert.equal(lobo.versionReglas, 'lobo-1.3.0');
+  assert.equal(lobo.versionReglas, 'lobo-1.4.0');
   const ocho = lobo.crear(crearRng(123), { jugadores: 8 });
   assert.deepEqual(ocho.roles, ['lobo', 'bruja', 'cupido', 'cazador', 'aldeano', 'vidente', 'lobo', 'aldeano']);
   assert.equal(ocho.maxRondas, 6);
@@ -122,9 +122,10 @@ test('arena consulta a las dos Videntes sin compartir resultados; el corte no pe
 });
 
 test('reglas de producción informan dos Videntes independientes en doce y conservan una en ocho', () => {
-  assert.match(REGLAS, /8 jugadores: 2 lobos, 1 vidente, 1 bruja, 1 cazador, 1 cupido, 2 aldeanos; máximo 6 rondas/);
-  assert.match(REGLAS, /12 jugadores: 3 lobos, 2 videntes, 1 bruja, 1 cazador, 1 cupido, 4 aldeanos; máximo 6 rondas/);
-  assert.match(REGLAS, /sin reconocerse ni compartir hallazgos automáticamente/);
+  assert.match(REGLAS, /Mesa de 8: 2 lobos, 1 vidente, 1 bruja, 1 cazador, 1 cupido, 2 aldeanos\./);
+  assert.match(REGLAS, /Mesa de 12: 3 lobos, 2 videntes, 1 bruja, 1 cazador, 1 cupido, 4 aldeanos\./);
+  assert.match(REGLAS, /Dura como maximo 6 rondas/);
+  assert.match(REGLAS, /hay DOS videntes: deciden a la vez, sin saber quien es la otra y sin compartir hallazgos/);
   assert.equal(lobo.reglas, REGLAS);
 });
 

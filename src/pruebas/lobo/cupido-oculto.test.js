@@ -24,8 +24,8 @@ function noche(E, victima, veneno = null) {
 }
 const muertes = (E) => E.eventos.filter((e) => e.tipo === 'muerte');
 
-test('versión de reglas 1.3.0 y cuatro modos de Cupido', () => {
-  assert.equal(VERSION, 'lobo-1.3.0');
+test('versión de reglas 1.4.0 (1.3.0 trajo el Cupido oculto; 1.4.0 solo el prompt completo) y cuatro modos de Cupido', () => {
+  assert.equal(VERSION, 'lobo-1.4.0');
   assert.deepEqual([...MODOS_CUPIDO], ['pareja', 'cupido', 'ambos', 'nada']);
 });
 
@@ -142,6 +142,6 @@ test('el evento final trae a los enamorados y la cámara los muestra', () => {
 });
 
 test('el texto de reglas ya no dice que Cupido queda revelado', () => {
-  assert.doesNotMatch(REGLAS, /queda revelado públicamente/);
-  assert.match(REGLAS, /nadie más sabe quién es Cupido/);
+  assert.doesNotMatch(REGLAS, /queda revelado publicamente/);
+  assert.match(REGLAS, /Nadie mas sabe quien es Cupido ni quienes son los enamorados hasta que una muerte lo revele/);
 });
