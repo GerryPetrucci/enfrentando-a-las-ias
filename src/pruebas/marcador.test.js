@@ -14,9 +14,9 @@ import { armarMarcador, leerEpisodios } from '../marcador.js';
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const jug = (id, tipo = 'bot') => ({ id, nombre: id.toUpperCase(), color: '#111111', tipo, modelo: tipo === 'modelo' ? `x/${id}` : null });
 
-const episodioDilema = {
-  etiqueta: '2026-10-09-dilema-a-vs-b', fecha: '2026-10-09T10:00:00.000Z', seedBase: 1,
-  juego: { id: 'dilema', nombre: 'Dilema', categoria: 'Traición y confianza' },
+const episodioConfianza = {
+  etiqueta: '2026-10-09-confianza-a-vs-b', fecha: '2026-10-09T10:00:00.000Z', seedBase: 1,
+  juego: { id: 'confianza', nombre: 'Juego de confianza', categoria: 'Traición y confianza' },
   partidas: [
     { jugadores: [jug('a'), jug('b')], puntos: [20, 15], ganador: 0, empate: false,
       metricas: [{ traiciones: 2, promesasHechas: 9, promesasRotas: 1, jugadasInvalidas: 0 }, { traiciones: 5, promesasHechas: 9, promesasRotas: 3, jugadasInvalidas: 1 }] },
@@ -27,8 +27,8 @@ const episodioDilema = {
 
 const fila = (m, categoria, id) => m.categorias.find((c) => c.nombre === categoria).tabla.find((f) => f.id === id);
 
-test('el Dilema se agrega como siempre: puntos por partida, V-E-D, traiciones y fiabilidad', () => {
-  const m = armarMarcador([{ archivo: 'dilema.json', ep: episodioDilema }], '2026-10-09T12:00:00.000Z');
+test('un juego de dos se agrega como siempre: puntos por partida, V-E-D, traiciones y fiabilidad', () => {
+  const m = armarMarcador([{ archivo: 'confianza.json', ep: episodioConfianza }], '2026-10-09T12:00:00.000Z');
   const a = fila(m, 'Traición y confianza', 'a'), b = fila(m, 'Traición y confianza', 'b');
   assert.equal(a.partidas, 2);
   assert.deepEqual([a.victorias, a.empates, a.derrotas], [1, 1, 0]);
@@ -43,9 +43,9 @@ test('el Dilema se agrega como siempre: puntos por partida, V-E-D, traiciones y 
 });
 
 test('la obediencia es el porcentaje de ordenes validas de todas las partidas, no el promedio de promedios', () => {
-  const conquista = {
-    etiqueta: '2026-10-09-conquista-a-vs-b', fecha: '2026-10-10T10:00:00.000Z', seedBase: 7,
-    juego: { id: 'conquista', nombre: 'Guerra de territorios', categoria: 'Estrategia y conquista' },
+  const asedio = {
+    etiqueta: '2026-10-09-castillos-a-vs-b', fecha: '2026-10-10T10:00:00.000Z', seedBase: 7,
+    juego: { id: 'castillos', nombre: 'Asalto de castillos', categoria: 'Estrategia y asedio' },
     serie: { partidas: 2, rotar: true, mismoSeed: true },
     partidas: [
       { jugadores: [jug('a'), jug('b')], puntos: [5, 3], ganador: 0, empate: false,
@@ -54,8 +54,8 @@ test('la obediencia es el porcentaje de ordenes validas de todas las partidas, n
         metricas: [{ traiciones: 0, promesasHechas: 0, promesasRotas: 0, jugadasInvalidas: 0, ordenesValidas: 1, ordenesTotal: 10 }, { traiciones: 0, promesasHechas: 0, promesasRotas: 0, jugadasInvalidas: 0, ordenesValidas: 10, ordenesTotal: 10 }] },
     ],
   };
-  const m = armarMarcador([{ archivo: 'c.json', ep: conquista }]);
-  const a = fila(m, 'Estrategia y conquista', 'a'), b = fila(m, 'Estrategia y conquista', 'b');
+  const m = armarMarcador([{ archivo: 'c.json', ep: asedio }]);
+  const a = fila(m, 'Estrategia y asedio', 'a'), b = fila(m, 'Estrategia y asedio', 'b');
   assert.equal(a.obediencia, +(19 / 20).toFixed(3));   // 9+10 de 10+10
   assert.equal(b.obediencia, +(1 / 10).toFixed(3));    // la partida con 0 de 0 no cuenta
   assert.equal(a.traiciones, 1);
@@ -64,10 +64,10 @@ test('la obediencia es el porcentaje de ordenes validas de todas las partidas, n
 });
 
 test('cada episodio trae su juego, su serie y el enfrentamiento, del mas nuevo al mas viejo', () => {
-  const nuevo = { ...episodioDilema, etiqueta: 'nuevo', fecha: '2026-10-11T00:00:00.000Z', serie: { partidas: 2, rotar: true, mismoSeed: false } };
-  const m = armarMarcador([{ archivo: 'viejo.json', ep: episodioDilema }, { archivo: 'nuevo.json', ep: nuevo }]);
+  const nuevo = { ...episodioConfianza, etiqueta: 'nuevo', fecha: '2026-10-11T00:00:00.000Z', serie: { partidas: 2, rotar: true, mismoSeed: false } };
+  const m = armarMarcador([{ archivo: 'viejo.json', ep: episodioConfianza }, { archivo: 'nuevo.json', ep: nuevo }]);
   assert.deepEqual(m.episodios.map((e) => e.archivo), ['nuevo.json', 'viejo.json']);
-  assert.equal(m.episodios[0].juego.id, 'dilema');
+  assert.equal(m.episodios[0].juego.id, 'confianza');
   assert.equal(m.episodios[0].enfrentamiento, 'A vs B');
   assert.deepEqual(m.episodios[0].serie, { partidas: 2, rotar: true, mismoSeed: false });
   assert.equal(m.episodios[1].serie, null);
@@ -83,13 +83,13 @@ test('un archivo sin partidas se ignora', () => {
 test('leerEpisodios solo lee los .json de la carpeta: no entra a data/pruebas ni lee otros archivos', () => {
   const dir = mkdtempSync(join(tmpdir(), 'marcador-'));
   try {
-    writeFileSync(join(dir, 'a.json'), JSON.stringify(episodioDilema));
+    writeFileSync(join(dir, 'a.json'), JSON.stringify(episodioConfianza));
     writeFileSync(join(dir, 'notas.txt'), 'no soy un resultado');
     mkdirSync(join(dir, 'pruebas'));
-    writeFileSync(join(dir, 'pruebas', 'practica.json'), JSON.stringify(episodioDilema));
+    writeFileSync(join(dir, 'pruebas', 'practica.json'), JSON.stringify(episodioConfianza));
     const leidos = leerEpisodios(dir);
     assert.deepEqual(leidos.map((x) => x.archivo), ['a.json']);
-    assert.equal(leidos[0].ep.etiqueta, '2026-10-09-dilema-a-vs-b');
+    assert.equal(leidos[0].ep.etiqueta, '2026-10-09-confianza-a-vs-b');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -100,7 +100,7 @@ test('la consola puede revisar otra carpeta (por ejemplo data/pruebas) sin tocar
   const real = join(RAIZ, 'web', 'marcador.json');
   const antes = existsSync(real) ? readFileSync(real, 'utf8') : null;
   try {
-    writeFileSync(join(dir, 'practica.json'), JSON.stringify(episodioDilema));
+    writeFileSync(join(dir, 'practica.json'), JSON.stringify(episodioConfianza));
     const r = spawnSync(process.execPath, ['src/marcador.js', `--data=${dir}`, `--salida=${join(dir, 'salida.json')}`], { cwd: RAIZ, encoding: 'utf8' });
     assert.equal(r.status, 0, r.stderr);
     const salida = JSON.parse(readFileSync(join(dir, 'salida.json'), 'utf8'));

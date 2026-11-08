@@ -14,12 +14,12 @@ const web = (f) => readFileSync(new URL(`../../web/${f}`, import.meta.url), 'utf
 test('la landing muestra un cuadro por juego con sus numeros, las ultimas partidas y el menu de inicio', async () => {
   const r = await correrPagina('index.html', { marcador: MARCADOR });
   const juegos = r.nodo('juegos').innerHTML;
-  assert.match(juegos, /juego\.html\?id=conquista/);
-  assert.match(juegos, /juego\.html\?id=mayormenor/);
-  assert.match(juegos, /Guerra de territorios/);
+  assert.match(juegos, /juego\.html\?id=lobo/);
+  assert.match(juegos, /juego\.html\?id=prueba/);
+  assert.match(juegos, /Lobo en la aldea/);
   assert.match(juegos, /1 partida publicada/);
   assert.match(juegos, /1 por publicarse/);
-  assert.match(juegos, /De 2 a 5 reinos/, 'la descripcion publica del juego');
+  assert.match(juegos, /Ocho o doce IAs/, 'la descripcion publica del juego');
   const partidas = r.nodo('partidas').innerHTML;
   assert.match(partidas, /partida\.html\?id=s1&partida=2/);
   assert.equal(r.nodo('t-partidas').textContent, 'Últimas partidas');
@@ -33,18 +33,18 @@ test('la landing muestra un cuadro por juego con sus numeros, las ultimas partid
 test('una partida por publicarse no dice su resultado en ninguna parte de la landing', async () => {
   const r = await correrPagina('index.html', { marcador: MARCADOR });
   const todo = r.nodo('partidas').innerHTML + r.nodo('juegos').innerHTML;
-  assert.match(todo, /Por publicarse · subida hasta el turno 8/);
+  assert.match(todo, /Por publicarse · subida hasta la ronda 8/);
   assert.doesNotMatch(todo, /NO DEBE SALIR/);
   assert.match(todo, /Ganó GPT/, 'la publicada si dice su ganador');
 });
 
 test('la busqueda escribe la direccion y filtra juegos y partidas; los enlaces viejos ?seed= siguen sirviendo', async () => {
-  const por = await correrPagina('index.html', { marcador: MARCADOR, search: '?q=mayor' });
-  assert.match(por.nodo('juegos').innerHTML, /Mayor o menor/);
-  assert.doesNotMatch(por.nodo('juegos').innerHTML, /conquista/);
+  const por = await correrPagina('index.html', { marcador: MARCADOR, search: '?q=prueba' });
+  assert.match(por.nodo('juegos').innerHTML, /Juego de prueba/);
+  assert.doesNotMatch(por.nodo('juegos').innerHTML, /lobo/);
   assert.equal(por.nodo('t-partidas').textContent, 'Partidas que coinciden');
   assert.equal(por.nodo('contador').textContent, '1 juego y 1 partida');
-  assert.equal(por.nodo('q').value, 'mayor');
+  assert.equal(por.nodo('q').value, 'prueba');
   const viejo = await correrPagina('index.html', { marcador: MARCADOR, search: '?seed=552912962' });
   assert.equal(viejo.nodo('contador').textContent, '1 juego y 2 partidas');
   assert.equal(viejo.nodo('q').value, '552912962');
@@ -73,33 +73,33 @@ test('sin marcador (o sin red) la landing avisa y la barra sigue montada', async
 });
 
 test('la pagina de un juego trae su tabla propia, sus partidas y el aviso de que no hay ranking general', async () => {
-  const r = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=conquista' });
+  const r = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=lobo' });
   const html = r.nodo('contenido').innerHTML;
-  assert.match(html, /<h1[^>]*>Guerra de territorios<\/h1>/);
+  assert.match(html, /<h1[^>]*>Lobo en la aldea<\/h1>/);
   assert.match(html, /<td>1-0-0<\/td>/);
   assert.match(html, /no dice quién es «la mejor IA»/);
   assert.match(html, /REGLAS DE LA GUERRA/, 'el prompt que recibieron las IAs');
-  assert.match(html, /proponer\.html\?tipo=enfrentamiento&amp;juego=Guerra%20de%20territorios/);
+  assert.match(html, /proponer\.html\?tipo=enfrentamiento&amp;juego=Lobo%20en%20la%20aldea/);
   assert.doesNotMatch(html, /serie/i);
-  assert.deepEqual(r.llamadasMenu.map((o) => [o.pagina, o.juegoId]), [['juego', 'conquista']]);
+  assert.deepEqual(r.llamadasMenu.map((o) => [o.pagina, o.juegoId]), [['juego', 'lobo']]);
   const lista = r.nodo('partidas').innerHTML;
   assert.match(lista, /partida\.html\?id=s1&partida=1/);
   assert.match(lista, /partida\.html\?id=s1&partida=2/);
   assert.match(lista, /Partida 2 · mismo seed que la 1, con los asientos rotados/);
-  assert.doesNotMatch(lista, /Mayor o menor|s2/, 'solo las partidas de este juego');
+  assert.doesNotMatch(lista, /Juego de prueba|s2/, 'solo las partidas de este juego');
   assert.doesNotMatch(lista + html, /NO DEBE SALIR/);
   assert.equal(r.nodo('contador').textContent, '2 partidas');
 });
 
 test('los filtros de un juego salen de la direccion y la reescriben; un juego sin partidas sigue mostrando su pagina', async () => {
-  const r = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=conquista&estado=por-publicarse' });
+  const r = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=lobo&estado=por-publicarse' });
   assert.equal(r.nodo('contador').textContent, '1 partida de 2');
   assert.doesNotMatch(r.nodo('partidas').innerHTML, /partida=1/);
-  assert.equal(r.history.ultima, '/pagina.html?id=conquista&estado=por-publicarse');
+  assert.equal(r.history.ultima, '/pagina.html?id=lobo&estado=por-publicarse');
   r.nodo('limpiar').manejadores.click[0]();
   assert.equal(r.nodo('contador').textContent, '2 partidas');
-  assert.equal(r.history.ultima, '/pagina.html?id=conquista');
-  const sin = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=mayormenor' });
+  assert.equal(r.history.ultima, '/pagina.html?id=lobo');
+  const sin = await correrPagina('juego.html', { marcador: MARCADOR, search: '?id=prueba' });
   assert.match(sin.nodo('contenido').innerHTML, /Todavía no hay partidas publicadas de este juego/);
 });
 

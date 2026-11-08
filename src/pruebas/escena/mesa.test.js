@@ -8,20 +8,6 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { juegosConEscena, mesaDe } from '../../../web/casino/lineas.js';
 import { MesaBase } from '../../../web/casino/mesa-base.js';
-import { construirLineaDeTiempo as lineaDuda } from '../../../web/casino/linea-de-tiempo-duda.js';
-import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
-import { construirLineaDeTiempo as lineaSol } from '../../../web/casino/linea-de-tiempo-solitario.js';
-import { construirLineaDeTiempo as lineaTD } from '../../../web/casino/linea-de-tiempo-tripledado.js';
-import { construirLineaDeTiempo as lineaSub } from '../../../web/casino/linea-de-tiempo-subasta.js';
-import { jugar } from './ayudas.js';
-import { jugarMM, jugarMMConCaido } from './ayudas-mm.js';
-import { jugarSol, jugarSolConCaido } from './ayudas-sol.js';
-import { jugarTD, jugarTDConCaido } from './ayudas-td.js';
-import { jugarSub, jugarSubConCaido } from './ayudas-sub.js';
-import { construirLineaDeTiempo as lineaFuga } from '../../../web/casino/linea-de-tiempo-fuga.js';
-import { jugarFuga, jugarFugaConCaido } from './ayudas-fuga.js';
-import { construirLineaDeTiempo as lineaConq } from '../../../web/casino/linea-de-tiempo-conquista.js';
-import { partidasDeEjemplo, jugarConqBots, jugarConqConCaido } from './ayudas-conq.js';
 import { jugarLobo } from './ayudas-lobo.js';
 import { construirLineaDeTiempo as lineaLobo } from '../../../web/casino/linea-de-tiempo-lobo.js';
 
@@ -78,23 +64,10 @@ test('MesaBase.nombre cae en "Jugador N" si falta el jugador', () => {
   assert.equal(mesa.nombre(1), 'Jugador 2');
 });
 
-test('cada mesa declara METODOS (tipo de beat -> metodo) y cada tipo de beat que su juego produce tiene un metodo que existe (se vio: un campo con el mismo nombre tapaba un metodo)', async () => {
-  const partidas = {
-    lobo: async () => [8, 12].flatMap((n) => lineaLobo(jugarLobo(3, n))),
-    dudaapuesta: async () => lineaDuda(await jugar(3)),
-    mayormenor: async () => [...lineaMM(await jugarMM(3)), ...lineaMM(await jugarMMConCaido(2, 0)), ...lineaMM(await jugarMM(1, ['prudente', 'temerario']))],
-    tripledado: async () => [...lineaTD(await jugarTD(3)), ...lineaTD(await jugarTDConCaido(2, 0)), ...lineaTD(await jugarTD(1, undefined, { maxRondas: 6 }))],
-    subasta: async () => [...lineaSub(await jugarSub(3)), ...lineaSub(await jugarSubConCaido(2, 0)), ...lineaSub(await jugarSub(1, ['parejo', 'parejo', 'parejo', 'parejo', 'parejo'])), ...lineaSub(await jugarSub(1, undefined, { maxRondas: 5 }))],
-    fuga: async () => [...lineaFuga(await jugarFuga(3)), ...lineaFuga(await jugarFugaConCaido(2, 0)), ...lineaFuga(await jugarFuga(1, ['traidor', 'traidor'])), ...lineaFuga(await jugarFuga(1, undefined, { maxRondas: 4 }))],
-    conquista: async () => [...(await partidasDeEjemplo()).flatMap((p) => lineaConq(p)), ...lineaConq(await jugarConqConCaido(2, 4, 1)), ...lineaConq(await jugarConqBots(5, ['agresivo', 'pacifico']))],
-    solitario: async () => [...lineaSol(await jugarSol(3)), ...lineaSol(await jugarSolConCaido(2, 0)), ...lineaSol(await jugarSol(1, ['bajo', 'bajo', 'bajo', 'bajo', 'bajo']))],
-  };
-  for (const id of juegosConEscena()) {
-    const { Mesa } = await mesaDe(id);
-    assert.equal(typeof Mesa.METODOS, 'object', `${id}: falta Mesa.METODOS`);
-    for (const [tipo, metodo] of Object.entries(Mesa.METODOS)) assert.equal(typeof Mesa.prototype[metodo], 'function', `${id}: el beat "${tipo}" apunta a ${metodo}, que no existe`);
-    assert.ok(partidas[id], `${id}: falta una partida de prueba en esta prueba`);
-    const tipos = new Set((await partidas[id]()).map((b) => b.tipo));
-    for (const tipo of tipos) assert.ok(Mesa.METODOS[tipo], `${id}: el beat "${tipo}" no tiene metodo en la mesa`);
+test('cada beat de Lobo tiene un método que existe en su mesa', async () => {
+  const { Mesa } = await mesaDe('lobo');
+  const { construirLineaDeTiempo } = await import('../../../web/casino/linea-de-tiempo-lobo.js');
+  for (const beat of construirLineaDeTiempo(jugarLobo())) {
+    assert.equal(typeof Mesa.prototype[Mesa.METODOS[beat.tipo]], 'function', beat.tipo);
   }
 });

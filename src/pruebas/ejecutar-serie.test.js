@@ -1,5 +1,5 @@
 // ejecutarSerie corre las partidas de una serie, una tras otra (lo de siempre) o todas a la vez (el lote). Se prueba con los
-// bots de control de la Guerra de territorios: sin red, sin API, sin gastar nada.
+// bots de control de la fixture simultáneo: sin red, sin API, sin gastar nada.
 //
 //   npm test
 
@@ -8,8 +8,8 @@ import assert from 'node:assert/strict';
 import { ejecutarSerie } from '../ejecutar-serie.js';
 import { planDeSerie } from '../serie.js';
 import { resolverAgente } from '../agentes.js';
-import conquista from '../juegos/conquista.js';
-import dilema from '../juegos/dilema.js';
+import simultaneo from './ayudas-simultaneo.js';
+import prueba from './ayudas-juego.js';
 
 const CLAVES = ['agresivo', 'pacifico', 'economico', 'azar'];
 const agentesDe = (juego, claves) => new Map(claves.map((c) => [c, resolverAgente(c, juego)]));
@@ -17,25 +17,25 @@ const sinTiempo = ({ duracionMs, ...resto }) => resto; // la duracion real cambi
 
 test('en serie y en paralelo salen las mismas partidas, en el orden del plan', async () => {
   const plan = planDeSerie({ claves: CLAVES, partidas: 4, seedBase: 7, mismoSeed: true });
-  const agentes = agentesDe(conquista, CLAVES);
-  const uno = await ejecutarSerie({ juego: conquista, plan, agentesPorClave: agentes, maxRondas: 8 });
-  const todas = await ejecutarSerie({ juego: conquista, plan, agentesPorClave: agentes, maxRondas: 8, paralelo: true });
+  const agentes = agentesDe(simultaneo, CLAVES);
+  const uno = await ejecutarSerie({ juego: simultaneo, plan, agentesPorClave: agentes, maxRondas: 8 });
+  const todas = await ejecutarSerie({ juego: simultaneo, plan, agentesPorClave: agentes, maxRondas: 8, paralelo: true });
   assert.equal(uno.length, 4);
   assert.deepEqual(todas.map(sinTiempo), uno.map(sinTiempo));
   assert.deepEqual(todas.map((r) => r.jugadores[0].id), CLAVES);
 });
 
-test('ejecutarSerie pasa las opciones del juego a cada partida (el bioma del mapa)', async () => {
+test('ejecutarSerie pasa las opciones del juego a cada partida (campo de ejemplo)', async () => {
   const plan = planDeSerie({ claves: CLAVES, partidas: 2, seedBase: 7, mismoSeed: true });
-  const r = await ejecutarSerie({ juego: conquista, plan, agentesPorClave: agentesDe(conquista, CLAVES), maxRondas: 1, opciones: { bioma: 'mares' } });
-  assert.deepEqual(r.map((x) => x.mapa.bioma), ['mares', 'mares']);
+  const r = await ejecutarSerie({ juego: simultaneo, plan, agentesPorClave: agentesDe(simultaneo, CLAVES), maxRondas: 1, opciones: { ejemplo: 'valor' } });
+  assert.deepEqual(r.map((x) => x.opciones.ejemplo), ['valor', 'valor']);
 });
 
 test('cada partida trae su rotacion, y con 2 jugadores tambien si va invertida', async () => {
   const plan = planDeSerie({ claves: ['tomaydaca', 'siempre-t'], partidas: 2, seedBase: 5 });
-  const r = await ejecutarSerie({ juego: dilema, plan, agentesPorClave: agentesDe(dilema, ['tomaydaca', 'siempre-t']) });
+  const r = await ejecutarSerie({ juego: prueba, plan, agentesPorClave: agentesDe(prueba, ['tomaydaca', 'siempre-t']) });
   assert.deepEqual(r.map((x) => [x.rotacion, x.invertido]), [[0, false], [1, true]]);
-  const c = await ejecutarSerie({ juego: conquista, plan: planDeSerie({ claves: CLAVES, partidas: 2, seedBase: 1, mismoSeed: true }), agentesPorClave: agentesDe(conquista, CLAVES), maxRondas: 1 });
+  const c = await ejecutarSerie({ juego: simultaneo, plan: planDeSerie({ claves: CLAVES, partidas: 2, seedBase: 1, mismoSeed: true }), agentesPorClave: agentesDe(simultaneo, CLAVES), maxRondas: 1 });
   assert.deepEqual(c.map((x) => [x.rotacion, x.invertido]), [[0, false], [1, false]]);
 });
 
@@ -43,7 +43,7 @@ test('avisa cada partida que termina y cada turno que se registra', async () => 
   const plan = planDeSerie({ claves: CLAVES, partidas: 3, seedBase: 2, mismoSeed: true });
   const terminadas = [], turnos = [];
   await ejecutarSerie({
-    juego: conquista, plan, agentesPorClave: agentesDe(conquista, CLAVES), maxRondas: 2, paralelo: true,
+    juego: simultaneo, plan, agentesPorClave: agentesDe(simultaneo, CLAVES), maxRondas: 2, paralelo: true,
     alTerminar: (r, p) => terminadas.push(p.n), alRegistrar: (p, registro) => turnos.push([p.n, registro.turno]),
   });
   assert.deepEqual(terminadas.sort(), [0, 1, 2]);
@@ -52,17 +52,17 @@ test('avisa cada partida que termina y cada turno que se registra', async () => 
 
 test('maxRondas corta cada partida y la marca como truncada', async () => {
   const plan = planDeSerie({ claves: CLAVES, partidas: 2, seedBase: 2, mismoSeed: true });
-  const r = await ejecutarSerie({ juego: conquista, plan, agentesPorClave: agentesDe(conquista, CLAVES), maxRondas: 3 });
+  const r = await ejecutarSerie({ juego: simultaneo, plan, agentesPorClave: agentesDe(simultaneo, CLAVES), maxRondas: 3 });
   assert.ok(r.every((x) => x.truncada && x.rondas.length === 3));
 });
 
 test('alEmpezar avisa antes de cada partida: en serie una por una, en paralelo todas al arrancar', async () => {
   const plan = planDeSerie({ claves: CLAVES, partidas: 3, seedBase: 2, mismoSeed: true });
-  const agentes = agentesDe(conquista, CLAVES);
+  const agentes = agentesDe(simultaneo, CLAVES);
   for (const paralelo of [false, true]) {
     const eventos = [];
     await ejecutarSerie({
-      juego: conquista, plan, agentesPorClave: agentes, maxRondas: 1, paralelo,
+      juego: simultaneo, plan, agentesPorClave: agentes, maxRondas: 1, paralelo,
       alEmpezar: (p) => eventos.push(`empieza ${p.n}`), alTerminar: (r, p) => eventos.push(`termina ${p.n}`),
     });
     assert.deepEqual(

@@ -1,5 +1,6 @@
 // Las llamadas INVALIDAS de una partida guardada: que modelo, en que turno, por que y con que texto. Cada juego guarda esos datos donde le toca (Lobo en
-// `privado.acciones`, la Guerra en `respuestas`, La Fuga y Duda y apuesta en `crudos`); aqui se leen todos igual, para analizarlas siempre del mismo modo.
+// `privado.acciones`; un juego por turnos simultaneos en `respuestas` o en `crudos`, como los registros guardados de los juegos retirados el 7-11-2026,
+// que siguen en data/pruebas/); aqui se leen todos igual, para analizarlas siempre del mismo modo.
 // Una llamada es invalida si el motor la marco asi (`invalidas`, `invalida`) o si la API fallo (`errores`: respuesta cortada por max_tokens, sin JSON, red...).
 // Puro: lo usan src/correr.js (resumen al terminar cada corrida) y herramientas/analizar-invalidas.mjs (detalle de cualquier resultado guardado).
 
@@ -9,7 +10,7 @@ export function llamadasInvalidasDe(partida) {
     const turno = r.turno ?? k + 1;
     (partida.jugadores ?? []).forEach((j, i) => {
       const accion = r.privado?.acciones?.find((a) => a.asiento === i) ?? null; // Lobo
-      const respuesta = r.respuestas?.[i] ?? null; // Guerra
+      const respuesta = r.respuestas?.[i] ?? null; // registros con `respuestas` por asiento
       const error = r.errores?.[i] || null;
       const invalida = r.invalidas?.[i] === true || accion?.invalida === true || respuesta?.invalida === true || !!error;
       if (!invalida) return;

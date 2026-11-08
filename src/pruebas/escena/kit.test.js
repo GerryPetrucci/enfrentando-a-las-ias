@@ -1,5 +1,5 @@
-// Kit visual de la escena de Duda y apuesta: cartas, fichas y placas como texto HTML/SVG, y la hoja de estilos de la mesa.
-// Pruebas estaticas (sin navegador): lo que se juzga mirando se verifica en la tarea 7 con capturas.
+// Kit visual de las escenas de casino: cartas de color, fichas, placas y logo como texto HTML/SVG, y la hoja de estilos de la mesa.
+// Pruebas estaticas (sin navegador): lo que se juzga mirando se verifica con capturas.
 //
 //   npm test
 
@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PALETA } from '../../../web/paleta.js';
 import { LOGO, CARTAS, esc, htmlDefs, htmlDorso, htmlFrente, htmlCarta, htmlFicha, htmlPila, htmlPlaca, htmlLogo } from '../../../web/casino/kit.js';
-import { COLORES } from '../../juegos/dudaapuesta/constantes.js';
+// Los cinco colores de carta del kit (el comodin arcoiris va aparte): fijados aqui para que quitar o renombrar uno sea un cambio visible.
+const COLORES = ['rojo', 'amarillo', 'azul', 'verde', 'morado'];
 
 const leer = (ruta) => readFileSync(new URL(`../../../web/casino/${ruta}`, import.meta.url), 'utf8');
 const hexes = (texto) => new Set((texto.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((h) => h.toLowerCase()));
@@ -41,9 +42,12 @@ test('hay una carta para cada color del juego, cada una con forma y letra propia
   assert.match(CARTAS.arcoiris.gema, /url\(#arcoiris\)/);
 });
 
-test('un color desconocido no lanza: cara en blanco', () => {
+test('un color desconocido no lanza: cara en blanco, y su forma (gemaDe) sale vacia', async () => {
   for (const x of ['', 'negro', null, undefined, 7]) assert.doesNotThrow(() => htmlFrente(x));
   assert.doesNotMatch(htmlFrente('negro'), /gema/);
+  const { gemaDe } = await import('../../../web/casino/kit.js');
+  assert.equal(gemaDe('rojo'), CARTAS.rojo.gema);
+  for (const raro of ['negro', undefined, null, '', 7, '__proto__']) assert.equal(gemaDe(raro), '');
 });
 
 test('una carta que el publico no debe ver todavia NO lleva su frente ni en el HTML; una visible si', () => {

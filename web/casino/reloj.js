@@ -1,5 +1,5 @@
-// El reloj de la Subasta de tiempo: el contador empieza a ritmo normal (un segundo de pantalla por cada segundo de reloj), se acelera en el medio y termina a ritmo normal. Una
-// apuesta puede ser de 600 s y no se pueden esperar en un video: asi el publico vive el principio y el final de cada subasta en tiempo real y el medio se resume.
+// El reloj de la juego de tiempo: el contador empieza a ritmo normal (un segundo de pantalla por cada segundo de reloj), se acelera en el medio y termina a ritmo normal. Una
+// apuesta puede ser de 600 s y no se pueden esperar en un video: asi el publico vive el principio y el final de cada juego en tiempo real y el medio se resume.
 //
 // Es una funcion PURA del tiempo de pantalla: nunca usa el reloj del equipo, asi que el mismo archivo se ve siempre igual. Las cifras las dijo el usuario (16 de octubre de 2026):
 //   - los primeros 3 s y los ultimos 3 s van a ritmo normal (los mismos al inicio y al final);

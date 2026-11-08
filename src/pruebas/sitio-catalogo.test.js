@@ -8,16 +8,16 @@ import { ESTADOS, fechaLarga, fechaCorta, normalizarSeed, normalizarTexto, resum
 
 const ia = (id, nombre = id.toUpperCase()) => ({ id, nombre, color: '#111', inicial: nombre[0] });
 const juego = (id, nombre, categoria = 'Cat') => ({ id, nombre, categoria });
-const CONQ = juego('conquista', 'Guerra de territorios', 'Estrategia y conquista');
-const MAYOR = juego('mayormenor', 'Mayor o menor', 'Estrategia de eliminación');
+const CONQ = juego('castillos', 'Asalto de castillos', 'Estrategia y asedio');
+const MAYOR = juego('cartaalta', 'Carta alta', 'Estrategia de eliminación');
 const partida = (serie, n, j, seed, fecha, estado, ids, extra = {}) => ({ serie, n, juego: j, seed, fecha, estado, hastaTurno: estado === 'publicada' ? null : 8, jugadores: ids.map((i) => ia(i)), ganador: null, puntos: null, ...extra });
 const P1 = partida('s2', 1, MAYOR, 2991144164, '2026-10-21', 'publicada', ['claude', 'gpt'], { ganador: 'GPT', puntos: [0, 4] });
 const P2 = partida('s1', 1, CONQ, 552912962, '2026-10-19', 'publicada', ['claude', 'gpt', 'gemini'], { ganador: 'Claude', puntos: [4, 2, 0] });
 const P3 = partida('s1', 2, CONQ, 552912962, '2026-10-19', 'por-publicarse', ['claude', 'gpt', 'gemini']);
 const datos = {
   juegos: [
-    { ...CONQ, versionReglas: 'conquista-1.1.0', tabla: [{ id: 'claude', nombre: 'Claude', partidas: 1 }] },
-    { ...MAYOR, versionReglas: 'mayormenor-1.0.0', tabla: [] },
+    { ...CONQ, versionReglas: 'castillos-1.1.0', tabla: [{ id: 'claude', nombre: 'Claude', partidas: 1 }] },
+    { ...MAYOR, versionReglas: 'cartaalta-1.0.0', tabla: [] },
   ],
   partidas: [P1, P2, P3],
 };
@@ -41,29 +41,29 @@ test('las fechas se escriben en UTC: un dia sin hora no se corre al dia anterior
 
 test('cada juego trae sus numeros: partidas publicadas, por publicarse, IAs y la ultima fecha; el que mas reciente salio va primero', () => {
   const r = resumenDeJuegos(datos);
-  assert.deepEqual(r.map((j) => j.id), ['mayormenor', 'conquista'], 'ordenados por su partida mas reciente');
-  const c = r.find((j) => j.id === 'conquista');
+  assert.deepEqual(r.map((j) => j.id), ['cartaalta', 'castillos'], 'ordenados por su partida mas reciente');
+  const c = r.find((j) => j.id === 'castillos');
   assert.equal(c.publicadas, 1);
   assert.equal(c.porPublicarse, 1);
   assert.equal(c.ultima, '2026-10-19');
   assert.deepEqual(c.ias.map((j) => j.id), ['claude', 'gemini', 'gpt'], 'las IAs que han jugado, por nombre');
-  assert.equal(c.categoria, 'Estrategia y conquista');
-  assert.equal(c.versionReglas, 'conquista-1.1.0');
+  assert.equal(c.categoria, 'Estrategia y asedio');
+  assert.equal(c.versionReglas, 'castillos-1.1.0');
   assert.deepEqual(resumenDeJuegos({}), []);
   assert.deepEqual(resumenDeJuegos(null), []);
 });
 
 test('un juego sin partidas todavia (solo en la tabla) tambien sale, al final', () => {
-  const r = resumenDeJuegos({ juegos: [...datos.juegos, { id: 'fuga', nombre: 'La Fuga', categoria: 'Lealtad', tabla: [] }], partidas: datos.partidas });
-  assert.equal(r.at(-1).id, 'fuga');
+  const r = resumenDeJuegos({ juegos: [...datos.juegos, { id: 'lealtad', nombre: 'La lealtad', categoria: 'Lealtad', tabla: [] }], partidas: datos.partidas });
+  assert.equal(r.at(-1).id, 'lealtad');
   assert.equal(r.at(-1).publicadas, 0);
   assert.equal(r.at(-1).ultima, null);
 });
 
 test('las partidas de un juego salen de la mas nueva a la mas vieja y sin series', () => {
-  assert.deepEqual(partidasDeJuego(datos, 'conquista').map((p) => [p.serie, p.n]), [['s1', 1], ['s1', 2]]);
+  assert.deepEqual(partidasDeJuego(datos, 'castillos').map((p) => [p.serie, p.n]), [['s1', 1], ['s1', 2]]);
   assert.deepEqual(partidasDeJuego(datos, 'nada'), []);
-  assert.deepEqual(partidasDeJuego(null, 'conquista'), []);
+  assert.deepEqual(partidasDeJuego(null, 'castillos'), []);
 });
 
 test('filtrar las partidas de un juego por IA, estado y seed', () => {
@@ -87,12 +87,12 @@ test('las IAs de una lista de partidas salen una vez, por nombre', () => {
 
 test('la busqueda libre encuentra por nombre de juego, categoria, IA o seed, sin acentos ni mayusculas', () => {
   const ids = (r) => [r.juegos.map((j) => j.id), r.partidas.map((p) => `${p.serie}${p.n}`)];
-  assert.deepEqual(ids(buscar(datos, 'GUERRA')), [['conquista'], ['s11', 's12']]);
-  assert.deepEqual(ids(buscar(datos, 'eliminacion')), [['mayormenor'], ['s21']], 'sin acento');
-  assert.deepEqual(ids(buscar(datos, 'gemini')), [['conquista'], ['s11', 's12']], 'por IA');
-  assert.deepEqual(ids(buscar(datos, '552912962')), [['conquista'], ['s11', 's12']], 'por seed');
-  assert.deepEqual(ids(buscar(datos, '552 912 962')), [['conquista'], ['s11', 's12']], 'seed con espacios');
-  assert.deepEqual(ids(buscar(datos, 'claude mayor')), [['mayormenor'], ['s21']], 'varias palabras: todas deben cuadrar');
+  assert.deepEqual(ids(buscar(datos, 'CASTILLOS')), [['castillos'], ['s11', 's12']]);
+  assert.deepEqual(ids(buscar(datos, 'eliminacion')), [['cartaalta'], ['s21']], 'sin acento');
+  assert.deepEqual(ids(buscar(datos, 'gemini')), [['castillos'], ['s11', 's12']], 'por IA');
+  assert.deepEqual(ids(buscar(datos, '552912962')), [['castillos'], ['s11', 's12']], 'por seed');
+  assert.deepEqual(ids(buscar(datos, '552 912 962')), [['castillos'], ['s11', 's12']], 'seed con espacios');
+  assert.deepEqual(ids(buscar(datos, 'claude carta')), [['cartaalta'], ['s21']], 'varias palabras: todas deben cuadrar');
   assert.deepEqual(ids(buscar(datos, '99999')), [[], []]);
   assert.deepEqual(ids(buscar(datos, '7')), [[], []], 'un digito suelto no es un seed');
   assert.equal(buscar(datos, '').juegos.length, 2, 'sin texto salen todos los juegos');

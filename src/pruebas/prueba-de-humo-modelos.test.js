@@ -12,30 +12,32 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  CANDIDATOS, IDS_PRUEBAS, LLAMADAS_MAX, armarMesa, construirPruebas, resolverCandidatos, estimarModelo,
-  ejecutarPrueba, veredicto, correrPrueba, costoDeUso, razonamientoDe,
+  CANDIDATOS, IDS_PRUEBAS as IDS_REALES, LLAMADAS_MAX, armarMesa, construirPruebas, resolverCandidatos, estimarModelo,
+  ejecutarPrueba, veredicto as veredictoReal, correrPrueba, costoDeUso, razonamientoDe,
 } from '../../herramientas/prueba-de-humo-modelos.mjs';
 import { CONTENDIENTES } from '../modelos.js';
 import { PARAMETROS } from '../parametros.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const mesa = armarMesa();
-const pruebas = construirPruebas(mesa);
+const veredicto = (intentos, repeticion = null) => veredictoReal(intentos, repeticion, 3);
+const IDS_PRUEBAS = ['formato', ...IDS_REALES];
+const pruebas = [{ id: 'formato', sistema: 'Fixture de formato', usuario: '{"ronda": 3}', evaluar: r => ({ ok: /^[CT]/i.test(r?.jugada ?? ''), motivo: 'jugada fuera de C/T', notas: /^[CT]/i.test(r?.promesa ?? '') ? [] : ['promesa ausente o fuera de C/T'] }) }, ...construirPruebas(mesa)];
 const prueba = (id) => pruebas.find((p) => p.id === id);
 const candidato = { clave: 'x', nombre: 'X', modelo: 'p/x', razonamiento: 'medium', precio: { entrada: 1, salida: 4 } };
 
 // Un asiento vivo distinto del que responde, que no sea lobo (objetivo valido para matar, inspeccionar o votar).
 const ajenoNoLobo = (E, yo) => E.roles.findIndex((r, i) => i !== yo && E.vivos[i] && r !== 'lobo');
 
-test('las 3 pruebas se arman con el motor real: fases, asientos y prompt de produccion', () => {
+test('dos vistas reales y un fixture de formato prueban el corredor: fases, asientos y prompt de produccion', () => {
   assert.deepEqual(pruebas.map((p) => p.id), IDS_PRUEBAS);
   assert.equal(mesa.noche.fase, 'lobos');
   assert.equal(mesa.dia.fase, 'dia');
   assert.equal(mesa.noche.roles[mesa.asientoLobo], 'lobo');
   assert.equal(mesa.dia.roles[mesa.asientoVidente], 'vidente');
   assert.ok(mesa.dia.vivos[mesa.asientoVidente]);
-  assert.match(prueba('dilema').sistema, /Dilema del Prisionero Negociado/);
-  assert.match(prueba('dilema').usuario, /"ronda": 3/);
+  assert.match(prueba('formato').sistema, /Fixture de formato/);
+  assert.match(prueba('formato').usuario, /"ronda": 3/);
   assert.match(prueba('lobo-noche').sistema, /Lobo en la aldea/);
   assert.match(prueba('lobo-noche').usuario, /"fase":"lobos"/);
   assert.match(prueba('lobo-noche').usuario, /"manada"/);
@@ -46,7 +48,7 @@ test('las 3 pruebas se arman con el motor real: fases, asientos y prompt de prod
 
 test('las fixtures son reproducibles: dos armados dan exactamente los mismos prompts', () => {
   const otra = construirPruebas(armarMesa());
-  assert.deepEqual(otra.map((p) => [p.sistema, p.usuario]), pruebas.map((p) => [p.sistema, p.usuario]));
+  assert.deepEqual(otra.map((p) => [p.sistema, p.usuario]), pruebas.slice(1).map((p) => [p.sistema, p.usuario]));
 });
 
 test('la vista de la noche no filtra roles ajenos que la IA no debe ver', () => {
@@ -56,15 +58,15 @@ test('la vista de la noche no filtra roles ajenos que la IA no debe ver', () => 
   assert.equal(vista.manada.length, 2);
 });
 
-test('dilema: acepta una jugada valida y rechaza una fuera de C/T', () => {
-  const { evaluar } = prueba('dilema');
+test('formato: acepta una jugada valida y rechaza una fuera de C/T', () => {
+  const { evaluar } = prueba('formato');
   assert.equal(evaluar({ jugada: 'C', promesa: 'T', mensaje: 'hola', razon: 'x' }).ok, true);
   assert.equal(evaluar({ jugada: 'T', promesa: 'C' }).ok, true);
   const mala = evaluar({ jugada: 'cooperar', mensaje: 1 });
   assert.equal(mala.ok, true, 'cooperar empieza con C: el motor la lee como C');
   const rota = evaluar({ jugada: 'X', promesa: 'C' });
   assert.equal(rota.ok, false);
-  assert.match(rota.motivo, /jugada:string/);
+  assert.match(rota.motivo, /jugada fuera de C\/T/);
   assert.match(evaluar({ jugada: 'C' }).notas[0], /promesa ausente/);
 });
 
@@ -94,7 +96,7 @@ test('lobo-dia: voto + mensaje validos; autovoto, voto en texto y afirmaRol inex
 });
 
 test('ejecutarPrueba: cada forma de fallar queda con su motivo; las buenas respuestas pasan', async () => {
-  const p = prueba('dilema');
+  const p = prueba('formato');
   const con = (r) => ejecutarPrueba({ candidato, prueba: p, llamar: async () => r });
   const uso = { prompt_tokens: 1000, completion_tokens: 200 };
 
@@ -130,7 +132,7 @@ test('costoDeUso: prefiere el costo que informa el proveedor; si no, tokens x pr
 });
 
 test('ejecutarPrueba: manda reintentos 0 (una llamada contada = una solicitud) y distingue errores que no cobran de los que si pudieron', async () => {
-  const p = prueba('dilema');
+  const p = prueba('formato');
   let recibido;
   await ejecutarPrueba({ candidato, prueba: p, llamar: async (args) => { recibido = args; return { texto: '{"jugada":"C"}', uso: null, finishReason: 'stop' }; } });
   assert.equal(recibido.reintentos, 0);
@@ -163,11 +165,11 @@ test('veredicto: 3/3 aprueba, 1 falla es dudoso si su repeticion sale bien, 2 o 
 function modeloFalso({ fallan = [], uso = { prompt_tokens: 1000, completion_tokens: 100 } } = {}) {
   const llamadas = [];
   const llamar = async ({ modelo, sistema, usuario }) => {
-    const id = sistema.includes('Dilema del Prisionero') ? 'dilema' : usuario.includes('"fase":"lobos"') ? 'lobo-noche' : 'lobo-dia';
+    const id = sistema.includes('Fixture de formato') ? 'formato' : usuario.includes('"fase":"lobos"') ? 'lobo-noche' : 'lobo-dia';
     llamadas.push({ modelo, id });
     if (fallan.includes(id)) return { texto: 'no puedo ayudar', uso, finishReason: 'stop' };
     const respuesta = {
-      dilema: { jugada: 'C', promesa: 'C', mensaje: 'hola', razon: 'x' },
+      formato: { jugada: 'C', promesa: 'C', mensaje: 'hola', razon: 'x' },
       'lobo-noche': { accion: 'matar', objetivo: ajenoNoLobo(mesa.noche, mesa.asientoLobo) },
       'lobo-dia': { mensaje: 'hola', voto: ajenoNoLobo(mesa.dia, mesa.asientoVidente) },
     }[id];
@@ -192,7 +194,7 @@ test('correrPrueba: una sola falla se repite UNA vez esa prueba y queda dudoso',
   const { llamar, llamadas } = modeloFalso({ fallan: ['lobo-noche'] });
   const r = await correrPrueba({ candidatos: [cand('a')], pruebas, llamar, topeUsd: 1 });
   assert.equal(r.modelos[0].veredicto, 'rechazado', 'la repeticion tambien falla con este modelo falso');
-  assert.deepEqual(llamadas.map((l) => l.id), ['dilema', 'lobo-noche', 'lobo-dia', 'lobo-noche']);
+  assert.deepEqual(llamadas.map((l) => l.id), ['formato', 'lobo-noche', 'lobo-dia', 'lobo-noche']);
   assert.equal(r.modelos[0].repeticion.prueba, 'lobo-noche');
   assert.equal(r.llamadas, 4);
 
@@ -205,7 +207,7 @@ test('correrPrueba: una sola falla se repite UNA vez esa prueba y queda dudoso',
 });
 
 test('correrPrueba: con 2 fallas seguidas se omite la tercera llamada (rechazado sin gastar mas)', async () => {
-  const { llamar, llamadas } = modeloFalso({ fallan: ['dilema', 'lobo-noche'] });
+  const { llamar, llamadas } = modeloFalso({ fallan: ['formato', 'lobo-noche'] });
   const r = await correrPrueba({ candidatos: [cand('a')], pruebas, llamar, topeUsd: 1 });
   assert.equal(r.modelos[0].veredicto, 'rechazado');
   assert.equal(llamadas.length, 2);
@@ -237,19 +239,19 @@ test('correrPrueba: un error de llave o de credito (401/402) detiene todo', asyn
 });
 
 test('sin costo conocido (uso ausente, vacio o parcial, o un fallo que pudo cobrarse) se reserva el peor caso', async () => {
-  const peor = (prueba('dilema').sistema.length + prueba('dilema').usuario.length) / 3 * 1 / 1e6 + PARAMETROS.maxTokens * 4 / 1e6;
+  const peor = (prueba('formato').sistema.length + prueba('formato').usuario.length) / 3 * 1 / 1e6 + PARAMETROS.maxTokens * 4 / 1e6;
   const bien = '{"jugada":"C","promesa":"C"}';
   for (const uso of [null, {}, { prompt_tokens: 1000 }]) {
     const llamar = async () => ({ texto: bien, uso, finishReason: 'stop' });
-    const r = await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('dilema')], llamar, topeUsd: 100 });
+    const r = await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('formato')], llamar, topeUsd: 100 });
     assert.ok(r.gastado >= peor * 0.999, `uso ${JSON.stringify(uso)}: cuenta los max_tokens enteros`);
     assert.equal(r.modelos[0].intentos[0].costoReservado, true);
   }
   const cae = async () => { throw new Error('OpenRouter 502: upstream'); };
-  const r5 = await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('dilema')], llamar: cae, topeUsd: 100 });
+  const r5 = await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('formato')], llamar: cae, topeUsd: 100 });
   assert.ok(r5.gastado >= peor * 0.999, 'un 5xx pudo cobrarse: se reserva');
   const noCobra = async () => { throw new Error('OpenRouter 404: nada'); };
-  assert.equal((await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('dilema')], llamar: noCobra, topeUsd: 100 })).gastado, 0);
+  assert.equal((await correrPrueba({ candidatos: [cand('a')], pruebas: [prueba('formato')], llamar: noCobra, topeUsd: 100 })).gastado, 0);
 });
 
 test('el tope alcanzado por reservas de costo desconocido detiene la corrida', async () => {
@@ -273,7 +275,7 @@ test('correrPrueba se niega a empezar con un tope o un precio que dejarian el ga
 test('correrPrueba: una falla y la corrida cortada por el tope deja el modelo incompleto, no dudoso ni rechazado', async () => {
   // Cada llamada cuesta $1 y el tope es $2: la 1.a falla, la 2.a pasa, y no hay una 3.a.
   const uso = { prompt_tokens: 1000000, completion_tokens: 0 };
-  const { llamar } = modeloFalso({ fallan: ['dilema'], uso });
+  const { llamar } = modeloFalso({ fallan: ['formato'], uso });
   const r = await correrPrueba({ candidatos: [cand('a')], pruebas, llamar, topeUsd: 2 });
   assert.equal(r.modelos[0].veredicto, 'incompleto');
   assert.equal(r.llamadas, 2);
@@ -402,4 +404,9 @@ test('programa: --ejecutar exige lista explicita y tope en dolares, y un candida
   const desconocido = programa(['--modelos=gpt-9']);
   assert.equal(desconocido.status, 1);
   assert.match(desconocido.stderr, /Candidato desconocido: gpt-9/);
+});
+
+test('el humo de producción solo prepara noche y día de Lobo', () => {
+  assert.deepEqual(IDS_REALES, ['lobo-noche', 'lobo-dia']);
+  assert.deepEqual(construirPruebas().map(p => p.id), IDS_REALES);
 });

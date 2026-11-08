@@ -7,8 +7,8 @@ import assert from 'node:assert/strict';
 import {
   parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, rutaLibre, errorDeLote, errorDePrimeraRonda, COSTO_MAXIMO_PETICION,
 } from '../serie.js';
-import conquista from '../juegos/conquista.js';
-import dilema from '../juegos/dilema.js';
+import simultaneo from './ayudas-simultaneo.js';
+import prueba from './ayudas-juego.js';
 
 test('parsearArgumentos lee --clave=valor y --bandera', () => {
   assert.deepEqual(parsearArgumentos(['--a=claude', '--solo', '--x=a=b', 'suelto']), { a: 'claude', solo: true, x: 'a=b' });
@@ -17,16 +17,16 @@ test('parsearArgumentos lee --clave=valor y --bandera', () => {
 test('jugadoresDe usa --jugadores si viene y, si no, el duelo --a contra --b', () => {
   assert.deepEqual(jugadoresDe({ jugadores: 'claude, gpt ,gemini' }), ['claude', 'gpt', 'gemini']);
   assert.deepEqual(jugadoresDe({ a: 'claude', b: 'gpt' }), ['claude', 'gpt']);
-  assert.deepEqual(jugadoresDe({}), ['tomaydaca', 'siempre-t']);
+  assert.deepEqual(jugadoresDe({}), ['agresivo', 'silencioso', 'revela', 'calla', 'rapida', 'guarda', 'mayoria', 'contradice']);
 });
 
 test('errorDeCantidad respeta el minimo y el maximo de cada juego', () => {
-  assert.equal(errorDeCantidad(conquista, 2), null);
-  assert.equal(errorDeCantidad(conquista, 5), null);
-  assert.match(errorDeCantidad(conquista, 1), /entre 2 y 5/);
-  assert.match(errorDeCantidad(conquista, 6), /entre 2 y 5/);
-  assert.equal(errorDeCantidad(dilema, 2), null);
-  assert.match(errorDeCantidad(dilema, 4), /con 2 jugadores/);
+  assert.equal(errorDeCantidad(simultaneo, 2), null);
+  assert.equal(errorDeCantidad(simultaneo, 5), null);
+  assert.match(errorDeCantidad(simultaneo, 1), /entre 2 y 5/);
+  assert.match(errorDeCantidad(simultaneo, 6), /entre 2 y 5/);
+  assert.equal(errorDeCantidad(prueba, 2), null);
+  assert.match(errorDeCantidad(prueba, 4), /con 2 jugadores/);
 });
 
 test('planDeSerie con 2 jugadores alterna asientos como siempre y cambia el seed en cada partida', () => {
@@ -63,8 +63,8 @@ test('avisosDeSerie avisa cuando los asientos no se reparten por igual o no se r
 });
 
 test('estimarLlamadas es el maximo posible: partidas x rondas x jugadores', () => {
-  assert.equal(estimarLlamadas(conquista, 4, 4), 4 * 30 * 4);
-  assert.equal(estimarLlamadas(dilema, 2, 4), 4 * 10 * 2);
+  assert.equal(estimarLlamadas(simultaneo, 4, 4), 4 * 30 * 4);
+  assert.equal(estimarLlamadas(prueba, 2, 4), 4 * 10 * 2);
   assert.equal(estimarLlamadas({}, 2, 4), null);
 });
 
@@ -116,8 +116,8 @@ test('errorDeLote: el lote exige modelos, modo pago y un tope de gasto positivo'
 
 test('errorDeLote: un juego que solo se juega en vivo (por turnos, de uno en uno) no admite --lote', () => {
   const modelos = [{ tipo: 'modelo' }, { tipo: 'bot' }];
-  const enVivo = { nombre: 'Duda y apuesta', soloEnVivo: true, rondas: 96 };
-  assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos, juego: enVivo }), /Duda y apuesta.*por turnos.*no admite --lote.*en vivo/);
+  const enVivo = { nombre: 'Juego en vivo', soloEnVivo: true, rondas: 96 };
+  assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos, juego: enVivo }), /Juego en vivo.*por turnos.*no admite --lote.*en vivo/);
   assert.equal(errorDeLote({ lote: false, modo: '', tope: null, agentes: modelos, juego: enVivo }), null, 'sin --lote no se valida nada');
   assert.equal(errorDeLote({ lote: true, modo: 'pago', tope: 0.5, agentes: modelos, juego: { nombre: 'Otro' } }), null);
   assert.match(errorDeLote({ lote: true, modo: 'pago', tope: 1, agentes: [{ tipo: 'bot' }], juego: enVivo }), /solo aplica a modelos/, 'con bots sigue mandando el mensaje de siempre');

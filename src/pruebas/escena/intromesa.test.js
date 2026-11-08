@@ -1,3 +1,4 @@
+import { jugarLobo } from './ayudas-lobo.js';
 // La animacion de la tarjeta de arranque en MesaBase (web/casino/mesa-base.js): la misma para los 7 juegos y sin pasar por METODOS. El aspecto se verifica con capturas
 // (herramientas/capturar-escena.mjs); aqui, que el beat se maneje solo, no toque los subtitulos del juego y no deje nada a la vista. Un DOM falso minimo, sin navegador.
 //
@@ -8,7 +9,6 @@ import assert from 'node:assert/strict';
 import { MesaBase } from '../../../web/casino/mesa-base.js';
 import { armarLinea } from '../../../web/casino/lineas.js';
 import { textoDeJuego } from '../../../web/casino/textos-juego.js';
-import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
 
 function nodoFalso() {
   const n = { style: {}, hijos: [], clases: new Set(), animaciones: [], innerHTML: '', className: '' };
@@ -27,8 +27,8 @@ async function conDom(fn) {
 
 const LAYOUT = { ancho: 1080, alto: 1920, zona: { x: 40, y: 150, ancho: 1000, alto: 1500 } };
 async function beatIntro() {
-  const p = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
-  return (await armarLinea('conquista', p))[0];
+  const p = jugarLobo(3);
+  return (await armarLinea('lobo', p))[0];
 }
 function mesaDe(opciones = {}) {
   const mesa = new MesaBase('9x16', { jugadores: [] }, { sfx: {}, vel: 1, ...opciones }, LAYOUT);
@@ -49,7 +49,7 @@ test('un beat intro se anima en MesaBase aunque la mesa no lo tenga en METODOS, 
 });
 
 test('la tarjeta lleva el nombre, la categoria, la regla y como se gana, y el aviso de IA; lo escapa; y al terminar no queda nada a la vista', async () => {
-  const beat = await beatIntro(), mesa = mesaDe(), t = textoDeJuego('conquista');
+  const beat = await beatIntro(), mesa = mesaDe(), t = textoDeJuego('lobo');
   await conDom(async () => {
     await mesa.ejecutar(beat, beat.minMs);
     const html = mesa.raiz.hijos[0].innerHTML;

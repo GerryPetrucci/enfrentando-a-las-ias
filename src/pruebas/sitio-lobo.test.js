@@ -83,12 +83,10 @@ test('una partida de Lobo ya publicada sigue mostrando su resultado y la convers
 });
 
 test('cada juego dice hasta donde se subio con su propia unidad (turno, ronda o mano)', () => {
-  assert.equal(unidadDeJuego('conquista').hasta, 'hasta el turno');
   assert.equal(unidadDeJuego('lobo').hasta, 'hasta la ronda');
-  assert.equal(unidadDeJuego('dudaapuesta').hasta, 'hasta la mano');
   assert.equal(unidadDeJuego('juego-nuevo').hasta, 'hasta el turno', 'un juego desconocido, «turno» como siempre');
   assert.equal(resumenDePartida({ estado: 'por-publicarse', hastaTurno: 2, juego: { id: 'lobo' } }), 'Por publicarse · subida hasta la ronda 2');
-  assert.equal(resumenDePartida({ estado: 'por-publicarse', hastaTurno: 8, juego: { id: 'conquista' } }), 'Por publicarse · subida hasta el turno 8');
+  assert.equal(resumenDePartida({ estado: 'por-publicarse', hastaTurno: 8, juego: { id: 'lobo' } }), 'Por publicarse · subida hasta la ronda 8');
   assert.equal(resumenDePartida({ estado: 'por-publicarse', hastaTurno: 8 }), 'Por publicarse · subida hasta el turno 8', 'sin juego tampoco lanza');
   assert.equal(resumenDePartida({ estado: 'por-publicarse' }), 'Por publicarse');
 });

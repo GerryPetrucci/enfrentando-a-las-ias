@@ -38,15 +38,15 @@ test('llamarModelo se niega a gastar credito sin modo pago, antes de tocar la re
 });
 
 test('la linea de comandos exige elegir el modo y no deja usar modelos de pago en modo gratis', () => {
-  let r = cli('--a=claude', '--b=gpt', '--partidas=1');
+  let r = cli('--jugadores=claude,gpt,claude,gpt,claude,gpt,claude,gpt', '--partidas=1');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /--modo=gratis/);
   assert.match(r.stderr, /--modo=pago/);
 
-  r = cli('--a=claude', '--b=laguna', '--partidas=1', '--modo=gratis');
+  r = cli('--jugadores=claude,laguna,claude,laguna,claude,laguna,claude,laguna', '--partidas=1', '--modo=gratis');
   assert.equal(r.status, 1);
   assert.match(r.stderr, /claude gasta credito/);
 
-  r = cli('--a=laguna', '--b=ling', '--partidas=1', '--modo=barato');
+  r = cli('--jugadores=laguna,ling,laguna,ling,laguna,ling,laguna,ling', '--partidas=1', '--modo=barato');
   assert.equal(r.status, 1);
 });

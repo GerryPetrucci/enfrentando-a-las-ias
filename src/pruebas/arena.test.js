@@ -5,8 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { correrPartida } from '../arena.js';
-import { agenteBase } from '../agentes.js';
-import dilema from '../juegos/dilema.js';
+import { agenteBase } from './ayudas-juego.js';
+import prueba from './ayudas-juego.js';
 
 // Juego de 3 asientos y 3 rondas: el asiento 2 "cae" al terminar la ronda 1 y deja de ser consultado.
 const juegoFalso = ({ rondas = 3, termina = true } = {}) => ({
@@ -103,8 +103,8 @@ test('con limitador, cada llamada espera su turno antes de salir', async () => {
   assert.equal(esperas, r.llamadas);
 });
 
-test('el Dilema no cambia: mismo resultado de siempre con estrategias base', async () => {
-  const r = await correrPartida({ juego: dilema, agentes: [agenteBase('tomaydaca'), agenteBase('siempre-t')], seed: 5 });
+test('el Juego de prueba no cambia: mismo resultado de siempre con estrategias base', async () => {
+  const r = await correrPartida({ juego: prueba, agentes: [agenteBase('tomaydaca'), agenteBase('siempre-t')], seed: 5 });
   assert.deepEqual(r.puntos, [9, 14]);
   assert.equal(r.ganador, 1);
   assert.equal(r.rondas.length, 10);

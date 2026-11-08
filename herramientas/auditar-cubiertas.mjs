@@ -2,7 +2,7 @@
 // Audita las piezas de grabacion de uno o varios paquetes: abre cada direccion de grabacion (las de su LEEME.md) en UN Chrome sin cabeza (por el protocolo de depuracion, sin dependencias),
 // a velocidad 4 por omision, y en cada instante comprueba que las tarjetas que cubren la mesa (arranque `intro-juego`, gancho `tarjeta-gancho` y cierre del video `cierre-juego`) estan
 // invisibles salvo durante el beat que les toca. Tambien comprueba que la pieza llegue a cerrar, sin errores de pagina ni de consola, y que traiga y muestre la tarjeta de cierre del video.
-// Nacio de un fallo real (29-10-2026): el `cierre` de mano de Duda y apuesta tapaba la mesa con la tarjeta del video vacia (docs/produccion-videos.md).
+// Nacio de un fallo real (29-10-2026): el `cierre` de mano de un juego de cartas (retirado el 7-11-2026) tapaba la mesa con la tarjeta del video vacia (docs/produccion-videos.md).
 //
 //   node herramientas/auditar-cubiertas.mjs grabaciones/listos/<juego>/<carpeta>/paquete-jN/LEEME.md [otro LEEME.md ...] [--vel=4]
 //

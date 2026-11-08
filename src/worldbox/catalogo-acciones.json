@@ -1,0 +1,11 @@
+{
+  "version": "auge-simulado-1.0.0",
+  "acciones": [
+    {"nombre":"esperar","descripcion":"No cambia el mundo.","parametros":{},"puntos":0,"cooldown":0},
+    {"nombre":"recolectar","simulada":true,"descripcion":"Suma 8 recursos.","parametros":{},"puntos":1,"cooldown":0},
+    {"nombre":"expandir","simulada":true,"descripcion":"Gasta 6 recursos y ocupa de 1 a 3 celdas libres (cantidad); cuesta 6 por celda.","parametros":{"cantidad":{"tipo":"entero","minimo":1,"maximo":3}},"puntos":1,"cooldown":1},
+    {"nombre":"fundar","simulada":true,"descripcion":"Gasta 15 recursos; requiere territorio > ciudades; suma 1 ciudad y 1 objetivo.","parametros":{},"puntos":2,"cooldown":2},
+    {"nombre":"reclutar","simulada":true,"descripcion":"Gasta 5 recursos y suma 3 pobladores.","parametros":{},"puntos":1,"cooldown":1},
+    {"nombre":"atacar","simulada":true,"descripcion":"Gasta 8 recursos; objetivo es el id de un rival (campo id de rivales); requiere al menos 5 pobladores y un rival vivo distinto de ti. El rival pierde 4 pobladores y tu faccion pierde 2; a poblacion 0 se elimina y libera territorio y ciudades.","parametros":{"objetivo":{"tipo":"cadena","minimo":1,"maximo":40}},"puntos":2,"cooldown":2}
+  ]
+}

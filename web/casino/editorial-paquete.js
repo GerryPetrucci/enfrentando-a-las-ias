@@ -1,6 +1,6 @@
 // Seleccion editorial basada solo en hechos que la escena ya muestra.
 // No usa privados, razones, mensajes ni modelos externos.
-export const CLIPS_POR_PARTE = { conquista: [2, 2], fuga: [1, 1], mayormenor: [1, 1], dudaapuesta: [2, 1], tripledado: [1, 1], solitario: [1, 1], subasta: [1, 1] };
+export const CLIPS_POR_PARTE = {};
 const TIPOS = new Set(['resultado', 'resolucion', 'batalla', 'revelado', 'consecuencia', 'final', 'cierre', 'comentarios', 'enfrentamiento']);
 const LINEAS = new Set(['hecho', 'resultado', 'comentario', 'revelacion', 'consecuencia', 'cierre', 'enfrentamiento']);
 const limpio = (t) => String(t ?? '').replace(/\s+/g, ' ').trim();
@@ -24,10 +24,10 @@ export function hechosDePieza(beats, pieza, destacadas = []) {
 }
 
 // Lo primero de CADA titulo y descripcion, igual en todas las redes y facil de reconocer (decidido por el usuario el 25 de octubre de 2026):
-//   «Guerra de territorios J3 - Parte 1/2 - Seed 1704202488»   (parte)
-//   «Guerra de territorios J3 - Clip 2 (Parte 1/2) - Seed 1704202488»   (clip)
-//   «Guerra de territorios J3 - Próximamente Parte 2/2 - Seed 1704202488»   (gancho, en video o en imagen)
-//   «Guerra de territorios J3 - Episodio completo - Seed 1704202488»   (el juego entero, que se sube al final)
+//   «Lobo en la aldea J2 - Parte 1/2 - Seed 1704202488»   (parte)
+//   «Lobo en la aldea J2 - Clip 2 (Parte 1/2) - Seed 1704202488»   (clip)
+//   «Lobo en la aldea J2 - Próximamente Parte 2/2 - Seed 1704202488»   (gancho, en video o en imagen)
+//   «Lobo en la aldea J2 - Episodio completo - Seed 1704202488»   (el juego entero, que se sube al final)
 // `juegoNumero` es el jN del juego (el que lleva el nombre de sus videos); sin el, se omite. Nunca se recorta: lo demas se acota para que quepa.
 export function identificadorDePieza(pieza, { juego, juegoNumero = null, seed, partes = 2 }) {
   const n = pieza.parte ?? Number(pieza.id.split('-').at(-1));

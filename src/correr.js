@@ -1,17 +1,7 @@
 #!/usr/bin/env node
 // CLI para correr un duelo o una serie y guardar el resultado en data/.
 //
-//   node src/correr.js --juego=dilema --a=claude --b=gpt --partidas=4 --modo=pago
-//   node src/correr.js --juego=dilema --a=laguna --b=nemotron-super --partidas=4 --modo=gratis
-//   node src/correr.js --a=tomaydaca --b=siempre-t --partidas=2   (estrategias base: sin API, sin modo)
-//   node src/correr.js --juego=conquista --jugadores=claude,gpt,gemini,deepseek --partidas=4 --modo=pago
-//   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4   (bots de control)
-//   node src/correr.js --juego=conquista --jugadores=haiku,luna,flash-lite,deepseek --partidas=4 --modo=pago --lote --tope=0.50 --destino=pruebas
-//
-//   node src/correr.js --juego=conquista --jugadores=agresivo,pacifico,economico,azar --partidas=4 --bioma=arido   (fuerza la forma del mapa)
-//
-// BIOMA (solo Guerra de territorios): `--bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas` fuerza la forma del mapa; sin el, sale del seed (una serie de rotacion
-// usa el mismo seed y por eso el mismo mapa). Cada partida guarda su mapa completo y su bioma, y la consola dice cual se jugo.
+//   node src/correr.js --juego=lobo --jugadores=agresivo,silencioso,revela,calla,rapida,guarda,mayoria,contradice --partidas=1 --destino=pruebas
 //
 // MODO (obligatorio en cada ejecucion con modelos, no hay valor por defecto):
 //   --modo=gratis  solo modelos gratis ($0 por llamada, no tocan tu saldo)
@@ -19,8 +9,7 @@
 //
 // SERIE DE ROTACION: por defecto los asientos rotan entre partidas (con 2 jugadores, se alternan; con k jugadores, en k
 // partidas cada uno pasa por cada asiento). Si la partida 1 la empieza A en la posicion 0, la 2 la empieza B. Esto mata
-// el argumento de "le tocaba mejor lugar" antes de que aparezca en los comentarios. En la Guerra de territorios todas las
-// partidas de la serie usan el mismo mapa. `--alternar=no` lo desactiva (no sirve para publicar).
+// el argumento de "le tocaba mejor lugar" antes de que aparezca en los comentarios. Cada juego decide si comparte seed en la serie. `--alternar=no` lo desactiva (no sirve para publicar).
 //
 // DESTINO: los resultados con modelos gratis son de practica y van a data/pruebas/ (el marcador no los lee). El resto va a
 // data/. `--destino=oficial|pruebas` lo cambia.
@@ -52,7 +41,6 @@ import { crearLimitador } from './limitador.js';
 import { crearClienteLote } from './lote.js';
 import { crearCoordinador } from './coordinador-lote.js';
 import { seedDesdeTexto } from './rng.js';
-import { BIOMAS } from './mapa.js';
 import {
   parsearArgumentos, jugadoresDe, errorDeCantidad, planDeSerie, avisosDeSerie, estimarLlamadas, destinoDe, errorDeModo, errorDeLote,
   errorDePrimeraRonda, rutaLibre,
@@ -72,25 +60,21 @@ const dolares = (n) => `$${Number(n).toFixed(n < 1 ? 4 : 2)}`;
 // normal para los modelos sin lote (`sincrono`) y la consola, para correr de punta a punta sin red ni gasto.
 export async function correr(argv, {
   raiz = RAIZ,
+  buscarJuego = obtenerJuego,
   crearCliente = crearClienteLote,
   sincrono = null,
   consola = { log: (...a) => console.log(...a), escribir: (t) => process.stdout.write(t) },
 } = {}) {
   const o = parsearArgumentos(argv);
-  const idJuego = o.juego || 'dilema';
-  const juego = obtenerJuego(idJuego);
+  const idJuego = o.juego || 'lobo';
+  const juego = buscarJuego(idJuego);
   const claves = jugadoresDe(o);
   const k = claves.length;
 
   const errCantidad = errorDeCantidad(juego, k);
   if (errCantidad) salir(errCantidad);
 
-  // --bioma=continente|arido|mares|interior|cordillera|istmo|golfo|peninsulas fuerza la forma del mapa de la Guerra de territorios; sin el, sale del seed. Se valida antes de cualquier llamada.
-  if (o.bioma !== undefined) {
-    if (juego.id !== 'conquista') salir('--bioma solo vale para la Guerra de territorios (--juego=conquista).');
-    if (!BIOMAS.includes(o.bioma)) salir(`--bioma debe ser uno de: ${BIOMAS.join(', ')}.`);
-  }
-  const opcionesDeJuego = o.bioma !== undefined ? { bioma: o.bioma } : {};
+  const opcionesDeJuego = {};
 
   let agentesPorClave;
   try {
@@ -133,7 +117,7 @@ export async function correr(argv, {
     salir(err.message);
   }
 
-  const partidas = Number(o.partidas || (k > 2 ? k : 2));
+  const partidas = Number(o.partidas ?? 1);
   if (!Number.isInteger(partidas) || partidas < 1) salir('--partidas debe ser un numero entero de 1 o mas.');
   const rotar = o.alternar !== 'no';
   const mismoSeed = !!juego.mismoSeedEnSerie;
@@ -212,7 +196,7 @@ export async function correr(argv, {
     // Un juego por bandos (Lobo) puede tener varios ganadores: `ganador` queda en null y manda `ganadorBando`.
     const quien = r.ganador != null ? `gana ${nombres[r.ganador]}` : r.ganadorBando ? `gana el bando ${r.ganadorBando}` : 'sin ganador';
     const texto = r.truncada ? `cortada a ${r.rondas.length} turno(s)` : r.empate ? `empate ${r.puntos.join('-')}` : `${quien} ${r.puntos.join('-')}`;
-    consola.log(`${lote ? `  Partida ${p.n + 1}/${partidas}` : ''}  ${texto}${r.mapa?.bioma ? ` · bioma ${r.mapa.bioma}` : ''}`);
+    consola.log(`${lote ? `  Partida ${p.n + 1}/${partidas}` : ''}  ${texto}`);
     const fallos = r.rondas.flatMap((x) => (x.errores ?? []).filter(Boolean));
     if (fallos.length) consola.log(`     ! ${fallos.length} error(es) de API: ${fallos[0].slice(0, 90)}`);
     // Siempre se dice por que fallaron las llamadas invalidas (el detalle con el texto crudo: node herramientas/analizar-invalidas.mjs).
@@ -293,7 +277,7 @@ export async function correr(argv, {
   consola.log(
     destino === 'pruebas'
       ? '  Practica: el marcador no lo lee (para verlo: node src/marcador.js --data=data/pruebas --salida=marcador-pruebas.json)\n'
-      : '  Siguiente: node src/marcador.js  ·  luego abre web/replay.html\n'
+      : '  Siguiente: node src/marcador.js  ·  luego abre el sitio con node src/servidor.js\n'
   );
   return { ruta, salida };
 }

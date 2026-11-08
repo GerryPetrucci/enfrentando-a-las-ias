@@ -1,4 +1,4 @@
-// Diseno de la pantalla de la escena de Duda y apuesta: donde va cada cosa en cada formato. Todo son rectangulos {x, y, ancho, alto}
+// Diseno comun de la pantalla de las escenas (formatos, zona segura, hoja maestra; layout-lobo.js parte de aqui): donde va cada cosa en cada formato. Todo son rectangulos {x, y, ancho, alto}
 // en pixeles del PROPIO lienzo del formato (la escena los desplaza a su lugar en la hoja maestra de 3840x2160).
 //
 // La web no puede importar de herramientas/ (el sitio publica solo web/ y data/), asi que las medidas de los formatos y de la zona

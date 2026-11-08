@@ -15,7 +15,7 @@ export const PUBLICADA = 'publicada';
 export const ELIMINADA = 'eliminada';
 
 // Lo UNICO que sale de una partida a medio publicar. Todo lo demas (puntos, ganador, orden, metricas, duracion, tokens, avisos, cuantos turnos tuvo en total...) adelanta el resultado.
-const CLAVES_PARCIALES = ['seed', 'juego', 'jugadores', 'mapa', 'reinos', 'rotacion', 'invertido', 'rondas'];
+const CLAVES_PARCIALES = ['seed', 'juego', 'jugadores', 'rotacion', 'invertido', 'rondas'];
 
 // Lobo guarda UN REGISTRO POR FASE (cupido, lobos, bruja, vidente, dia): su `turno` cuenta fases, y los videos, el paquete y `hasta` hablan de RONDAS. Por eso en Lobo se cuenta por `ronda`.
 const esLobo = (partida) => partida?.juego?.id === 'lobo';

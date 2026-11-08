@@ -1,4 +1,4 @@
-// Lo que comparten las mesas de casino de todos los juegos (mesa-duda.js, mesa-mayormenor.js, mesa-solitario.js): el fondo y las piezas fijas, los tiempos con la velocidad,
+// Lo que comparten las mesas de casino de todos los juegos (mesa-duda.js, mesa-juego.js, mesa-juego.js): el fondo y las piezas fijas, los tiempos con la velocidad,
 // el sonido, los subtitulos, el volteo de cartas y las fichas que viajan. Cada mesa agrega lo suyo (asientos, escenario, como se anima cada tipo de beat) y cumple el contrato que
 // espera la pagina (escena.js): `raiz`, `L`, `rapido`, `vel`, `sfx`, `ejecutar(beat, ms)`, `estadoVisible()`, `mostrarEstadoInicial(beat)`.
 //

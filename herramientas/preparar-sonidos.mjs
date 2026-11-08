@@ -42,16 +42,9 @@ export const MAPA = {
   'pierde-abucheo.ogg': { paquete: 'freesound', origen: '264378_HowardV.mp3', desde: 0.3, dur: 3.2, fundido: 1.0 }, // una multitud abucheando
   // BATALLA (el zoom de una disputa de regiones): las cinco grabaciones que escogio el usuario (28-10-2026), sonando A LA VEZ durante el zoom (calendario en web/casino/sonido.js: `paisaje`).
   // Dos CAMAS largas que se repiten con cruce todo el zoom, y tres ESPADAZOS cortos que caen al azar y separados.
-  'batalla-grito.ogg': { paquete: 'freesound', origen: '563011_florianreichelt.mp3', desde: 0.6, dur: 9.0, fundido: 0.5, nivel: -24 }, // la carga de una tropa gritando (florianreichelt)
-  'batalla-multitud.ogg': { paquete: 'freesound', origen: '353185_Jofae.mp3', desde: 0.3, dur: 8.2, fundido: 0.5, nivel: -25 }, // una multitud vitoreando (Jofae)
   // Los tres espadazos son CORTOS (de 0.5 a 0.6 s) para que quepan 6 o 7 en 6 s sin encimarse, y se nivelan por la fuerza de sus 100 ms mas fuertes (`rms`), no por la media del archivo: asi el clink seco de JohnBuhr no
   // suena 10 dB mas bajo que el golpe ancho de spycrah (antes parecia que solo se oia uno).
-  'choque-1.ogg': { paquete: 'freesound', origen: '326868_JohnBuhr.mp3', desde: 0.0, dur: 0.5, fundido: 0.2, rms: -14 }, // espadazo seco (JohnBuhr)
-  'choque-2.ogg': { paquete: 'freesound', origen: '364531_Christopherderp.mp3', desde: 0.0, dur: 0.6, fundido: 0.25, rms: -14 }, // espadazo con algo de resonancia (Christopherderp)
-  'choque-3.ogg': { paquete: 'freesound', origen: '471095_spycrah.mp3', desde: 0.95, dur: 0.6, fundido: 0.25, rms: -14 }, // espadazo ancho (spycrah)
   // MARAVILLA (el zoom al construirla): DeVern suena cada turno que esta en obra; JensZygar, cuando queda construida
-  'maravilla-cuerno.ogg': { paquete: 'freesound', origen: '512490_DeVern.mp3', desde: 0.8, dur: 4.4, fundido: 0.8, nivel: -19 }, // un cuerno de guerra lejano (DeVern)
-  'maravilla-gong.ogg': { paquete: 'freesound', origen: '486629_JensZygar.mp3', desde: 0.0, dur: 6.0, fundido: 2.0, nivel: -19 }, // un gong grande con su resonancia (JensZygar)
 };
 
 export const NIVEL_OBJETIVO_DB = -20; // volumen medio al que se lleva cada muestra (el maestro de sonido.js las baja ~12 dB bajo la voz)

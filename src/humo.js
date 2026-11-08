@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Prueba de humo GRATUITA de la Guerra de territorios: una serie corta con modelos gratis para medir, antes de gastar
+// Prueba de humo GRATUITA de Lobo en la aldea: una serie corta con modelos gratis para medir, antes de gastar
 // credito, cuantas respuestas traen JSON y cuantas ordenes valen. No corre en `npm test` porque llama a la API de verdad.
 //
-//   node src/humo.js                                  (nemotron-ultra y nemotron-super, 10 turnos, 2 partidas: ~40 llamadas)
-//   node src/humo.js --modelos=nemotron-ultra,laguna --turnos=10 --partidas=2 --ritmo=18
+//   node src/humo.js                                  (ocho asientos, 10 fases, una partida parcial)
+//   node src/humo.js --turnos=2 --partidas=1 --ritmo=18
 //
 // Siempre en modo gratis: se niega a llamar a un modelo que gaste credito. Las llamadas salen a 18 por minuto (el tope de
 // OpenRouter es 20) y sin comprar creditos el tope diario es de 50 llamadas. El resultado completo va a data/pruebas/.
@@ -12,7 +12,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import conquista from './juegos/conquista.js';
+import lobo from './juegos/lobo.js';
 import { resolverAgente } from './agentes.js';
 import { CONTENDIENTES, fijarModo } from './modelos.js';
 import { correrPartida } from './arena.js';
@@ -23,7 +23,7 @@ import { parsearArgumentos, errorDeCantidad, errorDeModo, planDeSerie, rutaLibre
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Los modelos de la prueba cuando no se piden otros: solo gratis (Laguna se retira el 2026-10-31 y Ling ya cobra).
-export const MODELOS_DE_HUMO = ['nemotron-ultra', 'nemotron-super'];
+export const MODELOS_DE_HUMO = Array.from({ length: 8 }, (_, i) => i % 2 ? 'nemotron-super' : 'nemotron-ultra');
 
 // Resume una serie de partidas por modelo (se juntan las partidas aunque el modelo cambie de asiento).
 export function resumirHumo(partidas) {
@@ -45,7 +45,7 @@ export function resumirHumo(partidas) {
         if (error) {
           f.conError++;
           if (f.ejemplosDeError.length < 3 && !f.ejemplosDeError.includes(error)) f.ejemplosDeError.push(error);
-        } else if (r.respuestas?.[i]?.invalida) {
+        } else if ((r.invalidas?.[i] ?? r.respuestas?.[i]?.invalida)) {
           f.respuestasInvalidas++;
         }
       }
@@ -70,18 +70,18 @@ async function principal() {
   const o = parsearArgumentos(process.argv.slice(2));
   const claves = String(o.modelos === undefined || o.modelos === true ? MODELOS_DE_HUMO.join(',') : o.modelos).split(',').map((s) => s.trim()).filter(Boolean);
   const turnos = Number(o.turnos ?? 10);
-  const partidas = Number(o.partidas ?? claves.length);
+  const partidas = Number(o.partidas ?? 1);
   const ritmo = Number(o.ritmo ?? 18);
 
-  const errCantidad = errorDeCantidad(conquista, claves.length);
+  const errCantidad = errorDeCantidad(lobo, claves.length);
   if (errCantidad) salir(errCantidad);
-  if (!Number.isInteger(turnos) || turnos < 1 || turnos > conquista.rondas) salir(`--turnos debe ser un entero de 1 a ${conquista.rondas}.`);
+  if (!Number.isInteger(turnos) || turnos < 1 || turnos > lobo.rondas) salir(`--turnos debe ser un entero de 1 a ${lobo.rondas}.`);
   if (!Number.isInteger(partidas) || partidas < 1) salir('--partidas debe ser un entero de 1 o mas.');
   if (!(ritmo > 0)) salir('--ritmo debe ser un numero mayor que 0 (llamadas por minuto).');
 
   let agentesPorClave;
   try {
-    agentesPorClave = new Map(claves.map((c) => [c, resolverAgente(c, conquista)]));
+    agentesPorClave = new Map(claves.map((c) => [c, resolverAgente(c, lobo)]));
   } catch (err) {
     salir(err.message);
   }
@@ -104,7 +104,7 @@ async function principal() {
   for (const p of plan) {
     process.stdout.write(`  Partida ${p.n + 1}/${partidas} `);
     const r = await correrPartida({
-      juego: conquista, agentes: p.claves.map((c) => agentesPorClave.get(c)), seed: p.seed, maxRondas: turnos, limitador,
+      juego: lobo, agentes: p.claves.map((c) => agentesPorClave.get(c)), seed: p.seed, maxRondas: turnos, limitador,
       alRegistrar: () => process.stdout.write('.'),
     });
     console.log(` ${r.llamadas} llamadas`);
@@ -124,7 +124,7 @@ async function principal() {
   mkdirSync(dirname(ruta), { recursive: true });
   writeFileSync(ruta, JSON.stringify({
     etiqueta: basename(ruta, '.json'), fecha: new Date().toISOString(), tipo: 'humo', modo: 'gratis', destino: 'pruebas',
-    juego: { id: conquista.id, nombre: conquista.nombre, categoria: conquista.categoria },
+    juego: { id: lobo.id, nombre: lobo.nombre, categoria: lobo.categoria },
     turnos, jugadores: claves, resumen, partidas: resultados,
   }, null, 2));
   console.log(`\n  Guardado: data/pruebas/${basename(ruta)}\n`);

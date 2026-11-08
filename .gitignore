@@ -38,3 +38,4 @@ privado/
 
 # ajustes personales de Claude Code (el respaldo automatico de privado/ es solo de este equipo)
 .claude/settings.local.json
+worldbox-puente/salida/

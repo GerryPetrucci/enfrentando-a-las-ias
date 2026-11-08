@@ -8,7 +8,7 @@ const objetivoValido = (E, j, i) => Number.isInteger(j) && E.vivos[j] === true &
 const evento = (E, tipo, datos = {}) => E.eventos.push({ ronda: E.ronda, tipo, ...datos });
 const acierto = (E, i) => { E.puntos[i] += PUNTOS.acierto; E.stats[i].aciertos++; };
 
-const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida (igual que Guerra, Duda y apuesta y La Fuga)
+const LARGO_CRUDO = 400; // caracteres de la respuesta cruda que se guardan cuando una respuesta fue invalida (src/invalidas.js la lee para analizarla)
 // Lo recibido, corto y con comillas: "3" (texto) no es 3 (numero), y eso es justo lo que suele fallar.
 const ver = (v) => { const t = JSON.stringify(v); return t === undefined ? 'nada' : t.length > 40 ? `${t.slice(0, 40)}…` : t; };
 

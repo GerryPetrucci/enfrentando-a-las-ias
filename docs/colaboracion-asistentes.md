@@ -83,9 +83,7 @@ contra navegador/CLI. Es una asignación provisional, revisable por evidencia,
 no una superioridad general de un modelo. No usar «es difícil» como único criterio.
 
 La planificación conjunta está en `privado/planes/plan-conjunto-2026-10-24.md`;
-el usuario debe elegir el primer lote antes de iniciar más producto. La spec de
-Civilizaciones existe y sigue pendiente de aprobación; no se autoriza implementarla
-por aparecer en el plan. Adaptamos alcance, memoria y compacción de ECC sin instalar
+el usuario debe elegir el primer lote antes de iniciar más producto. No implementar un juego por aparecer en un plan histórico. Adaptamos alcance, memoria y compacción de ECC sin instalar
 su runtime, observadores o hooks. Ambos asistentes disponen de entradas de las
 mismas skills; el procedimiento canónico vive en `.agents/skills/`.
 

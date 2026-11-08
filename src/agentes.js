@@ -116,58 +116,11 @@ export function agenteBotConEstado(clave, fn, { nombre, color } = {}) {
   };
 }
 
-// --- Estrategias clasicas, gratis, utiles como control del experimento ---
-
-const BASES = {
-  'siempre-c': {
-    nombre: 'Siempre Coopera',
-    color: '#6FA86F',
-    fn: () => ({ jugada: 'C', promesa: 'C', mensaje: 'Cooperemos los diez rondas.', razon: 'Coopera siempre.' }),
-  },
-  'siempre-t': {
-    nombre: 'Siempre Traiciona',
-    color: '#B8544A',
-    fn: () => ({ jugada: 'T', promesa: 'C', mensaje: 'Confia en mi.', razon: 'Traiciona siempre.' }),
-  },
-  tomaydaca: {
-    nombre: 'Toma y Daca',
-    color: '#5A8FB8',
-    fn: (vista) => {
-      const ultima = vista.historial.at(-1);
-      const jugada = !ultima ? 'C' : ultima.jugadaDelRival;
-      return { jugada, promesa: jugada, mensaje: 'Te devuelvo lo que me des.', razon: 'Copia la jugada anterior del rival.' };
-    },
-  },
-  azar: {
-    nombre: 'Al Azar',
-    color: '#9C8FB8',
-    fn: (vista, rng) => {
-      const jugada = rng() < 0.5 ? 'C' : 'T';
-      return { jugada, promesa: rng() < 0.5 ? 'C' : 'T', mensaje: 'Ni yo se que voy a hacer.', razon: 'Moneda al aire.' };
-    },
-  },
-};
-
-export function agenteBase(clave) {
-  const b = BASES[clave];
-  if (!b) throw new Error(`Estrategia base desconocida: "${clave}"`);
-  return agenteBot(clave, b.fn, { nombre: b.nombre, color: b.color });
-}
-
-export const CLAVES_BASE = Object.keys(BASES);
-
 // Resuelve un nombre de la linea de comandos al agente que corresponda. Si se da el juego, sus bots de control
-// (`juego.bots`) tienen prioridad, y las estrategias base (que son del Dilema) se niegan a jugar otro juego:
-// asi el error sale antes de la primera ronda y no como "respuestas invalidas" a media partida.
+// (`juego.bots`) tienen prioridad; los nombres desconocidos se rechazan antes de jugar.
 export function resolverAgente(clave, juego = null) {
   const bot = juego?.bots?.[clave];
   if (bot) return agenteBotConEstado(clave, bot.fn, { nombre: bot.nombre, color: bot.color });
-  if (CLAVES_BASE.includes(clave)) {
-    if (juego && juego.id !== 'dilema') {
-      throw new Error(`"${clave}" es una estrategia del Dilema y no sirve en ${juego.nombre}. Bots de este juego: ${Object.keys(juego.bots ?? {}).join(', ') || '(ninguno)'}.`);
-    }
-    return agenteBase(clave);
-  }
   if (!CONTENDIENTES[clave]) {
     const bots = juego?.bots ? ` Bots de ${juego.nombre}: ${Object.keys(juego.bots).join(', ')}.` : '';
     throw new Error(`Jugador desconocido: "${clave}". Modelos: ${Object.keys(CONTENDIENTES).join(', ')}.${bots}`);

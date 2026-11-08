@@ -9,7 +9,6 @@ import * as propuestas from '../../web/propuestas.js';
 import * as textos from '../../web/casino/textos-juego.js';
 import * as redes from '../../web/redes.js';
 import * as carrusel from '../../web/carrusel.js';
-import * as evaluacion from '../../web/casino/evaluacion-conquista.js';
 import * as conversacionLobo from '../../web/casino/conversacion-lobo.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
@@ -56,7 +55,7 @@ export async function correrPagina(archivo, { search = '', hash = '', marcador =
   };
   const window = { open: (...a) => abiertas.push(a) };
   const modulos = {
-    ...catalogo, ...menu, ...propuestas, ...textos, ...redes, ...carrusel, ...evaluacion, ...conversacionLobo,
+    ...catalogo, ...menu, ...propuestas, ...textos, ...redes, ...carrusel, ...conversacionLobo,
     cargarMarcador: async () => (marcador === null ? { juegos: [], partidas: [], error: true } : marcador),
     montarMenu: (datos, opciones) => llamadasMenu.push(opciones),
   };
@@ -70,14 +69,14 @@ export async function correrPagina(archivo, { search = '', hash = '', marcador =
 const ia = (id, nombre, color = '#111') => ({ id, nombre, color, inicial: nombre[0] });
 const IAS = [ia('claude', 'Claude'), ia('gpt', 'GPT'), ia('gemini', 'Gemini')];
 const partida = (serie, n, juego, seed, fecha, estado, extra = {}) => ({ serie, n, juego, fecha, seed, estado, hastaTurno: estado === 'publicada' ? null : 8, turnos: estado === 'publicada' ? 18 : null, jugadores: IAS, ganador: null, puntos: null, ...extra });
-const CONQ = { id: 'conquista', nombre: 'Guerra de territorios', categoria: 'Estrategia y conquista' };
-const MAYOR = { id: 'mayormenor', nombre: 'Mayor o menor', categoria: 'Estrategia de eliminación' };
+const CONQ = { id: 'lobo', nombre: 'Lobo en la aldea', categoria: 'Identidad oculta' };
+const MAYOR = { id: 'prueba', nombre: 'Juego de prueba', categoria: 'Estrategia de eliminación' };
 
 export const MARCADOR = {
   generado: '2026-10-21T16:48:55.317Z',
   juegos: [
-    { ...CONQ, versionReglas: 'conquista-1.1.0', sistema: 'REGLAS DE LA GUERRA', tabla: [{ ...IAS[0], partidas: 1, victorias: 1, empates: 0, derrotas: 0, puntos: 5, puntosPorPartida: 5 }] },
-    { ...MAYOR, versionReglas: 'mayormenor-1.0.0', sistema: null, tabla: [] },
+    { ...CONQ, versionReglas: 'lobo-1.1.0', sistema: 'REGLAS DE LA GUERRA', tabla: [{ ...IAS[0], partidas: 1, victorias: 1, empates: 0, derrotas: 0, puntos: 5, puntosPorPartida: 5 }] },
+    { ...MAYOR, versionReglas: 'prueba-1.0.0', sistema: null, tabla: [] },
   ],
   partidas: [
     partida('s2', 1, MAYOR, 2991144164, '2026-10-21', 'publicada', { ganador: 'GPT', puntos: [0, 4, 0] }),

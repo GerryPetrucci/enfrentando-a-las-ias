@@ -241,8 +241,8 @@ export function indexarPaquetes(raiz) {
   return indice;
 }
 
-async function principal() {
-  const a = Object.fromEntries(process.argv.slice(2).map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
+export async function principal(argv = process.argv.slice(2), { generarVideos = generarVideosDeGancho } = {}) {
+  const a = Object.fromEntries(argv.map((x) => { const [k, ...v] = x.replace(/^--/, '').split('='); return [k, v.length ? v.join('=') : 'true']; }));
   const salir = (m) => { console.error(m); process.exit(1); };
   if (a.indexar) { // --indexar: rehace data/paquetes.json con los paquetes que ya hay (los generados antes del indice)
     const indice = indexarPaquetes(resolve(a.listos ?? 'grabaciones/listos')), ruta = resolve(RUTA_INDICE);
@@ -303,7 +303,7 @@ async function principal() {
   // Los ganchos de imagen fija se generan ANTES de escribir el LEEME (no se graban con OBS): un VIDEO corto por formato (la misma imagen en cada cuadro) junto a los videos que se suben; ya no se deja el PNG (28-10-2026).
   // Sin navegador o sin ffmpeg se avisa, en el LEEME tambien, y trae el comando.
   const destinoDeGanchos = join(serie, 'por-subir', `j${juegoNumero}`);
-  const imagenes = await generarVideosDeGancho({ piezas: paquete.piezas, juegoId, juegoNumero, de: 2, carpeta: destinoDeGanchos });
+  const imagenes = await generarVideos({ piezas: paquete.piezas, juegoId, juegoNumero, de: 2, carpeta: destinoDeGanchos });
   if (imagenes.error) paquete.advertencias.push(imagenes.error);
   for (const p of paquete.piezas) if (p.tipo === 'gancho-imagen' || p.tipo === 'gancho') for (const formato of Object.keys(FORMATOS)) { // lo que sobra de un paquete anterior se quita: los PNG de un gancho de imagen fija (de ellos solo queda el video) y el video de imagen fija de un gancho que ahora es de video
     for (const viejo of p.tipo === 'gancho-imagen' ? [nombreDeImagen({ juegoNumero, parte: p.parte, formato })] : [nombreDeVideoDeGancho({ juegoNumero, parte: p.parte, formato }), nombreDeImagen({ juegoNumero, parte: p.parte, formato })]) {

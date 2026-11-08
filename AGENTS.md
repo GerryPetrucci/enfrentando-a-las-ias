@@ -1,7 +1,16 @@
 # Enfrentando a las IAs
 
-Juegos reproducibles entre modelos, videos y sitio de resultados. Node 20+, ES
-modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
+Alcance: Lobo en la Aldea (unico juego) y el proyecto en construccion de abajo.
+Partidas reproducibles entre modelos, videos y sitio de resultados. Node 20+, ES
+modules, cero dependencias, sin build. Espanol; textos publicos con acentos. Los
+demas juegos se eliminaron el 7-11-2026 y siguen en el historial de git.
+
+WorldBox (arena de IAs, MVP operativo desde el 7-11-2026): `docs/worldbox.md`, reglas versionadas en
+`docs/worldbox-reglas.md`, puente en `worldbox-puente/`. Reglas propias: nada del API del juego se usa sin
+verificarlo en el binario (`herramientas/worldbox-ensamblado.mjs`) o en vivo; una acción solo se anuncia con
+`verificada:true` tras probarla dos veces; el puente escucha solo en `127.0.0.1` con token (nunca en logs ni en el
+repo); modelos reales solo con `--modo=pago` explícito y tope de gasto, jamás sin orden; cambiar reglas o prompt
+sube `rules_version`/`prompt_version`; el juego apaga el modo experimental tras cada actualización.
 
 ## Contrato
 
@@ -35,7 +44,7 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
   regenera con `--forzar` antes de grabar. Regla decidida 28-10-2026 (`docs/produccion-videos.md`).
 - **Sonidos: grabaciones reales con licencia CC0 (28-10-2026).** Los efectos de la escena son grabaciones reales (lo sintetizado de `sonido.js` es solo respaldo) y todos CC0, porque el repo es público: la licencia se verifica en la página de
   cada sonido y se anota en `web/audio/LICENCIAS.txt` (autor, página, licencia); `herramientas/preparar-sonidos.mjs` se niega a bajar/usar lo que no diga CC0. Cómo cambiar una muestra y qué archivo es cada efecto: `web/audio/LEEME.md`
-  (`web/sonidos.html` para escucharlas). En Guerra, el zoom de una disputa suena como un **paisaje** (`sfx.batalla(ms)`: cinco grabaciones a la vez, espadazos al azar) y la Maravilla suena cada turno de obra y al quedar construida.
+  (`web/sonidos.html` para escucharlas).
 - Título y descripción de cada pieza, en todas las redes, empiezan igual: `Juego JN - Parte 1/2 - Seed S` (clip: `Clip 2 (Parte 1/2)`; gancho: `Próximamente Parte 2/2`). Regla decidida 25-10-2026 (`web/casino/editorial-paquete.js`).
 - **Hashtags en todo texto para subir:** toda descripción que se genere para publicar (parte, clip, gancho, de cualquier juego) termina con hashtags en su última línea: `#IAvsIA`
   primero, los del juego (`textos-juego.js`) y los de los modelos que juegan; de 1 a 5, nunca omitidos (si falta lugar se quitan los del final, nunca `#IAvsIA`). El **título mide
@@ -59,7 +68,7 @@ modules, cero dependencias, sin build. Espanol; textos publicos con acentos.
 - **Prompt completo en cada juego (los hechos y los futuros):** el prompt de sistema explica el juego ENTERO y sin ambigüedad: reglas exactas con cifras, orden de resolución del turno, qué ve y qué no ve el modelo, cómo leer cada línea de su estado,
   cada orden con su sintaxis y sus errores comunes, y el formato de respuesta explicado campo por campo (tipo, límites, significado) con un ejemplo de valores inventados y la advertencia de no copiarlos. Un prompt escaso hace que el modelo juegue a
   «descifrar el juego» y no el juego diseñado: eso sesga. La claridad va primero y el costo se analiza DESPUÉS de escribirlo; nunca se recorta claridad para caber en un tope (subir el tope de tokens del prompt pide orden del usuario). Cada afirmación se
-  verifica contra el motor y el texto se prueba como variante sobre prompts reales antes de adoptarlo. Procedimiento y lista de verificación: `docs/guia-de-prompts.md`. Primero Guerra de territorios, luego los demás. Regla decidida 28-10-2026.
+  verifica contra el motor y el texto se prueba como variante sobre prompts reales antes de adoptarlo. Procedimiento y lista de verificación: `docs/guia-de-prompts.md`. Regla decidida 28-10-2026.
 - Sin sondeos al otro asistente: esperar su entrega y aviso final; no revisar archivos durante su trabajo ni duplicar sus comprobaciones sin un hallazgo concreto.
 
 ## Contexto por tarea
@@ -77,8 +86,9 @@ iniciar producto. No duplicar reglas ni estado operativo en CLAUDE.md.
 | Tarea | Entrada |
 |---|---|
 | Videos, archivos, audio, guion | `docs/produccion-videos.md` |
-| Juego y balance | `src/juegos/<id>/`, spec en `privado/spec/` |
-| Escena y diseno | `web/casino/mesa-<id>.js`, layout y CSS del juego |
+| Juego y balance | `src/juegos/lobo/`, spec en `privado/spec/` |
+| WorldBox (arena, puente, protocolo) | `docs/worldbox.md`, `src/worldbox/`, `worldbox-puente/`; evidencia en `privado/worldbox/` |
+| Escena y diseno | `web/casino/mesa-lobo.js`, `layout-lobo.js` y `mesa.css` |
 | API y costos | `src/modelos.js`, `parametros.js`, `docs/metodologia.md` |
 | Redes y perfiles | `web/redes.js`, `marca/perfiles.md` |
 | Publicacion al avisar subida | `docs/politica-publicacion.md` |

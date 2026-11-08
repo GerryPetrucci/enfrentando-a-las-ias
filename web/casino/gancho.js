@@ -15,34 +15,18 @@ export const GANCHO = {
   MAX_CORTES: 5, PRESUPUESTO_MS: 20000, // lo que suman los cortes con sus etiquetas
 };
 
-// 28-10-2026, a pedido del usuario («en los clips de Guerra casi no se ve nada; que se distinga lo que pasa»): en Guerra de territorios un corte dura ~6 s, la aceleracion maxima baja de 8x a 3x, un corte no pasa
-// de 12 s y el gancho llega a 4 cortes (hasta 36 s de cortes). Los demas juegos conservan los parametros de siempre.
-export const GANCHO_POR_JUEGO = {
-  conquista: { CORTE_MS: 6000, VEL_MAX: 3, MAX_CORTE_MS: 12000, MAX_CORTES: 4, PRESUPUESTO_MS: 36000 },
-};
+export const GANCHO_POR_JUEGO = {};
 export const parametrosDeGancho = (juegoId) => ({ ...GANCHO, ...(GANCHO_POR_JUEGO[juegoId] ?? {}) });
 
 // Del motivo mas fuerte al mas flojo: el corte se llama como el primero que tenga.
-const ETIQUETAS = [
-  ['traicion', 'Traición'], ['maravilla', 'La Maravilla'], ['batalla decisiva', 'Batalla decisiva'], ['caida', 'Caída de un reino'],
-  ['batalla', 'Batalla'], ['conquista', 'Conquista'], ['pacto', 'Pacto'],
-];
+const ETIQUETAS = [];
 export function etiquetaDeCorte(motivos) {
   const lista = Array.isArray(motivos) ? motivos : [];
   return ETIQUETAS.find(([motivo]) => lista.includes(motivo))?.[1] ?? 'Momento clave';
 }
 
-// Juegos donde una unidad lleva mucho relleno y lo que se quiere ver es el MOMENTO. En Guerra de territorios un turno dura de 30 a 65 s (las ordenes y los mensajes de cada reino) y la batalla o la traicion, 6 a 10 s:
-// acelerar el turno entero hasta que cupiera en un corte hacia que no se distinguiera nada. Para esos juegos el corte muestra SOLO el beat que cuenta el momento, a velocidad normal o casi. Cada funcion recibe los beats
-// de la unidad y los motivos de su destacada, y devuelve [el beat del momento] o null (no hay momento que mostrar: se usa la unidad entera). El orden de los motivos es el de las etiquetas: la traicion manda.
-const FOCO = {
-  conquista: (deLaUnidad, motivos) => {
-    const de = (tipo) => deLaUnidad.filter((b) => b.tipo === tipo), tiene = (...m) => m.some((x) => motivos.includes(x));
-    const decisivas = (bs) => [...bs.filter((b) => b.pasos?.some((p) => p.tipo === 'tarjeta' && p.variante === 'C')), ...bs]; // la decisiva (pantalla VS) primero
-    const elegidos = tiene('traicion') ? de('traicion') : tiene('maravilla') ? de('resolucion') : tiene('batalla decisiva') ? decisivas(de('batalla')) : tiene('batalla') ? de('batalla') : tiene('caida', 'conquista') ? de('resolucion') : [];
-    return elegidos.length ? [elegidos[0]] : null;
-  },
-};
+// Foco opcional por juego.
+const FOCO = {};
 
 // Un corte: el momento de la unidad (con foco) o la unidad entera, acelerado para durar cerca de CORTE_MS (entre 1x y VEL_MAX). { unidad, etiqueta, vel, duracionMs (lo que dura a 1x), ms (lo que dura en el gancho),
 // ids (solo con foco: los beats que se muestran) }. La pagina lo usa para armar los cortes que pide la direccion (gancho=1&cortes=...); elegirCortes, para decidir cuales. juegoId: el juego, para su foco.

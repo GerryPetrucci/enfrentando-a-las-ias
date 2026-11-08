@@ -6,8 +6,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { urlDeCaptura, erroresDeConsola, beatsClave, tamanoDeFormato, buscarChrome } from '../../../herramientas/capturar-escena.mjs';
-import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
-import { jugar, CASOS } from './ayudas.js';
+import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-lobo.js';
+import { jugarLobo } from './ayudas-lobo.js';
+import { ultimaRonda } from '../../publicacion.js';
+// Una partida de Lobo con bots de al menos 3 rondas: asi hay noches posteriores donde mirar el estado que arrastra cada ronda.
+const larga = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => jugarLobo(s)).find((p) => ultimaRonda(p) >= 3);
 
 test('el tamano de ventana de cada formato es el del lienzo', () => {
   assert.equal(tamanoDeFormato('9x16'), '1080,1920');
@@ -53,15 +56,25 @@ test('de la salida de Chrome solo cuentan los errores de la consola de la pagina
   assert.deepEqual(erroresDeConsola(undefined), []);
 });
 
-test('los beats clave de una partida: el primer reparto, anuncio, duda, revelado y retirada, y el final', async () => {
-  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
+test('los beats clave de una partida de Lobo: el primero de cada tipo (preparacion, noche, amanecer, votacion...), el final y el elenco que lo cierra', () => {
+  const beats = construirLineaDeTiempo(larga);
   const clave = beatsClave(beats);
   assert.deepEqual(clave, [...new Set(clave)].sort((a, b) => a - b), 'sin repetir y en orden');
   const tipos = clave.map((i) => beats[i].tipo);
-  for (const t of ['reparto', 'anuncio', 'duda', 'revelado', 'retirada', 'final']) assert.ok(tipos.includes(t), `falta ${t}: ${tipos}`);
-  assert.equal(beats[clave.at(-1)].tipo, 'final');
+  for (const t of new Set(beats.map((b) => b.tipo))) assert.ok(tipos.includes(t), `falta ${t}: ${tipos}`);
+  for (const t of ['preparacion', 'noche', 'amanecer', 'votacion', 'final', 'elenco']) assert.ok(tipos.includes(t), `falta ${t}: ${tipos}`);
+  assert.ok(clave.includes(beats.findLastIndex((b) => b.tipo === 'final')), 'el beat del final');
+  assert.equal(clave.at(-1), beats.length - 1, 'en Lobo el ultimo beat clave es el elenco, que va despues del final');
+  assert.ok(clave.length < beats.length, 'no son todos los beats');
   assert.deepEqual(beatsClave([]), []);
   assert.deepEqual(beatsClave(null), []);
+});
+
+test('los beats clave miran tambien una ronda posterior: el estado que arrastra una ronda a la siguiente es donde se ven los fallos', () => {
+  const beats = construirLineaDeTiempo(larga);
+  const posteriores = beatsClave(beats).map((i) => beats[i]).filter((b) => b.mano >= 2);
+  assert.ok(posteriores.some((b) => b.tipo === 'noche'), 'falta la noche de una ronda posterior');
+  assert.ok(posteriores.some((b) => b.tipo === 'votacion'), 'falta la votacion de una ronda posterior');
 });
 
 test('buscarChrome usa CHROME_PATH si existe, luego los sitios conocidos, y devuelve null si no hay ninguno', () => {
@@ -74,36 +87,19 @@ test('buscarChrome usa CHROME_PATH si existe, luego los sitios conocidos, y devu
 });
 
 import { leerEstado, leerDesfase, desfaseAceptable } from '../../../herramientas/capturar-escena.mjs';
-import { beatsDeEstado, erroresDeEstado } from '../../../web/casino/linea-de-tiempo-duda.js';
+import { beatsDeEstado, erroresDeEstado } from '../../../web/casino/linea-de-tiempo-lobo.js';
 
-test('los beats clave miran tambien una mano posterior: el estado que arrastra una mano a la siguiente es donde se vieron los fallos', async () => {
-  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
-  const clave = beatsClave(beats);
-  const posteriores = clave.map((i) => beats[i]).filter((b) => b.mano >= 2);
-  assert.ok(posteriores.some((b) => b.tipo === 'reparto'), 'falta el reparto de una mano posterior');
-  assert.ok(posteriores.some((b) => b.tipo === 'anuncio'), 'falta el primer anuncio de una mano posterior');
-});
 
-test('beatsDeEstado: el reparto de cada mano desde la segunda, con un tope de manos', async () => {
-  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
+test('beatsDeEstado: la noche de cada ronda desde la segunda, con un tope de rondas', () => {
+  const beats = construirLineaDeTiempo(larga);
   const todos = beatsDeEstado(beats, 99);
-  assert.ok(todos.length >= 5);
-  assert.ok(todos.every((i) => beats[i].tipo === 'reparto' && beats[i].mano >= 2));
-  assert.deepEqual(new Set(todos.map((i) => beats[i].mano)).size, todos.length, 'una por mano');
-  assert.equal(beatsDeEstado(beats, 3).length, 3);
+  assert.equal(todos.length, ultimaRonda(larga) - 1, 'una por cada ronda desde la segunda');
+  assert.ok(todos.every((i) => beats[i].tipo === 'noche' && beats[i].mano >= 2));
+  assert.deepEqual(new Set(todos.map((i) => beats[i].mano)).size, todos.length, 'una por ronda');
+  assert.equal(beatsDeEstado(beats, 1).length, 1);
   assert.deepEqual(beatsDeEstado(null, 3), []);
 });
 
-test('erroresDeEstado: al repartir una mano no queda sello ni anuncio de la anterior, y las pastillas son las de la camara de esa mano', () => {
-  const beat = { id: 'm3-1-reparto', camara: [1, 3] };
-  assert.deepEqual(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 2, medallas: 0 }, beat), []);
-  assert.match(erroresDeEstado({ sello: 1, anuncio: 0, pastillas: 2, medallas: 0 }, beat).join(), /sello/);
-  assert.match(erroresDeEstado({ sello: 0, anuncio: 1, pastillas: 2, medallas: 0 }, beat).join(), /anuncio/);
-  assert.match(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 4, medallas: 0 }, beat).join(), /pastillas/);
-  assert.match(erroresDeEstado({ sello: 0, anuncio: 0, pastillas: 2, medallas: 1 }, beat).join(), /medalla/);
-  assert.match(erroresDeEstado(null, beat).join(), /estado/);
-  assert.equal(erroresDeEstado({ sello: 0.004, anuncio: 0, pastillas: 2, medallas: 0 }, beat).length, 0, 'una opacidad casi cero no se ve');
-});
 
 test('leerEstado y leerDesfase leen lo que la escena deja en el DOM', () => {
   const dom = '<body data-estado="{&quot;sello&quot;:0,&quot;anuncio&quot;:0,&quot;pastillas&quot;:2,&quot;medallas&quot;:0}" data-duracion-ms="61000.5" data-esperada-ms="60000">';
@@ -235,4 +231,12 @@ test('pngEsNegro entiende los filtros de PNG (Sub y Up): Chrome comprime con ell
   assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], { 0: sub, 1: up })), true);
   const conRojo = Buffer.from(sub); conRojo[1 + 4 * 2] = 200; // en la fila Sub, el pixel 2 suma 200 al rojo y arrastra a los siguientes
   assert.equal(pngEsNegro(pngSolido(ancho, alto, [0, 0, 0], { 0: conRojo, 1: up })), false);
+});
+
+test('erroresDeEstado compara las identidades de Lobo y detecta mensajes del día anterior', () => {
+ const beat = { tipo: 'noche', pasos: [{ tipo: 'estado-final', jugadores: [{ vivo: true }] }] };
+ assert.deepEqual(erroresDeEstado({ jugadores: [{ vivo: true }] }, beat), []);
+ assert.ok(erroresDeEstado({ jugadores: [] }, beat).length);
+ assert.ok(erroresDeEstado({ jugadores: [{ vivo: true }], mensaje: true }, beat).length);
+ assert.ok(erroresDeEstado(null, beat).length);
 });

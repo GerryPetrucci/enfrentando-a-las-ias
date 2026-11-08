@@ -21,10 +21,11 @@ Cada duelo se corre un numero par de partidas y los asientos se intercambian en
 cada una (`--alternar=no` lo desactiva, pero no deberia usarse para contenido
 publicado). Ninguna IA acumula la ventaja de ir siempre primero.
 
-Con mas de dos jugadores (Guerra de territorios) se corre una **serie de
-rotacion**: en k partidas cada jugador pasa por cada uno de los k asientos, y el
-mapa es el mismo en toda la serie. Por eso las series se corren en multiplos de k;
-la consola avisa si no es asi.
+Por defecto se juega UNA partida por corrida (`--partidas=1`). Solo si el usuario
+la pide se corre una **serie de rotacion**: en k partidas cada jugador pasa por cada
+uno de los k asientos, con el mismo seed en toda la serie si el juego lo declara
+(`mismoSeedEnSerie`). Por eso una serie se corre en multiplos de k; la consola avisa
+si no es asi.
 
 ## 3. Seed publicado
 
@@ -101,87 +102,13 @@ contesta (a mitad de precio, de minutos a horas despues). Tres cosas que hay que
 - El tope se compara con el gasto que OpenRouter ya informo, no con lo enviado y aun en espera: el gasto final puede pasar un poco
   del tope. Si se alcanza, o si un envio o una espera falla, la serie queda incompleta y se guarda como practica. Los turnos que no
   se pudieron pedir quedan anotados como error de API, no escondidos, y cada evento del lote queda en un registro `.lotes.jsonl`.
-- Una serie es un mundo: todas sus partidas comparten el seed base (en juegos con `mismoSeedEnSerie`, como La Fuga y Guerra de territorios, el escenario
+- Una serie es un mundo: todas sus partidas comparten el seed base (en juegos con `mismoSeedEnSerie`, cuando así lo declara el contrato, el escenario
   es identico en cada partida y solo cambian las decisiones). Para ver mas escenarios se corren varias series con distinto `--seed`.
 
-## 11. Reglas ocultas
+## 11. Información oculta en Lobo
 
-La Fuga tiene una regla que las IAs no conocen: si los prisioneros se separan, cada uno puede escapar por su cuenta (y eso vale
-menos que escapar juntos). El prompt nunca afirma lo contrario: dice que planean salir juntos, que hay detalles de la prision que
-no conocen, y calla sobre lo que pasa si solo uno sale. Se publica aqui y el reproductor la muestra, porque lo que se mide es que
-hacen las IAs creyendo que deben salir juntos. Tambien son ocultos, y quedan guardados en cada ronda (`oculto`): el peligro real
-de cada situacion, que metodo funciona mejor, si la pista decia la verdad y los dados. Las IAs nunca los ven; el publico si,
-despues de cada ronda. Si alguien se separa puede, ademas, escapar de inmediato por su ruta propia (una probabilidad oculta que
-depende de la fase) y deja la partida; quien se queda atras sigue solo, falla algo mas pero encuentra mas botin, y si logra
-escapar despues cobra mas que el que se fue primero.
-
-## 12. Juegos sin regla oculta
-
-El número solitario no tiene ninguna regla oculta: el prompt cuenta todo (cartas, fases, anulación, cortes, final, desempates y el
-puntaje por puesto) y la vista solo calla lo que los demás deciden a la vez. Lo único que no se ve de antemano es el azar de reemplazo
-(qué jugada legal se pone si una IA responde mal) y el sorteo de un desempate total; los dos se sortean al crear la partida con el seed (así
-se pueden reproducir), no dependen de lo que decidan las IAs, y en el registro queda su efecto: la jugada marcada como inválida con su motivo
-y el criterio de desempate que se usó. Una respuesta ilegal se mide como fallo (obediencia), no se esconde. Cada ronda son
-dos turnos y 90 llamadas por partida, por eso este juego se corre en vivo y no por lote.
-
-## 13. Información oculta sin regla oculta: la Subasta de tiempo
-
-La Subasta de tiempo no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve el banco ni las apuestas de los demás. Lo que sí es
-secreto durante la partida es esa información, y es el corazón del juego. La `vista` solo muestra lo propio (banco, apuestas y fichas) y lo público
-(las fichas de todos y quién ganó cada subasta); una prueba cambia el banco y las apuestas ajenas y exige que la vista de cada jugador no cambie. Después
-de cada subasta el público sí ve cuánto apostó cada uno (queda en `oculto` de cada registro). El tiempo se guarda en décimas enteras para no
-arrastrar errores de decimales. Una respuesta ilegible equivale a retirarse y se mide como fallo (obediencia), no se esconde. Cada subasta es un turno:
-hasta 95 llamadas por partida, por eso se corre en vivo y no por lote.
-
-## 14. Decisiones a la vez con papeles distintos: Mayor o menor
-
-Mayor o menor no esconde ninguna regla: el prompt cuenta todo, incluido que nadie ve lo que el rival decide en la misma ronda ni el orden en que saldrán las cartas
-del crupier. En cada ronda el jugador activo (que juega una carta boca abajo) y el predictor (que apuesta sin verla) deciden a la vez; como el activo compromete su carta
-antes de que el predictor apueste, es equivalente a que sean simultáneos, y por eso la arena pide las dos respuestas en el mismo turno. El orden de los dos mazos del crupier
-y las jugadas de reemplazo se sortean al crear la partida con el seed (una serie de dos partidas con los asientos invertidos repite el mismo mundo), y la `vista` solo
-lee de esos mazos la carta de la ronda en curso; una prueba reordena el futuro del crupier y exige que la vista de cada jugador no cambie. Una respuesta ilegal se
-reemplaza por una jugada legal sorteada de antemano y se mide como fallo (obediencia), no se esconde: el prompt lo cuenta y el historial que ven los dos la marca como [reemplazo]. Cada ronda son dos llamadas, 36 por partida como máximo, por eso se corre en vivo.
-
-## 15. Dos tipos de turno y puntos exactos: Triple dado
-
-Triple dado no esconde ninguna regla: el prompt cuenta todo, incluido que los dados de la ronda se lanzan después de elegir la tarjeta y qué se ve y qué no de los dados ocultos.
-Una partida alterna dos tipos de turno (predicción y enfrentamiento) en el mismo juego; la predicción de la ronda 4 no se pregunta, porque a cada jugador solo le queda una tarjeta
-(cada una se usa una vez), así que ese turno no cuesta llamadas (60 por partida en vez de 64). Todos los dados de las cuatro rondas y los reemplazos se sortean al crear la partida
-con el seed (una serie de cuatro partidas con los asientos rotados repite los mismos dados por asiento). Los repartos por empate dan tercios y mitades (tres empatados cobran 3.33),
-así que los puntos se guardan como enteros en doceavos de punto y solo se convierten a decimales al mostrarlos: la frontera de una tarjeta (MORE empieza en exactamente 7) no depende de errores
-de coma flotante. La `vista` solo muestra de los dados ocultos ajenos los que ya se usaron (su valor se revela al comparar) y en la fase de predicción ningún dado; una prueba cambia los dados
-no lanzados, los ocultos ajenos sin usar y las tarjetas ajenas en curso y exige que la vista de cada jugador no cambie. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano,
-se mide como fallo (obediencia) y el historial que ven los cuatro la marca como [reemplazo]. El registro guarda los puntos de cada enfrentamiento de dos formas: decimales para mostrar
-(3 × 3.33 = 9.99) y doceavos enteros exactos (`puntosD`, `puntosRondaD`) para cualquier cuenta.
-
-## 16. Un juego por turnos: Duda y apuesta
-
-Duda y apuesta no esconde ninguna regla: el prompt cuenta todo, incluido que las cartas de los demás son secretas hasta que se revelan en un enfrentamiento. Es el único juego del proyecto donde decide **un solo jugador por turno**: la arena le pregunta únicamente a quien le toca (`activos`), así que cada turno es una llamada y una partida cuesta como máximo 96 llamadas (el tope de 16 manos y de 4 anuncios por mano lo garantiza; con bots, unas 21 en promedio). Las cartas de las 16 manos se reparten de antemano por asiento con el seed: una serie de cuatro partidas con los asientos rotados repite las mismas cartas por asiento aunque las decisiones cambien. La `vista` solo muestra las cartas propias; el historial muestra de cada enfrentamiento cuántas cartas del color anunciado tenía cada jugador, y nada de las manos donde alguien se retiró. Una respuesta ilegal se reemplaza por una jugada legal sorteada de antemano, se mide como fallo (obediencia) y el historial la marca con `*`. Los anuncios que no se cumplen (faroles) se calculan después, desde las cartas guardadas en el registro, para la evaluación; ninguna jugada se cambia.
-
-## 17. La escena de Duda y apuesta: qué se muestra y qué no
-
-La escena de casino lee una partida **ya guardada** y no cambia ni oculta ninguna jugada: lo que se ve es lo que registró el motor. Hay una sola decisión editorial de imagen, la **cámara oculta**: en cada mano el público ve las cartas reales de dos de los cuatro jugadores (elegidos al azar con el seed de la partida y el número de mano, así que es reproducible) y de los otros dos nada hasta el recuento; si alguien se retira, no se revela ninguna carta. Es solo una decisión de qué mostrar al espectador: las IAs reciben exactamente el mismo texto de siempre (el prompt y la `vista` no cambian) y no saben nada de la cámara. La capa de comentario y los subtítulos salen de la narración que el código guardó en la partida; con `razon=1` se muestra también lo que cada IA dijo que pensó. Las jugadas que el juego puso por una respuesta ilegal se marcan como tales (borde punteado y "Jugada del juego") y nunca se le atribuyen a la IA. Los clips para redes se eligen por reglas fijas (`puntuarManos`: eliminación, mano justa, farol descubierto, retirada tras una subida, cambio de líder) y no a mano, para que no dependan del gusto de quien edita. Todo video lleva la etiqueta "Contenido generado por IA · Proyecto independiente".
-
-## 18. La escena de Mayor o menor: qué se muestra y qué no
-
-Igual que la de Duda y apuesta, la escena de Mayor o menor lee una partida **ya guardada** y no cambia ni oculta ninguna jugada. La información pública del juego (la carta del crupier, las cartas que le quedan a cada jugador, la apuesta y el lado) se muestra tal cual. Lo único secreto es la **carta que juega el activo, boca abajo**: la **cámara oculta** la muestra al público de antemano en las rondas que sortea el seed de la partida (se sortea cada ronda con el seed y su número, así que es reproducible y, en promedio, es la mitad) y en las demás se queda oculta hasta el reveal. Es solo una decisión de qué mostrar al espectador: las IAs reciben el mismo texto de siempre y no saben nada de la cámara. En la tira de números de cada jugador, la carta jugada solo se marca cuando se revela. Las fichas que se mueven salen de lo que registró el motor (nunca se recalculan): quien juega cobra de la banca la diferencia solo si su carta es mayor que la del crupier; el predictor que acierta recupera su apuesta y cobra otro tanto igual, el que falla la paga a la banca y, si la carta es igual a la del crupier, la apuesta solo se devuelve. Los comentarios de la narración (por ejemplo "lo apuesta todo" o "pasa al frente") se dicen al final del resultado de su ronda para no adelantar nada. Una carta o una apuesta que el juego puso por una respuesta ilegal se marca como tal y nunca se le atribuye a la IA. Los clips para redes se eligen por reglas fijas (`puntuarRondas`: apuesta total, apuesta grande, cambio de líder, carta igual, regalar la ronda, caída de golpe, final).
-
-## 19. La escena de El número solitario: qué se muestra y qué no
-
-La escena de El número solitario lee una partida **ya guardada** y no cambia ni oculta ninguna jugada: puntos, fichas de victoria, choques, ganador y cortes salen de lo que registró el motor (nunca se recalculan). Las **parejas** se eligen en secreto y se muestran **todas juntas**, sin cámara: nadie las ve antes que los demás. Las **marcas** (cuál de las dos cartas juega cada quien) también son simultáneas; la **cámara oculta** le muestra al público la marca de 2 de los jugadores que siguen en la ronda, elegidos con el seed de la partida y el número de ronda (reproducible), antes del reveal, con la etiqueta "Cámara"; de los demás no se ve nada hasta que todas se revelan a la vez. Es solo una decisión de qué mostrar al espectador: las IAs reciben el mismo texto de siempre y no saben nada de la cámara. Cuando dos o más marcan el mismo número esas cartas se tachan como "Anulada"; gana el número más bajo que nadie más jugó (si todos chocan, es una ronda en blanco y nadie puntúa). Quien queda a salvo en un corte (rondas 3 y 6) sale de la partida y su fila se atenúa. Los comentarios de la narración (por ejemplo "toma la delantera" o "choque de 5") se dicen al final del resultado de su ronda; los que siguen al anuncio de un corte se dicen con el corte. Una pareja o una marca que el juego puso por una respuesta ilegal se marca con borde punteado y "Jugada del juego", y ni la pantalla ni la voz dicen que la eligió la IA. Los clips para redes se eligen por reglas fijas (`puntuarRondas`: choque de tres o más, ronda en blanco, el que toma la delantera, premio alto, corte y final).
-
-## 20. La escena de Triple dado: qué se muestra y qué no
-
-La escena de Triple dado lee una partida **ya guardada** y no cambia ni oculta ninguna jugada. Los dados **no se sortean en la escena**: cada uno llega con la cara que dice el registro y la animación de rebote y giro (que sale del seed de la partida y del dado, así que es reproducible) siempre termina ahí. Los puntos, los empates (que se reparten con promedio y se leen en doceavos enteros, sin coma flotante), los premios y los acumulados salen del registro y nunca se recalculan. Lo secreto del juego son las **tarjetas** de cada ronda, que se eligen a la vez antes de ver los dados: la **cámara oculta** le muestra al público la tarjeta de 2 de los 4 jugadores, elegidos con el seed de la partida y el número de ronda (reproducible); las otras dos se voltean al cierre de la ronda. Los dados **rojo y azul** de cada jugador son ocultos: el público conoce su valor solo cuando entran en una combinación y, si no se usan, al cierre de la ronda. Es solo una decisión de qué mostrar al espectador: las IAs reciben el mismo texto de siempre y no saben nada de la cámara. Acertar la tarjeta da un premio (ZERO paga 40 puntos; MIN, MORE y MAX duplican la suma de la ronda) y fallar no resta. En la ronda 4 solo queda una tarjeta y se pone sola: la escena lo marca. Una jugada que el juego puso por una respuesta ilegal la dice la narración del motor ("no responde bien: el juego le pone...") y nunca se le atribuye a la IA. Los comentarios de la narración (por ejemplo "saca un triple" o "pasa al frente") se dicen al final del cierre de su ronda. Al terminar la ronda 4 gana la pieza el más alto en solitario y queda eliminado el más bajo en solitario; un empate deja a nadie. Los clips para redes se eligen por reglas fijas (`puntuarRondas`: triple, ZERO acertado, ganar por el dado que sobraba, pasar al frente y final).
-
-## 21. La escena de Subasta de tiempo: qué se muestra y qué no
-
-La escena de Subasta de tiempo lee una partida **ya guardada** y no cambia ni oculta ninguna jugada: apuestas, bancos, fichas, empates y el final salen de lo que registró el motor. Aquí **no hay cámara oculta**: el público ve los bancos de todas las IAs desde el principio (las IAs nunca los ven) y lo que descubre en cada subasta es cuánto aguanta cada una, en el orden en que se sueltan los botones. Nadie sabe lo que apostaron los demás hasta que el contador pasa por su apuesta. El contador **no mide tiempo real**: una apuesta puede ser de 600 segundos y no se pueden esperar en un video, así que empieza a ritmo normal durante 3 segundos, se acelera en el medio (con una rampa suave) y vuelve a ritmo normal durante los 3 últimos; con una apuesta de 8 segundos o menos todo va a ritmo normal. El número que se ve en cada instante es una función del tiempo de pantalla y de la apuesta más alta, así que es reproducible y no depende de la máquina. Quien se retira (apuesta 0) suelta su botón de entrada; quien ya no tiene banco queda apagado ("sin tiempo"); una respuesta ilegible la cuenta el motor como retirada y la escena lo dice ("ilegible: se retira") sin atribuírsela a la IA. Gana la apuesta más alta y recibe una ficha; todas las apuestas se pagan, ganes o pierdas, y los bancos bajan; si dos o más empatan en lo más alto la subasta se anula y el tiempo se pierde igual; si todos se retiran nadie gana. Los comentarios de la narración (por ejemplo "se queda sin tiempo" o "apuesta más de la mitad de su banco") se dicen al final del resultado de su subasta. Al terminar las subastas (la 19, o antes si todas las IAs se quedan sin banco) gana la pieza quien tiene más fichas y queda eliminado quien tiene menos (el empate se desempata por el tiempo que conserva; si también empatan, nadie). Los clips para redes se eligen por reglas fijas (`puntuarRondas`: empate, quedarse sin tiempo, más de la mitad del banco, adelantarse en fichas, ganar por casi nada y final).
-
-## 22. La escena de La Fuga: qué se muestra y qué no
-
-La escena de La Fuga lee una partida **ya guardada** y no cambia ni oculta ninguna jugada: decisiones, mensajes, riesgo, resultados, tentaciones, alarma, cohesión y puntos salen de lo que registró el motor. Se ve como una **sala de control** con una cámara por prisionero. Aquí **no hay cámara oculta por azar**: lo que el público ve y las IAs no es la **alarma** y la **cohesión** (medidores siempre visibles, con la palabra de la alerta: tranquila, inquieta, en alerta, desatada) y la **probabilidad real de fallar** de cada paso, que aparece después de las decisiones. Las decisiones secretas y simultáneas de los dos prisioneros (postura y método) salen **todas juntas** en su momento y nunca antes; **no** se muestra si cada uno quiere aprovechar la tentación: eso se descubre en la consecuencia. El botín cambia de manos y la oferta del guardia se acepta (el aviso aparece en la cámara del otro) solo en la consecuencia, y la alarma, la cohesión y los puntos se mueven al terminar la situación, no antes: la alarma sube con el botín y la cohesión baja con la oferta aceptada, y moverlas antes dejaría ver quién la aceptó. Quien cae queda en rojo con «SIN SEÑAL» y deja de recibir decisiones (el otro sigue solo); quien se separa y encuentra su ruta propia sale de inmediato («SALIDA»). Una jugada que el juego puso por una respuesta ilegible se dice como del juego («El juego elige por…») y un campo escrito pero ilegible (promesa, tentación) se anota sin atribuírselo a la IA; los mensajes y las razones de las IAs se muestran **tal cual**. Los textos de la escena usan el vocabulario suave de La Fuga («Por su cuenta», «se queda atrás», «contarle al guardia»). Cada una de las 24 situaciones tiene su propia mini escena, armada con piezas reutilizables dibujadas con código; la escena depende solo de la situación: la pista engañosa y el método mejor nunca se dibujan. El final **revela la regla oculta**: salir solo valía 7 puntos y quien se quedaba atrás y aun así salía cobraba 9 (los dos juntos, 10; capturado, 0). Se muestran las cuatro reglas y se marca la que se cumplió para cada IA según lo que cobró (nunca un «habría pasado»). La escena reproduce una partida: una serie son dos entradas en la lista, y armar el episodio con las dos es edición. Los clips para redes se eligen por reglas fijas (`puntuarRondas`: caída, escape anticipado, oferta aceptada, promesa rota, botín y final).
-
-## 23. La escena de Guerra de territorios: qué se muestra y qué no
-
-La escena de Guerra de territorios lee una partida **ya guardada** y no cambia ni oculta ninguna jugada: órdenes, batallas, conquistas, pactos, rupturas, hambre, caídas y puntos salen de lo que registró el motor, y **nunca recalcula una regla** (si un número no está guardado, no se dibuja). El mapa es el que guarda la partida (`partida.mapa`), con su bioma; el color de cada reino viene de la paleta global de cada IA. Aquí **no hay cámara oculta por azar**: el público lo ve todo (órdenes, tropas, recursos, honor) y lo único que la escena **retrasa** son los **mensajes privados**, que no se esconden: salen con su texto exacto cuando algo los hace relevantes. Al enviarse solo se dice «X le escribió en privado a Y»; si ese reino rompe después el pacto con el destinatario, el cartel de traición va seguido de un **flashback** con el último privado que le había escrito (también los del mismo turno); si un pacto se cumple, se muestran hasta dos mensajes de la pareja desde que se firmó; y los que nunca se revelaron salen en el panel final, los tres más recientes. Una jugada que puso el juego (por una orden ilegible o un modelo caído) se dice como del juego y nunca se le atribuye a la IA. Cada batalla muestra los datos del motor: tropas de cada bando, modificadores aplicados (armas, fortaleza, terreno), fuerzas y resultado; una batalla es **decisiva** (pantalla VS en lugar de tarjeta) cuando las dos fuerzas más altas difieren menos del 10 %, hay tres o más bandos, cae una capital o el atacante rompió ese turno un pacto con el defensor; un turno muestra como mucho tres tarjetas, ordenadas por importancia, y de las flechas de las órdenes se dibujan como mucho 10: las de ataque primero y, con lo que quede, hasta cinco de las demás. El marcador y el panel final (ranking con 5, 3, 1 y 0 puntos, momentos clave y marca de victoria por la Maravilla) se calculan solo de los eventos guardados. Los clips para redes se eligen por reglas fijas (`puntuarTurnos`: batallas decisivas, traiciones, caídas y la Maravilla) y cada partida se publica en dos partes de turnos contiguos.
+Las reglas son públicas para todas las IAs; los roles y las acciones nocturnas
+se muestran según la vista de cada asiento. El motor valida las decisiones.
+La escena lee registros guardados, no vuelve a jugar. Mientras falta la parte
+final, `src/publicacion.js` solo publica los eventos públicos hasta la ronda
+anunciada, sin acciones privadas, cámaras ni errores que delaten roles.

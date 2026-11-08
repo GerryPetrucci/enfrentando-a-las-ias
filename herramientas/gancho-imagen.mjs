@@ -6,7 +6,7 @@
 //
 //   node herramientas/gancho-imagen.mjs --juego=lobo --numero=1 --parte=1 [--de=2] --salida=grabaciones/listos/lobo-en-la-aldea/2026-10-25_seed-3441676158/por-subir/j1 [--formato=9x16,16x9] [--chrome=RUTA]
 //
-// --juego   id del juego (el del archivo guardado: lobo, conquista...)   --numero   su numero de juego jN   --parte   la parte que anuncia   --de   cuantas partes tiene (2 por omision)
+// --juego   id del juego (el del archivo guardado: lobo, juego...)   --numero   su numero de juego jN   --parte   la parte que anuncia   --de   cuantas partes tiene (2 por omision)
 // --duracion   segundos del video (6 por omision)   --ffmpeg   ruta de ffmpeg (el del PATH por omision)   --imagen   deja el PNG en vez del video
 // Para verla en el navegador sin generar nada: node src/servidor.js y abrir http://localhost:4321/gancho-imagen.html?juego=lobo&numero=1&parte=1&de=2&formato=9x16
 
@@ -42,7 +42,7 @@ export function servirWeb(carpeta = resolve(RAIZ, 'web')) {
 // El navegador se lanza ASINCRONO: el servidor de arriba vive en este mismo proceso, y un spawnSync lo congelaria mientras el navegador le pide la pagina (se quedarian esperandose).
 function ejecutar(programa, argumentos, limiteMs = 120000) {
   return new Promise((ok) => {
-    const p = spawn(programa, argumentos, { stdio: ['ignore', 'ignore', 'pipe'] });
+    const p = spawn(programa, argumentos, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
     let stderr = '';
     p.stderr.on('data', (d) => { stderr = (stderr + d).slice(-2000); });
     const reloj = setTimeout(() => p.kill(), limiteMs);
@@ -85,10 +85,11 @@ export async function renderizarGanchoImagen({ juegoId, juegoNumero = 1, parte =
   const m = modeloDeGanchoImagen({ juegoId, juegoNumero, parte, de, formato }); // valida antes de abrir nada
   if (!chrome) throw new Error('No encontré Chrome ni Edge. Pasa --chrome=RUTA o define CHROME_PATH.');
   const propio = servidor ?? await servirWeb(resolve(raiz, 'web'));
+  const perfil = mkdtempSync(join(tmpdir(), 'gancho-chrome-'));
   try {
     mkdirSync(dirname(resolve(destino)), { recursive: true });
     const url = `http://127.0.0.1:${propio.puerto}/${direccionDeGanchoImagen({ juegoId, juegoNumero, parte, de, formato })}`;
-    const r = await ejecutar(chrome, ['--headless=new', ...(COMO_ROOT ? ['--no-sandbox'] : []), '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1', `--window-size=${m.ancho},${m.alto}`,
+    const r = await ejecutar(chrome, ['--headless=new', `--user-data-dir=${perfil}`, ...(COMO_ROOT ? ['--no-sandbox'] : []), '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1', `--window-size=${m.ancho},${m.alto}`,
       '--virtual-time-budget=8000', `--screenshot=${resolve(destino)}`, url]);
     if (!existsSync(destino)) throw new Error(`El navegador no dejó la imagen (${String(r.stderr).trim().slice(-300) || `estado ${r.estado}`}).`);
     const { ancho, alto } = medidasDePng(destino);
@@ -96,6 +97,7 @@ export async function renderizarGanchoImagen({ juegoId, juegoNumero = 1, parte =
     return { destino, ancho, alto, formato };
   } finally {
     if (!servidor) await propio.cerrar();
+    rmSync(perfil, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
 

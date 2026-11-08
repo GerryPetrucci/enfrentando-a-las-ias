@@ -66,7 +66,7 @@ export const CONTENDIENTES = {
   // --- Modelos GRATIS: $0 por llamada, no gastan el saldo (solo cuentan para el tope diario de OpenRouter). ---
   // Los que respondieron bien al formato de los juegos en la prueba del 10 de octubre de 2026 (eran 4; Ling dejo de ser gratis el 17). Aparecen y
   // desaparecen del catalogo y se saturan: sirven para practicar, no para publicar un torneo serio. (En la prueba de humo del
-  // 9 de octubre de 2026 con la Guerra de territorios, Laguna y Ling dieron 1 respuesta util en 40 llamadas.)
+  // 9 de octubre de 2026 con la escena, Laguna y Ling dieron 1 respuesta util en 40 llamadas.)
   'nemotron-ultra': { nombre: 'Nemotron Ultra', modelo: 'nvidia/nemotron-3-ultra-550b-a55b:free', gratis: true, color: PALETA['nemotron-ultra'].color, inicial: 'U', razonamiento: 'medium', lote: false },
   'nemotron-super': { nombre: 'Nemotron Super', modelo: 'nvidia/nemotron-3-super-120b-a12b:free', gratis: true, color: PALETA['nemotron-super'].color, inicial: 'S', razonamiento: 'medium', lote: false },
   laguna: { nombre: 'Laguna', modelo: 'poolside/laguna-s-2.1:free', gratis: true, color: PALETA.laguna.color, inicial: 'A', razonamiento: null, lote: false },
@@ -82,7 +82,7 @@ export const CONTENDIENTES = {
   luna: { nombre: 'GPT Luna', modelo: 'openai/gpt-6-luna', color: PALETA.luna.color, inicial: 'N', razonamiento: 'medium', lote: true, practica: true },
   'flash-lite': { nombre: 'Gemini Flash-Lite', modelo: 'google/gemini-3.5-flash-lite', color: PALETA['flash-lite'].color, inicial: 'F', razonamiento: 'medium', lote: true, practica: true },
 
-  // --- Sumados el 25 de octubre de 2026: superaron la prueba de humo de formato (herramientas/prueba-de-humo-modelos.mjs, 3 llamadas cada uno: Dilema,
+  // --- Sumados el 25 de octubre de 2026: superaron la prueba de humo de formato (herramientas/prueba-de-humo-modelos.mjs, 3 llamadas cada uno: juego,
   // Lobo de noche y de dia; plan en privado/planes/plan-probar-modelos-nuevos.md). Confirma que contestan el formato, NO que jueguen bien: antes de
   // grabar con uno hace falta una partida completa de prueba. Ninguno tiene variante de lote en el catalogo. Cohere (Command A+) quedo fuera: su
   // razonamiento solo se enciende o apaga y se comio los 4000 tokens sin escribir respuesta.

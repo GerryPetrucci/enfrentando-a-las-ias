@@ -90,7 +90,6 @@ function detalleDe(dato, n) {
     asientos: (Array.isArray(p.jugadores) ? p.jugadores : []).map((j) => j?.id),
     ganador: publicada && !p.empate && Number.isInteger(p.ganador) ? nombres[p.ganador] ?? null : null,
     puntos: publicada ? p.puntos : null,
-    ganoPorMaravilla: publicada ? p.ganoPorMaravilla === true : null,
   };
 }
 
@@ -125,7 +124,7 @@ export function armarMarcador(episodiosLeidos, generado = new Date().toISOString
     grupos.push({ fecha: ep.fecha, items: detalle.map((d, i) => ({
       juego: { id: ep.juego.id, nombre: ep.juego.nombre, categoria: cat },
       serie: ep.etiqueta, n: d.n, fecha: ep.fecha, seed: d.seed, estado: d.estado, hastaTurno: d.hastaTurno, turnos: d.turnos,
-      jugadores: infoJugadores(vigentes[i].p), ganador: d.ganador, puntos: d.puntos, ganoPorMaravilla: d.ganoPorMaravilla,
+      jugadores: infoJugadores(vigentes[i].p), ganador: d.ganador, puntos: d.puntos,
       versionReglas: ep.prompt?.reglas ?? null, modo: ep.modo ?? null,
     })) });
     const todas = detalle.length > 0 && detalle.every((d) => d.estado === PUBLICADA);

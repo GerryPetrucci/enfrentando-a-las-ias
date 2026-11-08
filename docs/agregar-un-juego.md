@@ -1,185 +1,74 @@
-# Como agregar un juego
+# Contrato para incorporar un juego
 
-El motor no sabe de que juego se trata. Para agregar uno solo necesitas un
-archivo en `src/juegos/` que exporte este objeto, y una linea en
-`src/juegos/index.js`.
+El alcance actual es Lobo en la Aldea. Esta guía conserva el contrato de la arena
+para extensiones expresamente autorizadas; no autoriza agregar juegos por cuenta propia.
 
-```js
-export default {
-  id: 'subasta',                    // nombre en la linea de comandos
-  nombre: 'Subasta a Ciegas',       // lo que sale en pantalla
-  categoria: 'Negociacion',         // agrupa el marcador
-  jugadores: 2,
-  reglas: `...`,                    // va dentro del prompt, igual para todos
-  formatoRespuesta: `{"oferta": numero, "mensaje": "texto"}`,
+Un juego exporta `id`, `nombre`, `categoria`, `jugadores`, `versionReglas`,
+`reglas`, `formatoRespuesta` y estas funciones:
 
-  crear(rng)                  -> estado inicial
-  terminado(estado)           -> true/false
-  vista(estado, i)            -> lo que ve el jugador i (sin info secreta del rival)
-  normalizar(respuesta)       -> jugada valida SIEMPRE, con .invalida si venia mal
-  aplicar(estado, jugadas, rng) -> muta el estado y devuelve el registro de la ronda
-  resultado(estado)           -> { puntos, ganador, empate, metricas }
-}
-```
-
-Tres extensiones que usa la Guerra de territorios (el Dilema no las necesita):
-- `crear(rng, opciones)` recibe opciones (por ejemplo `{ jugadores: 4 }`); sin opciones usa los valores por defecto.
-- `vista(estado, i)` puede devolver un **texto** ya armado en vez de un objeto: `construirUsuario` lo usa tal cual (para un
-  objeto sigue mostrando el JSON, igual que antes, byte a byte).
-- `activos(estado)` devuelve un arreglo de booleanos con los jugadores a los que hay que preguntarles (un reino caido deja de
-  costar llamadas). La arena lo usa: a los asientos inactivos no les pregunta y le pasa `null` a `aplicar`.
-
-Lo que la consola y la arena usan si el juego lo ofrece (todo opcional):
-- `minJugadores` y `maxJugadores`: cuantos jugadores admite (`--jugadores=a,b,c`); sin ellos, vale `jugadores`.
-- `mismoSeedEnSerie: true`: una serie de rotacion conserva el mapa (mismo seed); sin esto, cada partida usa otro seed.
-- `bots`: `{ id: { nombre, color, fn(estado, asiento, rng) } }`, los bots de control que la consola acepta por nombre. Leen el
-  estado completo, nunca lo modifican y usan solo el `rng` que reciben.
-- `rondas`: la arena corta con un error una partida que no termina despues de `rondas + 2` rondas.
-- El registro de cada ronda puede traer `narracion: [{ tipo, texto }]` (la historia publica; usa `{0}` y `{1}` en vez de los
-  nombres, que el reproductor reemplaza con `resolverNombres`) y `oculto` (lo que ni las IAs ven ni la `vista` debe filtrar; el
-  reproductor lo muestra). `resultado` puede traer `epilogo` con el mismo formato. Ver `src/juegos/fuga/` como ejemplo.
-- `metricas[i]` con las claves `traiciones`, `promesasHechas`, `promesasRotas`, `jugadasInvalidas` y, si el juego tiene ordenes
-  en texto, `ordenesValidas` y `ordenesTotal`: el marcador las suma sin conocer el juego.
-- El registro de cada ronda debe traer `errores: (string|null)[]`, un error de API por jugador.
-- `evaluar(partidas)`: la evaluacion al final de una serie (no hay torneo general: cada juego se evalua por si mismo). Recibe las partidas
-  de la serie y devuelve `{ partidas, jugadores: [{ id, nombre, caracteristicas, destacadas, ... }], comentario: [{ tipo, texto }] }`. La consola
-  imprime el `comentario` y guarda todo en la serie (`evaluacion`); si falla, la serie se guarda igual. Lo calcula el codigo desde los datos
-  (sin llamadas extra), nunca cambia una jugada, y el texto es publico (lleva acentos). Ver `src/juegos/solitario/evaluacion.js`.
-
-Tres reglas que no conviene romper:
-
-1. **`vista` nunca filtra informacion secreta.** Es el unico lugar donde se
-   decide que sabe cada jugador. Un bug aqui invalida todas las partidas de ese juego.
-2. **`normalizar` nunca lanza error.** Recibe `null`, texto basura o un objeto
-   mal formado y siempre devuelve una jugada legal, marcada con `invalida: true`.
-   Un modelo caido no debe tumbar la grabacion.
-3. **Todo lo aleatorio pasa por el `rng` que recibes**, nunca por `Math.random()`.
-   Si no, el seed deja de reproducir la partida.
-
-## La escena vertical no sale de la zona segura (obligatorio, decidido el 20 de octubre de 2026)
-
-En 9:16 las redes tapan arriba (285 px) y abajo (420 px) con su propia interfaz. Todo lo que dibuje la escena de tu juego (cabecera, mesa, fichas, subtitulos, tarjetas, pantalla final) va dentro de `ZONA_SEGURA` (`herramientas/formatos.mjs`; el layout la recibe como `L.zona`). Al agregar un juego:
-
-1. Agrega su funcion de layout a `JUEGOS` en `src/pruebas/escena/layoutzona.test.js`, una entrada por cada tamano de mesa que pueda tener (Guerra de territorios prueba sus 4 mapas). Si lo olvidas, otra prueba de ese archivo falla.
-2. Revisa a ojo una captura 9:16 del caso mas grande con `node herramientas/capturar-escena.mjs --formato=9x16` (el mas cargado: mas jugadores, mensajes mas largos, pantalla final).
-3. Solo una banda que cubre todo el ancho a proposito (como las bandas VS de Guerra) puede ir de lado a lado, y aun asi dentro de la zona a lo alto.
-
-## Gancho «Próximamente» del juego (regla del 25 de octubre de 2026)
-
-Todo juego tiene gancho en cada parte: en video si sus partidas dan al menos 2 momentos con puntos (`destacadasDe`) y, si no, **en imagen** (`herramientas/gancho-imagen.mjs`: «Próximamente», el juego, «Juego N · Parte M de K»). No hace falta hacer nada para que funcione. Si el juego tiene arte que su escena ya usa (un panorama, personajes), registralo en `ARTE_GANCHO` (`web/casino/gancho-imagen.js`) para que la imagen lo lleve; sin eso sale solo con la marca. Detalle en `docs/produccion-videos.md`.
-## El prompt del juego (regla del 28 de octubre de 2026)
-
-El prompt de sistema de tu juego tiene que explicar el juego ENTERO y sin ambigüedad (reglas con cifras, orden del turno, qué ve el modelo, cómo leer su estado, cada orden, formato de respuesta campo por campo con un ejemplo de valores inventados). La claridad va primero; el costo se analiza después. Sigue `docs/guia-de-prompts.md`.
-
-## Examen de ingreso de modelos (27 de octubre de 2026)
-
-Antes de gastar una partida entera con un modelo nuevo (o con uno que ya fallo) se le hace el examen del juego: `node herramientas/examen-modelos.mjs --juego=<id> --modelos=a,b` estima el costo sin llamar a nadie; con `--ejecutar --tope-usd=<dolares>` llama de verdad. Cada modelo contesta unos escenarios reales del juego (prompts de produccion congelados en 4 momentos de una partida de bots, dos veces cada uno) y el motor juzga sus respuestas: JSON valido, ordenes legales, cortes por `max_tokens`, tokens de salida frente al tope. Veredicto `apto` / `con reservas` / `no apto`; el resumen queda en `privado/planes/aptitud-modelos.md` (modelo × juego, con version de reglas, tope de tokens y fecha: **caduca** si cambia alguno) y el detalle, con el razonamiento de cada llamada, en `privado/pruebas/examen-<juego>-<fecha>.json`. «Apto» dice que el modelo permite jugar, no que juegue bien, y es una muestra corta: un modelo que se corta solo en el final de una partida larga puede aprobar.
-
-**Diagnóstico sobre una partida real.** Los escenarios de bots no reproducen lo que ven los modelos en una partida de verdad (mensajes, pactos, un reino que crece según sus propias decisiones): el 28 de octubre GLM Flash salió «apto» en el examen y se había cortado en 17 de 30 turnos de su partida real. Para repetir los prompts REALES de una partida guardada: `node herramientas/examen-modelos.mjs --juego=conquista --modelos=glm-flash --partida=pruebas/ARCHIVO.json --jugador=glm-flash --repeticiones=1 [--turnos=7,9,10] [--ejecutar --tope-usd=0.20]` (la ruta es relativa a `data/`). El motor rejuega las respuestas guardadas (`reconstruirPrompts`, con su comprobación de fidelidad: si la rejugada no coincide con los estados guardados, o la partida se jugó con otro prompt de sistema, se niega), repite cada turno con el modelo pedido y cuenta cuántos de los turnos que se cortaron en la real se vuelven a cortar y cuántos de los que salieron bien. No escribe la tabla de aptitud: es un diagnóstico de esa partida. Un juego lo soporta si ofrece `reconstruirPrompts` con el gancho `alTurno` (ver `src/juegos/conquista/replay.js`). Para probar una redacción nueva SIN tocar el juego: `--reemplazar="texto viejo=>texto nuevo"` cambia ese texto del prompt de usuario de cada escenario solo en memoria (se niega si el texto no aparece en alguno); `--sistema=privado/spec/<borrador>.txt` prueba un prompt de sistema completo distinto (solo archivos de `privado/`; el examen dice si el prompt usado es IGUAL o DISTINTO al de la partida real, por la huella); `--max-tokens=N` prueba otro tope de tokens de salida. Así se probó el prompt completo de Guerra 2.3.0 (`docs/guia-de-prompts.md`). Así se descartó el 28 de octubre que la falta de leyenda de `g/m/c/fN` fuera la causa de los cortes de GLM Flash: con la leyenda dejó de descifrar siglas y se cortó igual (9 de 14, como sin ella).
-
-Para sumar tu juego al examen agrega una entrada a `JUEGOS` en `herramientas/examen-modelos.mjs` con `escenarios(opciones)`: una lista de `{ id, tokensEstimados, sistema, usuario, evaluar(respuesta) }`, con `sistema` y `usuario` armados con `construirSistema` / `construirUsuario` (los de produccion), y `evaluar` devolviendo `{ ok, motivo, ordenes: { validas, total } }` segun el motor. Mira `escenariosDeConquista` como ejemplo.
-
-## Colores de las IAs (global, no se definen por juego)
-
-El color de cada IA vive en [`web/paleta.js`](../web/paleta.js) y es el mismo en todos los juegos, el sitio y el
-reproductor. Tu juego y su escena nunca escriben un color de IA: lo piden por id.
-
-```js
-import { colorDe, textoDe, franjasDe, fondoCSS } from './paleta.js';   // en una pagina
-colorDe(j.id, j.color)   // relleno liso (j.color es el respaldo para estrategias base)
-textoDe(j.id, j.color)   // el mismo color, legible sobre fondo oscuro (nombres, avisos)
-franjasDe(j.id)          // null, o los colores de Gemini para pintar a franjas
-fondoCSS(j.id, j.color)  // valor de `background:` en CSS
-```
-
-`web/replay.html` ya lo hace asi (`tintaIA` pinta el degradado de Gemini). Los colores usan solo la identidad
-de color de cada proveedor, nunca sus logos. `npm test` comprueba que dos IAs no se confundan sobre el mapa.
-
-## Presupuesto de llamadas (limite duro al disenar un juego)
-
-OpenRouter limita los modelos gratis a **20 llamadas por minuto y 50 por dia**; con al menos
-$10 de creditos comprados (que los modelos gratis no gastan) el tope sube a **1,000 por dia**.
-Ese tope es lo que permite una "liga gratuita" para practicar y depurar, asi que todo juego
-nuevo lo respeta. Con modelos de pago no hay tope de plataforma, pero cada llamada cuesta.
-
-| Concepto | Limite |
+| Función | Contrato |
 |---|---|
-| Llamadas por jugador por turno | **Una** (ordenes en lote). Nunca una por region o por unidad |
-| Turnos maximos | **30** |
-| Llamadas por partida de 4 jugadores | **<= 100** (~25 por jugador). Asi caben ~10 partidas al dia en modo gratis |
-| Tokens por llamada | Entrada **<= 3,500**, salida **<= 500** (`max_tokens` 8000 incluye el razonamiento) |
-| Costo con modelos de pago (mezcla de los 5) | Objetivo **<= $0.40** por partida (caso base), tope duro **$0.90** |
-| Reintentos | Cuentan como llamadas (`reintentos: 2` por defecto): presupuestar +10% |
-| Medicion | Cada partida imprime sus llamadas y tokens y avisa si pasa el presupuesto |
+| `crear(rng, opciones)` | Estado inicial; recibe el número de jugadores y opciones. |
+| `terminado(estado)` | Indica cuándo acaba la partida. |
+| `vista(estado, i)` | Solo la información que puede conocer ese asiento; texto u objeto. |
+| `normalizar(respuesta, estado)` | Maneja respuestas inválidas sin tumbar la partida. |
+| `aplicar(estado, jugadas, rng)` | Valida acciones, resuelve la fase y devuelve su registro. |
+| `resultado(estado)` | Puntos, ganadores, empate y métricas desde el estado final. |
 
-**Mas complejidad** (reglas, mapa, recursos) cuesta tokens, no llamadas: esta permitida mientras la
-entrada no pase de 3,500 tokens y se cumpla el tope de costo. Subir los turnos, las llamadas por
-turno o el numero de jugadores por encima de lo anterior requiere aprobacion expresa.
+Referencia concreta: `src/juegos/lobo.js`, `src/juegos/lobo/` y sus pruebas.
+Los bots se registran en `juego.bots`: `{ nombre, color, fn(estado, asiento, rng) }`.
+Una IA solo recibe `vista`; nunca modifica el estado. Todo azar usa el RNG con seed.
 
-**Excepcion aprobada (9 oct 2026):** la Guerra de territorios puede usar hasta 4,450 tokens de entrada (ampliado
-desde 4,200 con aprobacion expresa: el peor caso de 5 reinos de las pruebas del plan 1 mide 4,406) y 650 de salida
-por llamada; con sus 6 reglas extra mide 3,681 tokens de entrada tipicos en 5 reinos. Los demas limites
-(una llamada por jugador y turno, 30 turnos, ~100 llamadas por partida de 4 jugadores) no cambian. Medirlo con
-`node herramientas/medir-prompt.mjs` (no hace llamadas: mide el texto real del juego con los caracteres por token medidos)
-antes de aceptar mas reglas; `npm test` vigila el mismo tope.
+Extensiones comunes: `activos(estado)` evita consultar asientos inactivos;
+`minJugadores`/`maxJugadores` acotan la mesa; `rondas` fija la guardia de terminación;
+`mismoSeedEnSerie` permite conservar un mundo en una serie pedida por el usuario;
+`limiteLlamadasDuro` reserva una fase entera antes de consultar modelos.
+`opcionesDeAgentes` aporta datos de presentación al estado inicial.
+`evaluar(partidas)` puede producir un resumen sin modificar las partidas.
 
-**Ampliada (22 oct 2026, Guerra 2.0.0):** hasta 6,500 tokens de entrada en el peor caso de 5 reinos (6,000 al empezar la rama) y 700 de salida visible (14 ordenes), por decision delegada
-del usuario para sostener mas complejidad. Una partida completa de 4 reinos ronda $1.0-1.25 con 1.1.0 (medido: ~$0.0104 por llamada); con 2.0.0 el tope es $1.50 blando / $2.00 duro.
+El registro conserva errores de API por asiento. La arena añade `errores` si
+el juego no lo hace. Lobo registra una fase por entrada y una ronda en varias fases:
+`src/publicacion.js` cuenta la ronda para recortar la publicación y excluye los
+roles, acciones privadas, errores y cámaras mientras falta la parte final.
 
-Antes de implementar, estimar llamadas y costo con los precios vigentes de OpenRouter.
+## Reglas y prompts
 
-**Los tokens se miden con Claude**, que para el mismo texto en espanol cuenta ~1.5 veces mas tokens que
-GPT, Gemini, DeepSeek y Llama (medido el 10 oct 2026: ~2.0 caracteres por token contra ~2.9). Si un
-prompt cabe en 3,500 tokens de Claude, cabe en todos. Regla practica: **entrada <= ~7,000 caracteres**.
+Leer el spec antes de cambiar reglas. Aplicar la lista de verificación completa
+de `docs/guia-de-prompts.md`: cifras, orden de fases, visibilidad, estado, sintaxis,
+errores y formato campo por campo con ejemplos inventados que no se deben copiar.
+Versionar reglas y prompt; no subir topes de tokens sin orden.
 
-**Tamano medido de un mapa** (borrador del juego 2, codificacion compacta): un mapa de pixel art dividido en
-regiones (26, 39, 52 o 65 para 2, 3, 4 o 5 reinos), cada region con su terreno, recurso y TODAS sus vecinas,
-mas las reglas completas y el estado de mitad de partida, ocupa ~1,770 / 2,010 / 2,240 / 2,480 tokens de Claude
-(51-71% del presupuesto). La salida de 8 ordenes ocupa ~100-160 tokens. Cada region cuesta ~25-30 tokens,
-y listar las vecinas de cada region completas (no una sola vez por pareja) evita que la IA tenga que cruzar listas
-y dar ordenes invalidas. Codificar compacto es parte del diseno.
+Para examinar el formato de Lobo sin una partida entera:
 
-(Pendiente: el contador de llamadas por partida se agrega con el juego 2; hoy solo se cuentan tokens.)
-
-### Un juego nuevo ya funciona por lote
-
-El lote (`--lote`) no le pide nada al juego: usa las mismas funciones y respeta el mismo presupuesto de llamadas. Lo que junta
-en cada envio son las jugadas del mismo turno de todas las partidas de la serie (una por jugador y por partida), no las de
-distintos jugadores de una misma partida.
-
-## Categorias sugeridas
-
-Tener varias categorias es lo que hace interesante el marcador: ninguna IA gana
-todas, y ahi esta la discusion.
-
-| Categoria | Juegos baratos de programar |
-|---|---|
-| Traición y confianza | Dilema del prisionero negociado (ya esta), juego de la confianza |
-| Negociacion | Reparto de un pastel, subasta a ciegas, ultimatum |
-| Engano | Mentiroso, adivina quien miente, poker simplificado |
-| Recursos | Blotto (reparte tropas en frentes), carrera por un recurso que se agota |
-| Cooperacion | Bien publico, cazar el ciervo |
-| Improvisacion | Juego con reglas secretas que deben deducir jugando |
-
-Los de la columna derecha son todos de menos de 150 lineas. La variedad del
-marcador no cuesta trabajo de programacion: cuesta elegir bien los juegos.
-
-## Modo "bot escrito" (para correr miles de partidas gratis)
-
-El modo caro es que la IA decida en cada ronda. El modo barato es pedirle **una
-sola vez** que escriba su bot en JavaScript, guardarlo en `src/bots/` y correrlo
-sin costo:
-
-```js
-// src/bots/dilema-claude.js
-export default function (vista) {
-  return { jugada: 'C', promesa: 'C', mensaje: '...', razon: '...' };
-}
+```powershell
+node herramientas/examen-modelos.mjs --juego=lobo --modelos=haiku,glm-flash --archivo=CATALOGO.json
 ```
 
-Luego registra un `agenteBot('claude-bot', fn, { nombre: 'Claude (bot)' })` en
-`src/agentes.js`. La arena los trata igual que a los modelos en vivo, asi que el
-marcador y el reproductor funcionan sin cambios.
+Sin `--ejecutar` solo estima. La llamada real exige autorización y un tope en dólares.
+`--sistema=privado/spec/BORRADOR.txt` y `--reemplazar="viejo=>nuevo"` prueban variantes
+en memoria. Los escenarios actuales son noche y día con ocho asientos; aún no
+reconstruyen los prompts de una partida guardada de Lobo.
 
-Esto es lo que te deja publicar *"los enfrentamos 1,000 veces"* por el costo de
-cinco llamadas a la API.
+## Escena, publicación y videos
+
+Registrar solo juegos aprobados en `src/juegos/index.js`; añadir su escena en
+`web/casino/lineas.js` y textos públicos en `web/casino/textos-juego.js`.
+La web no importa `src/` ni `herramientas/`. La portada solo anuncia juegos
+con partidas publicadas en `data/publicas/`, después de regenerar el marcador.
+
+Usar `web/paleta.js`, fuentes locales y tokens de marca. En 9:16 todo queda
+dentro de la zona segura de `herramientas/formatos.mjs`: 285 px arriba, 420 abajo
+y 130 a cada lado. Añadir el layout a las pruebas de zona segura y comprobar
+capturas reales antes de afirmar una mejora visual.
+
+Toda parte lleva gancho: cortes si hay al menos dos momentos puntuados; si no,
+un video de imagen fija de seis segundos con su `jN`, parte y etiqueta de IA.
+Registrar el arte en `ARTE_GANCHO` de `web/casino/gancho-imagen.js`.
+Los sonidos son grabaciones CC0 documentadas en `web/audio/LICENCIAS.txt`.
+
+Los IDs `cierre-N` se reservan al cierre del video. No confundirlos con el cierre
+de una ronda. Ver `docs/produccion-videos.md` para identificación, voz, hashtags,
+límites de texto y bloques copiables del LEEME.
+
+Pruebas: primero las afectadas y después toda la suite aplicable con bots/mocks.
+Solo una partida por corrida, `--partidas=1`, salvo petición de serie.

@@ -18,33 +18,33 @@ Textos listos para copiar. Los límites de caracteres son los que conozco y pued
 
 ## Bios en español
 
-**TikTok** (límite 80 · 77):
+**TikTok** (límite 80 · 76):
 ```
-IA contra IA en juegos de confianza, traición y más. Mismo prompt para todas.
-```
-
-**Instagram** (límite 150 · 130):
-```
-Ponemos a las IAs a jugar entre sí y llevamos el marcador. Mismo juego, mismo prompt, metodología pública. Proyecto independiente.
+IA contra IA en Lobo en la Aldea. Mismo prompt para todas. Marcador público.
 ```
 
-**X** (límite 160 · 157):
+**Instagram** (límite 150 · 138):
 ```
-IA contra IA en juegos de confianza, traición y más. Mismo juego, mismo prompt, marcador público. Proyecto independiente, sin afiliación con los proveedores.
+Ponemos a las IAs a jugar Lobo en la Aldea y llevamos el marcador. Mismo juego, mismo prompt, metodología pública. Proyecto independiente.
 ```
 
-**Facebook, texto de presentación** (límite 101 · 84; para cuando se agregue):
+**X** (límite 160 · 153):
 ```
-IA contra IA en juegos de confianza, traición y más. Mismo prompt, marcador público.
+IA contra IA en Lobo en la Aldea: mentiras, votos y traición. Mismo prompt, marcador público. Proyecto independiente, sin afiliación con los proveedores.
+```
+
+**Facebook, texto de presentación** (límite 101 · 65; para cuando se agregue):
+```
+IA contra IA en Lobo en la Aldea. Mismo prompt, marcador público.
 ```
 
 **YouTube, descripción del canal** (límite 1000):
 ```
 Ponemos a las IAs a jugar entre sí y llevamos el marcador.
 
-Cada episodio enfrenta a modelos de IA en un juego distinto, con el mismo prompt para todos y la misma semilla. Las jugadas son las que registró el motor, sin retoques: lo que ves es lo que decidió cada IA.
+Cada episodio enfrenta a modelos de IA en el mismo juego, con el mismo prompt para todos. Las jugadas son las que registró el motor, sin retoques: lo que ves es lo que decidió cada IA.
 
-Empezamos con el Dilema del Prisionero Negociado. En cada ronda las IAs eligen cooperar o traicionar, y además prometen lo que harán en la siguiente. Después medimos cuánto cumplen lo que prometen.
+Por ahora jugamos Lobo en la Aldea. Cada IA recibe un rol secreto —aldeano o lobo, con vidente, bruja y más—, habla, miente, vota y trata de sobrevivir. Después se ve qué bando ganó y cómo se decidió.
 
 Marcador y metodología: https://gerrypetrucci.github.io/enfrentando-a-las-ias/
 
@@ -53,11 +53,11 @@ Proyecto independiente, sin afiliación con los proveedores de los modelos. Sus 
 
 ## Bios en inglés (para cuando se abra la versión en inglés)
 
-**TikTok** (80 · 75): `AI vs AI in games of trust, betrayal and more. Same prompt for every model.`
+**TikTok** (80 · 69): `AI vs AI in Werewolf (Lobo en la Aldea). Same prompt for every model.`
 
-**Instagram** (150 · 108): `We make AIs play each other and keep score. Same game, same prompt, public methodology. Independent project.`
+**Instagram** (150 · 125): `We make AIs play Werewolf (Lobo en la Aldea) and keep score. Same game, same prompt, public methodology. Independent project.`
 
-**X** (160 · 151): `AI vs AI in games of trust, betrayal and more. Same game, same prompt, public scoreboard. Independent project, not affiliated with the model providers.`
+**X** (160 · 160): `AI vs AI in Werewolf (Lobo en la Aldea): lies, votes and betrayal. Same prompt, public scoreboard. Independent project, not affiliated with the model providers.`
 
 ## Lista al crear cada cuenta
 

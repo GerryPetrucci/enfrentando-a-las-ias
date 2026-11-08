@@ -19,7 +19,6 @@
 <script type="module">
 import { cargarMarcador, montarMenu, esc } from './menu.js?v=__V__';
 import { ESTADOS, fechaLarga, etiquetaDePartida, unidadDeJuego } from './catalogo.js?v=__V__';
-import { evaluarPartida, ETIQUETAS } from './casino/evaluacion-conquista.js?v=__V__';
 import { conversacionDeLobo } from './casino/conversacion-lobo.js?v=__V__';
 
 const $ = (id) => document.getElementById(id);
@@ -28,24 +27,10 @@ const id = (q.get('id') ?? '').replace(/[^\w.-]/g, '');
 const contenido = $('contenido');
 const disco = (j) => `<span class="disco" style="--c:${esc(/^#[0-9a-f]{3,8}$/i.test(j?.color ?? '') ? j.color : '#888')}" aria-hidden="true">${esc(j?.inicial ?? String(j?.nombre ?? '?')[0])}</span>`;
 const ia = (p, k) => { const j = p.jugadores?.[k]; return `<span class="ia">${disco(j)}${esc(j?.nombre ?? `Jugador ${k + 1}`)}</span>`; };
-const reino = (p, k) => (p.reinos?.[k] ? ` <small>(${esc(p.reinos[k] === 'Ambar' ? 'Ámbar' : p.reinos[k])})</small>` : '');
 
 function error(texto) {
   document.title = 'Partida no encontrada · Enfrentando a las IAs';
   contenido.innerHTML = `<p class="migas"><a href="./">← Todos los juegos</a></p><p class="vacio">${esc(texto)}</p>`;
-}
-
-function turno(p, r, prompts) {
-  const t = r.turno ?? r.ronda;
-  const msgs = (r.mensajes ?? []).map((m) => `<div class="mensaje"><div class="quien">${ia(p, m.k)} dice en público</div><q>${esc(m.texto)}</q></div>`).join('');
-  const privados = (r.privados ?? []).map((m) => `<div class="mensaje privado"><div class="quien">${ia(p, m.k)} le escribe a ${ia(p, m.a)}</div><q>${esc(m.texto)}</q></div>`).join('');
-  const jugadas = (r.respuestas ?? []).map((x, k) => {
-    if (!x) return '';
-    const ordenes = x.invalida ? `<p class="invalida">No respondió bien: ${esc(x.motivo ?? 'respuesta inválida')}${r.errores?.[k] ? ` (${esc(String(r.errores[k]).slice(0, 140))})` : ''}</p>` : `<ul class="ordenes">${(x.ordenes ?? []).map((o) => `<li>${esc(o)}</li>`).join('')}</ul>`;
-    const prompt = prompts?.[k] ? `<details><summary>El prompt que recibió</summary><pre class="prompt">${esc(prompts[k])}</pre></details>` : '';
-    return `<div class="jugada-ia" style="--c:${esc(p.jugadores?.[k]?.color ?? '#888')}"><h4>${ia(p, k)}${reino(p, k)}</h4>${ordenes}${x.razon ? `<p class="razon">«${esc(x.razon)}»</p>` : ''}${prompt}</div>`;
-  }).join('');
-  return `<article class="turno"><h3>Turno ${esc(t)}</h3>${msgs}${privados}${jugadas}</article>`;
 }
 
 // Lobo en la aldea: la conversacion publica (casino/conversacion-lobo.js), ronda por ronda. Los nombres ya vienen con su letra si un modelo ocupa varios asientos.
@@ -63,19 +48,11 @@ function rondaLobo(p, r) {
   return `<article class="turno"><h3>Ronda ${esc(r.ronda)}</h3>${hechos}</article>`;
 }
 
-function fichas(p) {
-  try {
-    return evaluarPartida(p).jugadores.map((e) => `<div class="ficha"><h4>${ia(p, e.asiento)} · ${esc(e.puntos)} pts</h4><dl>${Object.entries(ETIQUETAS).map(([k, nombre]) => `<dt>${esc(nombre)}</dt><dd class="${e.caracteristicas[k].notable ? 'nota' : ''}">${esc(e.caracteristicas[k].frase)}</dd>`).join('')}</dl></div>`).join('');
-  } catch {
-    return ''; // la evaluacion de caracteristicas aun es solo de Guerra de territorios
-  }
-}
-
 function resultado(p) {
   const nombres = p.jugadores.map((j) => j.nombre);
-  const ganador = p.empate ? 'Empate' : Number.isInteger(p.ganador) ? `Ganó ${esc(nombres[p.ganador])}${p.ganoPorMaravilla ? ' por la Maravilla' : ''}` : '';
+  const ganador = p.empate ? 'Empate' : Number.isInteger(p.ganador) ? `Ganó ${esc(nombres[p.ganador])}` : p.ganadorBando ? `Ganó el bando ${esc(p.ganadorBando)}` : '';
   const orden = Array.isArray(p.orden) ? p.orden : p.jugadores.map((_, i) => i);
-  const evaluacion = p.metricas ? fichas(p) : '';
+  const evaluacion = '';
   return `<section><h2>Resultado</h2><p class="meta"><b>${ganador}</b>${p.turnos ? ` · ${esc(p.turnos)} turnos` : ''}</p>
     <div class="puntos">${orden.map((k, i) => `<div>${ia(p, k)}<div class="pts">${esc(p.puntos?.[k] ?? 0)} pts</div><div class="meta">puesto ${i + 1}</div></div>`).join('')}</div>
     ${evaluacion ? `<h2 style="margin-top:28px">Cómo jugó cada IA</h2>${evaluacion}` : ''}</section>`;
@@ -129,7 +106,7 @@ if (serie) {
     ? `Lo que dijo cada IA en el debate y lo que pasó en cada ronda, tal como lo registró el motor.${pendiente ? ' Los roles de quienes siguen vivos no se publican hasta la parte final.' : ''} Los números de asiento que citan las IAs en sus mensajes se muestran con el nombre de ese jugador.`
     : 'Lo que escribió y decidió cada IA en cada turno, tal como lo registró el motor. Lo que se dicen en privado solo lo ve su destinatario durante la partida; aquí se publica hasta donde llega el video.'}</p>
     ${esLobo ? (conversacion.length ? conversacion.map((r) => rondaLobo(p, r)).join('') : `<p class="vacio">Todavía no hay ${unidad.nombre}s publicadas de esta partida.</p>`)
-      : rondas.length ? rondas.map((r) => turno(p, r, prompts.get(r.turno ?? r.ronda))).join('') : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
+      : rondas.length ? '<p class="vacio">Este juego no está disponible.</p>' : '<p class="vacio">Todavía no hay turnos publicados de esta partida.</p>'}</section>`;
 } else {
   montarMenu(datos, { pagina: 'partida' });
 }

@@ -14,7 +14,7 @@ export const LOGO = { verde: '#5fa877', rojo: '#d8584e', oro: '#e0b25c', noche: 
 const ENTIDADES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ENTIDADES[c]);
 
-// Las cartas de Duda y apuesta. Cada color tiene su FORMA y su LETRA para leerse sin depender del color (daltonismo); `tinta` es el color del texto de la carta.
+// Las cartas de color del kit (cinco colores y el comodin arcoiris). Cada color tiene su FORMA y su LETRA para leerse sin depender del color (daltonismo); `tinta` es el color del texto de la carta.
 export const CARTAS = {
   rojo:     { nombre: 'Rojo',     letra: 'R', tinta: '#c8423a', forma: 'círculo',   gema: '<circle cx="40" cy="40" r="30" fill="#d8584e" stroke="#7d1d17" stroke-width="4"/><circle cx="31" cy="30" r="9" fill="#fff" opacity=".45"/>' },
   amarillo: { nombre: 'Amarillo', letra: 'A', tinta: '#b88a00', forma: 'triángulo', gema: '<polygon points="40,8 72,66 8,66" fill="#f2c744" stroke="#8a6500" stroke-width="4" stroke-linejoin="round"/><polygon points="40,18 48,34 30,34" fill="#fff" opacity=".4"/>' },
@@ -61,10 +61,10 @@ export function htmlPila(n, tipo, max = 8) {
   return `<div class="pila">${Array.from({ length: cuantas }, (_, i) => htmlFicha(tipo, 22 - i * 5)).join('')}</div>`;
 }
 
-// espacios = null: un solo grupo de fichas (los juegos que solo tienen un tipo, como Mayor o menor).
+// espacios = null: un solo grupo de fichas (los juegos que solo tienen un tipo, como cartas numéricas).
 export const htmlFichasPlaca = (fichas, espacios) => `<div class="fichas"><div class="grupo">${htmlPila(fichas, 'juego')}<span class="cuenta">${esc(fichas)}</span></div>${espacios === null ? '' : `<div class="grupo">${htmlPila(espacios, 'espacio')}<span class="cuenta">${esc(espacios)}</span></div>`}</div>`;
 
-// El estado de un jugador en la ronda (Mayor o menor): una pastilla con su papel («Activo», «Predictor») y lo que le toca hacer, que va en el centro de su barra para que el publico vea quien hace que.
+// El estado de un jugador en la ronda (cartas numéricas): una pastilla con su papel («Activo», «Predictor») y lo que le toca hacer, que va en el centro de su barra para que el publico vea quien hace que.
 // `juego`: la jugada la puso el juego (respuesta ilegible), no la IA. `ahora: true`: es quien actua en este momento y su pastilla brilla. Sin papel legible no hay pastilla.
 export function htmlEstado(estado) {
   if (!estado || typeof estado.papel !== 'string' || !estado.papel) return '';
@@ -80,7 +80,7 @@ export function htmlPlaca(jugador, rol = '', fichas = 0, espacios = 0, reemplazo
   return `<div class="placa${reemplazo ? ' reemplazo' : ''}${pastilla ? ' con-estado' : ''}" style="--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))}"><div class="avatar" style="--fondo:${esc(fondoCSS(j.id, j.color))}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="rol">${esc(rol)}</div></div>${pastilla}${htmlFichasPlaca(fichas, espacios)}</div>`;
 }
 
-// ---- Cartas con numero (Mayor o menor, El numero solitario): cara crema con el numero grande y chico, sin color ni palo (el numero se lee solo) ----
+// ---- Cartas con numero (cartas numéricas, El numero juego): cara crema con el numero grande y chico, sin color ni palo (el numero se lee solo) ----
 const numeroValido = (n) => Number.isInteger(n) && n >= 0 && n <= 99;
 
 // Frente de una carta numerica. Un numero ilegible no lanza: cara en blanco.
@@ -92,7 +92,7 @@ export function htmlFrenteNumero(n) {
 // Una carta numerica. n = null cuando el publico NO debe verla todavia: el HTML no lleva el numero (ni en un atributo) y la escena lo pone con htmlFrenteNumero() al voltearla.
 export const htmlCartaNumero = (n = null) => `<div class="carta num"${numeroValido(n) ? ` data-numero="${n}"` : ''}><div class="giro">${numeroValido(n) ? htmlFrenteNumero(n) : '<div class="cara"></div>'}${htmlDorso()}</div></div>`;
 
-// ---- El numero solitario: la fila de cada jugador ----
+// ---- El numero juego: la fila de cada jugador ----
 // Las tres variables de color de un jugador (--c borde, --t texto, --fondo avatar): salen de paleta.js por su id; un bot usa el color que trae el resultado guardado.
 export const estiloJugador = (jugador) => { const j = jugador ?? {}; return `--c:${esc(colorDe(j.id, j.color))};--t:${esc(textoDe(j.id, j.color))};--fondo:${esc(fondoCSS(j.id, j.color))}`; };
 
@@ -104,14 +104,14 @@ export function htmlInfoFila(jugador, puntos = 0, fichas = 0) {
   return `<div class="info-fila" style="${estiloJugador(j)}"><div class="avatar">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="stats"><b>${entero(puntos)}</b> pts · ${entero(fichas)} <span class="vic">●</span></div></div></div>`;
 }
 
-// La tira de numeros de un jugador (informacion publica de Mayor o menor): los que siguen disponibles claros, los usados oscuros y tachados, el que se juega ahora en dorado.
+// La tira de numeros de un jugador (informacion publica de cartas numéricas): los que siguen disponibles claros, los usados oscuros y tachados, el que se juega ahora en dorado.
 export function htmlTira(numeros, usadas = [], ahora = null) {
   const lista = (Array.isArray(numeros) ? numeros : []).filter(numeroValido);
   const gastadas = Array.isArray(usadas) ? usadas : [];
   return `<div class="tira-num">${lista.map((n) => `<div class="t${gastadas.includes(n) ? ' usada' : ''}${n === ahora ? ' ahora' : ''}">${n}</div>`).join('')}</div>`;
 }
 
-// La tira de una mano REPARTIDA (Mayor o menor, reglas 2.0.0): una casilla por carta de la mano, en orden, con repetidas. `disponibles` son las cartas que siguen en la mano: de cada numero, las
+// La tira de una mano REPARTIDA (cartas numéricas, reglas 2.0.0): una casilla por carta de la mano, en orden, con repetidas. `disponibles` son las cartas que siguen en la mano: de cada numero, las
 // primeras copias quedan claras y el resto de la tira va tachado; `ahora` marca la ultima copia usada de ese numero (la carta que se juega ahora). Lo que no es un numero no entra.
 export function htmlTiraMano(inicial, disponibles = [], ahora = null) {
   const cartas = (Array.isArray(inicial) ? inicial : []).filter(numeroValido).sort((a, b) => a - b);
@@ -126,21 +126,21 @@ export function htmlTiraMano(inicial, disponibles = [], ahora = null) {
   return `<div class="tira-num">${casillas.map((c, i) => `<div class="t${c.usada ? ' usada' : ''}${i === marcada ? ' ahora' : ''}">${c.n}</div>`).join('')}</div>`;
 }
 
-// El avatar de una fila de Subasta de tiempo: la inicial sobre el color de la IA (de paleta.js; un bot usa el color guardado). Todo lo que viene de los datos pasa por esc().
+// El avatar de una fila de juego de tiempo: la inicial sobre el color de la IA (de paleta.js; un bot usa el color guardado). Todo lo que viene de los datos pasa por esc().
 export function htmlAvatarJugador(jugador) {
   const j = jugador ?? {};
   const nombre = j.nombre ?? 'Jugador';
   return `<div class="avatar" style="${estiloJugador(j)}">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div>`;
 }
 
-// La informacion de un jugador en Triple dado: avatar, nombre y "N pts" (el texto de los puntos ya viene escrito: 28.5, 3.33). Todo lo que viene de los datos pasa por esc().
+// La informacion de un jugador con puntos: avatar, nombre y "N pts" (el texto de los puntos ya viene escrito: 28.5, 3.33). Todo lo que viene de los datos pasa por esc().
 export function htmlInfoPuntos(jugador, puntosTexto = '0') {
   const j = jugador ?? {};
   const nombre = j.nombre ?? 'Jugador';
   return `<div class="info-fila" style="${estiloJugador(j)}"><div class="avatar">${esc(j.inicial ?? [...nombre][0] ?? '?')}</div><div class="quien"><div class="nom">${esc(nombre)}</div><div class="stats"><b>${esc(puntosTexto)}</b> pts</div></div></div>`;
 }
 
-// ---- Triple dado: dados vistos DESDE ARRIBA (solo se dibuja la cara de arriba) ----
+// ---- Dados vistos DESDE ARRIBA (solo se dibuja la cara de arriba) ----
 // Los puntos de cada cara sobre una rejilla de 3x3 (casillas 0 a 8, de izquierda a derecha y de arriba abajo).
 const PUNTOS_DADO = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 export const COLORES_DADO = ['blanco', 'rojo', 'azul'];

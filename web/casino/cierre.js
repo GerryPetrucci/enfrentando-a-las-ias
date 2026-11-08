@@ -1,7 +1,7 @@
 // El cierre de CADA video (parte, clip o gancho): la voz pide seguirnos y reaccionar con una frase que cambia de un video a otro, y en pantalla queda el logo, el @ de cada red y la pagina donde se
 // publican los resultados. Es un beat mas al final de la pieza (tipo 'cierre'), como la tarjeta de arranque lo es al principio (intro.js); la pagina lo agrega con cierre=1 (escena.js).
-// OJO: el TIPO `cierre` no basta para reconocerlo: Duda y apuesta y Triple dado llaman `cierre` a su propio fin de mano o de ronda (con su animacion en METODOS). El cierre del video se
-// reconoce SOLO por su id `cierre-N` (esBeatDeCierre); con el tipo, la mesa mostraba esta tarjeta vacia sobre la mesa al terminar cada mano (29-10-2026, grabaciones de OBS).
+// OJO: el TIPO `cierre` no basta para reconocerlo: un juego puede llamar `cierre` a su propio fin de mano o de ronda (con su animacion en METODOS; asi lo hacian dos juegos ya retirados). El cierre
+// del video se reconoce SOLO por su id `cierre-N` (esBeatDeCierre); con el tipo, la mesa mostraba esta tarjeta vacia sobre la mesa al terminar cada mano (29-10-2026, grabaciones de OBS).
 // La frase se elige con un seed sacado de la pieza (nunca Math.random: el mismo video es siempre igual) y el id del beat dice cual es (`cierre-N`): la voz se genera para TODAS las frases
 // (herramientas/narrar.mjs) y cada pieza usa el audio que le toca. Puro: sin DOM ni red. Los @ y la pagina salen de web/redes.js (una sola fuente).
 

@@ -1,4 +1,4 @@
-// El agente en lote y una serie completa de la Guerra de territorios corrida con lotes FALSOS (sin red ni gasto): las partidas de
+// El agente en lote y una serie completa de la fixture simultáneo corrida con lotes FALSOS (sin red ni gasto): las partidas de
 // una serie avanzan juntas, turno por turno, y cada ronda sale en UN lote por modelo.
 //
 //   npm test
@@ -10,8 +10,8 @@ import { correrPartida } from '../arena.js';
 import { crearCoordinador } from '../coordinador-lote.js';
 import { planDeSerie } from '../serie.js';
 import { clienteFalso } from './ayudas-lote.js';
-import conquista from '../juegos/conquista.js';
-import dilema from '../juegos/dilema.js';
+import simultaneo from './ayudas-simultaneo.js';
+import prueba from './ayudas-juego.js';
 import { fijarModo } from '../modelos.js';
 
 fijarModo('pago');
@@ -24,27 +24,27 @@ test('el agente en lote pide al coordinador con el razonamiento medio y el texto
   const agente = agenteModeloEnLote('claude', coordinador);
   assert.equal(agente.id, 'claude');
   assert.equal(agente.tipo, 'modelo');
-  const r = await agente.jugar({ juego: dilema, vista: { ronda: 1 } });
+  const r = await agente.jugar({ juego: prueba, vista: { ronda: 1 } });
   assert.equal(r.respuesta.jugada, 'T');
   assert.deepEqual(r.uso, { total_tokens: 9 });
   const [p] = pedidos;
   assert.equal(p.modelo, 'anthropic/claude-sonnet-5.5');
   assert.equal(p.usaLote, true);
   assert.equal(p.razonamiento, 'medium');
-  assert.ok(p.sistema.includes(dilema.reglas));
+  assert.ok(p.sistema.includes(prueba.reglas));
   assert.ok(p.usuario.includes('"ronda": 1'));
 });
 
 test('un modelo sin variante de lote pide la llamada normal; los gratis tampoco usan lote', async () => {
   const pedidos = [];
   const coordinador = { pedir: async (p) => { pedidos.push(p); return { texto: '{}', finishReason: 'stop', uso: null }; } };
-  await agenteModeloEnLote('llama', coordinador).jugar({ juego: dilema, vista: {} });
-  await agenteModeloEnLote('laguna', coordinador).jugar({ juego: dilema, vista: {} });
+  await agenteModeloEnLote('llama', coordinador).jugar({ juego: prueba, vista: {} });
+  await agenteModeloEnLote('laguna', coordinador).jugar({ juego: prueba, vista: {} });
   assert.deepEqual(pedidos.map((p) => [p.usaLote, p.razonamiento]), [[false, null], [false, null]]);
 });
 
 test('sin jugada utilizable se lanza el motivo, igual que con la llamada normal', async () => {
-  const con = (r) => agenteModeloEnLote('gpt', { pedir: async () => r }).jugar({ juego: dilema, vista: {} });
+  const con = (r) => agenteModeloEnLote('gpt', { pedir: async () => r }).jugar({ juego: prueba, vista: {} });
   await assert.rejects(con({ texto: '', finishReason: 'length' }), /cortada por max_tokens/);
   await assert.rejects(con({ texto: 'solo texto', finishReason: 'stop' }), /JSON válido/);
   await assert.rejects(con({ texto: '', finishReason: 'stop' }), /vacía/);
@@ -59,7 +59,7 @@ async function correrSerie(cliente, { sincronoFalso } = {}) {
   const claves = ['claude', 'gpt', 'gemini', 'llama'];
   const agentes = new Map(claves.map((c) => [c, agenteModeloEnLote(c, coordinador)]));
   const plan = planDeSerie({ claves, partidas: 4, seedBase: 7, mismoSeed: true });
-  const resultados = await Promise.all(plan.map((p) => correrPartida({ juego: conquista, agentes: p.claves.map((c) => agentes.get(c)), seed: p.seed, maxRondas: 3 })));
+  const resultados = await Promise.all(plan.map((p) => correrPartida({ juego: simultaneo, agentes: p.claves.map((c) => agentes.get(c)), seed: p.seed, maxRondas: 3 })));
   return { resultados, coordinador, plan };
 }
 
@@ -110,7 +110,7 @@ test('con el tope de gasto, la serie se detiene sin gastar mas y lo que no se pu
   const claves = ['claude', 'gpt', 'gemini', 'llama'];
   const agentes = new Map(claves.map((c) => [c, agenteModeloEnLote(c, coordinador)]));
   const plan = planDeSerie({ claves, partidas: 2, seedBase: 7, mismoSeed: true });
-  const resultados = await Promise.all(plan.map((p) => correrPartida({ juego: conquista, agentes: p.claves.map((c) => agentes.get(c)), seed: p.seed, maxRondas: 5 })));
+  const resultados = await Promise.all(plan.map((p) => correrPartida({ juego: simultaneo, agentes: p.claves.map((c) => agentes.get(c)), seed: p.seed, maxRondas: 5 })));
   const est = coordinador.estadisticas();
   assert.equal(est.topeAlcanzado, true);
   assert.ok(est.gasto >= 0.05 && est.gasto <= 0.05 + 0.06, `gasto ${est.gasto}`); // se pasa a lo sumo por los lotes de una ronda

@@ -73,14 +73,14 @@ test('con navegador: cada imagen sale del tamano exacto de su formato y la pagin
   const tmp = mkdtempSync(join(tmpdir(), 'gancho-img-'));
   try {
     await conServidor(async (servidor) => {
-      for (const juegoId of ['lobo', 'conquista']) for (const [formato, ancho, alto] of [['9x16', 1080, 1920], ['16x9', 1920, 1080]]) {
+      for (const juegoId of ['lobo', 'lobo']) for (const [formato, ancho, alto] of [['9x16', 1080, 1920], ['16x9', 1920, 1080]]) {
         const destino = join(tmp, `${juegoId}-${formato}.png`);
         const r = await renderizarGanchoImagen({ juegoId, juegoNumero: 2, parte: 1, de: 2, formato, destino, chrome: CHROME, servidor });
         assert.deepEqual([r.ancho, r.alto], [ancho, alto]);
         assert.ok(existsSync(destino));
         assert.deepEqual(medidasDePng(destino), { ancho, alto });
         // la autocomprobacion de la pagina: lista y 0 elementos fuera de la zona
-        // Con toda la suite corriendo en paralelo el navegador a veces vuelca el DOM antes de terminar de dibujar (en solitario sale a la primera): se reintenta hasta 3 veces.
+        // Con toda la suite corriendo en paralelo el navegador a veces vuelca el DOM antes de terminar de dibujar (en lobo sale a la primera): se reintenta hasta 3 veces.
         let dom = '';
         for (let intento = 0; intento < 3 && !/data-lista="1"/.test(dom); intento++) {
           dom = (await ejecutar(CHROME, ['--headless=new', '--disable-gpu', `--window-size=${ancho},${alto}`, '--virtual-time-budget=8000', '--dump-dom',

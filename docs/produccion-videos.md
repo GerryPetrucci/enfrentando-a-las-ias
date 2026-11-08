@@ -47,8 +47,8 @@ antes de mover y actualiza las rutas de los LEEME conservando el resto del texto
 No mueve archivos que ya estan en `jN/` ni sobrescribe destinos existentes.
 
 Los cupos son maximos por parte, no obligaciones. Viven en
-`CLIPS_POR_PARTE`, en `web/casino/editorial-paquete.js`: Guerra 2/2, Duda y
-apuesta 2/1, los demas 1/1. Se pueden cambiar para un paquete:
+`CLIPS_POR_PARTE`, en `web/casino/editorial-paquete.js` (hoy vacio: todo juego,
+Lobo incluido, va con 1/1). Se pueden cambiar para un paquete:
 
 ```powershell
 node herramientas/paquete.mjs --archivo=SERIE.json --partida=1 --clips=2,1
@@ -80,10 +80,6 @@ numero de partida dentro del archivo casi siempre es 1).
   `web/casino/indice-paquetes.js`; no se versiona) y, si la pieza esta en su paquete, tambien su parte y su clip. `paquete.mjs` lo actualiza cada vez que genera un paquete; `node herramientas/paquete.mjs --indexar` lo rehace con los
   paquetes que ya hay en `grabaciones/listos/`. Si esa partida no tiene paquete, no se inventa un numero. Aun asi, lo correcto es regenerar el paquete con `--forzar` y grabar con el LEEME nuevo.
 
-**Gancho en video de Guerra de territorios, mas lento (28-10-2026).** Los cortes del gancho se aceleraban hasta 8x y un turno de 40 a 65 s cabia en ~5 s: no se distinguia nada. En Guerra (`GANCHO_POR_JUEGO.conquista` en
-`gancho.js`) la aceleracion maxima es 3x, un corte dura ~6 s (hasta 12 s), el gancho llega a 4 cortes (36 s de cortes) y cada corte muestra SOLO el momento —la batalla (la decisiva primero), la traicion o la resolucion de la
-Maravilla/caida/conquista—, no el turno entero: una batalla se ve a ~1.8x. Los demas juegos conservan los parametros de siempre. La pagina y el paquete piden las mismas destacadas (40) para planear los mismos cortes.
-
 Ninguna parte sale sin gancho. El gancho en video (`gancho.js`) necesita al menos 2 momentos buenos (con puntos, dentro de la parte, sin la primera ni la ultima
 unidad); cuando no los hay (Lobo en la aldea, o un juego cuyas destacadas no puntuan), `paquete.mjs` crea en su lugar una pieza `gancho-imagen` y la vuelve un **VIDEO DE IMAGEN FIJA** (28-10-2026): un video corto
 (6 s, `DURACION_GANCHO_IMAGEN_S`) que repite la imagen en cada cuadro, para poder compartirlo como short de YouTube. Se genera con ffmpeg junto a los videos que se suben, con el mismo nombre en mp4
@@ -114,7 +110,7 @@ si el registro y la pieza son identicos, ni se inventa un conflicto para variarl
 
 **Todo titulo y toda descripcion empiezan igual** (decidido el 25 de octubre de 2026),
 para encontrar el juego, su numero, la parte y el seed a simple vista en cualquier red:
-`Guerra de territorios J3 - Parte 1/2 - Seed 1704202488`; un clip dice
+`Lobo en la aldea J2 - Parte 1/2 - Seed 1704202488`; un clip dice
 `Clip 2 (Parte 1/2)` y un gancho (de video o de imagen) `Proximamente Parte 2/2`.
 Lo que sigue (hecho destacado o participantes) se acota para que el identificador nunca se corte.
 
@@ -169,22 +165,22 @@ voz no equivale a reproducirla: `--sinvoz` en el generador del paquete elimina
 tambien sus tiempos, por lo que no debe usarse para preparar la version muda de
 una partida narrada. Para esa version se usa el recorte por canales.
 
-## Si en OBS desaparece o se queda pegada una parte de la pantalla (28 de octubre de 2026)
+## Revisión de cubiertas y animaciones en OBS
 
-Dos grabaciones de Guerra j3 fallaron en OBS (33, Chromium 150, aceleración por hardware, 4K) y nunca en un Chrome de escritorio, y el DOM estaba bien (opacidad 1, sin la clase del zoom, `transform: none`):
-(1) la cabecera con la marca y el turno, el aviso de IA, el marcador, el feed y los subtítulos desaparecieron ~27 s tras ciertas batallas; (2) al terminar el zoom el mapa se quedó con el zoom puesto y sin recorte, cubriendo la hoja.
-En los dos, una animación del navegador (`animate()` con `fill: 'forwards'`) cancelada dejaba su valor viejo en el compositor de OBS. En los otros juegos no se nota porque el valor viejo coincide con el final; en Guerra no.
-**Regla:** en la escena de Guerra, lo que debe quedar puesto (HUD, zoom del mapa, lo que se apaga: tarjetas, feed, subtítulos) lo mueve `web/casino/animador-estilo.js` (requestAnimationFrame, estilo en línea; el estado final lo escribe
-él), sin Web Animations con `fill` ni transiciones de CSS de opacidad/transform. Una prueba lo exige (`src/pruebas/escena/hud-conquista.test.js`). Si en otro juego algo se queda pegado o invisible solo en OBS, es lo primero que hay que sospechar.
-Al regrabar: «Actualizar caché de la página actual» en OBS. Si aun así falla, probar con la aceleración por hardware del navegador apagada (OBS → Ajustes → Avanzado → «Aceleración por hardware del navegador», pide reiniciar OBS).
-Para diagnosticar: sacar de la grabación el brillo de la zona (ffmpeg `signalstats`) segundo a segundo, casarlo con los momentos de la partida y comparar con el DOM en una reproducción en tiempo real.
+Si una animación queda pegada solo en OBS, revisar animaciones canceladas con
+`fill:forwards` y confirmar el estado final en estilos en línea. El módulo
+genérico `web/casino/animador-estilo.js` permite hacerlo con reloj inyectable.
+Confirmar el resultado en la grabación real antes de darlo por resuelto.
 
-## Un panel vacío que tapa la mesa al terminar cada mano o ronda (29 de octubre de 2026): NO era OBS
+El cierre de video se reconoce por su id `cierre-N` (`esBeatDeCierre`), nunca
+solo por su tipo. Esos IDs se reservan a `web/casino/cierre.js`. La regresión se
+comprueba en `src/pruebas/escena/cierre-del-video-y-cierre-de-juego.test.js`.
 
-En Duda y apuesta (j1, parte 1) las cartas de la mano 2 se veían negras y «ya nada se veía» justo después de «Y el anuncio era cierto»; en Triple dado, antes de la ronda 2. Se reproducía igual en Chrome (a los 64 s un panel oscuro con borde dorado cubría las dos mesas) y se midió con `elementsFromPoint`: era `.cierre-juego` con opacidad 1 y texto vacío.
-Causa: Duda y Triple dado llaman `cierre` a su propio fin de mano o de ronda (con su animación en `METODOS`) y el cierre de cada VIDEO (`cierre.js`) también era un beat de tipo `cierre`. `MesaBase.ejecutar` desviaba el del juego a la tarjeta del video (vacía, sin paso `cierre`) y nunca corría `cerrar`/`cerrarRonda`; además `conCierre` creía que la pieza ya traía su cierre cuando el último beat era el del juego, así que la tarjeta final real (logo, @ de las redes, sitio) tampoco se agregaba.
-**Regla:** el cierre del video se reconoce por su id `cierre-N` (`esBeatDeCierre` en `cierre.js`), NUNCA por el tipo; ningún beat de un juego puede llevar un id `cierre-N`. Lo exige `src/pruebas/escena/cierre-del-video-y-cierre-de-juego.test.js`. Un beat con el tipo de otra cosa de la base (`intro`, `tarjeta-gancho`) tendría el mismo problema: antes de nombrar un tipo de beat nuevo, buscarlo en `mesa-base.js`.
-Las piezas ya grabadas de esos juegos no sirven (no traen el fin de mano ni el cierre): regenerar la voz de los cierres (`node herramientas/narrar.mjs --archivo=... --solo-cierres`) y el paquete (`paquete.mjs --forzar`) y volver a grabar. Para revisar TODAS las piezas de un paquete antes de grabar: `node herramientas/auditar-cubiertas.mjs grabaciones/listos/<juego>/<carpeta>/paquete-jN/LEEME.md` (abre cada dirección del LEEME en Chrome a velocidad 4 en su propio servidor del puerto 4325, y exige que las tarjetas de arranque, gancho y cierre estén visibles solo en su beat, que la pieza cierre sin errores y que traiga la tarjeta final del video; lo decide `problemasDePieza`, probada en `src/pruebas/escena/auditar-cubiertas.test.js`). No sustituye mirar la grabación de OBS.
+```powershell
+node herramientas/auditar-cubiertas.mjs grabaciones/listos/<juego>/<carpeta>/paquete-jN/LEEME.md
+```
+
+La auditoría verifica las tarjetas y el cierre en Chrome; no sustituye mirar OBS.
 
 ## Guion para narracion humana
 

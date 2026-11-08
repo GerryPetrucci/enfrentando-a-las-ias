@@ -1,10 +1,14 @@
 # Contexto del proyecto
 
+
+
 ## Instrucciones compartidas con Codex
 
 Leer [AGENTS.md](AGENTS.md) y aplicar sus reglas comunes. El flujo de relevo esta
 en [docs/colaboracion-asistentes.md](docs/colaboracion-asistentes.md); el estado
 del trabajo entre asistentes vive en `privado/planes/relevo-asistentes.md`.
+
+
 
 ## Produccion actualizada (23 de octubre de 2026, orden del usuario)
 
@@ -34,31 +38,11 @@ Detalles y limites: `docs/produccion-videos.md`. Paquetes de muestra nuevos:
 >
 > Origen: conversacion en la app de Claude, 8 de octubre de 2026.
 
-## RETOMAR AQUI (sesion en la nube del 22 de octubre de 2026)
 
-**Guerra de territorios 2.0.0 esta construida y fusionada a `main`** (orden expresa del usuario el 22 de octubre de 2026; se construyo en la rama `guerra-2.0.0`, que queda como historial). Para seguir en la computadora:
-
-1. `git fetch origin && git checkout main && git pull`; `git -C privado pull` (el respaldo privado trae las specs, los planes y los datos oficiales); `npm test` (verde).
-2. Leer `privado/planes/plan-guerra-2.0.0-ledger.md` (ultima etapa terminada y siguiente tarea) y `privado/planes/plan-guerra-2.0.0.md` (etapas 0 a 12 con checklist). Reglas completas: `privado/spec/guerra-2.0.0-diseno.md`. Hallazgos y mediciones: `privado/spec/guerra-2.0.0-propuesta.md` y `-medicion.md`.
-3. El usuario dejo trabajando a Claude mientras dormia y delego las decisiones: las que se tomaron estan en la seccion 10 del diseno (tope de entrada 6,500 tokens y costo $1.50/$2.00 por partida, capital cerrada a aliados, tierra ajena x0.85, suministro por regiones aisladas, paquete de equilibrio, mejoras en vez de armas). Son revisables: cada una vive en una constante o una regla. Avance: etapas 0 a 11 hechas (motor, alianzas, suministro, equilibrio, vista, medicion con bots —el lider de T10/T15/T20 ya no gana 90/95/98 % sino 41-61 / 50-70 / 53-77 % con bots de estrategia; la Reconquista y la Patria se midieron y se quitaron—, ocho biomas, evaluacion, rejugada, docs y la escena con composicion por tipo, visitas, aisladas y Hegemon).
-4. **Juego nuevo de civilizaciones («Carrera de civilizaciones»): solo hay SPEC** (`privado/spec/civilizaciones-diseno.md`, con el orden de construccion por capas en su seccion 12; el concepto y las mediciones, en `civilizaciones-propuesta.md`). El usuario pidio parar ahi (limite semanal de uso): falta que la apruebe; entonces se escribe el plan con checklist (`privado/planes/plan-civilizaciones.md`) y se construye en una rama propia, nunca en `main` hasta que el usuario lo ordene.
-5. **Primera partida real con la 2.0.0 corrida el 22 de octubre de 2026** (orden expresa, una sola partida, sin tope pero cuidando el saldo; Claude, GPT, Gemini y DeepSeek, $0.88 mas un ensayo de 3 turnos de $0.10; `data/2026-10-22-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json`, respaldo en `privado/datos-oficiales/`; voz y paquete `paquete-j3` listos en `grabaciones/listos/guerra-de-territorios/2026-10-22_seed-1704202488/`; detalle en `docs/decisiones-detalle.md`). Falta que el usuario la grabe con OBS y decida si sirve de episodio.
-6. Espera orden expresa del usuario: aprobar la spec de civilizaciones, `cache_control` para Claude (medir `cached_tokens`), mas partidas con modelos reales (con tope), publicar la serie 2.0.0.
 
 ## Donde vive que
 
-- **Publico (este repo):** codigo, `CLAUDE.md`, `README.md`, `docs/` (metodologia, como agregar un juego), `marca/` y
-  `herramientas/` (programas chicos que se corren a mano, p. ej. `node herramientas/medir-prompt.mjs`).
-- **Privado (`privado/`, ignorado por git, nunca se sube):** spec y borrador de reglas (`privado/spec/`), planes de
-  implementacion y plan de juegos (`privado/planes/`), plan de contenido (`privado/contenido/`), terminos de uso de los
-  proveedores (`privado/terminos/`) y prototipos con sus herramientas de balance (`privado/prototipos/`). Su inventario esta en
-  `privado/inventario-conocimiento.md`. `src/pruebas/privado.test.js` falla si git llegara a rastrear algo ahi.
-- **Respaldo de `privado/` (hecho el 11 de octubre de 2026):** `privado/` tiene su propio repo git (anidado; el repo publico lo ignora) subido a un repo
-  **PRIVADO** de GitHub, `GerryPetrucci/enfrentando-a-las-ias-privado`. Para refrescar la copia despues de cambiar specs o planes:
-  `git -C privado add -A && git -C privado commit -m "respaldo" && git -C privado push`. Nunca publicar ese repo ni subir `.env`.
-- **Memoria de Claude:** la de este proyecto vive junto al repo y solo guarda punteros y preferencias; las decisiones van aqui
-  o en `privado/`.
-- La llave de OpenRouter solo esta en `.env` (ignorado): nunca se lee ni se pega en el chat.
+
 
 ## Que es esto
 
@@ -71,6 +55,8 @@ paises y un video donde alguien puso a varias IAs a elegir estrategias en un
 juego tipo Age of Empires. La restriccion desde el dia uno: **nada de video o
 foto "real"** — todo se genera con codigo propio.
 
+
+
 ### Los tres principios que hacen funcionar el formato
 
 1. **Identidad prestada.** El publico no ve un algoritmo, ve "su" IA. Sin eso es
@@ -80,7 +66,11 @@ foto "real"** — todo se genera con codigo propio.
 3. **Generable en masa.** Una vez programado el motor, cada episodio es cambiar
    participantes y seed. Eso es lo que permite publicar seguido sin morir.
 
+
+
 ## Decisiones ya tomadas (no volver a abrirlas sin motivo)
+
+
 
 ### Nada de suscripciones. API, via OpenRouter.
 
@@ -92,6 +82,8 @@ formato son centavos.
 formato compatible con OpenAI, sin recargo por token (el cobro es ~5.5% al cargar
 saldo). Cambiar de IA = cambiar un string, que es exactamente lo que necesita un
 canal cuyo chiste es enfrentarlas. Presupuesto realista: **$10-20 USD/mes.**
+
+
 
 ### Tres modos de costo, y cuando usar cada uno
 
@@ -105,6 +97,8 @@ Los tres los soporta `src/agentes.js` sin tocar el motor. Hoy esta implementado
 el modo en vivo y las estrategias de control; el modo "bot escrito" esta disenado
 pero falta escribir los bots (ver `docs/agregar-un-juego.md`).
 
+
+
 ### Gratis o pago: se elige en CADA ejecucion (decidido el 10 de octubre de 2026)
 
 `node src/correr.js ... --modo=gratis|pago` es obligatorio cuando juega algun modelo; no hay valor por
@@ -117,41 +111,15 @@ pago se niega a llamar a un modelo que gaste credito, aunque otro script lo inte
 de practica, no de torneo (se saturan, cambian y fallan por infraestructura).
 Los resultados con modelos gratis van a data/pruebas/ (no se versionan ni entran al marcador).
 
+
+
 ### Razonamiento de los modelos: siempre medio, nunca el maximo (decidido el 9 de octubre de 2026)
 
 Todos los modelos se llaman con razonamiento **medio** (`reasoning.effort = "medium"`) o, si no tiene niveles, con su valor por defecto; **nunca `high` ni `xhigh`** (cuesta mucho mas y no cambia lo que se mide). Igual para todas
 las IAs y congelado junto con el prompt y los demas parametros (`src/parametros.js`; cada contendiente declara `razonamiento` en `src/modelos.js`). `max_tokens` 8000 (4000 desde el 10 de octubre de 2026, cuando con 2000 GPT Luna
 se cortaba; 8000 desde el 26 de octubre por orden del usuario, «calidad antes que cantidad»: con 4000 se cortaban jugadas del final de Guerra y de Lobo); si aun asi se cortan, se mide y se decide con el usuario, sin subir el razonamiento. Correr `node herramientas/verificar-modelos.mjs` antes de cada corrida con modelos y antes de gastar. Detalle y mediciones: `docs/decisiones-detalle.md`.
 
-### Juegos y escenas (resumen; el detalle esta en `docs/decisiones-detalle.md`: leerlo solo al tocar ese juego)
 
-Cada juego es un objeto con seis funciones en `src/juegos/`; cada uno trae motor, bots de control, evaluacion al final de la serie (caracteristicas por IA, sin llamadas extra), pruebas y una escena en `web/escena.html`.
-Todos respetan el presupuesto de llamadas (abajo). **Con modelos reales solo se han corrido Mayor o menor (Claude vs GPT, $0.45) y Guerra de territorios (Claude, GPT, Gemini y DeepSeek, $1.03), ambos el 18 de octubre de 2026 con orden expresa y 2 partidas; detalle en `docs/decisiones-detalle.md`**; **el 22 de octubre de 2026, con orden expresa y sin tope, una partida de Triple dado ($0.46 las dos) y una de Duda y apuesta, con Claude, GPT, Gemini y DeepSeek (GPT gano las dos, 2-4-2-0; paquetes `paquete-j1` listos para grabar en `grabaciones/listos/triple-dado/` y `.../duda-y-apuesta/`)**; los demas, AL FINAL.
-
-| Juego | IAs | Idea | Categoria | Llamadas por partida |
-|---|---|---|---|---|
-| 1 Dilema del Prisionero Negociado | 2 | cooperar o traicionar con promesas publicas; juego de control | Traición y confianza | corto |
-| 2 Guerra de territorios | 2-5 | mapa de regiones (8 biomas), alianzas, mensajes, comercio; **reglas 2.0.0 (fusionadas a `main` el 22 de octubre)**: 4 tipos de unidad con dominio x2 y mejoras, aliados que visitan y defienden contigo, suministro, Hegemon y eventos (la humo con modelos gratis ya se corrió: no sirven) | — | ~100 |
-| 3 La Fuga | 2 | 9 situaciones, postura hacia el companero + metodo, tentaciones; **regla oculta**: salir solo vale 7, quedarse atras y salir 9, juntos 10, capturado 0 | Lealtad bajo riesgo | 18 |
-| 4 El numero solitario | 5 | 12 rondas, parejas de cartas y marca; gana el menor numero que nadie mas jugo; cortes en las rondas 3 y 6 | Estrategia de eliminación | 90 |
-| 5 Subasta de tiempo | 5 | 19 subastas con banco de 600 s; todas las apuestas se pagan; empate en lo alto anula | Estrategia de eliminación | 95 |
-| 6 Mayor o menor | 2 | 18 rondas, carta activa y apuesta del predictor a la vez; **reglas 2.0.0 (21 oct): apuesta de 1 a 6 fichas, carta igual cuenta como menor, mazo de 33 cartas con 11 secretas por jugador y 3 rondas dobles**; fichas de la banca | Estrategia de eliminación | 36 |
-| 7 Triple dado | 4 | 4 rondas, prediccion con tarjetas ZERO/MIN/MORE/MAX (una vez cada una), dados con 2 ocultos | Estrategia de eliminación | 60 |
-| 8 Duda y apuesta | 4 | unico por turnos; anunciar, aceptar o dudar, una sola eliminacion | Engaño y deducción | hasta 96 |
-
-Reglas que valen para varios juegos:
-- **Puntos del marcador** de los juegos de eliminacion: pieza 4, sobrevive 2 (a salvo 3 y en medio 2 en El numero solitario), eliminado 0. **Sin torneo general ni temporadas**: cada juego es independiente y se evalua por si mismo (al final de cada juego, caracteristicas de todos los modelos).
-- **Solo en vivo:** los juegos 4 a 8 (por lote seria impractico; Duda y apuesta niega `--lote`). **La Fuga** admite lote (9 turnos).
-- **La Fuga:** una partida suelta nunca se publica, siempre una **serie con asientos rotados** (mismas situaciones y dados). Vocabulario suave en el prompt, la vista y la narracion (nunca delatar, abandonar ni traicion; los identificadores internos no cambian).
-- **Juegos dinamicos e inesperados (decidido el 21 de octubre de 2026):** si un juego sale con poco suspenso (gana casi siempre la misma IA, sin remontadas), se cambian o modifican sus reglas para hacerlo mas dinamico, imprevisible y parejo: **que cualquiera pueda ganar**. Vale para los juegos futuros y para los actuales mientras no se hayan publicado; cambiar el prompt sube la version de reglas (las partidas anteriores no se comparan). Primer caso: Mayor o menor (GPT gano 161-70 y 226-56; 88 % de las fichas salen de apostar, ninguna apuesta de todas las fichas perdio): **reglas 2.0.0 decididas el 21 de octubre de 2026 con medicion con bots** (`node herramientas/medir-mayormenor.mjs`; analisis en `privado/spec/mayor-o-menor-balance.md` y `-medicion.md`): tope fijo de 6 fichas por apuesta (el tope por el rival casi no ayudaba), carta igual cuenta como menor, mano oculta (mazo de 33, 11 por jugador) y 3 rondas dobles; con 10 fichas y 18 rondas. Resultado con bots: margen final 54 % -> 25 %, partidas que terminan antes 30 % -> 5 %, remontadas 1.3 -> 1.8, el peor bot gana 31 % en vez de 9 %. Las dos partidas reales del 18 de octubre (reglas 1.0.0) quedan como ensayo y no se publican. **Serie con las 2.0.0 corrida el 21 de octubre de 2026 (orden expresa, Claude vs GPT, $0.46, `data/2026-10-21-mayormenor-claude-vs-gpt.json`, respaldo en `privado/datos-oficiales/`): GPT gano las dos, pero parejo (fichas 62-85 y 60-48 contra 70-161 y 56-226; en la partida 2 el que iba arriba cambio 5 veces; en la 1, GPT fue arriba toda la partida); voz y paquetes `paquete-j1` y `paquete-j2` hechos en `grabaciones/listos/mayor-o-menor/2026-10-21_seed-596137124/`; partes de ~4:10 (no caben como Short ni Reel).** La descripcion inicial del video (`textos-juego.js`) ya cuenta las reglas nuevas. Al disenar un juego nuevo, medir con bots que el que va arriba a mitad de partida no gane casi siempre.
-- **Prioridad de desarrollo:** juegos de concurso de eliminacion con nombres y personajes propios y las mismas reglas, nunca el nombre, el arte ni la estetica de ningun programa (catalogo en `privado/planes/plan-juegos-de-concurso.md`). La oleada 1 esta completa; la oleada 2 se elige de ese catalogo.
-- **Escenas (todas fusionadas en `main`):** una sola pagina `web/escena.html` + `web/casino/escena.js`; registro por juego en `web/casino/lineas.js`; `mesa-base.js` y una mesa por juego con `static METODOS`; linea de tiempo, diseno y reloj puros (se prueban en Node), el DOM se verifica con `node herramientas/capturar-escena.mjs` (`--completa`, `--estado`, `--voz`). **Lo que una jugada deja a la vista (caja de apuesta, sello, flecha, etiquetas) se apaga cuando la jugada se resuelve y la ronda nueva cambia todo a la vez (cabecera, papeles, fichas); `--estado` tambien exige que el titulo de la cabecera no quede cortado, y lo que dura en pantalla se verifica con capturas en tiempo real (las de tiempo virtual engañan con las animaciones); cambiar el texto de un beat obliga a regenerar la voz** (decidido el 21 de octubre de 2026 tras grabar Mayor o menor; detalle en `docs/decisiones-detalle.md`). La web no puede importar de `src/` ni de `herramientas/` (el sitio publica solo `web/` y `data/`). Formatos 9:16, 16:9 y `hoja` 4K. **En 9:16 NADA se dibuja fuera de la zona segura** (arriba 285 y abajo 420 libres para la interfaz de las redes; `layoutzona.test.js` lo exige a los 7 juegos; **todo juego nuevo se agrega a su lista `JUEGOS` con todos los tamanos de su mesa, y otra prueba falla si falta, ademas de revisarlo en una captura 9:16 del caso mas grande**) **y el cuadro de subtitulos aparece con cada beat que dice algo y se apaga solo, como el feed** (`subtitulos-vertical.js`; en 16:9 sigue fijo) (decidido el 20 de octubre de 2026; Guerra se redibujo: mapa mas chico, cabecera y marcador dentro de la zona). La Fuga no es de casino (sala de control con 24 mini escenas); Guerra de territorios tampoco: dibuja su propio mapa en canvas (`mapa-dibujo.js`, `mesa-conquista.js`), con batallas A/VS, traicion con flashback del privado y unidad `turno` (`turno=` es sinonimo de `mano=`).
-- **Camara oculta y secretos:** la escena solo LEE partidas guardadas y nunca cambia ni oculta una jugada; las jugadas que puso el juego se dicen como del juego, nunca atribuidas a la IA; lo secreto se revela en su momento (La Fuga: la tentacion y sus avisos solo en la consecuencia).
-- **Cada juego se publica en DOS partes** (decidido el 17 de octubre de 2026): `node herramientas/partes.mjs --archivo=... [--voz=...]` las calcula (`dividirEnDos`); no se recorta la narracion del motor. Con `razon=1` las razones de las IAs salen con la consecuencia (decidido el 17 de octubre de 2026).
-- **Tarjeta de arranque y paquete de publicacion (17 de octubre de 2026):** la parte 1 de cada juego abre con una tarjeta de 5 a 8 s (beat `intro`, antepuesto en un solo lugar: `armarLinea` en `lineas.js`; textos publicos en `web/casino/textos-juego.js`); `node herramientas/paquete.mjs --archivo=... [--voz=...]` deja en `grabaciones/paquetes/` el LEEME y los textos por pieza y red (2 partes + hasta 3 clips; solo hechos, la linea `[GANCHO: ...]` la confirma una persona; nunca privados ni razones). **La subida es manual** (decidido: sin APIs ni aprobaciones). **Gancho «Próximamente» (20 de octubre de 2026):** el paquete arma uno por parte (pieza `gancho-N`, `hkN` en el nombre; `web/casino/gancho.js`): tarjeta de apertura, 2 a 5 cortes rapidos de momentos de ESA parte con su etiqueta y tarjeta de cierre, de 12 a 26 s (mas el cierre), sin voz en los cortes ni musica (la pone quien lo sube), sin el primer ni el ultimo turno (sin spoilers). **Cierre de TODA pieza (parte, clip y gancho; 21 de octubre de 2026):** al final, la voz dice una frase que pide seguirnos y reaccionar (`No olvides seguirnos y reaccionar.` y 11 parecidas en `FRASES_CIERRE`; se elige con el seed de la pieza, asi cada video dice una distinta y el mismo video es siempre igual) y la pantalla muestra el logo, el @ de cada red (con Facebook) y la pagina de resultados, todo de `web/redes.js`; es un beat `cierre` que agrega la pagina con `cierre=1` (`web/casino/cierre.js`; las direcciones del paquete y de `partes.mjs` ya lo llevan). La voz del cierre se genera para TODAS las frases con `narrar.mjs`; una partida narrada antes del cierre usa `node herramientas/narrar.mjs --archivo=... --solo-cierres` (suma las frases sin volver a narrarla). En el gancho solo suena el cierre. El paquete suma lo que dura el cierre (unos 6.5 s) a cada pieza. Orden de subida: gancho, parte, clips. Estrategia y guia paso a paso en `privado/contenido/` (`estrategia-de-publicacion.md`, `guia-paso-a-paso.md`). **Grabacion con OBS (18 de octubre de 2026):** el paquete arma las direcciones para la hoja 4K (`--formato=hoja` por omision) con `grabar=1`: la pagina nace en negro, espera 2 s, se aclara (0.5 s), cuenta la pieza, se funde a negro y se queda en negro hasta cerrar (`FUNDIDOS` en `escena-config.js`); `herramientas/recortar-formatos.mjs` detecta ese negro y recorta dejando los fundidos (`--manual` lo apaga).
-- **Carpetas y nombres de los videos (20 de octubre de 2026):** cada serie vive en `grabaciones/listos/<juego>/<AAAA-MM-DD>_seed-<seed>/` con `originales/` (los `.mkv` de OBS), `por-subir/` (recortes listos), `subidos/`, `revision/` y `paquete-j<N>/` (LEEME y textos); `paquete.mjs` crea todo (`--salida` = la carpeta de la serie). Los videos se llaman `j1_pt1_9x16_fb-ig-tk-yt.mp4`: numero de juego (`jN`, sin fecha: sube de uno en uno en cada partida que se empaqueta en la carpeta del juego, aunque sea de otra serie; regenerar un paquete conserva el suyo y `--juego=N` lo fija), pieza (`hkN` gancho, `ptN` parte, `clpN` clip), formato y redes a las que sirve (`fb` Facebook, `ig` Instagram, `tk` TikTok, `x`, `yt` YouTube; salen de `FORMATOS` en `herramientas/formatos.mjs`, nombres en `herramientas/nombres.mjs`); la grabacion original lleva el mismo nombre sin formato ni redes. Solo hay dos formatos, `9x16` y `16x9`: el `4x5` se quito el 20 de octubre de 2026 porque ninguna red lo necesita. Capturas de prueba: `grabaciones/capturas/`, se borran cuando ya no sirven. **Limpieza al terminar de subir un juego (jN, una partida) (decidido el 20 de octubre de 2026, para tener menos archivos):** cuando TODAS las piezas del juego jN (gancho `hk`, partes `pt` y clips `clp`, en todos sus formatos) ya estan en `subidos/` y no queda ningun archivo `jN_` en `por-subir/`, y el usuario avisa que termino de subir, borrar `paquete-jN/textos/` y los recortes `.mp4` `jN_*` en `subidos/`; de `originales/` queda solo la grabacion (`.mkv`), que permite volver a recortar. El LEEME y `revision/` se quedan. Decir al usuario que se borro. Si algo del juego sigue en `por-subir/`, no borrar nada. **Principio (21 de octubre de 2026): de video, en `grabaciones/` solo debe quedar el original sin recortar que sale directo de OBS (el `.mkv`); los recortes `.mp4` son desechables (se regeneran de ese original con `recortar-formatos.mjs`), asi que no se guardan de mas ni se generan por adelantado.**
-- **Voz narradora:** sintetizada por IA, gratuita y local (Piper, voz elegida el 16 de octubre de 2026; su nombre tecnico no se muestra en publico: `privado/terminos/voz-narradora.md`); se genera ANTES de grabar con `herramientas/narrar.mjs` (`data/voz/`, ignorado) y la escena la usa con `?voz=`. Dos capas de texto: los hechos (los escribe el codigo, siempre verdaderos) y el comentario (editorial; nunca cambia ni oculta una jugada). **Guerra de territorios (18 de octubre de 2026):** la voz interpreta lo rutinario (expansion, tomas por reino, hambre, panorama cada 5 turnos, un mensaje publico citado por turno) y deja literal lo que es historia; `lineas` sigue con los hechos completos (y en pantalla) y `dicho` es lo que se oye y se subtitula (`web/casino/narracion-conquista.js`, ajustes arriba; solo reglas en codigo, sin modelos). Los videos se graban siempre desde el equipo de desarrollo.
-- **Lote (Batch API de OpenRouter):** `--modo=pago --lote --tope=DOLARES` (las tres banderas juntas), 50 % de descuento a cambio de esperar; se detiene (fail-closed) si algo falla y un lote enviado no se reintenta. Los modelos de practica (`haiku`, `luna`, `flash-lite`) van a `data/pruebas/`, nunca a torneo. El costo de una partida entera por lote NO esta confirmado (se salto el paso 6 por decision del usuario).
 
 ### No desarrollar juegos: desarrollar una arena
 
@@ -164,50 +132,23 @@ Los juegos de teoria de juegos son el atajo: baratisimos de programar (menos de
 150 lineas) y brutales de ver. Si ademas los modelos se mandan mensajes entre si,
 aparece la traicion — que es el mejor contenido disponible por linea de codigo.
 
+
+
 ### Un solo codigo, dos productos
 
 El mismo motor alimenta el sitio (marcador historico) y los videos (reproductor
 vertical 1080x1920 que se captura con OBS). No se escribe codigo aparte para
 video.
 
+
+
 ### Presupuesto de llamadas (limite duro al disenar un juego)
 
-Los modelos gratis de OpenRouter permiten 20 llamadas por minuto y 50 por dia (1,000 por dia
-si se compraron al menos $10 de creditos, que esos modelos no gastan). Para no perder la "liga
-gratuita", todo juego nuevo cumple: **una llamada por jugador por turno** (ordenes en lote),
-**maximo 30 turnos**, **<= ~100 llamadas por partida de 4 jugadores**, **entrada <= 3,500 y
-salida <= 500 tokens** (medidos con Claude, que cuenta ~1.5 veces mas tokens que los demas modelos
-en espanol; ~7,000 caracteres de entrada), y costo con modelos de pago **<= $0.40 por partida**
-(tope $0.90).
-Mas complejidad cuesta tokens, no llamadas, y esta permitida dentro de esos limites; subir turnos,
-llamadas por turno o jugadores requiere aprobacion expresa. Detalle en `docs/agregar-un-juego.md`.
-**Excepcion aprobada el 9 de octubre de 2026 (solo Guerra de territorios):** entrada <= 4,450 (era 4,200;
-ampliada con aprobacion expresa al medir con las pruebas del plan 1 el peor caso de 5 reinos, con los 4
-rivales mandando mensaje, privado y nota al largo maximo: 4,406) y salida <= 650 tokens, porque con sus 6
-reglas extra (mensajes privados, comercio, edificios, maravilla, honor y nota de plan) el prompt mide 3,681
-tokens en el caso tipico de 5 reinos. Sigue siendo **una llamada por
-jugador por turno**, 30 turnos y <= ~100 llamadas por partida de 4 jugadores; el costo con modelos de
-pago sube a ~$0.44 por partida con la mezcla media (dentro del tope mensual de ~$20).
-**Ampliada el 22 de octubre de 2026 (Guerra 2.0.0, decision delegada por el usuario, que propuso subir tokens para sostener mas complejidad):** entrada <= **6,500** (peor caso de 5 reinos,
-caracteres / 1.97; era 6,000 al empezar la rama y se subio a 6,500 al llegar el paquete de equilibrio y los frentes: el texto fijo se comprimio y aun asi no cabia; la parte fija de las reglas y el mapa es el prefijo que cachean los proveedores) y salida visible <= 700 con hasta 14 ordenes; `max_tokens` 4000 no cambia. El costo medido con modelos reales es ~$0.0104 por llamada
-(~$1.0-1.25 una partida completa de 4 reinos; el $0.44 de arriba era una estimacion): con 2.0.0 sube ~25 % y el tope queda en **$1.50 blando / $2.00 duro por partida completa de 4 reinos**.
-Llamadas, turnos y jugadores no cambian. Mediciones y razones en `privado/spec/guerra-2.0.0-propuesta.md`.
+
 
 ## Invariantes de diseno (romper esto rompe el proyecto)
 
-1. **`src/prompt.js` es EL CONTRATO.** Todas las IAs reciben texto identico. Lo
-   unico que cambia es el ID del modelo (y el nombre de reino de cada asiento en Guerra de territorios, que sale del modelo: `nombres.js`). Esta versionado:
-   **si cambia el prompt de un juego, sube la version de sus reglas y las partidas anteriores no se comparan con las nuevas.**
-   Cada juego es independiente: no hay temporadas ni torneo general.
-2. **`vista(estado, i)` nunca filtra informacion secreta del rival.** Es el unico
-   lugar donde se decide que sabe cada jugador. Un bug ahi invalida todas las
-   partidas jugadas con ese juego.
-3. **`normalizar()` nunca lanza error.** Recibe `null` o basura y siempre
-   devuelve una jugada legal marcada `invalida: true`. Un modelo caido no tumba
-   una grabacion.
-4. **Todo lo aleatorio pasa por el `rng` con seed**, nunca `Math.random()`.
-5. **Los fallos de API se registran, no se esconden.** Seguir el formato pedido
-   es parte de lo que se mide.
+
 
 ## Dos trampas estadisticas que no hay que olvidar
 
@@ -222,6 +163,8 @@ Las estrategias clasicas (`tomaydaca`, `siempre-c`, `siempre-t`, `azar`) estan e
 la tabla como **control**. Si una IA no le gana a `tomaydaca`, eso dice mas que
 cualquier duelo entre modelos.
 
+
+
 ## Marca y alcance de lo que se afirma
 
 Se dice: *"en este juego, con estas reglas, en estas 8 partidas, gano X"*.
@@ -233,6 +176,8 @@ octubre de 2026; de ahi salen tres reglas: lo que producen las IAs se presenta c
 **generado por IA** con aviso visible, **cada partida se revisa a mano** antes de
 publicarse, y las salidas **no se usan para entrenar** otros modelos. Repetir la
 revision antes de monetizar y cada 3 meses.
+
+
 
 ## Marca y presencia (decidido el 8 de octubre de 2026)
 
@@ -265,6 +210,8 @@ Todo el detalle vive en [`marca/`](marca/README.md); aqui solo lo que no se debe
 - **Hashtags:** Instagram permite 5 por publicacion desde dic 2025 y sirven para
   clasificar, no para ganar alcance. Usar 3 a 5 especificos.
 
+
+
 ## Publicacion de resultados (decidido el 18 de octubre de 2026)
 
 El sitio (decidido el 21 de octubre de 2026: **no hay series, solo juegos y partidas**) tiene una barra fija con menu (`web/menu.js`), una landing con buscador libre y un cuadro por juego (`web/index.html`), una pagina por juego con su tabla (partidas, V-E-D y puntos) y sus partidas (`web/juego.html`), una pagina por partida (`web/partida.html`; `serie.html` solo redirige), las redes del proyecto en un solo lugar (`web/redes.js`: enlaces e iconos de TikTok, Instagram, YouTube, Facebook y X para la landing y el pie; **una red nueva se agrega ahi, en `marca/perfiles.md` y en `REDES` de `herramientas/nombres.mjs`; `sitio-redes.test.js` falla si falta en alguno**), los modulos y el CSS se piden con `?v=__V__` que el despliegue cambia por el commit (si no, el navegador mezcla una pagina nueva con un modulo viejo de su cache de 10 min: un `import` nuevo en una pagina siempre lleva `?v=__V__`; una prueba lo exige), `web/metodo.html` y `web/proponer.html` (propuestas de juegos y enfrentamientos: abre un Issue de GitHub prellenado y lista los Issues abiertos con titulo `[Juego]` o `[Enfrentamiento]` por apoyos 👍; sin servidor). Solo muestra lo que ya salio en video. **Cada partida tiene un estado:**
@@ -274,7 +221,7 @@ El sitio (decidido el 21 de octubre de 2026: **no hay series, solo juegos y part
 
 **Aviso de subida = orden de hacer TODO esto, sin preguntar ni esperar otra orden** (decidido el 21 de octubre de 2026, tras olvidar publicar la parte 2 del j1 porque el usuario solo pidio mover archivos). Se activa con cualquier mensaje que diga que se subio una pieza (`ptN`, `clpN`, `hkN` de un juego `jN`), aunque la frase hable solo de mover archivos o de limpiar: 1) mover sus archivos de `por-subir/` a `subidos/` en `grabaciones/listos/` (los que ya estan en todas las redes de su nombre; si subio solo a algunas, preguntar); 2) **si la pieza es una PARTE (`pt`; clips y ganchos no se publican)**: el `jN` da la partida y el archivo (`paquete-jN/paquete.json`); averiguar hasta que turno llega esa parte (`node herramientas/partes.mjs --archivo=... --partida=N`) y si es la parte final (`hasta` = ultimo turno de la partida; si hay duda, **preguntar**) y correr `node herramientas/publicar.mjs --archivo=SERIE.json --partida=N --parte=P --hasta=TURNO [--final=si] --fecha=AAAA-MM-DD` (fecha = la de hoy; se niega si lo declarado no cuadra con la partida); 3) revisar el resumen que imprime (estado de la partida y de la serie, avisos); 4) `npm test`, y **hacer commit y push SOLO de `data/publicas/` y `web/marcador.json`** (el sitio se despliega solo): para esto el aviso de subida vale como autorizacion; cualquier otro cambio sigue necesitando orden expresa; 5) si con esto ya esta TODO el juego jN subido (sin nada suyo en `por-subir/`), aplicar la limpieza de arriba. Contar al usuario que se movio, que se publico y que se borro. El primer despliegue de esta politica, si aun no esta en `main`, requiere antes la orden expresa de fusionar la rama.
 
-**Reglas fijas:** el JSON COMPLETO de cada serie (con resultado y todas las partidas) **nunca va al repo publico**: `/data/*.json` esta ignorado y el respaldo vive en `privado/datos-oficiales/` (lo copia `publicar.mjs`); al sitio solo sale `data/publicas/`. Los prompts por turno se reconstruyen repitiendo la partida con su seed (`reconstruirPrompts`, solo Guerra de territorios por ahora; si el repaso no coincide con lo guardado, se omiten con un aviso) y el prompt de sistema debe coincidir con el hash guardado (si las reglas cambiaron, `publicar.mjs` se niega salvo `--forzar`). Nunca hay un ranking general: una tabla por juego. Los textos de comentario/descripcion de cada video llevan el enlace `?seed=` del sitio para que se pueda buscar.
+
 
 ## Flujo de trabajo y revisiones
 
@@ -284,22 +231,7 @@ El sitio (decidido el 21 de octubre de 2026: **no hay series, solo juegos y part
 - **Antes del agente de revision independiente, una pasada rapida con `/code-review` y/o `/simplify`** sobre el diff de la rama: se corrige lo que encuentren (con prueba que falle antes) y solo despues se lanza el agente (opus, solo lectura), que es mas caro. Asi el agente gasta su revision en lo que de verdad hace falta.
 - **Tokens:** CLAUDE.md se mantiene corto; el detalle de cada juego vive en `docs/decisiones-detalle.md` y se lee solo al tocar ese juego. Las revisiones de muchas imagenes se hacen con una hoja de contacto, no con capturas sueltas.
 
-## Estado actual
 
-**Hecho:** motor generico (`arena.js`), prompt unico versionado, RNG con seed, cliente de OpenRouter y registro de contendientes; los 8 juegos con motor, bots, evaluacion, pruebas y escena (la del juego 2, Guerra de territorios, terminada el 17 de octubre de 2026, con la narracion interpretada y los fundidos de grabacion del 18 de octubre, y puesta al dia con las reglas 2.0.0 el 22 de octubre: 1738 pruebas);
-CLI de duelos, series de rotacion, agregador de marcador, sitio publicado (landing con menu y buscador, pagina por juego con su tabla, pagina por partida, propuestas; sin series) (<https://gerrypetrucci.github.io/enfrentando-a-las-ias/>, politica «Publicacion de resultados»; se despliega solo en cada push a `main` que toque `web/` o `data/`), reproductor vertical, voz local y
-herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentando-a-las-ias>.
-
-**Pendiente:**
-- [ ] Piloto con modelos reales (en curso desde el 18 de octubre de 2026, con orden expresa y tope): grabar el episodio 1 y, si queda bien, subirlo; los IDs de modelo se verifican con `node herramientas/verificar-modelos.mjs` antes de cada corrida (cambian cada pocos meses; ultima vez 18 de octubre, todo cuadra).
-- [ ] Kit de marca hecho (`marca/`), cuentas de las 5 redes creadas (usuarios en `marca/perfiles.md`) y estrategia de publicacion escrita (`privado/contenido/`); falta dominio propio, sitio multilenguaje, imagen para links (`marca/exportados/og-1200x630.png`) y la tarjeta de marcador (resumen de una serie). Antes de la semana 1: correr series reales (AL FINAL, con orden expresa) y verificar una vez las pantallas de cada red (lista en la guia).
-- [ ] Juego 2 Guerra de territorios: mapa en la partida (8 biomas desde el 22 de octubre) y escena **hechos el 17 de octubre de 2026** (detalle en `docs/decisiones-detalle.md`); la humo con modelos gratis ya se corrió (15-40 % de respuestas con JSON: no sirven); falta solo la prueba con modelos reales (AL FINAL).
-- [ ] Juego nuevo «Carrera de civilizaciones» (2 IAs, mundos gemelos, 30 turnos, sin combate, Indice de Avance; spec completa el 22 de octubre de 2026 en `privado/spec/civilizaciones-diseno.md`): falta que el usuario la apruebe (o la corrija); despues, plan con checklist y construccion por capas (nucleo, crisis, carrera, comercio, vista, evaluacion, escena); modelos reales AL FINAL con orden expresa y tope (~$1.00 blando / $1.50 duro por partida).
-- [ ] Guerra de territorios, serie nueva con las reglas 2.0.0 (fusionada a `main` el 22 de octubre de 2026; reemplaza a la serie pendiente de las 1.1.0: Maravilla con costo x1.5 y el nombre de reino de cada modelo del color de su IA siguen vigentes): correr 2 partidas con modelos reales (con orden expresa y tope; $1.50 blando / $2.00 duro por partida de 4 IAs), medir con los registros (el que va arriba en el turno 10/15/20, cambios de lider, Hegemon, que la Maravilla decida como maximo 1 de cada 4 y ajustar con `privado/spec/guerra-2.0.0-medicion.md` como referencia), medir `cached_tokens` con `cache_control` para Claude, grabar y publicar esa. Las partidas de las reglas 1.0.0 (`data/2026-10-18-conquista-claude-vs-gpt-vs-gemini-vs-deepseek.json`) y 1.1.0 quedan como ensayo y no se publican.
-- [ ] Las escenas de los otros 5 juegos con evaluacion (Mayor o menor, El numero solitario, Subasta de tiempo, Triple dado, Duda y apuesta) tampoco muestran hoy sus caracteristicas al final del video, y La Fuga y el Dilema no tienen evaluacion; Guerra de territorios la tiene desde el 19 de octubre de 2026 (cinco caracteristicas, una ficha por IA antes del ranking; `docs/decisiones-detalle.md`).
-- [x] Más biomas (hecho el 22 de octubre de 2026, rama `guerra-2.0.0`): `cordillera` (rediseñada como cadenas anchas de montaña que salen del centro, con paleta de montañas claras), `istmo`, `golfo` y `peninsulas`; ocho en total (`docs/decisiones-detalle.md`, «Guerra de territorios 2.0.0»).
-- [ ] Modo "bot escrito" para correr miles de partidas.
-- El detalle del estado de cada juego y las ideas de formato en la banca estan en `docs/decisiones-detalle.md`.
 
 ## Convenciones del codigo
 
@@ -315,3 +247,28 @@ herramienta de partes. Repo publico: <https://github.com/GerryPetrucci/enfrentan
   pensarlo dos veces antes de agregarlo.
 - Sin paso de build: el sitio es HTML estatico que se abre y ya.
 - Pruebas con `npm test` (`node --test`, archivos `src/pruebas/*.test.js`).
+
+## Decisiones comunes conservadas al acotar el repositorio
+
+La voz se genera antes de grabar, localmente; el video espera la duración real de
+cada frase. Los hechos salen del registro y los comentarios no cambian jugadas.
+`linea-comun.js` conserva `dicho`, `mudas` y los textos públicos; una pieza no debe
+presuponer que el espectador vio las anteriores. Los fundidos de grabación siguen
+en `escena-config.js`: 2 s de negro, 0.5 s de entrada, contenido, 0.5 s de salida
+y 2 s de cola. El recorte identifica los márgenes, sin alterar la partida.
+
+Los fallos del compositor de OBS motivaron `animador-estilo.js`, genérico y probado:
+escribe el estado final en estilos en línea. El cierre de video se identifica por
+`cierre-N`, no por el tipo del beat. Paleta, fuentes locales, zonas seguras, audio
+CC0, hashtags, identificación `jN`, paquetes y publicación por partes se mantienen.
+Los tokens de salida, caché de prefijo y límites de costo se rigen por los
+parámetros vigentes; las cifras históricas no son una tarifa actual.
+
+## Histórico: juegos eliminados (7 de noviembre de 2026)
+
+Civilizaciones, conquista (Guerra de territorios), dudaapuesta, tripledado,
+mayormenor, fuga, subasta, solitario y dilema fueron eliminados del producto.
+Sus reglas, motores, escenas, mediciones y decisiones exclusivas se conservan en
+la etiqueta git `respaldo-antes-de-worldbox-2026-11-07`.
+Las decisiones comunes de narración, publicación, marca, seeds y control de
+costos siguen vigentes; el contrato actual está en `AGENTS.md`.

@@ -1,4 +1,4 @@
-// El reloj de la Subasta de tiempo (web/casino/reloj.js): empieza normal, se acelera y termina normal. Es una funcion pura del tiempo de pantalla. Sin DOM, sin red.
+// El reloj de la prueba de tiempo (web/casino/reloj.js): empieza normal, se acelera y termina normal. Es una funcion pura del tiempo de pantalla. Sin DOM, sin red.
 //
 //   npm test
 

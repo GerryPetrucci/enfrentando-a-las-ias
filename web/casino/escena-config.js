@@ -220,30 +220,6 @@ export function dividirEnDos(beats, voz = null, corteTras = null) {
   };
 }
 
-// ---- Lo que dice la pantalla de cada jugada ------------------------------------------------------------------------------------------------
-// El texto chico de la placa ("Anuncia", "Duda"...): aceptar no se llama "Anuncia", y una jugada que puso el juego lo dice.
-export function rolDeJugada(beat) {
-  if (beat?.reemplazo) return 'Jugada del juego';
-  if (beat?.tipo === 'defensa') return beat.pasos?.some((p) => p.tipo === 'pliega') ? 'Se retira' : 'Iguala';
-  return { anuncio: 'Anuncia', acepta: 'Acepta', duda: 'Duda' }[beat?.tipo] ?? '';
-}
-
-// El titulo de la caja de la apuesta (Mayor o menor): si la apuesta la puso el juego por una respuesta ilegal no se le atribuye a la IA.
-export function etiquetaDeApuesta(beat, nombre) {
-  return { titulo: beat?.reemplazo ? `El juego apuesta por ${nombre}` : `${nombre} apuesta` };
-}
-
-// La frase sobre el recuadro del anuncio ("Claude duda"); alerta = se pinta en rojo. Si la jugada la puso el juego no se le atribuye a la IA.
-export function etiquetaDeJugada(beat, nombre) {
-  if (!beat?.tipo) return { texto: '', alerta: false };
-  if (beat.reemplazo) return { texto: `El juego juega por ${nombre}`, alerta: false };
-  if (beat.tipo === 'defensa') {
-    return beat.pasos?.some((p) => p.tipo === 'pliega') ? { texto: `${nombre} se retira`, alerta: true } : { texto: `${nombre} iguala la subida`, alerta: false };
-  }
-  const texto = { anuncio: `${nombre} anuncia`, acepta: `${nombre} acepta y sube`, duda: `${nombre} duda` }[beat.tipo] ?? '';
-  return { texto, alerta: beat.tipo === 'duda' };
-}
-
 // ---- Varios archivos a la vez ------------------------------------------------------------------------------------------------------------
 // ?archivo=a.json,b.json (o el boton "Abrir JSON" con varios archivos) carga todos; la escena deja elegir una partida de la lista.
 
@@ -266,7 +242,7 @@ export function catalogarPartidas(cargados) {
     partidas.forEach((partida, i) => {
       const id = partida?.juego?.id ?? datos.juego?.id;
       const rondas = Array.isArray(partida?.rondas) ? partida.rondas : [];
-      // el campo que numera cada registro lo dice la unidad del juego: Duda y apuesta cuenta manos y Mayor o menor rondas (ahi `mano` es la mano de cartas del jugador, no un numero)
+      // el campo que numera cada registro lo dice la unidad del juego (lineas.js: `unidad`, o `campo` si sus registros la llaman distinto); Lobo cuenta rondas, no fases
       const unidad = juegosConEscena().includes(id) ? escenaDe(id).unidad : 'mano';
       const campo = juegosConEscena().includes(id) ? escenaDe(id).campo ?? unidad : unidad; // el campo con que sus registros numeran la unidad
       const manos = rondas.reduce((m, r) => Math.max(m, Number(r?.[campo]) || 0), 0);

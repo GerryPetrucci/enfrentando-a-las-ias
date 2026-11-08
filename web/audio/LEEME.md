@@ -24,8 +24,8 @@ y antes de monetizar, como con todo lo que viene de afuera. Las muestras se reco
 ## Que archivo es cada efecto
 
 El usuario escucha las muestras en `web/sonidos.html` y escoge. Cuando un efecto tiene varias, la escena elige una con el azar de la escena (la misma escena siempre suena igual).
-Las de gana y pierde son **opciones para elegir de oido** (la escena usa una al azar): las que no gusten se quitan de `muestras` en `web/casino/sonido.js` y de `MAPA`, y se borra su archivo. La batalla y la Maravilla
-son las que escogio el usuario (28 de octubre de 2026). La batalla es un **paisaje**: durante el zoom de una disputa suenan las cinco a la vez (`sfx.batalla(ms)`); en `web/sonidos.html` el boton «todas juntas» la reproduce.
+Las de gana y pierde son **opciones para elegir de oido** (la escena usa una al azar): las que no gusten se quitan de `muestras` en `web/casino/sonido.js` y de `MAPA`, y se borra su archivo.
+Los efectos de batalla y de Maravilla se retiraron el 7 de noviembre de 2026 con Guerra de territorios (juego eliminado), junto con sus archivos y su licencia.
 
 | Efecto | Archivo | Origen |
 |---|---|---|
@@ -35,13 +35,9 @@ son las que escogio el usuario (28 de octubre de 2026). La batalla es un **paisa
 | Cuenta (tic del contador) | `tic-1.ogg` | Kenney, Interface Sounds / tick_001 |
 | Anuncio (campanilla) | `anuncio-1.ogg` | Kenney, Interface Sounds / bong_001 |
 | Duda | `duda-1.ogg` | Kenney, Interface Sounds / question_002 |
-| Dados que ruedan (Triple dado), dos para alternar | `dado-1.ogg`, `dado-2.ogg` | Kenney, Casino Audio / dice-throw-1 y die-throw-2 |
-| **Gana** (sello dorado, captura, la Maravilla de otro juego...) | `gana-aplauso.ogg`, `gana-vitoreo.ogg`, `gana-ovacion.ogg` | Freesound: aplauso de una multitud, un grupo vitoreando, aplausos y silbidos al aire libre |
+| Dados que ruedan, dos para alternar | `dado-1.ogg`, `dado-2.ogg` | Kenney, Casino Audio / dice-throw-1 y die-throw-2 |
+| **Gana** (sello dorado, captura, un premio...) | `gana-aplauso.ogg`, `gana-vitoreo.ogg`, `gana-ovacion.ogg` | Freesound: aplauso de una multitud, un grupo vitoreando, aplausos y silbidos al aire libre |
 | **Pierde** (sello rojo, ataque que no captura) | `pierde-suspiro.ogg`, `pierde-trombon.ogg`, `pierde-abucheo.ogg` | Freesound: la multitud suspira decepcionada, un trombon triste, una multitud abucheando |
-| **Batalla**, el paisaje del zoom de una disputa de regiones: dos CAMAS que se repiten todo el zoom (el grito a 1.35 y la multitud a 0.55 de fondo: `volumenCamas` en `sonido.js`) | `batalla-grito.ogg`, `batalla-multitud.ogg` | Freesound: la carga de una tropa gritando (florianreichelt) y una multitud vitoreando (Jofae) |
-| **Batalla**, tres ESPADAZOS: de 6 a 7 en 6 s, por turnos entre los tres, a intervalos irregulares y NUNCA dos a la vez (no van al compas de las espadas dibujadas) | `choque-1.ogg`, `choque-2.ogg`, `choque-3.ogg` | Freesound: JohnBuhr, Christopherderp y spycrah; cortos (0.5-0.6 s) y nivelados por la fuerza de sus 100 ms mas fuertes (`rms`), no por la media del archivo |
-| **Obra** de la Maravilla (suena cada turno que esta en obra) | `maravilla-cuerno.ogg` | Freesound: un cuerno de guerra lejano (DeVern) |
-| **Construida** (la Maravilla acaba su obra) | `maravilla-gong.ogg` | Freesound: un gong grande (JensZygar) |
 
 ## Cambiar una muestra
 

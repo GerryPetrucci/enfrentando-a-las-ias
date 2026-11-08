@@ -1,5 +1,5 @@
 // El ritmo del cuadro de subtitulos en los formatos verticales: aparece con cada beat que dice algo, se queda lo que dura la voz (lo que se tarda en decir el texto) y se apaga, igual que el feed
-// de Guerra de territorios (feed-conquista.js), para no tapar la escena. Puro (se prueba en Node). Los tiempos son a velocidad 1; la mesa los divide entre `vel`.
+// de escena (feed-juego.js), para no tapar la escena. Puro (se prueba en Node). Los tiempos son a velocidad 1; la mesa los divide entre `vel`.
 
 export const SUBTITULO = {
   MIN_MS: 3500, // un texto corto se queda al menos esto

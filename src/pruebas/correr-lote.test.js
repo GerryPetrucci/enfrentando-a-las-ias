@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { correr, ErrorDeUso } from '../correr.js';
 import { createHash } from 'node:crypto';
 import { VERSION_PROMPT, construirSistema } from '../prompt.js';
-import conquista from '../juegos/conquista.js';
+import simultaneo from './ayudas-simultaneo.js';
 import { clienteFalso } from './ayudas-lote.js';
 
 const JUGADA = '{"ordenes": [], "pacto_con": null, "mensaje": "", "privados": [], "razon": "paso el turno"}';
@@ -25,7 +25,7 @@ async function correrAqui(argv, { cliente = clienteFalso({ responder: () => ({ t
   let texto = '';
   const consola = { log: (...a) => { texto += `${a.join(' ')}\n`; }, escribir: (t) => { texto += t; } };
   try {
-    const { ruta, salida } = await correr(argv, { raiz, crearCliente, sincrono, consola });
+    const { ruta, salida } = await correr(argv, { raiz, crearCliente, sincrono, consola, buscarJuego: () => simultaneo });
     // el registro de lotes (un renglon por evento) se lee antes de borrar la carpeta temporal
     const carpeta = join(raiz, 'data', 'pruebas');
     const archivoLog = existsSync(carpeta) ? readdirSync(carpeta).find((f) => f.endsWith('.lotes.jsonl')) : null;
@@ -43,7 +43,7 @@ const fallaCon = async (argv, patron, opciones) => {
 
 test('serie por lote con la mezcla de practica: un lote por modelo y por turno, y el resto de llamadas normales', async () => {
   const { datos, cliente, texto, rel } = await correrAqui([
-    '--juego=conquista', `--jugadores=${MODELOS_DE_PRACTICA}`, '--partidas=4', '--modo=pago', '--lote', '--tope=0.50', '--turnos=2', '--seed=7',
+    '--juego=simultaneo', `--jugadores=${MODELOS_DE_PRACTICA}`, '--partidas=4', '--modo=pago', '--lote', '--tope=0.50', '--turnos=2', '--seed=7',
   ]);
   // 2 turnos x 3 modelos con variante de lote = 6 lotes, cada uno con las 4 partidas; DeepSeek no tiene lote: 2 x 4 llamadas normales
   assert.equal(cliente.enviados.length, 6);
@@ -70,16 +70,16 @@ test('serie por lote con la mezcla de practica: un lote por modelo y por turno, 
 });
 
 test('--turnos manda el resultado a pruebas aunque nadie lo pida, y no deja mandarlo a oficial', async () => {
-  const { datos } = await correrAqui(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1']);
+  const { datos } = await correrAqui(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1']);
   assert.equal(datos.destino, 'pruebas');
-  await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1', '--destino=oficial'], /practica/, { crearCliente: sinCliente });
+  await fallaCon(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1', '--destino=oficial'], /practica/, { crearCliente: sinCliente });
 });
 
 test('si se alcanza el tope de gasto, la serie incompleta se guarda en pruebas aunque fuera oficial y lo dice', async () => {
   const cliente = clienteFalso({ costoPorLote: 0.06 });
   const { datos, texto } = await correrAqui(
     // la primera ronda (2 partidas x 3 modelos con lote = 6 peticiones, peor caso 6 x $0.025) cabe en el tope; los 3 lotes que cuestan $0.18 lo pasan
-    ['--juego=conquista', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.16', '--destino=oficial', '--seed=3'],
+    ['--juego=simultaneo', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.16', '--destino=oficial', '--seed=3'],
     { cliente },
   );
   assert.equal(datos.lote.topeAlcanzado, true);
@@ -91,7 +91,7 @@ test('si se alcanza el tope de gasto, la serie incompleta se guarda en pruebas a
 });
 
 test('con saldo menor que el tope, o sin poder consultarlo, no se envia nada', async () => {
-  const base = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--turnos=1'];
+  const base = ['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--turnos=1'];
   for (const [cliente, patron] of [
     [clienteFalso({ saldo: 0.1 }), /Saldo insuficiente: quedan \$0\.1000 en OpenRouter y --tope=0\.5/],
     [clienteFalso({ saldo: 0 }), /Saldo insuficiente/],
@@ -104,7 +104,7 @@ test('con saldo menor que el tope, o sin poder consultarlo, no se envia nada', a
 
 test('errores de uso de --lote, todos antes de crear el cliente', async () => {
   const modelos = '--jugadores=haiku,luna,flash-lite,claude';
-  const conq = ['--juego=conquista', modelos, '--partidas=1', '--turnos=1'];
+  const conq = ['--juego=simultaneo', modelos, '--partidas=1', '--turnos=1'];
   await fallaCon([...conq, '--lote', '--tope=1'], /--modo=pago/);                               // sin modo
   await fallaCon([...conq, '--lote', '--tope=1', '--modo=gratis'], /gasta credito|--modo=pago/); // modo gratis
   await fallaCon([...conq, '--lote', '--modo=pago'], /--tope=/);                                // sin tope
@@ -114,14 +114,14 @@ test('errores de uso de --lote, todos antes de crear el cliente', async () => {
   await fallaCon([...conq, '--modo=pago', '--turnos'], /--turnos/);                             // --turnos sin valor no es "1 turno"
   await fallaCon([...conq, '--lote', '--modo=pago', '--tope=1', '--sondeo'], /--sondeo/);       // --sondeo sin valor no es "1 segundo"
   await fallaCon([...conq, '--modo=pago', '--tope=1'], /solo se usa con --lote/);               // tope sin lote
-  await fallaCon(['--juego=conquista', '--jugadores=agresivo,pacifico,economico,azar', '--lote', '--modo=pago', '--tope=1'], /solo aplica a modelos/);
+  await fallaCon(['--juego=simultaneo', '--jugadores=agresivo,pacifico,economico,azar', '--lote', '--modo=pago', '--tope=1'], /solo aplica a modelos/);
   await fallaCon(['--a=deepseek', '--b=llama', '--partidas=1', '--lote', '--modo=pago', '--tope=1'], /variante de lote/);
   await fallaCon([...conq, '--modo=pago', '--turnos=0'], /--turnos/);
   await fallaCon([...conq, '--lote', '--modo=pago', '--tope=1', '--sondeo=0'], /--sondeo/);
 });
 
 test('sin --lote la consola sigue igual: una partida tras otra, con puntos, y sin lote en lo guardado', async () => {
-  const { datos, texto } = await correrAqui(['--juego=conquista', '--jugadores=agresivo,pacifico,economico,azar', '--partidas=2', '--destino=pruebas', '--seed=7'], { crearCliente: sinCliente });
+  const { datos, texto } = await correrAqui(['--juego=simultaneo', '--jugadores=agresivo,pacifico,economico,azar', '--partidas=2', '--destino=pruebas', '--seed=7'], { crearCliente: sinCliente });
   assert.match(texto, /Partida 1\/2 \.+ {2}(gana|empate)/);
   assert.match(texto, /Partida 2\/2 \.+ {2}(gana|empate)/);
   assert.equal('lote' in datos, false);
@@ -131,7 +131,7 @@ test('sin --lote la consola sigue igual: una partida tras otra, con puntos, y si
 });
 
 test('los modelos economicos de practica van a pruebas por defecto y no se dejan mandar a oficial', async () => {
-  const base = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1'];
+  const base = ['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1'];
   const { datos, rel } = await correrAqui(base);
   assert.equal(datos.destino, 'pruebas');
   assert.equal(rel.startsWith('data/pruebas/'), true);
@@ -140,14 +140,14 @@ test('los modelos economicos de practica van a pruebas por defecto y no se dejan
 
 // ---------- huecos que encontro la revision independiente (10 de octubre de 2026) ----------
 test('--lote con valor (--lote=si, --lote=1) es un error de uso: antes se ignoraba y corria en vivo, a precio completo y sin tope', async () => {
-  const base = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--tope=1'];
+  const base = ['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--tope=1'];
   await fallaCon([...base, '--lote=si'], /--lote no lleva valor/);
   await fallaCon([...base, '--lote=1'], /--lote no lleva valor/);
-  await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--lote=si'], /--lote no lleva valor/);
+  await fallaCon(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago', '--lote=si'], /--lote no lleva valor/);
 });
 
 test('banderas del lote: --ritmo no se combina con --lote, --sondeo solo con --lote y dentro de 1 a 3600 segundos', async () => {
-  const conq = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago'];
+  const conq = ['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--turnos=1', '--modo=pago'];
   await fallaCon([...conq, '--lote', '--tope=1', '--ritmo=10'], /--ritmo no se combina con --lote/);
   await fallaCon([...conq, '--sondeo=20'], /--sondeo solo se usa con --lote/);
   await fallaCon([...conq, '--lote', '--tope=1', '--sondeo=Infinity'], /--sondeo debe estar entre 1 y 3600/);
@@ -157,14 +157,14 @@ test('banderas del lote: --ritmo no se combina con --lote, --sondeo solo con --l
 
 test('la primera ronda sale entera, asi que se rechaza una serie cuya primera ronda podria costar mas que el tope', async () => {
   // 400 partidas x 3 modelos con lote = 1,200 peticiones de golpe: en el peor caso mucho mas que $0.10
-  await fallaCon(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=400', '--modo=pago', '--lote', '--tope=0.10'], /primera ronda envia 1200 peticiones/);
+  await fallaCon(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=400', '--modo=pago', '--lote', '--tope=0.10'], /primera ronda envia 1200 peticiones/);
   // el ensayo minimo de siempre (4 partidas, 3 modelos con lote = 12 peticiones, peor caso $0.30 con 16000 tokens) cabe en un tope de 0.32, e imprime cuantas peticiones lleva la primera ronda
-  const ok = ['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.32', '--turnos=1'];
+  const ok = ['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.32', '--turnos=1'];
   return correrAqui(ok).then(({ texto }) => assert.match(texto, /primera ronda: 12 peticiones/));
 });
 
 test('cada lote enviado queda anotado en un registro en disco al instante, y sus ids tambien en lo guardado', async () => {
-  const { log, datos } = await correrAqui(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.50', '--turnos=2', '--seed=7']);
+  const { log, datos } = await correrAqui(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,deepseek', '--partidas=4', '--modo=pago', '--lote', '--tope=0.50', '--turnos=2', '--seed=7']);
   const enviados = log.filter((e) => e.tipo === 'enviado');
   assert.equal(enviados.length, 6);
   assert.ok(enviados.every((e) => /^lote-\d+$/.test(e.id) && e.modelo && e.n === 4 && e.t));
@@ -175,7 +175,7 @@ test('cada lote enviado queda anotado en un registro en disco al instante, y sus
 test('si se pierde el seguimiento de un lote ya enviado, no salen mas, lo dice con el id, y la serie oficial se guarda como practica', async () => {
   const cliente = clienteFalso({ falloDeEsperar: 'red caida', desdeElLote: 1 });
   const { datos, texto, log } = await correrAqui(
-    ['--juego=conquista', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.50', '--destino=oficial', '--seed=3'],
+    ['--juego=simultaneo', '--jugadores=claude,gpt,gemini,llama', '--partidas=2', '--modo=pago', '--lote', '--tope=0.50', '--destino=oficial', '--seed=3'],
     { cliente },
   );
   assert.equal(cliente.enviados.length, 3, 'solo la primera ronda: el seguimiento fallo y no sale ningun lote mas');
@@ -188,8 +188,8 @@ test('si se pierde el seguimiento de un lote ya enviado, no salen mas, lo dice c
 });
 
 test('lo guardado dice con que prompt se midio: version, version de las reglas del juego y huella del prompt completo', async () => {
-  const { datos } = await correrAqui(['--juego=conquista', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1']);
+  const { datos } = await correrAqui(['--juego=simultaneo', '--jugadores=haiku,luna,flash-lite,claude', '--partidas=1', '--modo=pago', '--lote', '--tope=1', '--turnos=1']);
   assert.equal(datos.prompt.version, VERSION_PROMPT);
-  assert.equal(datos.prompt.reglas, conquista.versionReglas);
-  assert.equal(datos.prompt.hash, createHash('sha256').update(construirSistema(conquista)).digest('hex'));
+  assert.equal(datos.prompt.reglas, simultaneo.versionReglas);
+  assert.equal(datos.prompt.hash, createHash('sha256').update(construirSistema(simultaneo)).digest('hex'));
 });

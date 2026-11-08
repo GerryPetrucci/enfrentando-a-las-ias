@@ -1,3 +1,4 @@
+import { jugarLobo } from './ayudas-lobo.js';
 // La herramienta herramientas/paquete.mjs: escribe en disco la carpeta lista para publicar una partida (LEEME.md y un texto por pieza y por red). Se prueba como las demas
 // herramientas: lanzandola de verdad con `spawnSync` y escribiendo solo en un directorio temporal (--salida). Sin API, sin red.
 //
@@ -9,7 +10,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { escribirPaquete, leemeDe, paquetesDeSerie } from '../../../herramientas/paquete.mjs';
 import { formatoDeTiempo } from '../../../herramientas/partes.mjs';
 import { fechaDe, nombreDePieza, nombreDeVideo, SUBCARPETAS } from '../../../herramientas/nombres.mjs';
@@ -17,18 +18,19 @@ import { FORMATOS } from '../../../herramientas/formatos.mjs';
 import { carpetaDeVoz } from '../../../herramientas/narrar.mjs';
 import { construirPaquete } from '../../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../../web/casino/lineas.js';
-import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
-import { jugarTD } from './ayudas-td.js';
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url));
-const PARTIDA = await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots);
+const PARTIDA = jugarLobo(3);
+PARTIDA.juego.nombre = 'Lobo en la aldea';
+PARTIDA.jugadores.forEach(j => { j.tipo = 'bot'; });
 const ENLACE = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
-const FECHA = fechaDe('2026-10-19-guerra.json'), SERIE = 'grabaciones/listos/guerra-de-territorios/2026-10-19_seed-777';
+const FECHA = fechaDe('2026-10-19-guerra.json'), SERIE = 'grabaciones/listos/lobo-en-la-aldea/2026-10-19_seed-777';
 const CTX = { archivo: 'pruebas/guerra.json', partidaNumero: 1, juegoNumero: 1, enlace: ENLACE, fecha: FECHA, carpetaSerie: SERIE }; // lo que paquete.mjs le pasa a leemeDe
 const REDES_DE_TEXTO = ['tiktok', 'instagram', 'facebook', 'x', 'youtube'];
 
-function lanzar(args, { cwd = RAIZ } = {}) {
-  return spawnSync(process.execPath, [join(RAIZ, 'herramientas', 'paquete.mjs'), ...args], { encoding: 'utf8', timeout: 30000, cwd });
+function lanzar(args, { cwd } = {}) {
+  if (!cwd) return conTemporal(carpeta => lanzar(args, { cwd: carpeta }));
+  return spawnSync(process.execPath, ['--input-type=module', '-e', `import { principal } from ${JSON.stringify(pathToFileURL(join(RAIZ, 'herramientas', 'paquete.mjs')).href)}; await principal(process.argv.slice(1), { generarVideos: async () => ({ hechas: [], error: null }) });`, '--', ...args], { encoding: 'utf8', timeout: 30000, cwd });
 }
 function conTemporal(fn) {
   const carpeta = mkdtempSync(join(tmpdir(), 'paquete-'));
@@ -53,11 +55,11 @@ test('paquete.mjs escribe el LEEME y los textos de cada pieza y de cada red, y e
   assert.ok(existsSync(join(carpeta, 'LEEME.md')));
   for (const sub of SUBCARPETAS) assert.ok(existsSync(join(salida, sub, 'j1')), `la serie nace con su carpeta ${sub}/j1/`);
   const archivos = readdirSync(join(carpeta, 'textos')).sort();
-  for (const pieza of ['parte-1', 'parte-2', 'clip-1', 'episodio-completo']) assert.ok(archivos.includes(`${pieza}.txt`), `falta ${pieza}.txt`);
+  for (const pieza of ['parte-1', 'parte-2', 'gancho-1', 'episodio-completo']) assert.ok(archivos.includes(`${pieza}.txt`), `falta ${pieza}.txt`);
   assert.ok(!archivos.some((n) => /-(facebook|instagram|youtube|tiktok|x|comentario)\.txt$/.test(n)));
   assert.ok(!archivos.includes('clip-1-comentario.txt'), 'un clip no lleva comentario fijado');
   const leeme = readFileSync(join(carpeta, 'LEEME.md'), 'utf8');
-  for (const pieza of ['parte-1', 'parte-2', 'clip-1', 'episodio-completo']) assert.match(leeme, new RegExp(`### .*${pieza}`), `el LEEME no habla de ${pieza}`);
+  for (const pieza of ['parte-1', 'parte-2', 'gancho-1', 'episodio-completo']) assert.match(leeme, new RegExp(`### .*${pieza}`), `el LEEME no habla de ${pieza}`);
   assert.match(leeme, /http:\/\/localhost:4321\/escena\.html\?archivo=[^\s)]*ronda=\d+&hasta=\d+/, 'direccion exacta con ronda= y hasta=');
   assert.match(leeme, /node src\/servidor\.js/, 'dice como abrir el servidor');
   assert.match(leeme, /Texto único/, 'hay un solo texto por pieza');
@@ -74,7 +76,7 @@ test('sin --enlace, el comentario fijado manda al sitio con el seed de la partid
 }));
 
 test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente lo que construyo el paquete) y el de YouTube lleva titulo y descripcion', async () => conTemporalAsync(async (tmp) => {
-  const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
+  const beats = await armarLinea('lobo', PARTIDA), destacadas = await destacadasDe('lobo', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const carpeta = join(tmp, 'p');
   const escritos = escribirPaquete(paquete, carpeta, { archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
@@ -84,7 +86,7 @@ test('escribirPaquete deja cada texto tal cual (lo que se copia es exactamente l
 }));
 
 test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direccion y como nombrar el archivo, y trae la lista de revision de cada video', async () => {
-  const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
+  const beats = await armarLinea('lobo', PARTIDA), destacadas = await destacadasDe('lobo', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const texto = leemeDe(paquete, CTX);
   for (const p of paquete.piezas) {
@@ -103,14 +105,14 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
   // el nombre de cada video dice el juego, la pieza, el formato y las redes: j1_pt1_9x16_fb-ig-tk-yt.mp4
   assert.ok(texto.includes('j1_pt1_convoz_9x16_fb-ig-tk-yt.mp4') && texto.includes('j1_pt2_sinvoz_16x9_fb-x-yt.mp4'));
   for (const mp4 of texto.match(/[\w-]+\.mp4/g) ?? []) assert.match(mp4, /^j\d+_(((hk|pt|clp)\d|ep)_(convoz|sinvoz)|hk\d)_(9x16|16x9)_[a-z]+(-[a-z]+)*\.mp4$/, `un .mp4 sin el nombre nuevo: ${mp4}`); // el video de un gancho de imagen fija no tiene voz: j1_hk2_9x16_fb-ig-tk-yt.mp4
-  assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/guerra)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
+  assert.doesNotMatch(texto, /grabaciones\/listos\b(?!\/lobo-en-la-aldea)/, 'las rutas apuntan a la carpeta de la serie, no a grabaciones/listos suelto');
   assert.match(texto, /subidos\//, 'dice que lo subido se mueve a subidos/');
   assert.ok(texto.includes('textos/parte-1.txt'), 'lista el texto unico');
   // el gancho «Proximamente»: se explica y se dice en que orden se sube
   assert.match(texto, /### gancho-1/, 'el gancho es una pieza mas del LEEME');
   assert.match(texto, /primero el gancho \(hk\), luego la parte \(pt\) y al final los clips \(clp\)/i, 'dice el orden de subida');
   assert.match(texto, /Próximamente/, 'la lista de revision dice como abre un gancho');
-  assert.ok(texto.includes('j1_hk1_convoz_9x16_fb-ig-tk-yt.mp4'));
+  assert.ok(texto.includes('j1_hk1_9x16_fb-ig-tk-yt.mp4'));
   assert.doesNotMatch(texto, /1080 × 1920/, 'la fuente de OBS es la hoja de 3840 × 2160');
   assert.match(texto, /3840 × 2160/, 'dice como esta la fuente de OBS');
   assert.match(texto, /negro/i, 'explica el margen y el fundido de negro');
@@ -120,7 +122,7 @@ test('leemeDe explica, para cada pieza, que grabar, cuanto dura, con que direcci
 });
 
 test('el LEEME pone los nombres de archivo, las direcciones y los comandos en bloques de código (copiables) y los junta en un resumen al principio', async () => {
-  const beats = await armarLinea('conquista', PARTIDA), destacadas = await destacadasDe('conquista', PARTIDA, 10);
+  const beats = await armarLinea('lobo', PARTIDA), destacadas = await destacadasDe('lobo', PARTIDA, 10);
   const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas, archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
   const texto = leemeDe(paquete, CTX);
   const lineas = texto.split('\n');
@@ -157,7 +159,7 @@ test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si 
   const guardado = { ...FUNDIDOS };
   try {
     Object.assign(FUNDIDOS, { margenMs: 3000, colaMs: 4000 });
-    const paquete = construirPaquete({ partida: PARTIDA, beats: await armarLinea('conquista', PARTIDA), destacadas: [], archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
+    const paquete = construirPaquete({ partida: PARTIDA, beats: await armarLinea('lobo', PARTIDA), destacadas: [], archivo: 'pruebas/guerra.json', partidaNumero: 1, enlace: ENLACE });
     const texto = leemeDe(paquete, CTX);
     assert.match(texto, /3 s de negro al empezar/);
     assert.match(texto, /4 s de negro al final/);
@@ -170,13 +172,14 @@ test('el LEEME dice los margenes de FUNDIDOS (no un «2 s» escrito a mano): si 
   }
 });
 
-test('el LEEME avisa de las piezas que duran mas de 2:20 (lo que admite X con una cuenta gratis) y no avisa de las que caben', async () => {
-  const construir = async (id, partida) => construirPaquete({ partida, beats: await armarLinea(id, partida), destacadas: await destacadasDe(id, partida, 10), archivo: 'pruebas/x.json', partidaNumero: 1, enlace: ENLACE });
-  const largo = leemeDe(await construir('tripledado', await jugarTD(1)), { ...CTX, archivo: 'pruebas/x.json', enlace: undefined });
-  assert.match(largo, /### parte-1[\s\S]*?no cabe en X con una cuenta gratis/);
-  const pieza = (texto, id) => texto.split('### ').find((s) => s.startsWith(id));
-  const corto = leemeDe(await construir('conquista', PARTIDA), { ...CTX, archivo: 'pruebas/x.json', enlace: undefined });
-  assert.doesNotMatch(pieza(corto, 'clip-1'), /no cabe en X/, 'un clip de 23 s cabe en X');
+test('el LEEME avisa según la duración de la pieza, no según el juego', async () => {
+  const beats = await armarLinea('lobo', PARTIDA);
+  const paquete = construirPaquete({ partida: PARTIDA, beats, destacadas: [], archivo: 'pruebas/x.json', partidaNumero: 1 });
+  const p1 = paquete.piezas.find(p => p.id === 'parte-1');
+  p1.grabar.ms = 150000;
+  assert.match(leemeDe(paquete, CTX), /no cabe en X con una cuenta gratis/);
+  for (const p of paquete.piezas) if (p.grabar) p.grabar.ms = 30000;
+  assert.doesNotMatch(leemeDe(paquete, CTX), /no cabe en X con una cuenta gratis/);
 });
 
 test('paquete.mjs usa solo la voz que narrar.mjs dejo para esa partida (sin que haya que escribir su ruta), y con --sinvoz no la usa', () => conTemporal((tmp) => {
@@ -216,7 +219,7 @@ test('paquete.mjs sale con 1 y dice por que ante: sin --archivo, archivo inexist
     [[`--salida=${salida}`], /Falta --archivo/],
     [[`--archivo=${join(tmp, 'no-existe.json')}`, `--salida=${salida}`], /no se pudo leer|no existe|ENOENT/i],
     [[`--archivo=${guardar(tmp, PARTIDA)}`, '--partida=2', `--salida=${salida}`], /no tiene la partida 2/],
-    [[`--archivo=${guardar(tmp, { juego: { id: 'dilema', nombre: 'x', categoria: 'y' }, jugadores: [], rondas: [{}] }, 'dilema.json')}`, `--salida=${salida}`], /dilema.*no tiene escena/],
+    [[`--archivo=${guardar(tmp, { juego: { id: 'ausente', nombre: 'x', categoria: 'y' }, jugadores: [], rondas: [{}] }, 'lobo.json')}`, `--salida=${salida}`], /ausente.*no tiene escena/],
     [[`--archivo=${guardar(tmp, { ...structuredClone(PARTIDA), truncada: true }, 'cortada.json')}`, `--salida=${salida}`], /cortada|truncada/i],
     [[`--archivo=${guardar(tmp, PARTIDA, 'otra.json')}`, `--salida=${tmp}/../fuera-${basename(tmp)}`], /\.\./],
   ];
@@ -231,7 +234,7 @@ test('paquete.mjs sale con 1 y dice por que ante: sin --archivo, archivo inexist
 
 test('partes.mjs avisa si la voz no cubre los momentos con texto de la partida (si no, se grabaria sin voz sin enterarse) y no avisa con una voz al dia ni sin voz', async () => conTemporalAsync(async (tmp) => {
   const archivo = guardar(tmp, PARTIDA);
-  const beats = await armarLinea('conquista', PARTIDA);
+  const beats = await armarLinea('lobo', PARTIDA);
   const alDia = Object.fromEntries(beats.filter((b) => b.texto).map((b) => [b.id, { archivo: `data/voz/x-p1/${b.id}.ogg`, ms: 5000, fuente: b.texto }]));
   const vieja = { ...alDia };
   delete vieja[beats.find((b) => b.texto && b.tipo !== 'intro').id];
@@ -266,10 +269,10 @@ test('sin --salida, paquete.mjs arma la carpeta de la serie en grabaciones/listo
   writeFileSync(ruta, JSON.stringify({ juego: PARTIDA.juego, seedBase: 777, partidas: [PARTIDA] }));
   const r = lanzar([`--archivo=${ruta}`, '--sinvoz'], { cwd: tmp });
   assert.equal(r.status, 0, `${r.stdout}${r.stderr}`);
-  const serie = join(tmp, 'grabaciones', 'listos', 'guerra-de-territorios', '2026-10-19_seed-777');
+  const serie = join(tmp, 'grabaciones', 'listos', 'lobo-en-la-aldea', '2026-10-19_seed-777');
   for (const sub of [...SUBCARPETAS, 'paquete-j1']) assert.ok(existsSync(join(serie, sub)), `falta ${sub}/`);
   const leeme = readFileSync(join(serie, 'paquete-j1', 'LEEME.md'), 'utf8');
-  assert.match(leeme, /grabaciones\/listos\/guerra-de-territorios\/2026-10-19_seed-777\/originales\/j1\/j1_pt1\.mkv/, 'las rutas del LEEME son las de la serie y del juego');
+  assert.match(leeme, /grabaciones\/listos\/lobo-en-la-aldea\/2026-10-19_seed-777\/originales\/j1\/j1_pt1\.mkv/, 'las rutas del LEEME son las de la serie y del juego');
   assert.match(r.stdout, /2026-10-19_seed-777/, 'dice donde dejo el paquete');
   const meta = JSON.parse(readFileSync(join(serie, 'paquete-j1', 'paquete.json'), 'utf8'));
   assert.deepEqual([meta.version, meta.juego, meta.partida, meta.archivo], [2, 1, 1, ruta]);
@@ -291,7 +294,7 @@ test('el numero de juego sube de uno en uno por cada partida empaquetada del jue
   const escribir = (nombre, seedBase, partidas) => { const ruta = join(tmp, nombre); writeFileSync(ruta, JSON.stringify({ juego: PARTIDA.juego, seedBase, partidas })); return ruta; };
   const a = escribir('2026-10-19-guerra.json', 111, [PARTIDA, PARTIDA]), b = escribir('2026-10-20-guerra.json', 222, [PARTIDA]);
   const correr = (archivo, partida, ...extra) => { const r = lanzar([`--archivo=${archivo}`, `--partida=${partida}`, '--sinvoz', ...extra], { cwd: tmp }); assert.equal(r.status, 0, `${r.stdout}${r.stderr}`); return r; };
-  const juego = (serie) => join(tmp, 'grabaciones', 'listos', 'guerra-de-territorios', serie);
+  const juego = (serie) => join(tmp, 'grabaciones', 'listos', 'lobo-en-la-aldea', serie);
   correr(a, 1);
   correr(a, 2);
   correr(b, 1);

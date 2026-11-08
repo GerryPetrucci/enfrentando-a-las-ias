@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 // Prueba de humo para SUMAR modelos nuevos (plan: privado/planes/plan-probar-modelos-nuevos.md). Hermana de verificar-modelos.mjs,
-// que solo mira metadatos: esta SI llama a los modelos, con 3 llamadas chicas por candidato (no una partida):
-//   1. dilema      formato simple (Dilema del Prisionero en la ronda 3)
+// que solo mira metadatos: esta SI llama a los modelos, con 2 llamadas chicas por candidato (no una partida):
 //   2. lobo-noche  un Lobo en la noche 1, con manada y objetivos validos
 //   3. lobo-dia    la Vidente en el dia 1, con muerte, inspeccion y el campo opcional afirmaRol
 // Los prompts son los de produccion (src/prompt.js + las reglas reales de cada juego) y la validacion es la del motor
-// (normalizar del Dilema; aplicarTurno de Lobo). Solo se confirma que el FORMATO funciona, no que el modelo juegue bien.
+// (aplicarTurno de Lobo). Solo se confirma que el FORMATO funciona, no que el modelo juegue bien.
 //
 //   node herramientas/prueba-de-humo-modelos.mjs                          (lista candidatos y estima el costo; NO llama a ningun modelo)
 //   node herramientas/prueba-de-humo-modelos.mjs --modelos=grok,glm       (estima solo esos)
@@ -19,7 +18,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dilema from '../src/juegos/dilema.js';
 import lobo from '../src/juegos/lobo.js';
 import { BOTS } from '../src/juegos/lobo-bots.js';
 import { activosDe } from '../src/juegos/lobo/estado.js';
@@ -47,23 +45,15 @@ export const CANDIDATOS = {
   phi4: { nombre: 'Phi-4', modelo: 'microsoft/phi-4', grupo: 'economico' },
 };
 
-export const IDS_PRUEBAS = ['dilema', 'lobo-noche', 'lobo-dia'];
-// 11 candidatos x (3 llamadas + a lo mucho 1 repeticion) = 44; el resto es holgura. Es un tope fijo, no "hasta que se acabe algo".
+export const IDS_PRUEBAS = ['lobo-noche', 'lobo-dia'];
+// 11 candidatos x (2 llamadas + a lo mucho 1 repeticion) = 33; el resto es holgura. Es un tope fijo, no "hasta que se acabe algo".
 export const LLAMADAS_MAX = 48;
 // Supuesto para el costo "tipico": con razonamiento "medium" varios modelos gastan 1,500-2,000 tokens pensando (ver src/parametros.js).
 const SALIDA_TIPICA = 1500;
 const CARACTERES_POR_TOKEN = 3; // conservador: sobreestima la entrada
 const CONTEXTO_CORTO = 32768;
 
-// ---------- fixtures: las 3 vistas, armadas con el motor real ----------
-
-function estadoDelDilema() {
-  const E = dilema.crear();
-  const j = (jugada, promesa, mensaje) => dilema.normalizar({ jugada, promesa, mensaje, razon: 'ronda de ejemplo' });
-  dilema.aplicar(E, [j('C', 'C', 'Cooperemos.'), j('C', 'T', 'Confía en mí.')]);
-  dilema.aplicar(E, [j('C', 'C', 'Sigo cooperando.'), j('T', 'C', 'Esta vez no.')]);
-  return E;
-}
+// ---------- fixtures: las 2 vistas, armadas con el motor real ----------
 
 function jugarFase(E, rng) {
   const actores = activosDe(E);
@@ -91,14 +81,6 @@ export function armarMesa() {
 const tipoDe = (v) => (Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v);
 const camposDe = (r) => Object.entries(r).map(([k, v]) => `${k}:${tipoDe(v)}`).join(', ');
 
-function evaluarDilema(respuesta) {
-  const n = dilema.normalizar(respuesta);
-  if (n.invalida) return { ok: false, motivo: `jugada fuera de C/T (recibió ${camposDe(respuesta)})` };
-  const notas = [];
-  if (!/^[CT]/i.test(String(respuesta.promesa ?? '').trim())) notas.push('promesa ausente o fuera de C/T (el motor la reemplaza por C)');
-  return { ok: true, notas };
-}
-
 // Aplica la respuesta del modelo a una copia de la mesa, con bots en el resto de los asientos, y mira si el motor la marco invalida.
 function evaluarLobo(E, asiento) {
   return (respuesta) => {
@@ -117,7 +99,6 @@ function evaluarLobo(E, asiento) {
 
 export function construirPruebas(mesa = armarMesa()) {
   return [
-    { id: 'dilema', sistema: construirSistema(dilema), usuario: construirUsuario(dilema.vista(estadoDelDilema(), 0)), evaluar: evaluarDilema },
     { id: 'lobo-noche', sistema: construirSistema(lobo), usuario: construirUsuario(lobo.vista(mesa.noche, mesa.asientoLobo)), evaluar: evaluarLobo(mesa.noche, mesa.asientoLobo) },
     { id: 'lobo-dia', sistema: construirSistema(lobo), usuario: construirUsuario(lobo.vista(mesa.dia, mesa.asientoVidente)), evaluar: evaluarLobo(mesa.dia, mesa.asientoVidente) },
   ];
@@ -210,11 +191,11 @@ export async function ejecutarPrueba({ candidato, prueba, llamar }) {
 
 // aprobado: 3/3 sin cortes. dudoso: falla 1 y su repeticion sale bien. rechazado: fallan 2 o mas, o falla 1 y la repeticion tambien.
 // incompleto: la corrida se corto (tope, error de llave o credito) antes de tener pruebas o la repeticion; no se juzga al modelo.
-export function veredicto(intentos, repeticion = null) {
+export function veredicto(intentos, repeticion = null, esperadas = IDS_PRUEBAS.length) {
   const hechos = intentos.filter((i) => !i.omitida);
   const fallas = hechos.filter((i) => !i.ok).length;
   if (fallas >= 2) return 'rechazado';
-  if (hechos.length < IDS_PRUEBAS.length) return 'incompleto';
+  if (hechos.length < esperadas) return 'incompleto';
   if (fallas === 1) return !repeticion ? 'incompleto' : repeticion.ok ? 'dudoso' : 'rechazado';
   return 'aprobado';
 }
@@ -262,7 +243,7 @@ export async function correrPrueba({ candidatos, pruebas, llamar, topeUsd, maxLl
     const hechos = intentos.filter((i) => !i.omitida);
     modelos.push({
       clave: candidato.clave, nombre: candidato.nombre, modelo: candidato.modelo, razonamiento: candidato.razonamiento,
-      veredicto: veredicto(intentos, repeticion), intentos, repeticion,
+      veredicto: veredicto(intentos, repeticion, pruebas.length), intentos, repeticion,
       tokensEntrada: [...hechos, repeticion].reduce((n, i) => n + (i?.tokensEntrada ?? 0), 0),
       tokensSalida: [...hechos, repeticion].reduce((n, i) => n + (i?.tokensSalida ?? 0), 0),
       costo: [...hechos, repeticion].reduce((n, i) => n + (i?.costo ?? 0), 0),

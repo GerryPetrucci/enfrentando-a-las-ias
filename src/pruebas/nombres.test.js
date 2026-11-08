@@ -21,8 +21,8 @@ test('abreviarPieza: parte-N es ptN y clip-N es clpN; un id raro nunca lanza y n
 });
 
 test('fechaDe saca AAAA-MM-DD del nombre de la serie (con carpeta o sin ella) o de una fecha ISO, y sin ninguna usa hoy', () => {
-  assert.deepEqual(fechaDe('2026-10-19-conquista-claude-vs-gpt.json'), { largo: '2026-10-19', corto: '26-10-19' });
-  assert.deepEqual(fechaDe('pruebas/2026-10-19-conquista.json'), { largo: '2026-10-19', corto: '26-10-19' });
+  assert.deepEqual(fechaDe('2026-10-19-lobo-claude-vs-gpt.json'), { largo: '2026-10-19', corto: '26-10-19' });
+  assert.deepEqual(fechaDe('pruebas/2026-10-19-lobo.json'), { largo: '2026-10-19', corto: '26-10-19' });
   assert.deepEqual(fechaDe('sin-fecha.json', '2026-10-18T02:17:21.386Z'), { largo: '2026-10-18', corto: '26-10-18' }, 'el primero que trae fecha manda');
   assert.deepEqual(fechaDe('sin-fecha.json', undefined, new Date(2027, 0, 5)), { largo: '2027-01-05', corto: '27-01-05' });
   assert.deepEqual(fechaDe(null, 7, new Date(2026, 11, 31)), { largo: '2026-12-31', corto: '26-12-31' });
@@ -70,14 +70,14 @@ test('cada formato declara sus redes con las siglas de REDES, sin repetir y en o
 });
 
 test('slugDe quita acentos y signos: el nombre publico del juego sirve de nombre de carpeta', () => {
-  assert.equal(slugDe('Guerra de territorios'), 'guerra-de-territorios');
-  assert.equal(slugDe('El número solitario'), 'el-numero-solitario');
-  assert.equal(slugDe('Duda y apuesta'), 'duda-y-apuesta');
-  assert.equal(slugDe('  ¿Mayor o menor?  '), 'mayor-o-menor');
+  assert.equal(slugDe('Lobo en la aldea'), 'lobo-en-la-aldea');
+  assert.equal(slugDe('El número 7'), 'el-numero-7');
+  assert.equal(slugDe('Juego y apuesta'), 'juego-y-apuesta');
+  assert.equal(slugDe('  ¿Carta alta?  '), 'carta-alta');
   for (const raro of [null, undefined, '', 7, '???']) assert.equal(slugDe(raro), 'juego', String(raro));
 });
 
 test('carpetaDeSerie: grabaciones/listos/<juego>/<fecha>_seed-<seed>, y las subcarpetas de estado son las acordadas', () => {
-  assert.equal(carpetaDeSerie({ juego: 'Guerra de territorios', fecha: fechaDe('2026-10-19-x.json'), seed: 552912962 }), 'grabaciones/listos/guerra-de-territorios/2026-10-19_seed-552912962');
+  assert.equal(carpetaDeSerie({ juego: 'Lobo en la aldea', fecha: fechaDe('2026-10-19-x.json'), seed: 552912962 }), 'grabaciones/listos/lobo-en-la-aldea/2026-10-19_seed-552912962');
   assert.deepEqual(SUBCARPETAS, ['originales', 'por-subir', 'subidos', 'revision']);
 });

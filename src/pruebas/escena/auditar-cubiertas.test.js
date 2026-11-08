@@ -35,7 +35,7 @@ test('los fundidos de las tarjetas (menos de 0.7 s antes o despues de su beat) n
   assert.deepEqual(problemasDePieza({ ventanas, muestras }), []);
 });
 
-test('con el fundido a negro de la salida la tarjeta de cierre sigue a la vista debajo y no es un problema (falso positivo visto el 29-10 en la parte 2 de Duda y de Triple dado)', () => {
+test('con el fundido a negro de la salida la tarjeta de cierre sigue a la vista debajo y no es un problema (falso positivo visto el 29-10 en dos juegos de cartas ya retirados)', () => {
   const muestras = [[25000, { op: op(0, 0, 1), c: null, f: 'contenido' }], [28900, { op: op(0, 0, 1), c: null, f: 'saliendo' }], [29500, { op: op(0, 0, 1), c: '1', f: 'negro' }]];
   assert.deepEqual(problemasDePieza({ ventanas, muestras }), []);
   // pero el mismo cierre fuera de su beat y SIN el fundido de salida sigue siendo un problema

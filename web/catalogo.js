@@ -94,8 +94,8 @@ export function textoDeBusqueda(texto) {
 }
 
 // Como se llama la unidad de cada juego («hasta el turno 8», «hasta la ronda 2», «hasta la mano 5»): la misma que usan sus videos. Los que no estan, «turno».
-const UNIDADES = { conquista: ['turno', 'el'], lobo: ['ronda', 'la'], mayormenor: ['ronda', 'la'], tripledado: ['ronda', 'la'], subasta: ['ronda', 'la'], fuga: ['ronda', 'la'], dudaapuesta: ['mano', 'la'] };
-export const unidadDeJuego = (juegoId) => { const [nombre, articulo] = UNIDADES[juegoId] ?? UNIDADES.conquista; return { nombre, hasta: `hasta ${articulo} ${nombre}` }; };
+const UNIDADES = { lobo: ['ronda', 'la'] };
+export const unidadDeJuego = (juegoId) => { const [nombre, articulo] = UNIDADES[juegoId] ?? ['turno', 'el']; return { nombre, hasta: `hasta ${articulo} ${nombre}` }; };
 
 // La linea de resultado de una partida: el ganador solo si esta publicada; si no, hasta donde se ha subido.
 export function resumenDePartida(p) {

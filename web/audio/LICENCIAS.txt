@@ -58,10 +58,3 @@ Archivo de web/audio  <-  sonido original (numero, titulo, autor y pagina):
   pierde-suspiro.ogg     <- #764106 "CRWDReac_Crowd Sigh In Disappointment_ShaneVincent_GSC24_FUMA-AmbeoVR.wav" de ShangusBurger: https://freesound.org/people/ShangusBurger/sounds/764106/
   pierde-trombon.ogg     <- #175409 "wah wah sad trombone.wav" de kirbydx: https://freesound.org/people/kirbydx/sounds/175409/
   pierde-abucheo.ogg     <- #264378 "crowd booing" de HowardV: https://freesound.org/people/HowardV/sounds/264378/
-  batalla-grito.ogg      <- #563011 "People screaming in agony when charging into battle" de florianreichelt: https://freesound.org/people/florianreichelt/sounds/563011/
-  batalla-multitud.ogg   <- #353185 "Crowd of Boys Cheering" de Jofae: https://freesound.org/people/Jofae/sounds/353185/
-  choque-1.ogg           <- #326868 "Sword_Clash (7).wav" de JohnBuhr: https://freesound.org/people/JohnBuhr/sounds/326868/
-  choque-2.ogg           <- #364531 "Swords Clash - High Quality #3" de Christopherderp: https://freesound.org/people/Christopherderp/sounds/364531/
-  choque-3.ogg           <- #471095 "Sword clash 1.wav" de spycrah: https://freesound.org/people/spycrah/sounds/471095/
-  maravilla-cuerno.ogg   <- #512490 "Distant War Horn.wav" de DeVern: https://freesound.org/people/DeVern/sounds/512490/
-  maravilla-gong.ogg     <- #486629 "Gong Brilliant Paiste 32"" de JensZygar: https://freesound.org/people/JensZygar/sounds/486629/

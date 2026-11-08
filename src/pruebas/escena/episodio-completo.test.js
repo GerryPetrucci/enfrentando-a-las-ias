@@ -1,3 +1,4 @@
+import { jugarLobo } from './ayudas-lobo.js';
 // La pieza «episodio completo» del paquete (decidida el 31-10-2026): el juego entero de corrido, una sola grabacion de principio a fin, para subirlo AL FINAL y pasado un tiempo (cuenta el
 // resultado, asi que su titulo y su descripcion pueden tener spoilers). Vive en el mismo paquete y en el mismo LEEME que las demas piezas. Partidas REALES jugadas por bots; sin DOM, sin red y sin API.
 //
@@ -16,14 +17,10 @@ import { ordenDePublicacion, identificadorDePieza, MAX_TITULO, MAX_DESCRIPCION }
 import { claveDeCierre, duracionDeCierre } from '../../../web/casino/cierre.js';
 import { abreviarPieza, nombreDePieza } from '../../../herramientas/nombres.mjs';
 import { leemeDe, escribirPaquete, guionDePaquete } from '../../../herramientas/paquete.mjs';
-import { jugar as jugarDuda } from './ayudas.js';
-import { jugarTD } from './ayudas-td.js';
-import { jugarFuga } from './ayudas-fuga.js';
-import { jugarConqBots, ESCENARIOS } from './ayudas-conq.js';
 
 const ENLACE = 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/';
 const SERIE = 'grabaciones/listos/juego/2026-10-31_seed-1';
-const PARTIDAS = { dudaapuesta: await jugarDuda(1), tripledado: await jugarTD(1), fuga: await jugarFuga(1), conquista: await jugarConqBots(ESCENARIOS[0].seed, ESCENARIOS[0].bots) };
+const PARTIDAS = { lobo: jugarLobo(3) };
 const params = (url) => Object.fromEntries(new URL(url, 'http://x/').searchParams);
 
 async function paqueteDe(id, extra = {}) {
@@ -47,8 +44,8 @@ test('el episodio completo se sube al final: despues de la parte 2 y de sus clip
 });
 
 test('el titulo y la descripcion del episodio empiezan como los de todas las piezas: juego, jN, la pieza y el seed', () => {
-  assert.equal(identificadorDePieza({ id: 'episodio-completo', tipo: 'episodio', parte: null }, { juego: 'Guerra de territorios', juegoNumero: 3, seed: 1704202488 }), 'Guerra de territorios J3 - Episodio completo - Seed 1704202488');
-  assert.equal(identificadorDePieza({ id: 'parte-1', tipo: 'parte', parte: 1 }, { juego: 'Guerra de territorios', juegoNumero: 3, seed: 7 }), 'Guerra de territorios J3 - Parte 1/2 - Seed 7', 'las demas siguen igual');
+  assert.equal(identificadorDePieza({ id: 'episodio-completo', tipo: 'episodio', parte: null }, { juego: 'Asalto de castillos', juegoNumero: 3, seed: 1704202488 }), 'Asalto de castillos J3 - Episodio completo - Seed 1704202488');
+  assert.equal(identificadorDePieza({ id: 'parte-1', tipo: 'parte', parte: 1 }, { juego: 'Asalto de castillos', juegoNumero: 3, seed: 7 }), 'Asalto de castillos J3 - Parte 1/2 - Seed 7', 'las demas siguen igual');
 });
 
 test('la direccion del episodio lleva episodio=1 (y ni parte, ni de, ni clip); la pagina la lee y una direccion de parte no es un episodio', () => {
@@ -61,11 +58,11 @@ test('la direccion del episodio lleva episodio=1 (y ni parte, ni de, ni clip); l
 });
 
 test('la tarjeta que abre el episodio dice «Juego N» y «Episodio completo», sin «Parte M de K»', async () => {
-  const beats = await armarLinea('dudaapuesta', PARTIDAS.dudaapuesta);
-  const tarjeta = conIdentificador(beats, { juegoId: 'dudaapuesta', juegoNumero: 3, episodio: true })[0].pasos[0];
+  const beats = await armarLinea('lobo', PARTIDAS.lobo);
+  const tarjeta = conIdentificador(beats, { juegoId: 'lobo', juegoNumero: 3, episodio: true })[0].pasos[0];
   assert.equal(tarjeta.kicker, 'Juego 3');
   assert.equal(tarjeta.detalle, 'Episodio completo');
-  assert.equal(conIdentificador(beats, { juegoId: 'dudaapuesta', juegoNumero: 3, parte: 1, de: 2 })[0].pasos[0].detalle, 'Parte 1 de 2', 'una parte sigue diciendo su parte');
+  assert.equal(conIdentificador(beats, { juegoId: 'lobo', juegoNumero: 3, parte: 1, de: 2 })[0].pasos[0].detalle, 'Parte 1 de 2', 'una parte sigue diciendo su parte');
 });
 
 test('cada juego trae UN episodio completo: toda la partida de corrido, con la tarjeta de identificacion y el cierre de final, y es lo ultimo que se publica', async () => {
@@ -103,13 +100,13 @@ test('el texto del episodio cubre todo el juego y SI cuenta el resultado (es lo 
     assert.ok(e.comentarioFijado, `${id}: lleva el comentario fijado, como las partes`);
   }
   // el de las partes no cambia: la parte 1 no cuenta nada y los clips tampoco
-  const { paquete } = await paqueteDe('conquista');
+  const { paquete } = await paqueteDe('lobo');
   assert.ok(!/gan[óo]|empat/i.test(paquete.piezas.find((p) => p.id === 'parte-1').publicacion.descripcion));
 });
 
 test('el LEEME es el mismo y agrega, al final, la seccion del episodio completo: direccion, nombre j1_ep.mkv, carpeta, recorte, texto y aviso de que se sube pasado un tiempo', async () => {
-  const { paquete } = await paqueteDe('dudaapuesta');
-  const texto = leemeDe(paquete, { archivo: 'pruebas/dudaapuesta.json', partidaNumero: 1, juegoNumero: 1, enlace: ENLACE, carpetaSerie: SERIE });
+  const { paquete } = await paqueteDe('lobo');
+  const texto = leemeDe(paquete, { archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 1, enlace: ENLACE, carpetaSerie: SERIE });
   const seccion = texto.indexOf('### episodio-completo');
   assert.ok(seccion > 0, 'hay una seccion para el episodio completo');
   for (const otra of paquete.piezas.filter((p) => p.tipo !== 'episodio' && p.tipo !== 'gancho-imagen')) assert.ok(texto.indexOf(`### ${otra.id}`) < seccion, `${otra.id} va antes`);
@@ -128,11 +125,11 @@ test('el LEEME es el mismo y agrega, al final, la seccion del episodio completo:
 });
 
 test('escribirPaquete deja textos/episodio-completo.txt y paquete.json lo lista; al regenerar sin la pieza, su texto se aparta', async () => {
-  const { paquete, beats, partida } = await paqueteDe('tripledado');
+  const { paquete, beats, partida } = await paqueteDe('lobo');
   const tmp = mkdtempSync(join(tmpdir(), 'episodio-'));
   try {
     const carpeta = join(tmp, 'p');
-    escribirPaquete(paquete, carpeta, { archivo: 'pruebas/tripledado.json', partidaNumero: 1, juegoNumero: 3, enlace: ENLACE });
+    escribirPaquete(paquete, carpeta, { archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 3, enlace: ENLACE });
     const e = paquete.piezas.find((p) => p.tipo === 'episodio');
     assert.equal(readFileSync(join(carpeta, 'textos', 'episodio-completo.txt'), 'utf8'), `TÍTULO\n${e.publicacion.titulo}\n\nDESCRIPCIÓN\n${e.publicacion.descripcion}\n\nCOMENTARIO FIJADO\n${e.comentarioFijado}\n`);
     const json = JSON.parse(readFileSync(join(carpeta, 'paquete.json'), 'utf8'));
@@ -140,7 +137,7 @@ test('escribirPaquete deja textos/episodio-completo.txt y paquete.json lo lista;
     assert.equal(json.ordenPublicacion.at(-1), 'episodio-completo');
     assert.match(guionDePaquete(paquete, beats, { seed: partida.seed, partidaNumero: 1 }), /## episodio-completo · /);
     const sinEpisodio = { ...paquete, piezas: paquete.piezas.filter((p) => p.tipo !== 'episodio') };
-    escribirPaquete(sinEpisodio, carpeta, { archivo: 'pruebas/tripledado.json', partidaNumero: 1, juegoNumero: 3, enlace: ENLACE });
+    escribirPaquete(sinEpisodio, carpeta, { archivo: 'pruebas/lobo.json', partidaNumero: 1, juegoNumero: 3, enlace: ENLACE });
     assert.ok(!readdirSync(join(carpeta, 'textos')).includes('episodio-completo.txt'), 'el texto viejo ya no esta entre los vigentes');
     assert.ok(readdirSync(join(carpeta, 'textos', 'anteriores')).some((n) => n.endsWith('episodio-completo.txt')), 'quedo en anteriores/');
   } finally { rmSync(tmp, { recursive: true, force: true }); }

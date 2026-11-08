@@ -48,15 +48,6 @@ PALETA['glm-flash'] = variante('glm', 'GLM Flash');
 
 const NEUTRO = '#888888';
 
-// Ambiente del primer arco visual de La Fuga, separado de los colores de modelos.
-export const FUGA_AMBIENTE = {
-  pared: '#1b2a36', sombra: '#0a121b', linea: '#69818d', acero: '#354b59',
-  luz: '#e2c797', rastro: '#e4b76a', patrulla: '#f27b70', borrado: '#8bc9b6',
-  metal: '#8c9ba3', piso: '#1b242b', ladrillo: '#34424e', cielo: '#111c32',
-  piel: '#d7ae84', ropa: '#58727a', sombraRopa: '#263c49',
-  madera: '#695748', maderaLuz: '#9a8060', papel: '#cfccad', agua: '#1b3c4c', aguaLuz: '#7aa8b3',
-};
-
 // Ambiente de Lobo en la aldea: aldea de noche, separado de los colores de modelos.
 export const LOBO_AMBIENTE = {
   piel: '#d7ae84', ropa: '#5a4a6b', sombraRopa: '#2b2338', sombra: '#0c0a14',
@@ -79,28 +70,3 @@ export const fondoCSS = (id, respaldo = NEUTRO) => {
   const m = franjasDe(id);
   return m ? `linear-gradient(135deg, ${m.join(', ')})` : colorDe(id, respaldo);
 };
-
-// Materiales del mapa de Guerra de territorios.
-export const ARTE_CONQUISTA = Object.freeze({
-  "carne": "#c96a4f",
-  "sombraCarne": "#7a3524",
-  "marfil": "#efe6d2",
-  "sombraHueso": "#8a7f66",
-  "corteza": "#7a5027",
-  "sombraCorteza": "#3f260f",
-  "tronco": "#9a6b3f",
-  "bordeTronco": "#4a2f18",
-  "veta": "#d2a56b",
-  "anillo": "#7a4f28",
-  "roca": "#9a9eac",
-  "bordeRoca": "#4f525c",
-  "luzRoca": "#c3c6d0",
-  "acero": "#7ea6cc",
-  "bordeAcero": "#3d5a7a",
-  "luzAcero": "#9fc1e0",
-  "oro": "#f1c84b",
-  "oroOscuro": "#9a7412",
-  "caballo": "#c99a5b",
-  "bordeCaballo": "#6b4a24",
-  "crin": "#4a3416"
-});

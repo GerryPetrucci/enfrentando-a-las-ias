@@ -7,13 +7,18 @@ import assert from 'node:assert/strict';
 import {
   POR_PUBLICARSE, PUBLICADA, numeroDeRonda, ultimaRonda, esParteFinal, partidaParcial, partidaCompleta, registrarParte, armarSeriePublica,
 } from '../publicacion.js';
-import { jugarConqBots } from './escena/ayudas-conq.js';
-
-const bots = ['agresivo', 'pacifico', 'economico', 'azar'];
-const p1 = await jugarConqBots(18, bots), p2 = await jugarConqBots(19, bots);
-const serie = () => ({ etiqueta: 'serie-x', fecha: '2026-10-19', seedBase: 18, juego: { id: 'conquista', nombre: 'Guerra de territorios' }, prompt: { version: 'v1.0.0', reglas: 'conquista-1.1.0', hash: 'abc' }, modo: 'pago',
+// Registros sinteticos minimos de un juego por turnos (uno por turno, con `privado` y con todo lo que adelantaria el resultado): el recorte es generico y no
+// depende del motor. Lobo, que guarda un registro por fase, tiene sus propias pruebas al final.
+const bots = ['a', 'b', 'c', 'd'];
+const partidaDe = (seed) => ({
+  seed, juego: { id: 'prueba' }, jugadores: bots, rotacion: 0, invertido: false,
+  rondas: Array.from({ length: 12 }, (_, i) => ({ turno: i + 1, acciones: bots.map((b) => `${b}${i}`), privado: { pensado: `secreto ${i}` } })),
+  puntos: [3, 1, 0, 0], ganador: 0, empate: false, metricas: { x: 1 }, orden: [0, 1, 2, 3], turnos: 12, llamadas: 48, avisos: [], usoPorJugador: [], duracionMs: 1, tokensUsados: 9, epilogo: 'fin', truncada: false,
+});
+const p1 = partidaDe(18), p2 = partidaDe(19);
+const serie = () => ({ etiqueta: 'serie-x', fecha: '2026-10-19', seedBase: 18, juego: { id: 'prueba', nombre: 'Juego de prueba' }, prompt: { version: 'v1.0.0', reglas: 'prueba-1.1.0', hash: 'abc' }, modo: 'pago',
   jugadores: bots, serie: { partidas: 2 }, evaluacion: { partidas: 2, comentario: [{ texto: 'resumen' }] }, partidas: [structuredClone(p1), structuredClone(p2)] });
-const SPOILERS = ['puntos', 'ganador', 'empate', 'metricas', 'orden', 'ganoPorMaravilla', 'turnos', 'llamadas', 'avisos', 'usoPorJugador', 'duracionMs', 'tokensUsados', 'epilogo'];
+const SPOILERS = ['puntos', 'ganador', 'empate', 'metricas', 'orden', 'turnos', 'llamadas', 'avisos', 'usoPorJugador', 'duracionMs', 'tokensUsados', 'epilogo'];
 
 test('numeroDeRonda y ultimaRonda leen el numero de turno o de ronda del registro', () => {
   assert.equal(numeroDeRonda({ turno: 7 }, 0), 7);
@@ -40,16 +45,17 @@ test('una partida por publicarse trae solo hasta el turno subido y NADA del resu
   const parcial = partidaParcial(p1, 8);
   assert.equal(parcial.rondas.length, 8);
   assert.equal(parcial.rondas.at(-1).turno, 8);
-  assert.deepEqual(parcial.rondas, p1.rondas.slice(0, 8), 'son los mismos registros, sin tocar');
+  assert.deepEqual(parcial.rondas, p1.rondas.slice(0, 8).map(({ privado, ...r }) => r), 'son los mismos registros, sin tocar (salvo lo privado)');
   assert.equal(parcial.truncada, true);
   assert.deepEqual(parcial.parcial, { hastaTurno: 8 });
   assert.equal(parcial.estadoPublicacion, POR_PUBLICARSE);
   for (const clave of SPOILERS) assert.equal(parcial[clave], undefined, `${clave} adelanta el resultado`);
   assert.equal(parcial.seed, p1.seed);
-  assert.deepEqual(parcial.reinos, p1.reinos);
-  assert.ok(parcial.mapa && parcial.jugadores.length === 4);
+  assert.deepEqual(parcial.jugadores, bots);
+  assert.deepEqual([parcial.rotacion, parcial.invertido], [0, false], 'el asiento de cada jugador si sale (no adelanta nada)');
   const texto = JSON.stringify(parcial);
-  assert.ok(!texto.includes(`"turno":${9}`) || p1.rondas.length < 9, 'ningun registro del turno 9 en adelante');
+  assert.ok(!texto.includes(`"turno":${9}`), 'ningun registro del turno 9 en adelante');
+  assert.ok(!texto.includes('secreto') && parcial.rondas.every((r) => r.privado === undefined && r.acciones.length === 4), 'cada registro sale sin su parte privada, con lo demas intacto');
   assert.notEqual(parcial.rondas, p1.rondas, 'es una copia');
   parcial.rondas[0].turno = 999;
   assert.notEqual(p1.rondas[0].turno, 999, 'tocar la copia no toca la original');
@@ -104,7 +110,7 @@ test('la serie publica: lo publicado completo, lo subido a medias recortado, lo 
   assert.equal(pub.partidas[1].seed, p2.seed);
   assert.equal(pub.partidas[1].prompts, undefined);
   assert.equal(pub.prompt.sistema, 'SISTEMA');
-  assert.equal(pub.prompt.reglas, 'conquista-1.1.0');
+  assert.equal(pub.prompt.reglas, 'prueba-1.1.0');
   assert.equal(pub.seedBase, 18);
   reg = registrarParte(reg, { etiqueta: 'serie-x', partida: 1, parte: 2, hastaTurno: ultimaRonda(p1), final: true, fecha: 'f' });
   pub = armarSeriePublica(serie(), reg.series['serie-x'], { porPartida: prompts });
@@ -153,7 +159,7 @@ test('Lobo: «hasta» cuenta RONDAS (no fases) y lo que sale a medias son solo l
   for (const clave of ['"invalidas"', '"errores"', '"camara"', '"privado"']) assert.ok(!texto.includes(clave), `${clave} delata identidades`);
   assert.ok(lobo.rondas.every((r) => 'invalidas' in r && r.publico.camara), 'la partida original no se toca');
   // los demas juegos conservan su criterio de siempre (turno primero)
-  assert.equal(numeroDeRonda({ turno: 9, ronda: 2 }, 0, { juego: { id: 'conquista' } }), 9);
+  assert.equal(numeroDeRonda({ turno: 9, ronda: 2 }, 0, { juego: { id: 'prueba' } }), 9);
   assert.equal(numeroDeRonda({ turno: 9, ronda: 2 }, 0, lobo), 2);
 });
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Por que fallaron las llamadas de una partida guardada: cada llamada invalida con su modelo, turno, motivo, error de la API y el principio del texto crudo.
-// No llama a ningun modelo ni gasta nada. Sirve para cualquier juego (Lobo, Guerra de territorios, La Fuga, Duda y apuesta...); src/invalidas.js sabe donde guarda cada uno.
+// No llama a ningun modelo ni gasta nada. Sirve para cualquier juego y para los registros guardados de antes; src/invalidas.js sabe donde guarda cada uno.
 //
 //   node herramientas/analizar-invalidas.mjs --archivo=pruebas/NOMBRE.json [--partida=1] [--crudo=400] [--json]
 //

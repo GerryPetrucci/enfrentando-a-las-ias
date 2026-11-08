@@ -12,13 +12,13 @@ import { crearSonido } from '../../web/casino/sonido.js';
 import { construirPaquete } from '../../web/casino/paquete-textos.js';
 import { armarLinea, destacadasDe } from '../../web/casino/lineas.js';
 import { guionDePaquete, escribirPaquete } from '../../herramientas/paquete.mjs';
-import { jugarMM } from './escena/ayudas-mm.js';
+import { jugarLobo } from './escena/ayudas-lobo.js';
 import { organizarGrabaciones } from '../../herramientas/organizar-grabaciones.mjs';
 
 test('la publicacion cambia con hechos de la pieza y no toma mensajes, razones ni rondas futuras', () => {
   const pieza = { id: 'clip-1', tipo: 'clip', parte: 1, grabar: { desde: 2, hasta: 2, url: 'escena.html' } };
   const beats = [{ mano: 2, tipo: 'resultado', lineas: [{ tipo: 'resultado', texto: 'Claude pierde seis fichas.' }, { tipo: 'privado', texto: 'SECRETO' }, { tipo: 'razon', texto: 'RAZON' }] }, { mano: 3, tipo: 'resultado', lineas: [{ tipo: 'resultado', texto: 'FUTURO' }] }];
-  const contexto = { beats, nombres: ['Claude', 'GPT'], seed: 123, juego: 'Mayor o menor' };
+  const contexto = { beats, nombres: ['Claude', 'GPT'], seed: 123, juego: 'Lobo en la aldea' };
   const a = publicacionDePieza(pieza, contexto);
   assert.match(a.descripcion, /Claude pierde seis fichas/);
   assert.doesNotMatch(JSON.stringify(a), /SECRETO|RAZON|FUTURO/);
@@ -32,11 +32,11 @@ test('toda descripcion lleva hashtags (#IAvsIA primero y de 1 a 5), el titulo mi
   const pieza = { id: 'parte-2', tipo: 'parte', parte: 2, grabar: { desde: 3, hasta: 4, url: 'escena.html' } };
   const largo = 'Se revela una jugada tan larga y tan llena de detalles que no cabe en ninguna red social si no se acota con cuidado. '.repeat(3);
   const beats = [{ mano: 3, tipo: 'resultado', lineas: [{ tipo: 'resultado', texto: largo }] }];
-  const base = { beats, nombres: ['Claude', 'GPT', 'Gemini', 'DeepSeek'], seed: 1704202488, juego: 'Guerra de territorios', juegoNumero: 3, enlace: 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/?seed=1704202488' };
+  const base = { beats, nombres: ['Claude', 'GPT', 'Gemini', 'DeepSeek'], seed: 1704202488, juego: 'Asalto de castillos', juegoNumero: 3, enlace: 'https://gerrypetrucci.github.io/enfrentando-a-las-ias/?seed=1704202488' };
   const cinco = ['#IAvsIA', '#Estrategia', '#JuegosDeEstrategia', '#Claude', '#ChatGPT'];
   const lleno = publicacionDePieza(pieza, { ...base, hashtags: cinco });
   assert.ok(lleno.titulo.length <= 90 && lleno.descripcion.length <= 280, `${lleno.titulo.length} / ${lleno.descripcion.length}`);
-  assert.ok(lleno.titulo.startsWith('Guerra de territorios J3 - Parte 2/2 - Seed 1704202488'), 'el identificador nunca se corta');
+  assert.ok(lleno.titulo.startsWith('Asalto de castillos J3 - Parte 2/2 - Seed 1704202488'), 'el identificador nunca se corta');
   assert.equal(lleno.descripcion.split('\n').at(-1), cinco.join(' '), 'caben los cinco');
   assert.ok(lleno.descripcion.includes('Generado por IA') && lleno.descripcion.includes(base.enlace));
   const sin = publicacionDePieza(pieza, base);
@@ -46,7 +46,7 @@ test('toda descripcion lleva hashtags (#IAvsIA primero y de 1 a 5), el titulo mi
   const apretado = publicacionDePieza(pieza, { ...base, enlace: `${base.enlace}&x=${'a'.repeat(60)}`, hashtags: cinco });
   assert.ok(apretado.descripcion.length <= 280 && apretado.titulo.length <= 90);
   assert.match(apretado.descripcion.split('\n').at(-1), /^#IAvsIA( #\S+){0,3}$/, 'con poco lugar se quitan hashtags del final, nunca el primero');
-  assert.ok(apretado.descripcion.includes(`&x=${'a'.repeat(60)}`) && apretado.descripcion.startsWith('Guerra de territorios J3 - Parte 2/2'), 'el enlace y el identificador se conservan');
+  assert.ok(apretado.descripcion.includes(`&x=${'a'.repeat(60)}`) && apretado.descripcion.startsWith('Asalto de castillos J3 - Parte 2/2'), 'el enlace y el identificador se conservan');
   const absurdo = publicacionDePieza(pieza, { ...base, juego: 'Un juego con un nombre larguisimo para apretar el espacio del titulo y de la descripcion', hashtags: cinco });
   assert.ok(absurdo.titulo.length <= 90 && absurdo.descripcion.length <= 280, 'los topes valen siempre');
   assert.match(absurdo.descripcion.split('\n').at(-1), /^#IAvsIA/);
@@ -84,8 +84,8 @@ test('una colision de archivos impide toda la organizacion antes de mover nada',
 });
 
 test('clips confinados a su parte, cupo configurable y guion con cierre en el mismo orden del LEEME', async () => {
-  const partida = await jugarMM(3), beats = await armarLinea('mayormenor', partida);
-  const destacadas = await destacadasDe('mayormenor', partida, 40);
+  const partida = await jugarLobo(3), beats = await armarLinea('lobo', partida);
+  const destacadas = await destacadasDe('lobo', partida, 40);
   const paquete = construirPaquete({ partida, beats, destacadas, archivo: 'prueba.json', clipsPorParte: [2, 0] });
   const partes = paquete.piezas.filter((p) => p.tipo === 'parte');
   for (const c of paquete.piezas.filter((p) => p.tipo === 'clip')) {
@@ -108,7 +108,7 @@ test('el archivo unico y el guion se generan, y los textos de redes anteriores s
   const { writeFileSync, existsSync } = await import('node:fs');
   const dir = mkdtempSync(join(tmpdir(), 'produccion-paquete-'));
   try {
-    const partida = await jugarMM(9), beats = await armarLinea('mayormenor', partida);
+    const partida = await jugarLobo(9), beats = await armarLinea('lobo', partida);
     const p = construirPaquete({ partida, beats, archivo: 'x.json' });
     escribirPaquete(p, dir, { guion: guionDePaquete(p, beats, { seed: partida.seed }) });
     writeFileSync(join(dir, 'textos', 'parte-1-facebook.txt'), 'MIS NOTAS');

@@ -19,7 +19,7 @@ const MIN_CLIP_MS = 20000, MAX_CLIP_MS = 40000, MAX_VIDEO_MS = 180000; // conser
 const MODELOS = [[/^(claude|haiku)/, '#Claude'], [/^(gpt|luna)/, '#ChatGPT'], [/^(gemini|flash)/, '#Gemini'], [/^deepseek/, '#DeepSeek'], [/^llama/, '#Llama'],
   [/^grok/, '#Grok'], [/^qwen/, '#Qwen'], [/^(mistral|ministral)/, '#Mistral'], [/^minimax/, '#MiniMax'], [/^glm/, '#GLM'], [/^kimi/, '#Kimi'], [/^phi/, '#Phi4']];
 const UNIDADES = { mano: 'Mano', ronda: 'Ronda', turno: 'Turno' };
-const PUNTOS_EN_PANTALLA = ['fuga', 'conquista']; // los juegos cuyo final muestra los mismos puntos que guarda `partida.puntos`
+const PUNTOS_EN_PANTALLA = []; // los juegos cuyo final muestra los mismos puntos que guarda `partida.puntos`
 const MAX_INVALIDAS = 0.25; // desde esta fraccion de jugadas invalidas por llamada se avisa de un modelo caido o que no responde bien
 
 // #IAvsIA, los del juego y los de los modelos que juegan (descriptivos), nunca mas de 5.
@@ -83,15 +83,15 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
       advertencias.push(`${nombres[i]} tuvo ${invalidas} jugadas inválidas en ${llamadas} llamadas: un modelo caído o que no responde bien. Los fallos se publican tal cual, pero decide si esta partida sirve como episodio.`);
     }
   });
-  if (juego === 'fuga' && totalPartidas < 2) advertencias.push('La Fuga se publica siempre como serie con los asientos rotados: esta partida sola no es la que se publica.');
 
-  const hayGanador = Number.isInteger(partida.ganador) && partida.ganador >= 0 && partida.ganador < nombres.length && partida.empate !== true;
-  const ganador = hayGanador ? nombres[partida.ganador] : null;
+  const hayGanadorIndividual = Number.isInteger(partida.ganador) && partida.ganador >= 0 && partida.ganador < nombres.length && partida.empate !== true;
+  const ganador = hayGanadorIndividual ? nombres[partida.ganador] : partida.empate !== true && partida.ganadorBando ? `el bando ${partida.ganadorBando}` : null;
+  const hayGanador = ganador !== null;
   const puntos = Array.isArray(partida.puntos) ? partida.puntos : [];
   const ranking = nombres.map((n, i) => ({ n, p: puntos[i] })).filter((x) => Number.isFinite(x.p)).sort((a, b) => b.p - a.p).map((x) => `${x.n} ${x.p}`).join(' · ');
   const ordenFinal = (Array.isArray(partida.orden) ? partida.orden : []).filter((i) => nombres[i] !== undefined).map((i) => nombres[i]).join(' · ');
   const resultado = hayGanador ? `En esta partida ganó ${ganador}.` : 'Esta partida terminó en empate.';
-  // solo se escriben cifras que el video muestra: los puntos del juego en La Fuga y en Guerra de territorios; en los demas juegos `puntos` es el marcador (4/2/0) y no sale en pantalla: ahi va el orden final
+  // solo se escriben cifras que el video muestra: los puntos de juegos que los muestran; en los demas juegos `puntos` es el marcador (4/2/0) y no sale en pantalla: ahi va el orden final
   const lineaPuntos = PUNTOS_EN_PANTALLA.includes(juego) ? (ranking ? `Puntos: ${ranking}.` : '') : (ordenFinal ? `Orden final: ${ordenFinal}.` : '');
   const nota = 'Una partida suelta no es un ranking: es lo que pasó con estas reglas y este seed.';
   const serie = totalPartidas > 1 ? `Partida ${partidaNumero} de ${totalPartidas} de la serie. ` : '';
@@ -138,7 +138,7 @@ export function construirPaquete({ partida, beats, destacadas = [], archivo, par
     const total = Math.round(ms + IDENTIFICADOR_MS + duracionDeCierre(claveDeCierre({ seed: partida.seed, partida: partidaNumero, desde, hasta }), voz, cierre));
     return { url: direccionDeGrabacion({ archivo, partida: partidaNumero, desde, hasta, formato, voz: rutaVoz, cierre, juegoNumero: juegoN, de: 2, ...pieza }), desde, hasta, ms: total, plan: planDeGrabacion(total), nota };
   };
-  const resultadoCorto = hayGanador ? (partida.ganoPorMaravilla === true ? `Ganó ${ganador} por la Maravilla` : partida.extincionMutua === true ? `Ganó ${ganador} tras una extinción mutua` : `Ganó ${ganador}`) : 'Terminó en empate';
+  const resultadoCorto = hayGanador ? `Ganó ${ganador}` : 'Terminó en empate';
   for (const [n, p] of [[1, partes.parte1], [2, partes.parte2]]) {
     const sug = n === 1 ? `${nombres.length} IAs juegan ${t.nombre}: ¿quién gana?` : resultadoCorto;
     piezas.push({

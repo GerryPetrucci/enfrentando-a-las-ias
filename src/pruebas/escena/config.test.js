@@ -5,14 +5,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz, etiquetaDeApuesta, entradaDeVoz, resumenDeVoz, fuenteDeVoz, crearReproductorDeVoz } from '../../../web/casino/escena-config.js';
-import { construirLineaDeTiempo as lineaMM } from '../../../web/casino/linea-de-tiempo-mayormenor.js';
+import { leerParametros, recortarClip, duracionDeBeat, marcarTiempos, hayVoz, entradaDeVoz, resumenDeVoz, fuenteDeVoz, crearReproductorDeVoz } from '../../../web/casino/escena-config.js';
 import { planDeNarracion, armarVoz } from '../../../herramientas/narrar.mjs';
-import { jugarMM } from './ayudas-mm.js';
 import { POSICION_EN_HOJA } from '../../../web/casino/layout.js';
-import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
+import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-lobo.js';
 import { FORMATOS } from '../../../herramientas/formatos.mjs';
-import { jugar, CASOS } from './ayudas.js';
+import { ultimaRonda } from '../../publicacion.js';
+import { jugarLobo } from './ayudas-lobo.js';
+// Partidas de Lobo con bots (sin red): `jugar(seed)` y una de al menos 3 rondas para los recortes del medio.
+const jugar = (seed = 3) => jugarLobo(seed);
+const larga = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((s) => jugarLobo(s)).find((p) => ultimaRonda(p) >= 3);
 
 test('los parametros de la URL traen valores por defecto sensatos', () => {
   assert.deepEqual(leerParametros(''), { archivo: null, partida: 1, mano: 1, hasta: Infinity, formato: '9x16', camara: null, sonido: true, audioSeparado: false, vel: 1, razon: false, auto: false, grabar: false, detener: null, limpio: false, voz: null, escala: 'ajustar', gancho: null, cierre: false, tipoCierre: null, numero: null, pieza: { parte: null, de: null, clip: null, episodio: false } });
@@ -64,17 +66,18 @@ test('numero=N es el jN del juego y parte/de/clip dicen que pieza es: la pagina 
   assert.deepEqual(leerParametros('numero=3&parte=0&de=x&clip=-1').pieza, { parte: null, de: null, clip: null, episodio: false });
 });
 
-test('el clip por manos recorta los beats y no inventa final ni se cuelga con un rango fuera de la partida', async () => {
-  const p = await jugar(...CASOS.retirada);
-  const beats = construirLineaDeTiempo(p);
-  const ultima = p.rondas.at(-1).mano;
+test('el clip por rondas recorta los beats y no inventa final ni se cuelga con un rango fuera de la partida', () => {
+  const beats = construirLineaDeTiempo(larga);
+  const ultima = ultimaRonda(larga);
+  assert.ok(ultima >= 3);
   assert.deepEqual(recortarClip(beats, 1, Infinity), beats, 'todo el rango = todos los beats');
-  const medio = recortarClip(beats, 2, 3);
-  assert.ok(medio.length > 0 && medio.every((b) => b.mano >= 2 && b.mano <= 3));
-  assert.equal(medio[0].tipo, 'apertura', 'un clip empieza al abrir la mano');
-  assert.ok(medio.every((b) => b.tipo !== 'final'), 'un clip del medio no lleva el final');
+  const medio = recortarClip(beats, 2, 2);
+  assert.ok(medio.length > 0 && medio.every((b) => b.mano === 2));
+  assert.equal(medio[0].tipo, 'noche', 'un clip empieza con la noche de su primera ronda');
+  assert.ok(medio.every((b) => !['final', 'identidad', 'elenco'].includes(b.tipo)), 'un clip del medio no lleva el final');
   const hastaElFinal = recortarClip(beats, ultima, ultima);
-  assert.equal(hastaElFinal.at(-1).tipo, 'final', 'el clip de la ultima mano si lleva el final');
+  assert.ok(hastaElFinal.some((b) => b.tipo === 'final'), 'el clip de la ultima ronda si lleva el final');
+  assert.equal(hastaElFinal.at(-1).tipo, 'elenco', 'y cierra con el elenco completo');
   assert.deepEqual(recortarClip(beats, ultima + 1, ultima + 5), []);
   assert.deepEqual(recortarClip(beats, 5, 2), []);
   for (const basura of [null, undefined, 'x', 7]) assert.deepEqual(recortarClip(basura, 1, 3), []);
@@ -97,9 +100,8 @@ test('un beat dura lo que dura su voz si es mas larga que lo minimo, y lo minimo
   for (const nada of [null, undefined, {}, 'x', 7]) assert.equal(hayVoz(nada), false);
 });
 
-test('las marcas de tiempo (para re-doblar) son contiguas, parten de cero y suman lo que dura el clip', async () => {
-  const p = await jugar(...CASOS.retirada);
-  const beats = construirLineaDeTiempo(p);
+test('las marcas de tiempo (para re-doblar) son contiguas, parten de cero y suman lo que dura el clip', () => {
+  const beats = construirLineaDeTiempo(jugar());
   const voz = { [beats[3].id]: { ms: 9000 } };
   const marcas = marcarTiempos(beats, voz, 1);
   assert.equal(marcas.length, beats.length);
@@ -121,7 +123,7 @@ test('la posicion de cada formato en la hoja maestra de la escena es la de herra
 });
 
 import { listaDeArchivos, catalogarPartidas, primeraValida } from '../../../web/casino/escena-config.js';
-import { PRUDENTES } from './ayudas.js';
+
 
 test('listaDeArchivos separa por coma, recorta los espacios y quita vacios y repetidos', () => {
   assert.deepEqual(listaDeArchivos('a.json, b.json,,a.json '), ['a.json', 'b.json']);
@@ -129,14 +131,14 @@ test('listaDeArchivos separa por coma, recorta los espacios y quita vacios y rep
   for (const nada of [null, undefined, '', '  ,  ', 7]) assert.deepEqual(listaDeArchivos(nada), []);
 });
 
-test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las de Duda y apuesta que tienen rondas, y las demas dicen por que no', async () => {
-  const p1 = await jugar(1), p2 = await jugar(2, PRUDENTES);
+test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las de un juego con escena que tienen rondas, y las demas dicen por que no', () => {
+  const p1 = jugar(1), p2 = jugarLobo(2, 12);
   const cargados = [
     { nombre: 'a.json', datos: { juego: p1.juego, partidas: [p1, p2] } },
-    { nombre: 'dilema.json', datos: { juego: { id: 'dilema' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
+    { nombre: 'ausente.json', datos: { juego: { id: 'ausente' }, partidas: [{ jugadores: [{ nombre: 'A' }, { nombre: 'B' }], rondas: [{ mano: 1 }] }] } },
     { nombre: 'roto.json', datos: null, error: 'JSON invalido' },
     { nombre: 'vacio.json', datos: { partidas: [] } },
-    { nombre: 'sinrondas.json', datos: { juego: { id: 'dudaapuesta' }, partidas: [{ jugadores: [], rondas: [] }] } },
+    { nombre: 'sinrondas.json', datos: { juego: { id: 'lobo' }, partidas: [{ jugadores: [], rondas: [] }] } },
     { nombre: 'sinpartidas.json', datos: { algo: 1 } },
   ];
   const c = catalogarPartidas(cargados);
@@ -144,14 +146,15 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
   assert.equal(new Set(c.map((e) => e.clave)).size, 7, 'claves unicas');
   assert.deepEqual(c.slice(0, 2).map((e) => [e.clave, e.archivo, e.numero, e.valida]), [['a.json#1', 'a.json', 1, true], ['a.json#2', 'a.json', 2, true]]);
   assert.equal(c[0].partida, p1);
-  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['dudaapuesta', 'dudaapuesta', 'dilema']);
-  const manos = Math.max(...p1.rondas.map((r) => r.mano));
-  assert.equal(c[0].manos, manos);
-  assert.equal(c[0].titulo, `a.json · Partida 1 — Calculador vs Farolero vs Retador vs Prudente · ${manos} manos`);
-  assert.match(c[1].titulo, /Partida 2 — Prudente vs Prudente vs Prudente vs Prudente/);
+  assert.deepEqual(c.slice(0, 3).map((e) => e.juego), ['lobo', 'lobo', 'ausente']);
+  const rondas = Math.max(...p1.rondas.map((r) => r.ronda));
+  assert.ok(rondas < p1.rondas.length, 'Lobo numera sus registros por ronda, no por fase: la cuenta usa el campo de la unidad');
+  assert.equal(c[0].manos, rondas);
+  assert.equal(c[0].titulo, `a.json · Partida 1 — ${p1.jugadores.map((j) => j.nombre).join(' vs ')} · ${rondas} rondas`);
+  assert.match(c[1].titulo, /^a\.json · Partida 2 — Claude A vs GPT A vs Gemini A vs Claude B .* · \d+ rondas$/, '12 asientos: los nombres con su letra');
   const [sin, roto, vacio, sinRondas, sinPartidas] = c.slice(2);
   assert.deepEqual([sin.valida, sin.partida], [false, null]);
-  assert.match(sin.motivo, /dilema/);
+  assert.match(sin.motivo, /ausente/);
   assert.match(roto.motivo, /JSON invalido/);
   assert.match(vacio.motivo, /no trae partidas/);
   assert.match(sinPartidas.motivo, /no trae partidas/);
@@ -162,7 +165,7 @@ test('catalogarPartidas: una entrada por partida de cada archivo; solo valen las
 });
 
 test('catalogarPartidas marca las partidas cortadas', async () => {
-  const corta = await jugar(3, undefined, { maxRondas: 10 });
+  const corta = { ...await jugar(3), truncada: true };
   const [e] = catalogarPartidas([{ nombre: 'c.json', datos: { juego: corta.juego, partidas: [corta] } }]);
   assert.equal(e.valida, true);
   assert.match(e.titulo, / · cortada$/);
@@ -171,7 +174,7 @@ test('catalogarPartidas marca las partidas cortadas', async () => {
 test('primeraValida elige la partida pedida si sirve y, si no, la primera que sirva', async () => {
   const p = await jugar(1);
   const c = catalogarPartidas([
-    { nombre: 'otro.json', datos: { juego: { id: 'dilema' }, partidas: [{ rondas: [{}] }] } },
+    { nombre: 'otro.json', datos: { juego: { id: 'ausente' }, partidas: [{ rondas: [{}] }] } },
     { nombre: 'a.json', datos: { juego: p.juego, partidas: [p, p] } },
     { nombre: 'b.json', datos: { juego: p.juego, partidas: [p] } },
   ]);
@@ -185,17 +188,14 @@ test('primeraValida elige la partida pedida si sirve y, si no, la primera que si
   assert.equal(primeraValida(c.slice(0, 1)), null);
 });
 
-test('el texto de la caja de la apuesta: una apuesta del juego no se le atribuye a la IA', () => {
-  assert.deepEqual(etiquetaDeApuesta({ reemplazo: false }, 'Claude'), { titulo: 'Claude apuesta' });
-  assert.deepEqual(etiquetaDeApuesta({ reemplazo: true }, 'Caido'), { titulo: 'El juego apuesta por Caido' });
-  for (const raro of [null, undefined, {}, 7]) assert.equal(typeof etiquetaDeApuesta(raro, 'X').titulo, 'string');
-});
-
-test('la voz solo vale para el beat cuyo texto se narro: un voz.json con otra partida no suena ni cambia los tiempos', async () => {
-  const p1 = await jugarMM(1), p2 = await jugarMM(2);
-  const b1 = lineaMM(p1), b2 = lineaMM(p2);
-  // los ids de Mayor o menor no dependen de la partida: el mismo id existe en las dos
-  assert.ok(b1.filter((b) => b2.some((x) => x.id === b.id)).length > 10, 'precondicion: hay ids compartidos');
+test('la voz solo vale para el beat cuyo texto se narro: un voz.json con otra partida no suena ni cambia los tiempos', () => {
+  // La misma partida con otros modelos en los asientos: los beats tienen los MISMOS ids (los de Lobo dependen de la ronda, el orden y el tipo),
+  // pero lo que nombra a un modelo dice otra cosa. Es el caso peligroso: un voz.json de otra partida que encaja por id.
+  const p1 = jugar(1);
+  const otros = ['Grok', 'Kimi', 'Qwen', 'Mistral'];
+  const p2 = { ...structuredClone(p1), jugadores: p1.jugadores.map((j, i) => ({ ...j, nombre: `${otros[i % 4]} ${j.nombre.split(' ')[1]}` })) };
+  const b1 = construirLineaDeTiempo(p1), b2 = construirLineaDeTiempo(p2);
+  assert.deepEqual(b2.map((b) => b.id), b1.map((b) => b.id), 'precondicion: los ids coinciden');
   const resultados = planDeNarracion(b1).map((x) => ({ id: x.id, duracionS: 30, fuente: x.fuente }));
   const voz1 = armarVoz(resultados, { carpeta: 'data/voz/x-p1' });
   // la misma partida: toda la voz sirve
@@ -227,12 +227,8 @@ test('una voz sin fuente (escrita a mano o de antes) sigue valiendo; la fuente i
 });
 
 test('dividirEnDos parte una partida en dos clips de rondas contiguos que cubren todo, con duraciones parecidas; el final va en la segunda parte', async () => {
-  const { dividirEnDos, recortarClip, duracionDeBeat } = await import('../../../web/casino/escena-config.js');
-  const { construirLineaDeTiempo: lineaFuga } = await import('../../../web/casino/linea-de-tiempo-fuga.js');
-  const { construirLineaDeTiempo: lineaSub } = await import('../../../web/casino/linea-de-tiempo-subasta.js');
-  const { jugarFuga } = await import('./ayudas-fuga.js');
-  const { jugarSub } = await import('./ayudas-sub.js');
-  for (const beats of [lineaFuga(await jugarFuga(1)), lineaFuga(await jugarFuga(3, ['azar', 'azar'])), lineaSub(await jugarSub(2))]) {
+  const { dividirEnDos } = await import('../../../web/casino/escena-config.js');
+  for (const beats of [construirLineaDeTiempo(larga), construirLineaDeTiempo(jugar(7)), construirLineaDeTiempo(jugarLobo(5, 12))]) {
     const d = dividirEnDos(beats);
     const manos = [...new Set(beats.map((b) => b.mano))];
     assert.equal(d.parte1.mano, manos[0]);
@@ -249,6 +245,22 @@ test('dividirEnDos parte una partida en dos clips de rondas contiguos que cubren
   assert.equal(dividirEnDos([]), null);
   assert.equal(dividirEnDos(null), null);
   assert.equal(dividirEnDos([{ mano: 1, tipo: 'apertura', minMs: 1000, texto: '' }]), null, 'con una sola ronda no hay como partir');
+});
+
+test('?voz= y los audios de voz.json solo aceptan rutas relativas de este mismo sitio (nada de URL de otro dominio en la pagina publicada)', async () => {
+  const { esRutaRelativa } = await import('../../../web/casino/escena-config.js');
+  for (const bien of ['voz.json', 'voz/ep1/voz.json', 'a-b_c.1/x.ogg']) assert.equal(esRutaRelativa(bien), true, bien);
+  for (const mal of ['https://x.com/a.json', 'http://x.com/a', '//x.com/a.json', '/abs/a.json', '../a.json', 'a/../b.json', 'a\\b', 'voz.json?x=1', 'a b.json', '', null, undefined, 7]) assert.equal(esRutaRelativa(mal), false, String(mal));
+  assert.equal(leerParametros('voz=voz/ep1.json').voz, 'voz/ep1.json');
+  assert.equal(leerParametros('voz=https://x.com/a.json').voz, null);
+  assert.equal(leerParametros('voz=../secreto.json').voz, null);
+});
+
+test('los textos que ve el publico en la barra de la escena llevan acentos (la pagina se publica)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const leer = (r) => readFileSync(new URL(`../../../web/${r}`, import.meta.url), 'utf8');
+  const cadenas = (leer('casino/escena.js') + leer('casino/mesa-lobo.js') + leer('casino/mesa-base.js')).match(/'[^'\n]*'|`[^`\n]*`|"[^"\n]*"/g) ?? [];
+  assert.deepEqual(cadenas.filter((c) => /\b(pagina|Parametros|minimos|abrio|valido)\b/.test(c)), [], 'cadenas sin acento');
 });
 
 // Un audio falso: anota lo que le hacen. `play` puede devolver una promesa rechazada.

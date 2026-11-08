@@ -33,9 +33,9 @@ test('la direccion abre un Issue nuevo del repo con el titulo marcado por tipo y
   assert.match(cuerpo, /Cada IA recibe dos cartas/);
   assert.match(cuerpo, /Claude, GPT/);
   assert.match(cuerpo, /Ana/);
-  const e = new URL(urlDePropuesta({ tipo: 'enfrentamiento', titulo: 'Claude vs GPT', descripcion: 'En Mayor o menor, 10 partidas.', juego: 'Mayor o menor' }));
+  const e = new URL(urlDePropuesta({ tipo: 'enfrentamiento', titulo: 'Claude vs GPT', descripcion: 'En Lobo en la aldea, 10 partidas.', juego: 'Lobo en la aldea' }));
   assert.equal(e.searchParams.get('title'), '[Enfrentamiento] Claude vs GPT');
-  assert.match(e.searchParams.get('body'), /Mayor o menor/);
+  assert.match(e.searchParams.get('body'), /Lobo en la aldea/);
 });
 
 test('lo que escribe quien propone no rompe la direccion ni se pasa de largo', () => {

@@ -1,4 +1,4 @@
-// Arte nativo de Lobo en la aldea, mismo patron que pixel-fuga.js: pixeles duros, sin
+// Arte nativo de Lobo en la aldea, mismo patron que pixel-juego.js: pixeles duros, sin
 // texturas externas. Un busto generico de aldeano; el pelo y los ojos base se ocultan (en
 // mesa.css) cuando se revela un rol, que trae su propio tocado grande y reconocible a simple
 // vista (no un detalle chico encima). El color del cuerpo usa --sc/--c (color del modelo).

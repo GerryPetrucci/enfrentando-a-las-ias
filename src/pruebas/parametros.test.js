@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { PARAMETROS, cuerpoDeLlamada } from '../parametros.js';
 import { CONTENDIENTES, llamarModelo, fijarModo, exigirModoPago } from '../modelos.js';
 import { agenteModelo } from '../agentes.js';
-import dilema from '../juegos/dilema.js';
+import prueba from './ayudas-juego.js';
 
 // OJO: el modo (gratis/pago) es estado del proceso; esta prueba va primero, con el modo sin elegir.
 test('exigirModoPago frena a los modelos de pago sin modo pago, y deja pasar a los gratis', () => {
@@ -111,7 +111,7 @@ test('llamarModelo marca el sistema para cache solo en los proveedores que lo ex
 test('un agente de modelo usa el razonamiento de su contendiente', async () => {
   const f = conFetchFalso();
   try {
-    await agenteModelo('gpt').jugar({ juego: dilema, vista: { ronda: 1 } });
+    await agenteModelo('gpt').jugar({ juego: prueba, vista: { ronda: 1 } });
   } finally { f.restaurar(); }
   assert.deepEqual(f.enviados[0].reasoning, { effort: 'medium' });
 });

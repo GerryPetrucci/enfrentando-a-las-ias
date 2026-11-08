@@ -47,6 +47,5 @@ createServer(async (req, res) => {
     res.end('No encontrado');
   }
 }).listen(PUERTO, () => {
-  console.log(`\n  Sitio:        http://localhost:${PUERTO}/`);
-  console.log(`  Reproductor:  http://localhost:${PUERTO}/replay.html\n`);
+  console.log(`\n  Sitio:        http://localhost:${PUERTO}/\n`);
 });

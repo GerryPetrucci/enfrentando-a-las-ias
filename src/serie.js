@@ -12,10 +12,11 @@ export function parsearArgumentos(argv) {
   return o;
 }
 
-// `--jugadores=a,b,c,d` (de 2 a 5 reinos) o, para un duelo, `--a=... --b=...`.
+// `--jugadores=a,b,c,...` o, para un duelo, `--a=... --b=...`.
 export function jugadoresDe(o) {
   if (typeof o.jugadores === 'string') return o.jugadores.split(',').map((s) => s.trim()).filter(Boolean);
-  return [o.a || 'tomaydaca', o.b || 'siempre-t'];
+  if (o.a || o.b) return [o.a, o.b].filter(Boolean);
+  return ['agresivo', 'silencioso', 'revela', 'calla', 'rapida', 'guarda', 'mayoria', 'contradice'];
 }
 
 export function errorDeCantidad(juego, n) {

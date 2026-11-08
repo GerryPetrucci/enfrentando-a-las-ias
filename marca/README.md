@@ -9,7 +9,7 @@ Guía de identidad. Decisiones tomadas el 8 de octubre de 2026: logo **A · Duel
 
 - **Promesa:** lo que ves es lo que decidió cada IA. Nada de "esta es la mejor".
 - **Eslogan:** *Mismo juego. Mismo prompt. A ver quién gana.*
-- **Descriptor corto:** marcador de IAs en juegos de confianza, traición y más.
+- **Descriptor corto:** marcador de IAs en Lobo en la Aldea: mentiras, votos y traición. (Por ahora es el único juego publicado.)
 
 ## Logo
 
@@ -57,14 +57,13 @@ El rojo es el más justo (4.90 : 1): úsalo en letra mediana o grande y en negri
 
 Directa, con humor seco, sin hablar como robot. Tuteo neutro, comprensible en todo Latinoamérica (poca jerga local).
 
-- **Se dice:** *"En este juego, con estas reglas, en estas 8 partidas, ganó X."*
+- **Se dice:** *"En este juego, con estas reglas, en esta partida, ganó el bando X."*
 - **No se dice:** *"X es la mejor IA."* Nunca se publica un duelo suelto como veredicto.
-- **Fórmulas de título que funcionan con el formato:**
-  - *[IA] prometió [A] y hizo [B].*
-  - *Se traicionaron las dos.*
-  - *¿Le gana a Toma y Daca?* (el control como vara de medir)
-  - *Ronda 7: ahí se rompió todo.*
-  - Para **La Fuga** (vocabulario suave, 11 oct 2026): *[IA] prometió [A] y tomó otro camino.* · *Cada quien por su cuenta.* · *Se quedó atrás y aun así salió.* · *Ronda 7: ahí cambió el plan.* Evitar "traición", "abandonó" y "delató" en los títulos de este juego; en el Dilema, que es literalmente cooperar o traicionar, se conservan.
+- **Fórmulas de título que funcionan con el formato (Lobo en la Aldea):**
+  - *[IA] juró que era aldeana. Era lobo.*
+  - *La aldea votó mal en la ronda 3.*
+  - *Los lobos ganaron sin que nadie lo notara.*
+  - *Ronda 4: ahí se rompió todo.*
 - **Evita:** insultar a un proveedor, declarar ganadoras absolutas, prometer resultados que no se han medido.
 
 ## Reglas editoriales (confirmadas el 9 de octubre de 2026)
@@ -72,7 +71,7 @@ Directa, con humor seco, sin hablar como robot. Tuteo neutro, comprensible en to
 1. **Las jugadas no se retocan.** Lo que se ve es lo que registró el motor; los errores de API se muestran, no se esconden.
 2. **El prompt es público** y está versionado. Si cambia, sube la versión de las reglas de ese juego y las partidas anteriores no se comparan con las nuevas.
 3. **Seed y número de partidas visibles** en cada resultado.
-4. **Los controles** (`tomaydaca`, `siempre-c`, `siempre-t`, `azar`) aparecen en el marcador como referencia.
+4. **Los controles** (los bots de práctica de Lobo, como `agresivo` o `silencioso`) no entran al marcador público: sus partidas viven en `data/pruebas/`.
 
 ## Proveedores de IA: qué sí y qué no
 

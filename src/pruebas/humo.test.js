@@ -1,5 +1,5 @@
 // La prueba de humo gratuita (src/humo.js) llama a modelos gratis de verdad, asi que NO corre en npm test.
-// Lo que si se prueba aqui es el resumen que imprime, con agentes falsos sobre la Guerra de territorios real.
+// Lo que si se prueba aqui es el resumen que imprime, con agentes falsos sobre Lobo en la aldea real, y que se niega a gastar credito antes de tocar la red.
 //
 //   npm test
 
@@ -8,84 +8,77 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { correrPartida } from '../arena.js';
-import { planDeSerie } from '../serie.js';
-import { NOMBRES_REINOS } from '../juegos/conquista/constantes.js';
-import conquista from '../juegos/conquista.js';
+import lobo from '../juegos/lobo.js';
 import { resumirHumo, MODELOS_DE_HUMO } from '../humo.js';
 import { CONTENDIENTES, esGratis } from '../modelos.js';
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url));
 const USO = { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 };
 
-// Un agente que contesta bien: una orden valida y una invalida, con tokens de mentira. La valida es una oferta de comercio
-// porque no cuesta nada al ofrecerla: sirve igual en todos los turnos (reclutar gasta Comida y el hambre la agota).
+// Un agente que contesta bien: juega lo que jugaria el bot de control de Lobo, con tokens de mentira.
 const bueno = (id) => ({
   id, nombre: id, color: '#000000', inicial: id[0].toUpperCase(), tipo: 'modelo', modelo: `x/${id}`, necesitaEstado: true,
-  async jugar({ i }) {
-    return { respuesta: { ordenes: [`ofrecer ${NOMBRES_REINOS[1 - i]} Oro 1 Roca 1`, 'dormir'], razon: 'prueba' }, crudo: 'ok', uso: USO };
-  },
+  async jugar({ estado, i, rng }) { return { respuesta: lobo.bots.revela.fn(estado, i, rng), crudo: 'ok', uso: USO }; },
 });
 // Un agente cuya respuesta nunca trae JSON, como un modelo que contesta puro texto.
 const malo = (id) => ({
   id, nombre: id, color: '#000000', inicial: id[0].toUpperCase(), tipo: 'modelo', modelo: `x/${id}`,
   async jugar() { throw new Error('La respuesta no traía un JSON válido.'); },
 });
+const B = bueno('bueno'), M = malo('malo');
+const ocho = (primero, segundo) => [...Array(4).fill(primero), ...Array(4).fill(segundo)];
+const jugar = (agentes, seed, fases) => correrPartida({ juego: lobo, agentes, seed, maxRondas: fases });
 
-async function serie(agentesPorClave, claves, partidas, turnos) {
-  const plan = planDeSerie({ claves, partidas, seedBase: 3, mismoSeed: true });
-  const resultados = [];
-  for (const p of plan) {
-    resultados.push(await correrPartida({ juego: conquista, agentes: p.claves.map((c) => agentesPorClave[c]), seed: p.seed, maxRondas: turnos }));
-  }
-  return resultados;
-}
-
-test('resumirHumo mide por modelo cuantas respuestas traen JSON, cuantas ordenes valen y cuantos tokens gasta', async () => {
-  const resultados = await serie({ bueno: bueno('bueno'), malo: malo('malo') }, ['bueno', 'malo'], 2, 3);
-  assert.equal(resultados.length, 2);
-  assert.ok(resultados.every((r) => r.truncada && r.rondas.length === 3));
-  const [b, m] = ['bueno', 'malo'].map((id) => resumirHumo(resultados).find((x) => x.id === id));
-
-  assert.equal(b.llamadas, 6);              // 3 turnos x 2 partidas
+test('resumirHumo mide por modelo cuantas respuestas traen JSON, cuantas fallan y cuantos tokens gasta (Lobo real, 3 fases)', async () => {
+  const r = await jugar(ocho(B, M), 3, 3);
+  assert.ok(r.truncada && r.rondas.length === 3);
+  const resumen = resumirHumo([r]);
+  assert.deepEqual(resumen.map((x) => x.id).sort(), ['bueno', 'malo'], 'una fila por modelo aunque ocupe cuatro asientos');
+  const [b, m] = ['bueno', 'malo'].map((id) => resumen.find((x) => x.id === id));
+  assert.equal(b.llamadas + m.llamadas, r.llamadas, 'cada llamada de la partida cuenta para su modelo');
+  assert.ok(b.llamadas > 0 && m.llamadas > 0);
   assert.equal(b.conError, 0);
+  assert.equal(b.respuestasInvalidas, 0, 'el bot de control siempre responde bien');
   assert.equal(b.jsonValido, 1);
-  assert.equal(b.ordenesTotal, 12);          // 2 ordenes por turno
-  assert.equal(b.ordenesValidas, 6);
-  assert.equal(b.obediencia, 0.5);
-  assert.equal(b.tokensEntrada, 600);
-  assert.equal(b.tokensSalida, 300);
-
-  assert.equal(m.llamadas, 6);
-  assert.equal(m.conError, 6);
+  assert.deepEqual([b.tokensEntrada, b.tokensSalida], [b.llamadas * 100, b.llamadas * 50]);
+  assert.equal(b.obediencia, null, 'Lobo no mide ordenes');
+  assert.equal(m.conError, m.llamadas, 'cada llamada fallida cuenta como error');
   assert.equal(m.jsonValido, 0);
-  assert.equal(m.obediencia, 0);
+  assert.deepEqual([m.tokensEntrada, m.tokensSalida], [0, 0]);
   assert.deepEqual(m.ejemplosDeError, ['La respuesta no traía un JSON válido.']);
 });
 
-test('resumirHumo junta las partidas de un modelo aunque cambie de asiento', async () => {
-  const resultados = await serie({ bueno: bueno('bueno'), malo: malo('malo') }, ['bueno', 'malo'], 2, 1);
-  assert.deepEqual(resultados.map((r) => r.jugadores[0].id), ['bueno', 'malo']);
-  assert.deepEqual(resumirHumo(resultados).map((x) => x.id).sort(), ['bueno', 'malo']);
-  assert.equal(resumirHumo(resultados).find((x) => x.id === 'bueno').llamadas, 2);
+test('resumirHumo junta las partidas de un modelo aunque cambie de asiento, y cuenta las invalidas sin error aparte', async () => {
+  const a = await jugar(ocho(B, M), 3, 2), b = await jugar(ocho(M, B), 3, 2);
+  assert.deepEqual([a.jugadores[0].id, b.jugadores[0].id], ['bueno', 'malo']);
+  const juntos = resumirHumo([a, b]), solo = (p, id) => resumirHumo([p]).find((x) => x.id === id).llamadas;
+  assert.equal(juntos.find((x) => x.id === 'bueno').llamadas, solo(a, 'bueno') + solo(b, 'bueno'));
+  const sintetica = { jugadores: [{ id: 'a', nombre: 'A' }], usoPorJugador: [{ llamadas: 3, tokensEntrada: 10, tokensSalida: 4 }], metricas: [{}],
+    rondas: [{ invalidas: [false] }, { invalidas: [true] }, { errores: ['HTTP 500'], invalidas: [true] }] };
+  const [s] = resumirHumo([sintetica]);
+  assert.deepEqual([s.llamadas, s.conError, s.respuestasInvalidas, s.jsonValido], [3, 1, 1, 1 / 3], 'un error no se cuenta ademas como invalida');
+  assert.deepEqual(resumirHumo([]), []);
 });
 
-test('la prueba de humo se niega a correr con un modelo de pago, antes de tocar la red', () => {
-  const r = spawnSync(process.execPath, ['src/humo.js', '--modelos=claude,laguna', '--turnos=1', '--partidas=1'], { cwd: RAIZ, encoding: 'utf8', timeout: 30000 }); // 1 turno y 1 partida: tope de gasto si el seguro fallara
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /claude gasta credito/);
+const humo = (...args) => spawnSync(process.execPath, ['src/humo.js', ...args], { cwd: RAIZ, encoding: 'utf8', timeout: 30000 });
+const conOcho = (...claves) => `--modelos=${[...claves, ...MODELOS_DE_HUMO].slice(0, 8).join(',')}`;
+
+test('la prueba de humo se niega a correr con un modelo de pago (o con Ling, que ya cobra), antes de tocar la red; sus modelos por defecto son ocho asientos gratis', () => {
+  // 1 fase y 1 partida: si el seguro fallara algun dia, esta prueba haria a lo mas unas pocas llamadas y no una partida entera
+  const pago = humo(conOcho('claude'), '--turnos=1', '--partidas=1');
+  assert.equal(pago.status, 1);
+  assert.match(pago.stderr, /claude gasta credito/);
+  const ling = humo(conOcho('ling'), '--turnos=1', '--partidas=1');
+  assert.equal(ling.status, 1);
+  assert.match(ling.stderr, /ling gasta credito/);
+  assert.equal(MODELOS_DE_HUMO.length, 8, 'Lobo se juega con 8 asientos');
+  assert.ok(MODELOS_DE_HUMO.every((id) => esGratis(CONTENDIENTES[id].modelo)), MODELOS_DE_HUMO.join(','));
 });
 
-test('la prueba de humo se niega a correr con Ling (ya cobra) y sus modelos por defecto son todos gratis', () => {
-  // 1 turno y 1 partida: si el seguro fallara algun dia, esta prueba llamaria a la API de verdad (como mucho 2 llamadas) y no una serie entera
-  const r = spawnSync(process.execPath, ['src/humo.js', '--modelos=nemotron-super,ling', '--turnos=1', '--partidas=1'], { cwd: RAIZ, encoding: 'utf8', timeout: 30000 });
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /ling gasta credito/);
-  assert.ok(MODELOS_DE_HUMO.length >= 2 && MODELOS_DE_HUMO.every((id) => esGratis(CONTENDIENTES[id].modelo)), MODELOS_DE_HUMO.join(','));
-});
-
-test('la prueba de humo valida sus argumentos', () => {
-  for (const args of [['--modelos=laguna'], ['--modelos=laguna,nemotron-super', '--turnos=0'], ['--modelos=laguna,nemotron-super', '--turnos=31'], ['--modelos=agresivo,laguna']]) {
-    const r = spawnSync(process.execPath, ['src/humo.js', ...args], { cwd: RAIZ, encoding: 'utf8' });
+test('la prueba de humo valida sus argumentos: cantidad de asientos de Lobo, fases y bots de control', () => {
+  for (const args of [['--modelos=nemotron-super'], [conOcho(), '--turnos=0'], [conOcho(), `--turnos=${lobo.rondas + 1}`], [conOcho(), '--partidas=0'], [conOcho('revela')]]) {
+    const r = humo(...args);
     assert.equal(r.status, 1, args.join(' '));
+    assert.ok(r.stderr.trim().length > 0, `${args.join(' ')}: dice por que`);
   }
 });

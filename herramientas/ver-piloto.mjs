@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Revisión local de medios, con MIME y rangos para reproducción y búsqueda.
-// node herramientas/ver-piloto.mjs [--carpeta=grabaciones/piloto-fuga-F2] [--puerto=4322]
+// node herramientas/ver-piloto.mjs [--carpeta=grabaciones/piloto-juego-F2] [--puerto=4322]
 // --generar --config=revision.json escribe REVISAR.html con plantilla común de
 // marca y controles; --solo-generar evita abrir servidor. La configuración lleva
 // {titulo, descripcion?, nota?, muestras:[{titulo,tipo:'escena',url} | {titulo,tipo:'video',archivo}]}.
@@ -88,7 +88,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const puerto = Number(a.puerto ?? 4322);
   if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) { console.error('Puerto inválido'); process.exitCode = 1; }
   else (async () => {
-    const carpeta = a.carpeta ?? 'grabaciones/piloto-fuga-F2';
+    const carpeta = a.carpeta ?? 'grabaciones/piloto-juego-F2';
     if ('generar' in a) {
       const config = a.config ?? 'revision.json';
       if (!dentro(resolve(carpeta), resolve(carpeta, config))) throw new Error('Configuración fuera del piloto.');

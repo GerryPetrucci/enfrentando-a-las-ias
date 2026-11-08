@@ -8,12 +8,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "duelo": "node src/correr.js",
+    "duelo": "node src/correr.js --juego=lobo --partidas=1",
     "marcador": "node src/marcador.js",
     "sitio": "node src/servidor.js",
     "humo": "node src/humo.js",
     "recortar": "node herramientas/recortar-formatos.mjs",
     "test": "node --test",
-    "demo": "node src/correr.js --a=tomaydaca --b=siempre-t --partidas=2 && node src/marcador.js"
+    "demo": "node src/correr.js --juego=lobo --partidas=1 --destino=pruebas && node src/marcador.js"
   }
 }

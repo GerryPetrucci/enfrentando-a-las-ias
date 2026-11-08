@@ -11,7 +11,8 @@ import { armarMarcador, leerEpisodios } from './marcador.js';
 
 const entero = (x) => Number.isInteger(x) && x >= 1;
 
-export function publicarParte({ raiz, archivo, partida, parte = null, hasta, final = null, fecha = new Date().toISOString().slice(0, 10), forzar = false }) {
+// `obtener`: de donde sale el juego por su id (el registro publico; las pruebas pasan uno propio para cubrir la reconstruccion de prompts con un juego de prueba).
+export function publicarParte({ raiz, archivo, partida, parte = null, hasta, final = null, fecha = new Date().toISOString().slice(0, 10), forzar = false, obtener = obtenerJuego }) {
   if (!entero(partida)) throw new Error('--partida debe ser el numero de la partida (1 o mas).');
   if (!entero(hasta)) throw new Error('--hasta debe ser el numero del ultimo turno que cubre la parte (1 o mas).');
   const ruta = resolve(raiz, 'data', archivo);
@@ -21,7 +22,7 @@ export function publicarParte({ raiz, archivo, partida, parte = null, hasta, fin
   if (!p) throw new Error(`La serie no tiene la partida ${partida} (tiene ${crudo.partidas?.length ?? 0}).`);
   if (p.eliminada === true) throw new Error(`La partida ${partida} de esta serie esta eliminada: ya no se publica.`);
 
-  const juego = obtenerJuego(crudo.juego?.id), avisos = [];
+  const juego = obtener(crudo.juego?.id), avisos = [];
   const sistema = construirSistema(juego);
   const coincide = !crudo.prompt?.hash || createHash('sha256').update(sistema).digest('hex') === crudo.prompt.hash;
   if (!coincide) {

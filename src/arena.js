@@ -1,7 +1,7 @@
 // La arena. No sabe de que juego se trata ni quien juega: solo corre el ciclo.
 // Agregar juegos o contendientes nuevos no requiere tocar este archivo.
 //
-// Lo que un juego puede ofrecer de mas (todo opcional, el Dilema no usa nada de esto):
+// Lo que un juego puede ofrecer de mas (todo opcional, el juego no usa nada de esto):
 //   crear(rng, { jugadores, ...opciones })  recibe cuantos asientos hay
 //   opcionesDeAgentes(agentes) -> opciones  lo que el juego quiere saber de quienes se sientan (Guerra: el nombre de reino de cada modelo); `opciones` de la llamada manda sobre esto
 //   normalizar(respuesta, estado)           ademas de la respuesta recibe el estado (Guerra: los nombres de reino de la partida); los demas juegos lo ignoran

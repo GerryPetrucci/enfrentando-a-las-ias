@@ -7,27 +7,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { colocar } from '../../../web/casino/layout.js';
-import { colocarConquista } from '../../../web/casino/layout-conquista.js';
-import { colocarFuga } from '../../../web/casino/layout-fuga.js';
 import { colocarLobo } from '../../../web/casino/layout-lobo.js';
-import { colocarMayorMenor } from '../../../web/casino/layout-mayormenor.js';
-import { colocarSolitario } from '../../../web/casino/layout-solitario.js';
-import { colocarSubasta } from '../../../web/casino/layout-subasta.js';
-import { colocarTripleDado } from '../../../web/casino/layout-tripledado.js';
 import { juegosConEscena } from '../../../web/casino/lineas.js';
-import { CONFIG } from '../../mapa.js';
 
-const MAPAS = Object.values(CONFIG).map((c) => ({ ancho: c.W, alto: c.H, tile: c.T }));
-const JUEGOS = {
-  'lobo': () => [8, 12].map((n) => colocarLobo('9x16', n)),
-  'dudaapuesta': () => [colocar('9x16')],
-  'conquista': () => MAPAS.map((m) => colocarConquista('9x16', m)),
-  'fuga': () => [colocarFuga('9x16')],
-  'mayormenor': () => [colocarMayorMenor('9x16')],
-  'solitario': () => [colocarSolitario('9x16')],
-  'subasta': () => [colocarSubasta('9x16')],
-  'tripledado': () => [colocarTripleDado('9x16')],
-};
+const JUEGOS = { lobo: () => [8, 12].map(n => colocarLobo('9x16', n)) };
 const NO_SON_PIEZAS = new Set(['zona', 'mesa', 'formato', 'ancho', 'alto']);
 const LADO_A_LADO = new Set(['vs', 'vsAbajo']); // las bandas VS de Guerra cubren todo el ancho a proposito: solo se les pide la altura
 const esRect = (v) => v && typeof v === 'object' && ['x', 'y', 'ancho', 'alto'].every((k) => Number.isFinite(v[k]));

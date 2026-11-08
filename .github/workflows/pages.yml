@@ -1,5 +1,5 @@
 # Publica el sitio en GitHub Pages: web/ como raiz, mas data/ para que
-# replay.html pueda abrir las partidas con ?archivo=NOMBRE.json.
+# las paginas puedan abrir las partidas publicas (data/publicas/).
 name: Publicar sitio
 
 on:

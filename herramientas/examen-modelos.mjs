@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 // Examen de ingreso de modelos por juego: decide con que modelos conviene jugar cada juego ANTES de gastar una partida entera.
 // Los escenarios son prompts reales de produccion (src/prompt.js + el motor), sacados de una partida jugada por bots; la validacion es la del motor.
-// Esta primera parte arma los escenarios de Guerra de territorios; la corrida con modelos y el veredicto se agregan encima.
 
+import lobo from '../src/juegos/lobo.js';
+import { construirPruebas } from './prueba-de-humo-modelos.mjs';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname, isAbsolute, basename, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import conquista from '../src/juegos/conquista.js';
-import { regionesDe } from '../src/juegos/conquista/estado.js';
 import { construirSistema, construirUsuario, VERSION_PROMPT } from '../src/prompt.js';
 import { PARAMETROS } from '../src/parametros.js';
 import { CONTENDIENTES, extraerJSON, llamarModelo, fijarModo } from '../src/modelos.js';
@@ -20,7 +19,6 @@ const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const CARACTERES_POR_TOKEN = 1.97; // el de src/pruebas (tope de prompt de Guerra): el espanol con acentos rinde menos que el ingles
 // Bots que dan variedad al historial: cada asiento rota entre ellos. Son solo el pasado de la mesa; el modelo examinado decide el turno del escenario.
-const MEZCLA_CONQUISTA = ['mixto-adaptativo', 'lancero-masa', 'agresivo'];
 
 // ---------- veredicto ----------
 // Umbrales (propuestos el 27-10-2026; se ajustan con datos): no apto si falla la mitad de las llamadas o un escenario falla en todas sus repeticiones;
@@ -177,7 +175,6 @@ async function ejecutarEscenario({ candidato, escenario, repeticion, llamar, max
 }
 
 // candidatos: [{ clave, nombre, modelo, razonamiento, precio: { entrada, salida } }] (USD por millon de tokens).
-// escenarios: de escenariosDeConquista (u otro juego). Cada modelo recibe todos los escenarios, `repeticiones` veces cada uno.
 // El gasto nunca pasa del tope: antes de cada llamada se reserva su peor caso (entrada + todo el tope de tokens de salida).
 // `maxTokens` (opcional): otro tope de tokens de salida que el de produccion, para medir cuanto necesita un modelo (el 28-10-2026: Haiku con el prompt completo, 8000 vs 16000).
 export async function correrExamen({ candidatos, escenarios, repeticiones = 2, llamar, topeUsd, maxLlamadas = 200, paralelo = 1, maxTokens: maxTokensPedido = null, alProgreso = () => {} }) {
@@ -237,109 +234,10 @@ export async function correrExamen({ candidatos, escenarios, repeticiones = 2, l
 // El asiento examinado tiene que seguir vivo en TODOS los escenarios (un reino eliminado no tiene ordenes posibles y el examen culparia al modelo):
 // por defecto es el reino mas grande del ultimo turno pedido (el estado mas complejo, donde los modelos que razonan de mas se atoran);
 // uno pedido a mano que ya cayo es un error. El pasado de la mesa lo juegan solo los bots, asi que no depende del asiento elegido.
-export function escenariosDeConquista({ jugadores = 3, seed = 1, bioma = undefined, turnos = [2, 8, 15, 22], asiento = null } = {}) {
-  const pedidos = [...turnos].sort((a, b) => a - b);
-  const E = conquista.crear(crearRng(seed * 7919 + 13), { jugadores, bioma });
-  const bots = Array.from({ length: jugadores }, (_, s) => conquista.bots[MEZCLA_CONQUISTA[s % MEZCLA_CONQUISTA.length]]);
-  const rngs = Array.from({ length: jugadores }, (_, i) => crearRng((seed * 31 + i * 977) >>> 0));
-  const sistema = construirSistema(conquista);
-  const escenarios = [];
-
-  // Las jugadas de los bots en la mesa dada: lo que habria pasado en ese turno sin el modelo examinado (que, si se da, ocupa `propio`).
-  const jugadasDeBots = (mesa, rngsDe, propia = null, propio = -1) => mesa.reinos.map((r, s) => {
-    if (!r.vivo) return null;
-    if (s === propio && propia) return propia;
-    return conquista.normalizar(bots[s].fn(mesa, s, rngsDe[s]), mesa);
-  });
-
-  const mesas = [];
-  for (const turno of pedidos) {
-    // `turno` es el numero que lee el modelo («Turno 9 de 30») y el de r.turno en una partida guardada; el contador interno del motor va uno atras.
-    while (!conquista.terminado(E) && E.turno + 1 < turno) conquista.aplicar(E, jugadasDeBots(E, rngs));
-    if (conquista.terminado(E) || E.turno + 1 !== turno) throw new Error(`La partida de bots termina antes del turno ${turno} (seed ${seed}): pide un turno menor u otro seed.`);
-    mesas.push({ turno, mesa: structuredClone(E) });
-  }
-
-  if (asiento !== null && !(Number.isInteger(asiento) && asiento >= 0 && asiento < jugadores)) throw new Error(`El asiento ${asiento} no existe en una mesa de ${jugadores} reinos.`);
-  const ultima = mesas.at(-1).mesa;
-  const elegido = asiento ?? ultima.reinos.reduce((mejor, r, s) => (r.vivo && (mejor < 0 || regionesDe(ultima, s).length > regionesDe(ultima, mejor).length) ? s : mejor), -1);
-  if (elegido < 0) throw new Error(`En el turno ${mesas.at(-1).turno} no queda ningún reino vivo (seed ${seed}): pide un turno menor u otro seed.`);
-  for (const { turno, mesa } of mesas) {
-    if (!mesa.reinos[elegido].vivo) throw new Error(`El reino del asiento ${elegido} está eliminado en el turno ${turno} (seed ${seed}): elige otro asiento o pide turnos más tempranos.`);
-  }
-
-  asiento = elegido;
-  for (const { turno, mesa } of mesas) {
-    const usuario = construirUsuario(conquista.vista(mesa, asiento));
-    // Lo que jugaria el bot de ese asiento: sirve de jugada legal de referencia (y para probar que evaluar() acepta lo legal).
-    const jugadaDeReferencia = bots[asiento].fn(mesa, asiento, crearRng((seed * 31 + asiento * 977 + turno) >>> 0));
-    escenarios.push({
-      id: `conquista-t${turno}`, juego: conquista.id, turno, asiento, regiones: regionesDe(mesa, asiento).length, seed, bioma: mesa.bioma ?? bioma ?? null,
-      sistema, usuario, tokensEstimados: Math.ceil((sistema.length + usuario.length) / CARACTERES_POR_TOKEN),
-      jugadaDeReferencia,
-      // Aplica la respuesta del modelo a una copia de la mesa, con bots en los demas asientos, y cuenta cuantas ordenes dio el motor por buenas.
-      evaluar: (respuesta) => evaluarEnMesa(mesa, asiento, respuesta, (copia, propia) => {
-        const rngsEval = Array.from({ length: jugadores }, (_, i) => crearRng((seed * 31 + i * 977 + turno) >>> 0));
-        return jugadasDeBots(copia, rngsEval, propia, asiento);
-      }),
-    });
-  }
-  return escenarios;
-}
-
-// Lo comun a todo escenario de Guerra: la respuesta del modelo se normaliza con el motor y se aplica a una COPIA de la mesa junto con las jugadas
-// que arme `armarJugadas(copia, propia)` para los demas reinos; se cuentan las ordenes que el motor dio por buenas. Un turno sin una sola orden es un turno perdido.
-function evaluarEnMesa(mesa, asiento, respuesta, armarJugadas) {
-  const copia = structuredClone(mesa);
-  const propia = conquista.normalizar(respuesta, copia);
-  if (propia.invalida) return { ok: false, motivo: propia.motivo ?? 'el motor la marcó inválida', ordenes: { validas: 0, total: 1 } };
-  const registro = conquista.aplicar(copia, armarJugadas(copia, propia));
-  const { validas, total } = registro.obediencia[asiento];
-  if (total === 0) {
-    // Pasar el turno a proposito ("ordenes": []) es una decision valida (el 28-10-2026 GLM Flash razono en el turno 30 que su segundo puesto estaba asegurado);
-    // lo que no vale es un objeto sin la lista de ordenes, que es un formato mal entendido.
-    if (Array.isArray(respuesta?.ordenes)) return { ok: true, motivo: null, ordenes: { validas: 0, total: 0 } };
-    return { ok: false, motivo: 'la respuesta no trae la lista "ordenes"', ordenes: { validas: 0, total: 1 } };
-  }
-  return { ok: true, motivo: null, ordenes: { validas, total } };
-}
-
-// Escenarios de una partida REAL ya guardada (`crudo` = el archivo de data/ con su lista `partidas`): los prompts que de verdad vio un jugador, rejugados con el motor
-// (src/juegos/conquista/replay.js), cada uno con lo que paso en su llamada real (`real`). Sirve para repetir con otro modelo, o con el mismo, los turnos donde algo fallo.
-// Se niega si el prompt de sistema de hoy no es el de la partida o si la rejugada no coincide con los estados guardados: esos prompts no serian los reales.
-// `sistemaDistinto`: se va a probar OTRO prompt de sistema sobre los estados de esa partida (conSistema); entonces no se exige que el de hoy sea el que se jugo,
-// porque el prompt de usuario (lo que ve cada reino) no depende del texto de las reglas.
-export function escenariosDePartida(crudo, { jugador, turnos = null, partida = 1, sistemaDistinto = false } = {}) {
-  const p = crudo?.partidas?.[partida - 1];
-  if (!p) throw new Error(`La serie no tiene la partida ${partida} (tiene ${crudo?.partidas?.length ?? 0}).`);
-  const sistema = construirSistema(conquista);
-  if (!sistemaDistinto && crudo.prompt?.hash && createHash('sha256').update(sistema).digest('hex') !== crudo.prompt.hash) {
-    throw new Error(`Esta partida se jugó con otro prompt de sistema (reglas ${crudo.prompt.reglas ?? '?'}; ahora ${conquista.versionReglas}): los prompts reconstruidos no serían los que vio el modelo. Usa un worktree del commit con el que se jugó.`);
-  }
-  const asiento = p.jugadores.findIndex((j) => j.id === jugador);
-  if (asiento < 0) throw new Error(`Jugador desconocido: "${jugador}". En la partida: ${p.jugadores.map((j) => j.id).join(', ')}.`);
-
-  const mesas = new Map();
-  const r = conquista.reconstruirPrompts(p, Infinity, { alTurno: ({ turno, E, jugadas }) => mesas.set(turno, { mesa: structuredClone(E), jugadas: structuredClone(jugadas) }) });
-  if (!r.fiel) throw new Error('La rejugada de la partida no coincide con los estados guardados: los prompts reconstruidos no son de fiar.');
-
-  const pedidos = turnos ?? r.turnos.filter((t) => t.prompts[asiento] !== null).map((t) => t.turno);
-  return pedidos.map((turno) => {
-    const t = r.turnos.find((x) => x.turno === turno);
-    if (!t || t.prompts[asiento] === null) throw new Error(`El jugador ${jugador} no jugó el turno ${turno} en la partida ${partida}.`);
-    const ronda = p.rondas.find((x) => x.turno === turno);
-    const error = ronda.errores?.[asiento] ?? null;
-    const { mesa, jugadas } = mesas.get(turno);
-    const usuario = t.prompts[asiento];
-    return {
-      id: `real-t${turno}`, juego: conquista.id, turno, asiento, jugador, partida, seed: p.seed, bioma: mesa.bioma ?? null, regiones: regionesDe(mesa, asiento).length,
-      sistema, usuario, tokensEstimados: Math.ceil((sistema.length + usuario.length) / CARACTERES_POR_TOKEN),
-      // Lo que paso en la llamada real de este turno (`cortada`: se quedo sin tokens antes de dar su jugada).
-      real: { cortada: /max_tokens|finish_reason=length/.test(error ?? ''), error, invalida: !!ronda.respuestas?.[asiento]?.invalida, ordenes: ronda.respuestas?.[asiento]?.ordenes?.length ?? 0 },
-      // La respuesta del modelo examinado reemplaza a la del jugador; los demas reinos juegan lo que jugaron de verdad.
-      evaluar: (respuesta) => evaluarEnMesa(mesa, asiento, respuesta, (copia, propia) => Object.assign(structuredClone(jugadas), { [asiento]: propia })),
-    };
-  });
+export function escenariosDeLobo() {
+  return construirPruebas().map(e => ({ ...e, juego: 'lobo', tokensEstimados: Math.ceil((e.sistema.length + e.usuario.length) / CARACTERES_POR_TOKEN),
+    evaluar: respuesta => { const r = e.evaluar(respuesta); return { ...r, ordenes: { total: 1, validas: r.ok ? 1 : 0 } }; },
+  }));
 }
 
 // EXPERIMENTO de redaccion: cambia un texto del prompt de USUARIO de cada escenario, solo en memoria (el juego y las partidas no se tocan). Sirve para probar,
@@ -387,12 +285,9 @@ export function compararConReal(intentos, escenarios) {
 }
 
 // ---------- programa ----------
-//   node herramientas/examen-modelos.mjs --juego=conquista --modelos=haiku,glm-flash                      (estima el costo; NO llama a ningun modelo)
-//   node herramientas/examen-modelos.mjs --juego=conquista --modelos=haiku,glm-flash --ejecutar --tope-usd=0.50   (llama de verdad, modo pago)
 //   --repeticiones=2  --turnos=2,8,15,22  --jugadores=4  --paralelo=3  --archivo=catalogo.json (catalogo guardado en vez del publico de OpenRouter)  --sin-tabla
 //   --max-tokens=16000  otro tope de tokens de salida que el de produccion (PARAMETROS.maxTokens), para medir cuanto necesita un modelo
 // DIAGNOSTICO sobre una partida real guardada (en vez de los escenarios de bots): repite con los modelos pedidos los prompts que de verdad vio un jugador.
-//   node herramientas/examen-modelos.mjs --juego=conquista --modelos=glm-flash --partida=pruebas/ARCHIVO.json --jugador=glm-flash [--turnos=7,9,10] [--repeticiones=1] [--ejecutar --tope-usd=0.20]
 //   (la ruta es relativa a data/ o completa; no escribe la tabla de aptitud: es un diagnostico de esa partida, no un examen de ingreso)
 //   --reemplazar="texto viejo=>texto nuevo"  cambia ese texto del prompt de usuario de cada escenario SOLO en memoria (prueba una leyenda o una aclaracion contra los
 //   estados reales antes de tocar el prompt del juego); si el texto no aparece en algun escenario, se niega. Sirve con o sin --partida.
@@ -400,14 +295,7 @@ export function compararConReal(intentos, escenarios) {
 //   del hash (el prompt de usuario no depende del texto de las reglas). Es como se prueba un prompt nuevo contra los mismos turnos reales.// Seguro por diseno: sin --ejecutar nunca llama; con --ejecutar exige lista explicita de modelos y un tope en dolares, que se respeta reservando el peor caso
 // de cada llamada ANTES de hacerla. El detalle completo (con el razonamiento) va a privado/pruebas/ y el resumen a privado/planes/aptitud-modelos.md.
 
-const JUEGOS = {
-  conquista: {
-    nombre: 'Guerra de territorios', reglas: conquista.versionReglas,
-    // 4 reinos y cordillera: el prompt de las partidas publicadas. --jugadores=5 prueba el peor caso de tamano.
-    escenarios: (opciones) => escenariosDeConquista({ jugadores: 4, seed: 2970899132, bioma: 'cordillera', ...opciones }),
-    partida: escenariosDePartida,
-  },
-};
+const JUEGOS = { lobo: { nombre: lobo.nombre, reglas: lobo.versionReglas, escenarios: escenariosDeLobo } };
 const SALIDA_TIPICA = 1500; // tokens de salida por llamada para el costo "tipico" (los modelos que razonan gastan 1 500-2 000 pensando)
 const RUTA_APTITUD = resolve(RAIZ, 'privado', 'planes', 'aptitud-modelos.md');
 
@@ -476,13 +364,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (!turnos.length || turnos.some((t) => !Number.isInteger(t) || t < 1)) salir('--turnos=2,8,15,22: enteros desde 1, separados por coma.');
     opcionesDeEscenarios.turnos = turnos;
   }
-  if (o.jugadores !== undefined) opcionesDeEscenarios.jugadores = entero(o.jugadores, 4, 2, 5, 'jugadores');
+  if (o.jugadores !== undefined || o.turnos !== undefined) salir('Los escenarios de Lobo son fijos: noche y día con ocho asientos.');
   const topeUsd = Number(o['tope-usd']);
   if (o.ejecutar && !(topeUsd > 0)) salir('--ejecutar exige un tope de gasto en dólares: --tope-usd=0.50.');
 
   let sistemaAlterno = null;
   if (o.sistema !== undefined) {
-    if (typeof o.sistema !== 'string') salir('--sistema=<archivo dentro de privado/>, por ejemplo --sistema=privado/spec/guerra-prompt-2.3.0-borrador.txt.');
+    if (typeof o.sistema !== 'string') salir('--sistema=<archivo dentro de privado/>, por ejemplo --sistema=privado/spec/lobo-prompt-borrador.txt.');
     try { sistemaAlterno = { archivo: o.sistema, texto: leerSistema(o.sistema) }; } catch (err) { salir(err.message); }
   }
   let variante = null;

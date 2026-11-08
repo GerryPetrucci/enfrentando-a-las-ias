@@ -1,4 +1,4 @@
-// Diseno de la pantalla de la escena de Duda y apuesta: donde va cada cosa en 9:16 y en 16:9.
+// Diseno comun de la pantalla de las escenas (web/casino/layout.js): donde va cada cosa en 9:16 y en 16:9.
 // Lo que se lee tiene que caber en la zona segura (en 9:16, la de herramientas/formatos.mjs) y nada se pisa.
 //
 //   npm test

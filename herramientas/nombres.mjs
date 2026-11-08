@@ -60,7 +60,7 @@ export function nombreDeVideo(base, formato) {
   return [base, formato, ...(redes.length ? [redes.join('-')] : [])].join('_');
 }
 
-// 'El número solitario' -> 'el-numero-solitario'
+// 'El número juego' -> 'el-numero-juego'
 export function slugDe(texto) {
   const s = typeof texto === 'string' ? texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '';
   return s || 'juego';

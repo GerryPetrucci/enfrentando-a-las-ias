@@ -53,7 +53,7 @@ test('la direccion de la pagina lleva juego, numero, parte, cuantas partes y for
   const u = new URL(direccionDeGanchoImagen({ juegoId: 'lobo', juegoNumero: 12, parte: 2, de: 2, formato: '16x9' }), 'http://x/');
   assert.equal(u.pathname, '/gancho-imagen.html');
   assert.deepEqual(Object.fromEntries(u.searchParams), { juego: 'lobo', numero: '12', parte: '2', de: '2', formato: '16x9' });
-  assert.equal(new URL(direccionDeGanchoImagen({ juegoId: 'conquista' }), 'http://x/').searchParams.get('formato'), '9x16');
+  assert.equal(new URL(direccionDeGanchoImagen({ juegoId: 'ausente' }), 'http://x/').searchParams.get('formato'), '9x16');
 });
 
 test('el HTML dice lo que debe, usa el logo de la marca, escapa el texto y solo trae panorama y personajes si el juego tiene arte', () => {
@@ -62,9 +62,9 @@ test('el HTML dice lo que debe, usa el logo de la marca, escapa el texto y solo 
   assert.match(lobo, /src="logo\.svg"/);
   assert.equal([...lobo.matchAll(/class="gi-figura"/g)].length, 6);
   assert.match(lobo, /<figure class="gi-panel"><img src="arte\/lobo\/dia-asamblea-01\.png"/);
-  const sin = htmlDeGanchoImagen(modeloDeGanchoImagen({ juegoId: 'conquista', juegoNumero: 2, parte: 2 }));
-  assert.ok(!sin.includes('gi-panel') && !sin.includes('gi-plantel') && sin.includes('Guerra de territorios') && sin.includes('Síguenos para ver el desenlace'));
-  const malo = htmlDeGanchoImagen({ ...modeloDeGanchoImagen({ juegoId: 'conquista' }), nombre: '<img src=x onerror=alert(1)>', detalle: '"&' });
+  const sin = htmlDeGanchoImagen(modeloDeGanchoImagen({ juegoId: 'ausente', juegoNumero: 2, parte: 2 }));
+  assert.ok(!sin.includes('gi-panel') && !sin.includes('gi-plantel') && sin.includes('Enfrentando a las IAs') && sin.includes('Síguenos para ver el desenlace'));
+  const malo = htmlDeGanchoImagen({ ...modeloDeGanchoImagen({ juegoId: 'ausente' }), nombre: '<img src=x onerror=alert(1)>', detalle: '"&' });
   assert.ok(!malo.includes('<img src=x') && malo.includes('&lt;img src=x onerror=alert(1)&gt;') && malo.includes('&quot;&amp;'));
 });
 

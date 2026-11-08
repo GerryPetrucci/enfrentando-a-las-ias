@@ -7,11 +7,12 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { textoParaVoz, planDeNarracion, carpetaDeVoz, armarVoz, argumentosDePiper, argumentosDeFfmpeg, VOZ } from '../../../herramientas/narrar.mjs';
-import { lineaDe, juegosConEscena } from '../../../web/casino/lineas.js';
-import { construirLineaDeTiempo } from '../../../web/casino/linea-de-tiempo-duda.js';
+import { lineaDe, juegosConEscena, armarLinea } from '../../../web/casino/lineas.js';
 import { esRutaRelativa, duracionDeBeat } from '../../../web/casino/escena-config.js';
 import { urlDeCaptura } from '../../../herramientas/capturar-escena.mjs';
-import { jugar, CASOS } from './ayudas.js';
+import { jugarLobo } from './ayudas-lobo.js';
+// La linea que narra la herramienta: la de Lobo con su tarjeta de arranque delante (lineas.js), de una partida de bots de varias rondas.
+const linea = () => armarLinea('lobo', jugarLobo(4));
 
 test('la voz elegida es Piper (decision del usuario, 16 de octubre de 2026) y su nombre tecnico no esta en ningun archivo publico del repo', () => {
   assert.match(VOZ.archivoModelo, /voz-narradora\.onnx$/);
@@ -30,10 +31,10 @@ test('textoParaVoz limpia el texto y aplica el diccionario de pronunciacion pala
 });
 
 test('el plan de narracion tiene un audio por momento que se dice en voz alta, con su texto y un nombre de archivo propio', async () => {
-  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
+  const beats = await linea();
   const plan = planDeNarracion(beats);
   assert.equal(plan.length, beats.filter((b) => textoParaVoz(b.texto)).length);
-  assert.ok(plan.length > 20 && plan.length < beats.length, 'los momentos mudos (reparto, cierres sin texto) no llevan audio');
+  assert.ok(plan.length > 20 && plan.length < beats.length, 'los momentos mudos (los mensajes sin texto que decir) no llevan audio');
   assert.equal(new Set(plan.map((p) => p.id)).size, plan.length);
   for (const p of plan) {
     assert.equal(p.archivo, `${p.id}.ogg`);
@@ -41,13 +42,16 @@ test('el plan de narracion tiene un audio por momento que se dice en voz alta, c
     assert.ok(beats.some((b) => b.id === p.id), 'el audio es de un beat que existe');
     assert.ok(esRutaRelativa(p.archivo), p.archivo);
   }
-  assert.ok(!plan.some((p) => beats.find((b) => b.id === p.id).tipo === 'reparto'), 'el reparto es mudo');
+  const mudos = beats.filter((b) => !textoParaVoz(b.texto));
+  assert.ok(mudos.length > 0, 'la partida tiene momentos mudos');
+  assert.ok(!plan.some((p) => mudos.some((b) => b.id === p.id)), 'un momento mudo no lleva audio');
+  assert.ok(plan.some((p) => beats.find((b) => b.id === p.id).tipo === 'intro'), 'la tarjeta de arranque se narra');
   assert.deepEqual(planDeNarracion(null), []);
 });
 
 test('la carpeta de la voz sale del archivo y la partida, y es una ruta relativa valida', () => {
   assert.equal(carpetaDeVoz('pruebas/escena-bots.json', 1), 'data/voz/pruebas-escena-bots-p1');
-  assert.equal(carpetaDeVoz('2026-10-16-duda y apuesta.json', 3), 'data/voz/2026-10-16-duda-y-apuesta-p3');
+  assert.equal(carpetaDeVoz('2026-10-16-lobo en la aldea.json', 3), 'data/voz/2026-10-16-lobo-en-la-aldea-p3');
   for (const a of ['pruebas/escena-bots.json', 'x.json', 'raro ñandú!.json']) assert.ok(esRutaRelativa(carpetaDeVoz(a, 2)), a);
 });
 
@@ -62,12 +66,15 @@ test('voz.json: lo que dura cada audio mas una pausa para respirar, y el archivo
 });
 
 test('la escena usa voz.json tal como lo arma el generador: el beat dura lo que dura su audio si es mas largo que su minimo', async () => {
-  const beats = construirLineaDeTiempo(await jugar(...CASOS.retirada));
-  const apertura = beats.find((b) => b.tipo === 'apertura');
-  const voz = armarVoz([{ id: apertura.id, duracionS: 6 }], { carpeta: 'data/voz/x-p1', pausaMs: 350 });
-  assert.equal(duracionDeBeat(apertura, voz, 1), 6350);
-  assert.equal(duracionDeBeat(apertura, voz, 2), 3175);
-  assert.ok(esRutaRelativa(voz[apertura.id].archivo));
+  const beats = await linea();
+  const noche = beats.find((b) => b.tipo === 'noche' && b.texto);
+  assert.ok(noche.minMs < 6350, 'precondicion: el audio dura mas que su minimo');
+  const voz = armarVoz([{ id: noche.id, duracionS: 6 }], { carpeta: 'data/voz/x-p1', pausaMs: 350 });
+  assert.equal(duracionDeBeat(noche, voz, 1), 6350);
+  assert.equal(duracionDeBeat(noche, voz, 2), 3175);
+  assert.ok(esRutaRelativa(voz[noche.id].archivo));
+  const corto = armarVoz([{ id: noche.id, duracionS: 0.5 }], { carpeta: 'data/voz/x-p1', pausaMs: 350 });
+  assert.equal(duracionDeBeat(noche, corto, 1), noche.minMs, 'un audio mas corto que su minimo no lo acorta');
 });
 
 test('los argumentos de Piper y de ffmpeg llevan la voz, el nivel comun (-18 LUFS) y el formato OGG', () => {
@@ -77,9 +84,9 @@ test('los argumentos de Piper y de ffmpeg llevan la voz, el nivel comun (-18 LUF
 });
 
 test('hay una linea de tiempo por juego con escena; un juego sin escena da un error que dice cuales hay', async () => {
-  assert.ok(juegosConEscena().includes('dudaapuesta'));
-  assert.equal(typeof await lineaDe('dudaapuesta'), 'function');
-  await assert.rejects(() => lineaDe('dilema'), /no hay escena.*"dilema".*dudaapuesta/);
+  assert.ok(juegosConEscena().includes('lobo'));
+  assert.equal(typeof await lineaDe('lobo'), 'function');
+  await assert.rejects(() => lineaDe('ausente'), /no hay escena.*"ausente".*lobo/);
   await assert.rejects(() => lineaDe(undefined), /no hay escena/);
 });
 

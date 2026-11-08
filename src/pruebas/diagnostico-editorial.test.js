@@ -7,7 +7,7 @@ import { claveDeCierre, beatDeCierre, duracionDeCierre } from '../../web/casino/
 import { IDENTIFICADOR_MS } from '../../web/casino/gancho.js';
 import { construirPaquete } from '../../web/casino/paquete-textos.js';
 import { armarLinea } from '../../web/casino/lineas.js';
-import { jugarMM } from './escena/ayudas-mm.js';
+import { jugarLobo } from './escena/ayudas-lobo.js';
 
 const beatsDe = (duraciones) => duraciones.map((minMs, i) => ({ id: `b${i}`, mano: i + 1, tipo: 'jugada', texto: `Texto ${i}`, minMs }));
 
@@ -53,7 +53,7 @@ test('el limite exacto incluye el cierre y una linea invalida o un objetivo inva
 });
 
 test('la duracion de las partes actuales coincide con el paquete real, con y sin voz', async () => {
-  const partida = await jugarMM(7), beats = await armarLinea('mayormenor', partida);
+  const partida = await jugarLobo(7), beats = await armarLinea('lobo', partida);
   for (const voz of [null, Object.fromEntries(beats.map((b) => [b.id, { ms: b.minMs + 2000, fuente: b.texto }]))]) {
     const paquete = construirPaquete({ partida, beats, archivo: 'prueba.json', voz });
     const d = diagnosticar(beats, { voz, seed: partida.seed });

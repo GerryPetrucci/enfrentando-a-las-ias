@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { menuHtml, cargarMarcador, esc } from '../../web/menu.js';
 
-const juegos = [{ id: 'conquista', nombre: 'Guerra de territorios', publicadas: 1 }, { id: 'mayormenor', nombre: 'Mayor o menor', publicadas: 0 }];
+const juegos = [{ id: 'castillos', nombre: 'Asalto de castillos', publicadas: 1 }, { id: 'cartaalta', nombre: 'Carta alta', publicadas: 0 }];
 
 test('la barra trae la marca, el menu y un enlace por juego', () => {
   const h = menuHtml(juegos, { pagina: 'inicio' });
@@ -22,9 +22,9 @@ test('la pagina actual se marca con aria-current, y en un juego se marca ese jue
   assert.equal((menuHtml(juegos, { pagina: 'inicio' }).match(/aria-current="page"/g) ?? []).length, 1);
   const m = menuHtml(juegos, { pagina: 'metodo' });
   assert.match(m, /href="metodo\.html" aria-current="page"/);
-  const j = menuHtml(juegos, { pagina: 'juego', juegoId: 'mayormenor' });
-  assert.match(j, /href="juego\.html\?id=mayormenor" aria-current="page"/);
-  assert.doesNotMatch(j, /href="juego\.html\?id=conquista" aria-current/);
+  const j = menuHtml(juegos, { pagina: 'juego', juegoId: 'cartaalta' });
+  assert.match(j, /href="juego\.html\?id=cartaalta" aria-current="page"/);
+  assert.doesNotMatch(j, /href="juego\.html\?id=castillos" aria-current/);
   assert.match(menuHtml(juegos, { pagina: 'proponer' }), /href="proponer\.html"[^>]*aria-current="page"/);
 });
 
@@ -67,7 +67,7 @@ test('montarMenu pinta la barra y los botones abren y cierran el menu y la lista
   try {
     const { montarMenu } = await import('../../web/menu.js');
     montarMenu({ juegos }, { pagina: 'inicio' });
-    assert.match(d.barra.innerHTML, /juego\.html\?id=conquista/);
+    assert.match(d.barra.innerHTML, /juego\.html\?id=castillos/);
     d.botones.menu.manejadores.click();
     assert.equal(d.botones.menu.atributos['aria-expanded'], 'true');
     assert.ok(d.clases.has('abierto'));

@@ -11,7 +11,7 @@ import { publicarParte } from '../publicar.js';
 
 const jug = (id) => ({ id, nombre: id.toUpperCase(), color: '#111', inicial: id[0].toUpperCase(), tipo: 'modelo', modelo: `x/${id}` });
 const completa = (seed, puntos = [5, 0], ganador = 0) => ({ seed, jugadores: [jug('a'), jug('b')], puntos, ganador, empate: false, turnos: 12, rondas: [{ turno: 1 }, { turno: 2 }], metricas: [{}, {}] });
-const crudo = (partidas, extra = {}) => ({ etiqueta: 's1', fecha: '2026-10-21', seedBase: 7, juego: { id: 'dilema', nombre: 'Dilema', categoria: 'Cat' }, prompt: { reglas: 'x-1.0.0' }, serie: { partidas: partidas.length }, evaluacion: { partidas: 1, comentario: [] }, partidas, ...extra });
+const crudo = (partidas, extra = {}) => ({ etiqueta: 's1', fecha: '2026-10-21', seedBase: 7, juego: { id: 'lobo', nombre: 'Lobo en la aldea', categoria: 'Cat' }, prompt: { reglas: 'x-1.0.0' }, serie: { partidas: partidas.length }, evaluacion: { partidas: 1, comentario: [] }, partidas, ...extra });
 const REGISTRO_2_PUBLICADA = { partidas: { 1: { estado: ELIMINADA }, 2: { estado: 'publicada', hastaTurno: 2, partes: [{ parte: 1, hastaTurno: 2, final: true, fecha: '2026-10-25' }] } } };
 
 test('la serie publica deja en su lugar una marca vacia: ni seed, ni rondas, ni jugadores de la partida eliminada', () => {
@@ -67,7 +67,7 @@ test('una partida eliminada no se puede volver a publicar: ni por la marca del a
 
 test('la pagina de la partida: pedir una eliminada avisa que ya no se publica; la que se queda se ve igual, sin etiqueta de «hermana»', async () => {
   const { correrPagina, MARCADOR } = await import('./ayudas-sitio.js');
-  const publica = armarSeriePublica(crudo([completa(1111), completa(2222)], { juego: { id: 'conquista', nombre: 'Guerra de territorios', categoria: 'Estrategia y conquista' } }), REGISTRO_2_PUBLICADA);
+  const publica = armarSeriePublica(crudo([completa(1111), completa(2222)], { juego: { id: 'castillos', nombre: 'Asalto de castillos', categoria: 'Estrategia y asedio' } }), REGISTRO_2_PUBLICADA);
   const pedida = await correrPagina('partida.html', { search: '?id=s1&partida=1', marcador: MARCADOR, publicas: { s1: publica } });
   const html = pedida.nodo('contenido').innerHTML;
   assert.match(html, /Esa partida se eliminó y ya no se publica\./);
