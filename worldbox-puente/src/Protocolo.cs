@@ -145,6 +145,8 @@ namespace PuenteWorldBox
             Agregar("POST", "/v1/avanzar", true, new string[0], ManejarAvanzar);
             Agregar("GET", "/v1/estado-terminal", false, new string[0], ManejarEstadoTerminal);
             Agregar("POST", "/v1/cerrar", false, new string[0], ManejarCerrar);
+            Agregar("POST", "/v1/camara", true, new string[0], ManejarCamara);
+            Agregar("POST", "/v1/interfaz", true, new string[0], ManejarInterfaz);
         }
 
         private void Agregar(string metodo, string camino, bool cuerpoObligatorio, string[] consulta, Manejador m)
@@ -344,9 +346,12 @@ namespace PuenteWorldBox
                 if (j.Origen != null) d["origen"] = j.Origen;
                 d["juego"] = Json.Objeto("nombre", j.Nombre, "version", j.Version, "build_steam", j.BuildSteam, "unity", j.Unity);
                 d["estado"] = estado;
-                d["capacidades"] = Json.Objeto(
-                    "reiniciar", cap.Reiniciar, "semilla", cap.Semilla, "avanzar", cap.Avanzar,
-                    "terminal", cap.Terminal, "multi_faccion", cap.MultiFaccion);
+                ObjetoOrdenado capacidades = new ObjetoOrdenado()
+                    .Con("reiniciar", cap.Reiniciar).Con("semilla", cap.Semilla).Con("avanzar", cap.Avanzar)
+                    .Con("terminal", cap.Terminal).Con("multi_faccion", cap.MultiFaccion);
+                IPresentacion pres = m as IPresentacion;
+                capacidades.Con("camara", pres != null && pres.CamaraVerificada).Con("interfaz", pres != null && pres.InterfazVerificada);
+                d["capacidades"] = capacidades;
                 List<object> acciones = new List<object>();
                 foreach (DescripcionAccion a in m.Acciones.Todas) acciones.Add(Anunciar(a));
                 d["acciones"] = acciones;
@@ -504,6 +509,61 @@ namespace PuenteWorldBox
                     else if (ra.Error != null) t.Fallar(new InvalidOperationException("Avanzar fallo: " + ra.Error));
                     else t.Completar(Json.Objeto("tiempo_juego_s", ra.TiempoJuegoS, "terminal", ra.Terminal));
                 });
+            });
+        }
+
+        // Controles de presentacion (video): no son acciones del juego ni pasan por la lista blanca de acciones.
+        private RespuestaHttp ManejarCamara(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            bool liberar = false;
+            object v;
+            if (c.TryGetValue("liberar", out v) && v != null)
+            {
+                if (!(v is bool)) throw Campos.Invalido("'liberar' debe ser booleano.");
+                liberar = (bool)v;
+            }
+            string faccion = null;
+            if (c.TryGetValue("faccion", out v) && v != null) faccion = Campos.Id(c, "faccion");
+            double? zoom = null;
+            if (c.TryGetValue("zoom", out v) && v != null)
+            {
+                double z = Campos.Numero(c, "zoom");
+                if (!(z >= 1 && z <= 1000)) throw Campos.Invalido("'zoom' debe estar entre 1 y 1000 (el juego lo recorta a su rango).");
+                zoom = z;
+            }
+            string modo = "juego";
+            if (c.TryGetValue("modo", out v) && v != null)
+            {
+                modo = v as string;
+                if (modo != "juego" && modo != "limpio") throw Campos.Invalido("'modo' debe ser \"juego\" o \"limpio\".");
+            }
+            if (!liberar && faccion == null) throw Campos.Invalido("Falta 'faccion' (o use liberar:true).");
+            IMundo m = ExigirMundo();
+            IPresentacion pres = m as IPresentacion;
+            if (pres == null || !pres.CamaraVerificada) throw new ErrorPuente(Codigos.NoSoportado, "El mundo no controla la camara.");
+            RespuestaHttp previa = Repetida("camara", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("camara|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(((IPresentacion)mu).Camara(faccion, zoom, liberar, modo));
+            });
+        }
+
+        private RespuestaHttp ManejarInterfaz(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            object v;
+            if (!c.TryGetValue("visible", out v) || !(v is bool)) throw Campos.Invalido("Falta 'visible' (booleano).");
+            bool visible = (bool)v;
+            IMundo m = ExigirMundo();
+            IPresentacion pres = m as IPresentacion;
+            if (pres == null || !pres.InterfazVerificada) throw new ErrorPuente(Codigos.NoSoportado, "El mundo no controla la interfaz.");
+            RespuestaHttp previa = Repetida("interfaz", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("interfaz|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(((IPresentacion)mu).Interfaz(visible));
             });
         }
 

@@ -343,7 +343,7 @@ describe('puente C# (worldbox-puente)', { skip: OMITIR, timeout: 240000 }, () =>
       assert.deepEqual(Object.keys(j.juego), ['nombre', 'version', 'build_steam', 'unity']);
       assert.equal(j.origen, 'simulado');
       assert.equal(j.estado, 'listo');
-      assert.deepEqual(j.capacidades, { reiniciar: true, semilla: true, avanzar: true, terminal: true, multi_faccion: true });
+      assert.deepEqual(j.capacidades, { reiniciar: true, semilla: true, avanzar: true, terminal: true, multi_faccion: true, camara: false, interfaz: false }); // V1: el simulado no controla camara ni interfaz
       assert.deepEqual(j.limites, { max_segundos_avance: 600, max_acciones_por_turno: 10 });
       assert.deepEqual(j.acciones.map(a => a.nombre), ['esperar', 'crear_unidad', 'fundar_ciudad', 'dormir', 'atacar']);
       for (const a of j.acciones) {

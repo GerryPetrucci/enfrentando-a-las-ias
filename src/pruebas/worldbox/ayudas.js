@@ -90,7 +90,7 @@ export const ACCIONES_REAL_ANUNCIADAS = [
 // espacio: unidades que caben junto a la ciudad (todo o nada: si no caben las pedidas, rechazada/sin_espacio y el mundo no cambia).
 // creadasEfecto(cantidad): lo que la respuesta CONFIRMA en efecto.creadas (por omision, la cantidad; null = la respuesta no trae efecto).
 // mundoReinicio: campos del bloque mundo que sobrescribe el puente al reiniciar (para probar discrepancias con lo pedido).
-export function crearPuenteFalsoReal({ token = 'token-local', acciones = ACCIONES_REAL_ANUNCIADAS, gancho, calidades = [], espacio = Infinity, creadasEfecto = c => c, mundoReinicio = {}, especiesReinicio = null } = {}) {
+export function crearPuenteFalsoReal({ token = 'token-local', acciones = ACCIONES_REAL_ANUNCIADAS, gancho, calidades = [], espacio = Infinity, creadasEfecto = c => c, mundoReinicio = {}, especiesReinicio = null, presentacion = false } = {}) {
   let mundo = null, contador = 0; const cache = new Map(), peticiones = [];
   const vista = (f, propia) => ({ id: f.id, vivo: f.vivo, especie: f.especie, poblacion: f.vivo ? f.poblacion : 0, ciudades: f.vivo ? 1 : 0, territorio: f.vivo ? f.territorio : 0, recursos: f.vivo ? f.recursos : 0, objetivos: f.vivo ? 1 : 0,
     ejercito: 0, edificios: f.vivo ? f.edificios : 0, comida: f.vivo ? f.comida : 0, salud_media_pct: f.vivo ? f.salud : 0, rey_vivo: f.vivo, cooldowns: {},
@@ -104,7 +104,7 @@ export function crearPuenteFalsoReal({ token = 'token-local', acciones = ACCIONE
     if (body?.id_solicitud && cache.has(body.id_solicitud)) return cache.get(body.id_solicitud);
     const guardar = r => { if (body?.id_solicitud) cache.set(body.id_solicitud, r); return r; };
     if (ruta.pathname === '/v1/info') return ok({ puente: { nombre: 'puente-falso-real', version: '0.2.0' }, juego: { nombre: 'WorldBox', version: '0.51.2', build_steam: '19962337', unity: '2022.3.60f1' }, estado: 'listo',
-      capacidades: { reiniciar: true, semilla: false, avanzar: true, terminal: true, multi_faccion: true }, acciones, limites: { max_segundos_avance: 120, max_acciones_por_turno: 3 } });
+      capacidades: { reiniciar: true, semilla: false, avanzar: true, terminal: true, multi_faccion: true, ...(presentacion ? { camara: true, interfaz: true } : { camara: false, interfaz: false }) }, acciones, limites: { max_segundos_avance: 120, max_acciones_por_turno: 3 } });
     if (ruta.pathname === '/v1/escenario/reiniciar') {
       contador++;
       mundo = { turno: 0, t: 0, guerras: new Set(), facciones: body.facciones.map((f, i) => ({ id: f.id, especie: f.especie ?? 'human', vivo: true, poblacion: body.opciones?.unidades_iniciales ?? 4, territorio: 9, edificios: 0, recursos: 0, comida: 0, salud: 100, creadas: 0, almacen: false, poderes: 0, donado: 0, calidad: calidades[contador - 1]?.[i] ?? 500 + 10 * i })) };
@@ -113,6 +113,16 @@ export function crearPuenteFalsoReal({ token = 'token-local', acciones = ACCIONE
         facciones: mundo.facciones.map(f => ({ id: f.id, especie: especiesReinicio?.[f.id] ?? f.especie, nombre: `Reino ${f.id}`, sitio_x: 10, sitio_y: 10, calidad_sitio: f.calidad })) }));
     }
     if (!mundo) return err(503, 'no_listo');
+    // Presentacion para grabar (W5): camara {faccion, zoom?} | {liberar:true}; interfaz {visible}. Sin la capacidad el puente real responde no_soportado.
+    if (ruta.pathname === '/v1/camara' || ruta.pathname === '/v1/interfaz') {
+      if (!presentacion) return err(400, 'no_soportado');
+      if (ruta.pathname === '/v1/camara') {
+        if (body.liberar !== true && !mundo.facciones.some(x => x.id === body.faccion)) return err(400, 'solicitud_invalida');
+        mundo.camara = body.liberar === true ? null : body.faccion; return guardar(ok({ enfocada: body.liberar === true ? null : { faccion: body.faccion }, zoom: body.zoom ?? null }));
+      }
+      if (typeof body.visible !== 'boolean') return err(400, 'solicitud_invalida');
+      mundo.interfaz = body.visible; return guardar(ok({ visible: body.visible }));
+    }
     if (ruta.pathname === '/v1/observacion') {
       const f = mundo.facciones.find(x => x.id === ruta.searchParams.get('faccion'));
       if (!f) return err(400, 'solicitud_invalida');

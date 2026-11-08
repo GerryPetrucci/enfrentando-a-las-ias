@@ -73,6 +73,12 @@ servidor.Iniciar();                 // Awake
   profundidad, idempotencia por `id_solicitud` (solo se guardan respuestas de exito).
 - Solo se anuncian acciones `verificada` (el registro rechaza las que no lo estan).
 
+## Controles de presentacion (para grabar video; no son acciones)
+
+- `POST /v1/camara` `{faccion, zoom?:1..1000, modo?:"juego"|"limpio"}` enfoca el rey (o una unidad de la capital) de esa faccion; `{liberar:true}` la suelta. `modo:"limpio"` sigue a la unidad sin el panel del juego.
+- `POST /v1/interfaz` `{visible:bool}` oculta/muestra la interfaz (bandera `Config.ui_main_hidden`, la del poder `hide_ui`). Siguen visibles la lista de noticias, el boton del ojo y el texto de version: recortarlos en OBS.
+- Se anuncian en `capacidades.camara` / `capacidades.interfaz`; el modelo nunca los ve ni son acciones. Ver `privado/revisiones/V1-entrega.md`.
+
 ## Que garantiza cada capa (importante)
 
 | Regla | Quien la hace cumplir |

@@ -18,3 +18,6 @@ import './estimar.test.js';
 import './analisis-pesos.test.js';
 import './x1.test.js';
 import './cli.test.js';
+import './vivo.test.js';
+import './manual.test.js';
+import './zoom.test.js';

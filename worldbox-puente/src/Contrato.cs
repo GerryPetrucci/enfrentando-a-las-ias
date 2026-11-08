@@ -454,6 +454,26 @@ namespace PuenteWorldBox
     /// string, numeros, bool, null); el puente los serializa EN el hilo principal, asi que no importa
     /// si el mundo reutiliza colecciones despues.
     /// </summary>
+    /// <summary>
+    /// OPCIONAL: controles de PRESENTACION para grabar video (camara e interfaz del juego). No son acciones del juego: el modelo
+    /// nunca los ve ni los puede pedir; solo el orquestador, con token, por /v1/camara y /v1/interfaz. Un IMundo que tambien
+    /// implementa esta interfaz las anuncia en capacidades.camara / capacidades.interfaz (solo si estan verificadas).
+    /// Mismas reglas de hilo que IMundo: solo se invoca desde el hilo que llama a Bombear().
+    /// </summary>
+    public interface IPresentacion
+    {
+        bool CamaraVerificada { get; }
+        bool InterfazVerificada { get; }
+        /// <summary>
+        /// liberar=true suelta la camara; si no, enfoca a la faccion (y aplica zoom si no es null). modo: "juego" (el seguimiento del
+        /// propio juego, que muestra su panel de unidad) o "limpio" (la camara sigue a la unidad sin panel: para grabar con la interfaz oculta).
+        /// Devuelve {enfocada:{...}, zoom, modo}.
+        /// </summary>
+        IDictionary<string, object> Camara(string faccion, double? zoom, bool liberar, string modo);
+        /// <summary>Muestra u oculta la interfaz del juego. Devuelve {visible}.</summary>
+        IDictionary<string, object> Interfaz(bool visible);
+    }
+
     public interface IMundo
     {
         InfoJuego Info { get; }

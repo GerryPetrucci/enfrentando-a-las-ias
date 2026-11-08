@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace PuenteWorldBox
 {
-    public sealed class MundoWorldBox : IMundo
+    public sealed class MundoWorldBox : IMundo, IPresentacion
     {
         // ---------------------------------------------------------------- tipos internos
         private sealed class Faccion
@@ -624,6 +624,98 @@ namespace PuenteWorldBox
             ra.Terminal = EsTerminal();
             if (vencido && !fin && !unicoVivo) ra.Error = "El avance excedio 170 s de reloj real.";
             a.Termina(ra);
+        }
+
+        // ---------------------------------------------------------------- presentacion (video)
+        // Controles para GRABAR: no son acciones del juego, no pasan por la lista blanca y el modelo no los ve nunca.
+        // Verificados en vivo (ver V1-entrega.md): la camara de verdad sigue a la unidad y la interfaz desaparece y vuelve.
+        public bool CamaraVerificada { get { return true; } }
+        public bool InterfazVerificada { get { return true; } }
+
+        private static MoveCamera CamaraDelJuego()
+        {
+            // MoveCamera.instance es internal: se lee por reflexion; sus metodos de zoom son publicos.
+            System.Reflection.FieldInfo campo = typeof(MoveCamera).GetField("instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            MoveCamera c = campo == null ? null : campo.GetValue(null) as MoveCamera;
+            if (c == null) throw new ErrorPuente(Codigos.NoListo, "La camara del juego aun no existe.");
+            return c;
+        }
+
+        // Rey (o lider) vivo si hay; si no, la primera unidad viva de la ciudad capital; si no, cualquier unidad viva del reino.
+        private Actor ElegirFoco(Faccion f)
+        {
+            Kingdom k = f.Reino;
+            if (k == null || !k.isAlive()) return null;
+            if (k.king != null && k.king.isAlive() && k.king.current_tile != null) return k.king;
+            City ciudad = CiudadDe(f);
+            List<Actor> todas = World.world.units.units_only_alive;
+            Actor cualquiera = null;
+            for (int i = 0; i < todas.Count; i++)
+            {
+                Actor a = todas[i];
+                if (a.kingdom != k || !a.isAlive() || a.current_tile == null) continue;
+                if (ciudad != null && a.city == ciudad) return a;
+                if (cualquiera == null) cualquiera = a;
+            }
+            return cualquiera;
+        }
+
+                private Actor seguido; // modo "limpio": unidad a la que la camara sigue sin usar el seguimiento (ni el panel) del juego
+
+        /// <summary>Cada cuadro, tras la logica del juego (LateUpdate): mueve la camara hacia la unidad seguida en modo limpio.</summary>
+        public void SeguirCamara()
+        {
+            Actor a = seguido;
+            if (a == null) return;
+            if (!Juego.Cargado || !a.isAlive() || a.current_tile == null) { seguido = null; return; }
+            Camera cam = Camera.main;
+            if (cam == null) return;
+            Vector3 p = cam.transform.position;
+            Vector2 u = a.current_position;
+            float k = 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime); // suavizado independiente de la velocidad del juego
+            cam.transform.position = new Vector3(Mathf.Lerp(p.x, u.x, k), Mathf.Lerp(p.y, u.y, k), p.z);
+        }
+
+        public IDictionary<string, object> Camara(string faccion, double? zoom, bool liberar, string modo)
+        {
+            if (!Juego.Cargado) throw new ErrorPuente(Codigos.NoListo, "El mundo del juego aun no esta listo.");
+            MoveCamera cam = CamaraDelJuego();
+            if (liberar)
+            {
+                seguido = null;
+                MoveCamera.clearFocusUnitOnly();
+                if (zoom.HasValue) cam.setTargetZoom((float)zoom.Value);
+                return Json.Objeto("liberada", true, "enfocada", null, "zoom", cam.getTargetZoom());
+            }
+            ExigirEscenario();
+            Faccion f = Buscar(faccion);
+            Juego.Estabilizar();
+            Actor foco = ElegirFoco(f);
+            if (foco == null) throw new ErrorPuente(Codigos.SolicitudInvalida, "La faccion '" + f.Id + "' no tiene ninguna unidad viva que enfocar.");
+            if (modo == "limpio")
+            {
+                MoveCamera.clearFocusUnitOnly();
+                seguido = foco;
+                Vector3 p0 = Camera.main.transform.position;
+                Camera.main.transform.position = new Vector3(foco.current_position.x, foco.current_position.y, p0.z);
+            }
+            else
+            {
+                seguido = null;
+                MoveCamera.setFocusUnit(foco);
+            }
+            if (zoom.HasValue) cam.setTargetZoom((float)zoom.Value);
+            bool esRey = f.Reino.king == foco;
+            return Json.Objeto("liberada", false, "faccion", f.Id, "modo", modo, "zoom", cam.getTargetZoom(),
+                "enfocada", Json.Objeto("id", foco.getID(), "nombre", foco.name, "rol", esRey ? "rey" : "habitante", "x", foco.current_tile.x, "y", foco.current_tile.y));
+        }
+
+        public IDictionary<string, object> Interfaz(bool visible)
+        {
+            if (!Juego.Cargado) throw new ErrorPuente(Codigos.NoListo, "El mundo del juego aun no esta listo.");
+            // Es la misma bandera que activa el poder hide_ui del juego (PowerLibrary.clickHideUI) y que desactiva ButtonEvent.clickUnHideUI.
+            Config.ui_main_hidden = !visible;
+            return Json.Objeto("visible", !Config.ui_main_hidden);
         }
 
         // ---------------------------------------------------------------- terminal

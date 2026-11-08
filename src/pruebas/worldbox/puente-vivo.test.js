@@ -228,4 +228,63 @@ describe('puente dentro de WorldBox (WORLDBOX_VIVO=1)', { skip: !VIVO && 'se eje
       assert.equal((await observacion('a')).faccion.poblacion, antes + 2);
     });
   });
+
+  // --- V1: controles de presentacion para grabar video (camara e interfaz; no son acciones del juego) ----------
+  describe('V1: camara e interfaz', () => {
+    let n = 0;
+    async function crudo(ruta, datos, metodo = 'POST') {
+      const cuerpo = metodo === 'POST' ? JSON.stringify({ protocolo: 1, id_solicitud: `v1-${++n}-${Date.now()}`, ...datos }) : undefined;
+      const res = await fetch(URL_BASE + ruta, { method: metodo, body: cuerpo, signal: AbortSignal.timeout(60000),
+        headers: { 'X-Puente-Token': token, ...(cuerpo ? { 'Content-Type': 'application/json' } : {}) } });
+      const texto = await res.text();
+      let json; try { json = JSON.parse(texto); } catch { /* no es JSON */ }
+      return { estado: res.status, json, texto };
+    }
+
+    it('/v1/info anuncia capacidades.camara e interfaz (verificadas en vivo) y ninguna es una accion', async () => {
+      const r = await crudo('/v1/info', undefined, 'GET');
+      assert.equal(r.json.capacidades.camara, true);
+      assert.equal(r.json.capacidades.interfaz, true);
+      assert.ok(!r.json.acciones.some(x => /camara|interfaz|zoom/.test(x.nombre)), 'el modelo nunca ve controles de presentacion');
+    });
+
+    it('camara: enfoca al rey de cada faccion (modo juego y limpio), aplica zoom, valida y se libera', async () => {
+      const e = await crudo('/v1/escenario/reiniciar', { semilla: 1, tamano_mapa: 192, facciones: [{ id: 'a' }, { id: 'b' }], opciones: { velocidad: 'x2' } });
+      assert.equal(e.estado, 200, e.texto);
+      const vistos = new Set();
+      for (const [faccion, modo] of [['a', 'juego'], ['b', 'juego'], ['a', 'limpio'], ['b', undefined]]) {
+        const r = await crudo('/v1/camara', { faccion, zoom: 35, ...(modo ? { modo } : {}) });
+        assert.equal(r.estado, 200, r.texto);
+        assert.equal(r.json.liberada, false);
+        assert.equal(r.json.faccion, faccion);
+        assert.equal(r.json.modo, modo ?? 'juego');
+        assert.equal(r.json.zoom, 35);
+        assert.equal(r.json.enfocada.rol, 'rey');
+        assert.ok(Number.isInteger(r.json.enfocada.id) && r.json.enfocada.nombre);
+        vistos.add(r.json.enfocada.id);
+      }
+      assert.equal(vistos.size, 2, 'cada faccion enfoca a su propio rey');
+      for (const malo of [{}, { faccion: 'a', zoom: 0 }, { faccion: 'a', zoom: 1001 }, { faccion: 'a', zoom: 'x' }, { faccion: 'a b' }, { faccion: 'a', modo: 'x' }, { liberar: 'si' }, { faccion: 'zzz' }]) {
+        const r = await crudo('/v1/camara', malo);
+        assert.equal(r.estado, 400, `${JSON.stringify(malo)}: ${r.texto}`);
+      }
+      const l = await crudo('/v1/camara', { liberar: true, zoom: 200 });
+      assert.equal(l.estado, 200, l.texto);
+      assert.deepEqual([l.json.liberada, l.json.enfocada, l.json.zoom], [true, null, 200]);
+      assert.equal((await crudo('/v1/camara', { faccion: 'a' }, 'POST')).estado, 200, 'se puede volver a enfocar');
+      await crudo('/v1/camara', { liberar: true });
+    });
+
+    it('interfaz: se oculta y se muestra; visible debe ser booleano', async () => {
+      for (const visible of [false, true, false, true]) {
+        const r = await crudo('/v1/interfaz', { visible });
+        assert.equal(r.estado, 200, r.texto);
+        assert.equal(r.json.visible, visible);
+      }
+      assert.equal((await crudo('/v1/interfaz', { visible: 'no' })).estado, 400);
+      assert.equal((await crudo('/v1/interfaz', {})).estado, 400);
+      const sinToken = await fetch(`${URL_BASE}/v1/interfaz`, { method: 'POST', body: JSON.stringify({ protocolo: 1, id_solicitud: 'x', visible: false }) });
+      assert.equal(sinToken.status, 401);
+    });
+  });
 });

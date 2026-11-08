@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>WorldBox en vivo · Enfrentando a las IAs</title>
+<link rel="stylesheet" href="sitio.css?v=__V__">
+<style>
+  /* Capa para la fuente de navegador de OBS: fondo transparente; el juego se ve por detrás.
+     Sin animaciones ni transiciones: en OBS (CEF) dieron fallos con el HUD de otros juegos. */
+  :root { color-scheme: normal; }
+  html, body { background: transparent !important; margin: 0; width: 100%; height: 100%; overflow: hidden; }
+  body { font-family: var(--texto); color: var(--hueso); }
+  #escena { position: fixed; inset: 0; }
+  .caja { background: rgba(16,16,20,.84); border: 1px solid var(--borde); border-radius: 18px; }
+  .marca-v { position: absolute; display: flex; align-items: center; gap: 14px; padding: 10px 20px; font: 800 28px var(--titulos); letter-spacing: .12em; text-transform: uppercase; }
+  .marca-v b { color: var(--oro); font-weight: 800; }
+  .turno { position: absolute; padding: 10px 22px; text-align: right; font: 800 34px var(--titulos); letter-spacing: .1em; text-transform: uppercase; }
+  .turno small { display: block; font: 600 17px var(--texto); letter-spacing: 0; text-transform: none; color: var(--suave); }
+  .facciones { position: absolute; display: flex; gap: 12px; }
+  .faccion { padding: 12px 16px; min-width: 250px; border-left: 10px solid var(--c); }
+  .faccion.activa { border-color: var(--oro); box-shadow: 0 0 0 2px var(--oro); }
+  .faccion.muerta { opacity: .45; }
+  .faccion h3 { margin: 0 0 4px; font: 800 28px var(--titulos); letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
+  .faccion .datos { display: flex; gap: 14px; font: 600 19px var(--texto); color: var(--hueso); }
+  .faccion .datos span { color: var(--suave); font-weight: 400; }
+  .faccion .estado { margin-top: 2px; font: 700 15px var(--texto); letter-spacing: .08em; text-transform: uppercase; color: var(--aviso); }
+  .subtitulo { position: absolute; padding: 16px 24px; }
+  .subtitulo .quien { display: inline-block; padding: 3px 14px; border-radius: 999px; background: var(--c); color: #101014; font: 800 24px var(--titulos); letter-spacing: .08em; text-transform: uppercase; }
+  .subtitulo .texto { margin: 8px 0 0; font: 700 34px/1.2 var(--texto); }
+  .subtitulo .razon { margin: 8px 0 0; font: italic 400 23px/1.3 var(--texto); color: var(--suave); }
+  .subtitulo .evento { margin: 8px 0 0; font: 600 21px var(--texto); color: var(--oro); }
+  .fin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 28px 40px; min-width: 520px; text-align: center; }
+  .fin h2 { margin: 0 0 12px; font: 800 52px var(--titulos); letter-spacing: .08em; text-transform: uppercase; color: var(--oro); }
+  .fin ol { list-style: none; margin: 0; padding: 0; text-align: left; }
+  .fin li { display: flex; justify-content: space-between; gap: 40px; padding: 8px 0; border-top: 1px solid var(--borde); font: 700 30px var(--texto); }
+  .fin li i { font-style: normal; color: var(--c); }
+  .aviso-ia { position: absolute; font: 600 16px var(--texto); color: var(--aviso); background: rgba(16,16,20,.7); padding: 4px 12px; border-radius: 999px; }
+  .espera { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 20px 34px; font: 800 36px var(--titulos); letter-spacing: .1em; text-transform: uppercase; }
+  [hidden] { display: none !important; }
+
+  /* ---- 16:9 (1920 x 1080) ---- */
+  .f16x9 .marca-v { left: 40px; top: 32px; }
+  .f16x9 .turno { right: 40px; top: 32px; }
+  .f16x9 .facciones { left: 40px; top: 130px; flex-direction: column; }
+  .f16x9 .subtitulo { left: 50%; bottom: 56px; transform: translateX(-50%); width: min(1180px, 82vw); }
+  .f16x9 .aviso-ia { right: 40px; bottom: 20px; }
+
+  /* ---- 9:16 (1080 x 1920): evita la franja superior (~210 px) y la inferior (~430 px) que tapan las redes ---- */
+  .f9x16 .marca-v { left: 50%; top: 210px; transform: translateX(-50%); font-size: 30px; white-space: nowrap; }
+  .f9x16 .turno { right: 40px; top: 290px; font-size: 30px; }
+  .f9x16 .facciones { left: 40px; top: 290px; flex-direction: column; gap: 10px; }
+  .f9x16 .faccion { min-width: 0; width: 330px; padding: 8px 14px; }
+  .f9x16 .faccion h3 { font-size: 26px; }
+  .f9x16 .faccion .datos { font-size: 17px; gap: 10px; }
+  .f9x16 .subtitulo { left: 40px; right: 40px; bottom: 450px; }
+  .f9x16 .subtitulo .texto { font-size: 38px; }
+  .f9x16 .aviso-ia { left: 50%; transform: translateX(-50%); bottom: 400px; }
+  .f9x16 .fin { min-width: 0; width: 900px; }
+</style>
+</head>
+<body>
+<div id="escena" class="f16x9">
+  <div id="marca" class="marca-v caja"><span>Enfrentando a las <b>IAs</b></span><span style="color:var(--suave)">·</span><span>WorldBox</span></div>
+  <div id="turno" class="turno caja"></div>
+  <div id="facciones" class="facciones"></div>
+  <div id="subtitulo" class="subtitulo caja" hidden></div>
+  <div id="fin" class="fin caja" hidden></div>
+  <div id="espera" class="espera caja">Esperando la partida…</div>
+  <div class="aviso-ia">Jugadas y textos generados por IA</div>
+</div>
+<script>
+'use strict';
+// Lee data/vivo/worldbox.json (lo escribe `node src/worldbox/correr.js --grabacion`; lo sirve `node src/servidor.js`).
+// ?formato=16x9|9x16  ·  ?demo=1 usa un estado de ejemplo (para ensayar el encuadre sin partida)  ·  ?ms=400 intervalo de lectura
+const q = new URLSearchParams(location.search);
+const formato = q.get('formato') === '9x16' ? '9x16' : '16x9';
+const escena = document.getElementById('escena');
+escena.className = 'f' + formato;
+const $ = (id) => document.getElementById(id);
+const nodo = (tag, clase, texto) => { const n = document.createElement(tag); if (clase) n.className = clase; if (texto != null) n.textContent = texto; return n; };
+// Los colores vienen del archivo: solo se aceptan hex de 3 o 6 cifras.
+const colorSeguro = (c) => (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(String(c)) ? c : '#9a9aa6');
+const entero = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : '–');
+
+const DEMO = { version: 1, fase: 'decidio', turno: 7, turnos: 24, tiempo_juego_s: 350, activo: 'f1',
+  facciones: [
+    { id: 'f1', nombre: 'Claude Haiku', color: '#D97757', poblacion: 41, ciudades: 1, territorio: 28, vivo: true, puntos: 188.4 },
+    { id: 'f2', nombre: 'GPT Luna', color: '#F4F4F2', poblacion: 33, ciudades: 1, territorio: 21, vivo: true, puntos: 171.0 },
+    { id: 'f3', nombre: 'Gemini Flash-Lite', color: '#4285F4', poblacion: 0, ciudades: 0, territorio: 0, vivo: false, puntos: 0 } ],
+  decision: { participante: 'f1', texto: 'Crea 5 aldeanos y bendice a su gente', razon: 'Mi población crece más rápido que la de GPT Luna; conviene reforzarla antes de la guerra.', acciones: [] },
+  ultimo_evento: 'Gemini Flash-Lite fue eliminado', ranking: null, ganador: null };
+
+let memoria = null;
+function dibujar(e) {
+  const hay = e && e.version === 1;
+  $('espera').hidden = !!hay;
+  $('marca').hidden = $('turno').hidden = $('facciones').hidden = !hay;
+  if (!hay) { $('subtitulo').hidden = true; $('fin').hidden = true; return; }
+
+  const t = $('turno'); t.replaceChildren();
+  t.append(document.createTextNode(`Turno ${entero(e.turno)} / ${entero(e.turnos)}`), nodo('small', '', `Tiempo de juego: ${Math.floor((Number(e.tiempo_juego_s) || 0) / 60)} min ${Math.round((Number(e.tiempo_juego_s) || 0) % 60)} s`));
+
+  const cont = $('facciones'); cont.replaceChildren();
+  for (const f of e.facciones ?? []) {
+    const c = nodo('div', 'faccion caja' + (f.id === e.activo ? ' activa' : '') + (f.vivo === false ? ' muerta' : ''));
+    c.style.setProperty('--c', colorSeguro(f.color));
+    c.append(nodo('h3', '', String(f.nombre ?? '')));
+    const d = nodo('div', 'datos');
+    for (const [rot, val] of [['pob.', f.poblacion], ['ciud.', f.ciudades], ['terr.', f.territorio], ['pts', Math.round((Number(f.puntos) || 0) * 10) / 10]]) { const s = nodo('div', '', String(val ?? '–') + ' '); s.append(nodo('span', '', rot)); d.append(s); }
+    c.append(d);
+    if (f.vivo === false) c.append(nodo('div', 'estado', 'Eliminada'));
+    else if (f.id === e.activo && e.fase === 'pensando') c.append(nodo('div', 'estado', 'Pensando…'));
+    cont.append(c);
+  }
+
+  const sub = $('subtitulo');
+  // La decision se mantiene a la vista mientras el mundo avanza, hasta que otro modelo empieza a pensar.
+  if (e.fase === 'pensando' || e.fase === 'preparando') memoria = null;
+  if (e.decision) memoria = { dec: e.decision, activo: e.activo };
+  const dec = e.decision ?? memoria?.dec ?? null;
+  const caras = e.facciones ?? [];
+  // `decision.participante` trae el NOMBRE del modelo; `activo` trae el id.
+  const activa = caras.find((f) => f.id === e.activo) ?? caras.find((f) => f.nombre === dec?.participante) ?? caras.find((f) => f.id === memoria?.activo);
+  if (e.fase === 'fin') { sub.hidden = true; }
+  else if (e.fase === 'pensando' && activa) {
+    sub.hidden = false; sub.replaceChildren(); sub.style.setProperty('--c', colorSeguro(activa.color));
+    sub.append(nodo('span', 'quien', activa.nombre), nodo('p', 'texto', 'Pensando su jugada…'));
+    if (e.ultimo_evento) sub.append(nodo('p', 'evento', e.ultimo_evento));
+  } else if (dec && activa) {
+    sub.hidden = false; sub.replaceChildren(); sub.style.setProperty('--c', colorSeguro(activa.color));
+    sub.append(nodo('span', 'quien', activa.nombre), nodo('p', 'texto', String(dec.texto ?? '')));
+    if (dec.razon) sub.append(nodo('p', 'razon', '«' + String(dec.razon) + '»'));
+    // El evento solo se muestra si aporta algo distinto de la propia decision (p. ej. una eliminacion).
+    const repite = e.ultimo_evento && String(e.ultimo_evento).toLowerCase().includes(String(dec.texto ?? '').toLowerCase().slice(0, 20));
+    if (e.ultimo_evento && !repite) sub.append(nodo('p', 'evento', e.ultimo_evento));
+  } else sub.hidden = true;
+
+  const fin = $('fin');
+  if (e.fase === 'fin' && Array.isArray(e.ranking)) {
+    fin.hidden = false; fin.replaceChildren(); fin.append(nodo('h2', '', 'Resultado'));
+    const ol = nodo('ol');
+    for (const r of e.ranking) {
+      const li = nodo('li'); li.style.setProperty('--c', colorSeguro(r.color));
+      const izq = nodo('span'); izq.append(document.createTextNode(`${entero(r.puesto)}. `), nodo('i', '', String(r.nombre ?? '')));
+      li.append(izq, nodo('span', '', `${Math.round((Number(r.puntos) || 0) * 10) / 10} pts`)); ol.append(li);
+    }
+    fin.append(ol);
+  } else fin.hidden = true;
+}
+
+async function leer() {
+  if (q.get('demo') === '1') { dibujar(DEMO); return; }
+  try {
+    const r = await fetch('data/vivo/worldbox.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    dibujar(await r.json());
+  } catch { dibujar(null); }
+}
+leer();
+setInterval(leer, Math.max(200, Number(q.get('ms')) || 400));
+</script>
+</body>
+</html>

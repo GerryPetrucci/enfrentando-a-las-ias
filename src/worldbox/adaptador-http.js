@@ -10,7 +10,8 @@ export function crearAdaptadorHttp({ url = 'http://127.0.0.1:47600', token, time
   exigir(entero(timeoutMs, 1, 120000) && entero(reintentos, 0, 3) && entero(umbralCircuito, 1, 100));
   let fallos = 0, abiertoHasta = 0;
   const codigos = new Set(['no_autorizado', 'protocolo_incompatible', 'no_listo', 'solicitud_invalida', 'no_soportado', 'juego_ocupado', 'tiempo_agotado', 'error_interno']);
-  async function pedir(ruta, datos) {
+  // `presentacion`: camara e interfaz para grabar. Sus fallos NO cuentan para el circuito ni se reintentan: la partida no depende de ellas.
+  async function pedir(ruta, datos, { presentacion = false } = {}) {
     if (abiertoHasta > ahora()) throw new ErrorArena('circuito_abierto');
     const id = datos === undefined ? null : datos.id_solicitud ?? randomUUID(); // se conserva en los reintentos (idempotencia)
     const cuerpo = datos === undefined ? undefined : JSON.stringify({ ...datos, protocolo: PROTOCOLO, id_solicitud: id });
@@ -28,11 +29,12 @@ export function crearAdaptadorHttp({ url = 'http://127.0.0.1:47600', token, time
           if (!respuesta.ok || json.ok !== true) throw new ErrorArena(codigos.has(json.error?.codigo) ? json.error.codigo : 'error_interno');
           return json;
         }, timeoutMs);
-        fallos = 0; abiertoHasta = 0;
+        if (!presentacion) { fallos = 0; abiertoHasta = 0; }
         // El id lo pone el CLIENTE (no el servidor): queda en la respuesta normalizada para cruzar el log con la traza del mod.
         return id ? { ...x, id_solicitud: id } : x;
       } catch (e) {
         const error = e instanceof ErrorArena ? e : new ErrorArena('conexion');
+        if (presentacion) throw error;
         if (['no_autorizado', 'protocolo_incompatible', 'solicitud_invalida', 'no_soportado', 'respuesta_invalida'].includes(error.codigo)) throw error;
         fallos++;
         if (fallos >= umbralCircuito) { abiertoHasta = ahora() + recuperacionMs; throw error; }
@@ -48,6 +50,11 @@ export function crearAdaptadorHttp({ url = 'http://127.0.0.1:47600', token, time
     async ejecutar(datos) { return normalizarEjecucion(await pedir('/v1/accion', datos)); },
     async avanzar(datos) { return normalizarAvance(await pedir('/v1/avanzar', datos)); },
     async estadoTerminal() { return normalizarTerminal(await pedir('/v1/estado-terminal')); },
+    // Presentacion para grabar video (no son acciones del juego). Solo se llaman si info.capacidades.camara / interfaz son true.
+    // camara: {faccion, zoom?} enfoca a una faccion; {liberar: true} suelta la camara. interfaz: {visible} muestra u oculta la interfaz del juego.
+    // modo 'limpio' por omision: sin el panel de la unidad enfocada (el modo 'juego' lo muestra y ensucia el video).
+    async camara(datos) { await pedir('/v1/camara', datos?.liberar ? datos : { modo: 'limpio', ...datos }, { presentacion: true }); return { hecho: true }; },
+    async interfaz(datos) { await pedir('/v1/interfaz', datos, { presentacion: true }); return { hecho: true }; },
     async cerrar() { try { await pedir('/v1/cerrar', {}); return { cerrado: true }; } catch (e) { if (e.codigo === 'no_soportado') return { cerrado: false }; throw e; } },
   };
 }

@@ -29,6 +29,8 @@ export function normalizarInfo(x) {
   });
   exigir(new Set(acciones.map(a => a.nombre)).size === acciones.length, 'respuesta_invalida');
   const capacidades = Object.fromEntries(['reiniciar', 'semilla', 'avanzar', 'terminal', 'multi_faccion'].map(k => [k, x.capacidades[k] === true]));
+  // Presentacion para grabar (opcionales): solo se conservan si el puente las anuncia verificadas; sin ellas la forma no cambia.
+  for (const k of ['camara', 'interfaz']) if (x.capacidades[k] === true) capacidades[k] = true;
   const version = v => ({ nombre: String(v?.nombre ?? '').slice(0, 100), version: String(v?.version ?? '').slice(0, 100) });
   // Del juego se conservan tambien el build de Steam y la version de Unity (trazabilidad de la ejecucion).
   const juego = v => ({ ...version(v), ...(typeof v?.build_steam === 'string' ? { build_steam: v.build_steam.slice(0, 100) } : {}), ...(typeof v?.unity === 'string' ? { unity: v.unity.slice(0, 100) } : {}) });

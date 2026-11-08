@@ -427,8 +427,20 @@ namespace PuenteWorldBox.Anfitrion
         // Servidor con mundos defectuosos
         // ---------------------------------------------------------------------------------
 
-        private sealed class MundoFalso : IMundo
+        private sealed class MundoFalso : IMundo, IPresentacion
         {
+            public bool PresentacionActiva;
+            public string UltimaCamara = "";
+            public bool UltimaInterfaz;
+            public bool CamaraVerificada { get { return PresentacionActiva; } }
+            public bool InterfazVerificada { get { return PresentacionActiva; } }
+            public IDictionary<string, object> Camara(string faccion, double? zoom, bool liberar, string modo)
+            {
+                UltimaCamara = faccion + "|" + (zoom.HasValue ? zoom.Value.ToString(CultureInfo.InvariantCulture) : "-") + "|" + liberar + "|" + modo;
+                return Json.Objeto("liberada", liberar, "zoom", zoom.HasValue ? zoom.Value : 100.0);
+            }
+            public IDictionary<string, object> Interfaz(bool visible) { UltimaInterfaz = visible; return Json.Objeto("visible", visible); }
+
             private readonly InfoJuego info = new InfoJuego();
             private readonly CapacidadesMundo cap = new CapacidadesMundo();
             private readonly RegistroAcciones acciones;
@@ -905,6 +917,68 @@ namespace PuenteWorldBox.Anfitrion
                         Verdad(r.Cuerpo.Contains("solicitud_invalida") && r.Cuerpo.Contains("semilla"), "mensaje nombra la semilla: " + r.Cuerpo);
                     }
                     Verdad(Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/escenario/reiniciar", Cuerpo("", "\"semilla\":-1,\"facciones\":[{\"id\":\"a\"},{\"id\":\"b\"}]")); }).Cuerpo.Contains("0..2147483647"), "el mensaje dice el rango");
+                }
+                finally { s.Detener(); Directory.Delete(carpeta, true); }
+            });
+
+            Prueba("presentacion: capacidades.camara/interfaz solo son true si el mundo las verifico; sin ellas 501", delegate()
+            {
+                string carpeta;
+                MundoFalso m = new MundoFalso();
+                ServidorPuente s = Levantar(m, null, out carpeta);
+                try
+                {
+                    string tk = File.ReadAllText(s.RutaArchivoToken);
+                    int p = s.Puerto;
+                    Resp r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/info", null); });
+                    Verdad(r.Cuerpo.Contains("\"camara\":false") && r.Cuerpo.Contains("\"interfaz\":false"), "capacidades en false: " + r.Cuerpo);
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/camara", Cuerpo("", "\"faccion\":\"a\"")); });
+                    Igual(501, r.Estado, "camara sin soporte");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/interfaz", Cuerpo("", "\"visible\":false")); });
+                    Igual(501, r.Estado, "interfaz sin soporte");
+                    m.PresentacionActiva = true;
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/info", null); });
+                    Verdad(r.Cuerpo.Contains("\"camara\":true") && r.Cuerpo.Contains("\"interfaz\":true"), "capacidades en true: " + r.Cuerpo);
+                }
+                finally { s.Detener(); Directory.Delete(carpeta, true); }
+            });
+
+            Prueba("presentacion: /v1/camara y /v1/interfaz validan la solicitud y se ejecutan en el hilo principal", delegate()
+            {
+                string carpeta;
+                MundoFalso m = new MundoFalso();
+                m.PresentacionActiva = true;
+                ServidorPuente s = Levantar(m, null, out carpeta);
+                try
+                {
+                    string tk = File.ReadAllText(s.RutaArchivoToken);
+                    int p = s.Puerto;
+                    string[] malos = new string[] { "", "\"zoom\":40", "\"faccion\":\"a\",\"zoom\":0", "\"faccion\":\"a\",\"zoom\":1001", "\"faccion\":\"a\",\"zoom\":\"x\"", "\"faccion\":\"a b\"", "\"liberar\":\"si\"", "\"faccion\":7", "\"faccion\":\"a\",\"modo\":\"x\"", "\"faccion\":\"a\",\"modo\":3" };
+                    foreach (string mal in malos)
+                    {
+                        Resp r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/camara", Cuerpo("", mal)); });
+                        Igual(400, r.Estado, "camara invalida <" + mal + ">");
+                    }
+                    Igual("", m.UltimaCamara, "nada invalido llego al mundo");
+                    Resp ok = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/camara", Cuerpo("", "\"faccion\":\"a\",\"zoom\":40.5")); });
+                    Igual(200, ok.Estado, "camara valida: " + ok.Cuerpo);
+                    Igual("a|40.5|False|juego", m.UltimaCamara, "parametros entregados al mundo (modo por defecto: juego)");
+                    ok = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/camara", Cuerpo("", "\"faccion\":\"b\",\"modo\":\"limpio\"")); });
+                    Igual(200, ok.Estado, "modo limpio");
+                    Igual("b|-|False|limpio", m.UltimaCamara, "modo limpio entregado al mundo");
+                    ok = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/camara", Cuerpo("", "\"liberar\":true")); });
+                    Igual(200, ok.Estado, "liberar");
+                    Igual("|-|True|juego", m.UltimaCamara, "liberar sin faccion");
+                    Resp malI = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/interfaz", Cuerpo("", "\"visible\":\"no\"")); });
+                    Igual(400, malI.Estado, "visible no booleano");
+                    malI = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/interfaz", Cuerpo("", "")); });
+                    Igual(400, malI.Estado, "falta visible");
+                    m.UltimaInterfaz = true;
+                    Resp okI = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/interfaz", Cuerpo("", "\"visible\":false")); });
+                    Igual(200, okI.Estado, "interfaz");
+                    Verdad(okI.Cuerpo.Contains("\"visible\":false") && !m.UltimaInterfaz, "se oculto");
+                    Resp sinTk = Http(p, "malo", "POST", "/v1/camara", Cuerpo("", "\"faccion\":\"a\""));
+                    Igual(401, sinTk.Estado, "sin token valido");
                 }
                 finally { s.Detener(); Directory.Delete(carpeta, true); }
             });

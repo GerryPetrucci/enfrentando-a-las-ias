@@ -82,6 +82,12 @@ namespace PuenteWorldBox
             }
         }
 
+        private void LateUpdate()
+        {
+            try { if (mundo != null) mundo.SeguirCamara(); }
+            catch (Exception e) { Debug.Log("[PuenteWorldBox] LateUpdate: " + e.GetType().Name + ": " + e.Message); }
+        }
+
         private void OnApplicationQuit()
         {
             Cerrar();

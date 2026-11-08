@@ -36,18 +36,41 @@ export function validarConfig({ participantes, pasarela, semilla, turnos, maxAcc
 // `reglas`: 'simulado' | 'real' | 'generico' (por omision, segun el origen que anuncie el adaptador).
 export async function correrCompetencia({ adaptador, participantes, pasarela, reglas, semilla = 1, turnos, maxAcciones, puntosPorTurno, segundosPorTurno,
   tamanoMapa, opcionesEscenario, especie, presupuesto = 0, maxTokens = 1_000_000, maxTiempoMs, timeoutMs,
-  umbralSitio, intentosMapa, indicePartida = 0, competitionId = randomUUID(), runId = randomUUID(), telemetria, ahora = Date.now } = {}) {
+  umbralSitio, intentosMapa, indicePartida = 0, competitionId = randomUUID(), runId = randomUUID(), telemetria, ahora = Date.now, observador, presentacion, timeoutAvanceMs } = {}) {
   exigir(reglas === undefined || Object.hasOwn(PERFILES, reglas), 'argumento_invalido');
   const base = { adaptador, participantes, pasarela, semilla, turnos, maxAcciones, puntosPorTurno, segundosPorTurno, tamanoMapa, opcionesEscenario, especie, presupuesto, maxTokens, maxTiempoMs, timeoutMs, umbralSitio, intentosMapa, indicePartida };
   validarConfig(resolverConfig(base, PERFILES[reglas ?? 'simulado']));
   const log = telemetria ?? await crearTelemetria();
-  const inicio = ahora(), penalizaciones = Object.fromEntries(participantes.map(p => [p.id, 0]));
+  const inicio = ahora(), pausas = { ms: 0 }, penalizaciones = Object.fromEntries(participantes.map(p => [p.id, 0]));
   const usos = Object.fromEntries(participantes.map(p => [p.id, {}])), cooldownsLocal = Object.fromEntries(participantes.map(p => [p.id, {}]));
   let info, snapshot, terminados = 0, completo = false, razon = 'turnos', costo = 0, tokens = 0, iniciado = false, rulesVersion, perfil, cfg;
   // Los limites de tiempo salen del perfil elegido tras conocer el adaptador; hasta entonces valen los del perfil previo.
   let maxMs = resolverConfig(base, PERFILES[reglas ?? 'simulado']).maxTiempoMs, tMs = resolverConfig(base, PERFILES[reglas ?? 'simulado']).timeoutMs;
-  const plazo = () => Math.max(1, Math.min(tMs, maxMs - (ahora() - inicio)));
+  // La pausa de lectura del modo grabacion es presentacion: no cuenta contra el tiempo maximo de la partida.
+  const transcurrido = () => ahora() - inicio - pausas.ms;
+  const plazo = () => Math.max(1, Math.min(tMs, maxMs - transcurrido()));
   const llamarAdaptador = fn => conTiempo(fn, plazo());
+  // Modo grabacion (docs/worldbox-grabacion.md): solo PRESENTACION. El observador recibe cada fase para escribir el estado en vivo;
+  // la camara y la interfaz se usan solo si el puente las anuncia y NUNCA hacen fallar la partida. Nada de esto entra a la telemetria.
+  const pres = presentacion ?? null, dormir = pres?.dormir ?? (ms => new Promise(r => setTimeout(r, ms)));
+  let tiempoJuego = 0;
+  const avisar = async e => {
+    if (!observador) return;
+    const puntos = snapshot && perfil ? Object.fromEntries(participantes.map(p => [p.id, puntuar(snapshot.find(f => f.id === p.id) ?? {}, penalizaciones[p.id], perfil.pesos)])) : {};
+    try { await observador({ snapshot, puntos, tiempo_juego_s: tiempoJuego, ...e }); } catch { /* el observador nunca detiene la partida */ }
+  };
+  const retocar = async (clave, datos) => {
+    if (!pres || info?.capacidades?.[clave] !== true || typeof adaptador[clave] !== 'function') return;
+    try { await conTiempo(() => adaptador[clave](datos), Math.min(tMs, 10000)); } catch { /* sin camara o interfaz se graba igual */ }
+  };
+  // Zoom por fase (modo grabacion): cerca sobre quien decide, medio mientras el mundo avanza el turno, lejos en la preparacion y la tarjeta final.
+  // `presentacion.zooms` = {cerca, medio, lejos}; sin el, rige `presentacion.zoom` (zoom unico) como antes. El puente suaviza el cambio (setTargetZoom).
+  const zooms = pres?.zooms ?? null; let ultimaActiva = null;
+  const vivaPara = pref => snapshot?.find(f => f.id === pref)?.vivo ? pref : snapshot?.find(f => f.vivo)?.id ?? participantes[0].id; // la camara no puede seguir a un reino sin unidades
+  const enfocar = (pref, zoom) => retocar('camara', { faccion: vivaPara(pref), zoom });
+  // Toda espera de presentacion (pausa de lectura, espera de Enter en modo manual) queda fuera del tiempo maximo de la partida.
+  const sinContar = async fn => { const t0 = ahora(); try { return await fn(); } finally { pausas.ms += Math.max(0, ahora() - t0); } };
+  const pausar = async ms => { if (ms > 0) await sinContar(() => dormir(ms)); };
   // El estado terminal confirmado es la autoridad (no el `terminal` de avanzar) y debe seguir listando a todos.
   const estado = async () => {
     const t = normalizarTerminal(await llamarAdaptador(() => adaptador.estadoTerminal()));
@@ -59,6 +82,7 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
     perfil = PERFILES[reglas ?? perfilPorOrigen(info.origen).nombre];
     exigir((perfil.nombre === 'simulado') === (info.origen === 'simulado'), 'no_soportado');
     cfg = resolverConfig(base, perfil); validarConfig(cfg);
+    await avisar({ fase: 'preparando', turno: 0 });
     maxMs = cfg.maxTiempoMs; tMs = cfg.timeoutMs;
     rulesVersion = perfil.rules_version;
     const acciones = accionesHabilitadas(info, CATALOGO, perfil); comprobarCatalogo(acciones);
@@ -106,16 +130,22 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
         maxTiempoMs: cfg.maxTiempoMs, timeoutMs: cfg.timeoutMs, indicePartida, prompt_version: PROMPT_VERSION, rules_version: rulesVersion, reglas: perfil.nombre, pesos: perfil.pesos, victoria_supervivencia: perfil.victoriaSupervivencia === true, efectiva,
         adaptador: info, acciones_habilitadas: acciones.map(a => a.nombre), parametros_modelo: pasarela?.configuracion ?? null } });
     iniciado = true;
+    await retocar('interfaz', { visible: false });
+    if (zooms) await enfocar(participantes[0].id, zooms.lejos);
+    await avisar({ fase: 'preparando', turno: 0 });
     bucle: for (let turno = 1; turno <= cfg.turnos; turno++) {
-      if (ahora() - inicio >= maxMs) { razon = 'limite_tiempo'; break; }
+      if (transcurrido() >= maxMs) { razon = 'limite_tiempo'; break; }
       const orden = ordenRotado(participantes, indicePartida, turno).filter(p => snapshot.find(f => f.id === p.id).vivo);
       // Capturar TODAS las vistas antes de ejecutar la primera accion.
       const vistas = new Map();
       for (const p of orden) vistas.set(p.id, construirObservacion(await llamarAdaptador(() => adaptador.observar(p.id))));
       for (const p of orden) {
         if (!snapshot.find(f => f.id === p.id).vivo) continue;
-        if (ahora() - inicio >= maxMs) { razon = 'limite_tiempo'; break bucle; }
+        if (transcurrido() >= maxMs) { razon = 'limite_tiempo'; break bucle; }
         const vista = vistas.get(p.id), inicioDecision = ahora();
+        ultimaActiva = p.id;
+        if (zooms) await enfocar(p.id, zooms.cerca); else await retocar('camara', { faccion: p.id, ...(pres?.zoom ? { zoom: pres.zoom } : {}) });
+        await avisar({ fase: 'pensando', turno, activo: p.id });
         // Cooldowns: lo que informe el juego y lo que el orquestador lleva; el juego real no los calcula.
         const cooldowns = { ...snapshot.find(f => f.id === p.id).cooldowns };
         for (const [k, v] of Object.entries(cooldownsLocal[p.id])) cooldowns[k] = Math.max(cooldowns[k] ?? 0, v);
@@ -136,11 +166,17 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
         const v = validarRespuesta(r.texto, { maxAcciones: cfg.maxAcciones });
         if (!error && !v.ok) error = v.error;
         // Cortes de seguridad: detienen la partida y no penalizan a nadie.
-        const corte = ['presupuesto', 'presupuesto_excedido', 'limite_tokens', 'tarifa_requerida'].includes(error) ? error : costo > presupuesto + 1e-12 ? 'presupuesto_excedido' : tokens > maxTokens ? 'limite_tokens' : ahora() - inicio >= maxMs ? 'limite_tiempo' : null;
+        const corte = ['presupuesto', 'presupuesto_excedido', 'limite_tokens', 'tarifa_requerida'].includes(error) ? error : costo > presupuesto + 1e-12 ? 'presupuesto_excedido' : tokens > maxTokens ? 'limite_tokens' : transcurrido() >= maxMs ? 'limite_tiempo' : null;
         const antes = puntuar(snapshot.find(f => f.id === p.id), penalizaciones[p.id], perfil.pesos);
         // Infraccion = culpa del participante (contenido invalido). Los fallos de infraestructura pierden la decision sin penalizar.
         let infracciones = error && !corte && !ERRORES_TECNICOS.has(error) ? 1 : 0, puntos = cfg.puntosPorTurno, enviadas = 0, invalidas = 0, rechazadas = 0;
         const validadas = [], ejecuciones = [];
+        await avisar({ fase: 'decidio', turno, activo: p.id, acciones: error || corte ? [ESPERAR] : v.acciones, razon: v.ok ? v.reasoning_summary : '', error: error ?? corte });
+        // Modo manual: la partida se detiene con la decision a la vista hasta que quien graba la deje seguir (antes de ejecutar nada).
+        if (pres?.esperar) {
+          await avisar({ fase: 'esperando', turno, activo: p.id, acciones: error || corte ? [ESPERAR] : v.acciones, razon: v.ok ? v.reasoning_summary : '', error: error ?? corte });
+          try { await sinContar(() => pres.esperar({ turno, participante: p.id, modelo: p.modelo })); } catch { /* sin consola, sigue */ }
+        }
         for (const propuesta of error || corte ? [ESPERAR] : v.acciones) {
           const validacion = validarAccion(propuesta, { acciones, turno, cooldowns, puntos, usos: usos[p.id], rivalesVivos });
           if (!validacion.ok) { infracciones++; invalidas++; error ??= validacion.error; }
@@ -180,6 +216,7 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
           try { snapshot = (await estado()).resumen_por_faccion; }
           catch (e) { error = normalizarError(e).codigo; razon = `puente_${error}`; }
         }
+        await avisar({ fase: 'aplicando', turno, activo: p.id, acciones: validadas, razon: v.ok ? v.reasoning_summary : '', error: error ?? corte, invalidas, rechazadas });
         await log.registrar({ tipo: 'decision', competition_id: competitionId, run_id: runId, turn_number: turno, participant_id: p.id, model_id: p.modelo,
           prompt_version: PROMPT_VERSION, rules_version: rulesVersion, sistema_hash: hash(prompt.sistema), prompt_hash: hash({ sistema: prompt.sistema, usuario: prompt.usuario }), ...vista, request_id: r.request_id, latency_ms: r.latency_ms,
           action_raw: typeof r.texto === 'string' ? r.texto : (JSON.stringify(r.texto) ?? ''), action_validated: validadas, execution_result: ejecuciones,
@@ -189,12 +226,18 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
           razonamiento_efectivo: r.razonamiento_efectivo ?? null, ...(anomalias.length ? { anomalias } : {}), timestamp: new Date(ahora()).toISOString() });
         if (razon.startsWith('puente_')) break bucle;
         if (corte) { razon = corte; break bucle; }
+        if (!pres?.esperar) await pausar(pres?.lecturaMs);
       }
-      if (ahora() - inicio >= maxMs) { razon = 'limite_tiempo'; break; }
-      const avance = await llamarAdaptador(() => adaptador.avanzar({ segundos_juego: cfg.segundosPorTurno }));
+      if (transcurrido() >= maxMs) { razon = 'limite_tiempo'; break; }
+      if (zooms) await enfocar(ultimaActiva ?? participantes[0].id, zooms.medio);
+      // Avanzar a velocidad x1 dura de verdad los segundos del turno: tiene su propio plazo (por omision, el mismo de siempre).
+      const avance = await conTiempo(() => adaptador.avanzar({ segundos_juego: cfg.segundosPorTurno }), Math.max(1, Math.min(timeoutAvanceMs ?? tMs, maxMs - transcurrido())));
+      tiempoJuego = avance?.tiempo_juego_s ?? tiempoJuego;
       const terminal = await estado(); snapshot = terminal.resumen_por_faccion; terminados++;
       await log.registrar({ tipo: 'turno', turn_number: turno, snapshot, avance: { segundos_pedidos: cfg.segundosPorTurno, tiempo_juego_s: avance?.tiempo_juego_s ?? null, ...(avance?.id_solicitud ? { id_solicitud: avance.id_solicitud } : {}) },
         resultados: participantes.map(p => { const f = snapshot.find(f => f.id === p.id); return { participant_id: p.id, model_id: p.modelo, ...f, penalizaciones: penalizaciones[p.id], puntos: puntuar(f, penalizaciones[p.id], perfil.pesos) }; }) });
+      await avisar({ fase: 'turno', turno });
+      if (!zooms) await retocar('camara', { liberar: true });
       if (terminal.terminal) { completo = true; razon = terminal.razon === 'turnos' ? 'turnos' : 'supervivencia'; break; }
       if (turno === cfg.turnos) completo = true;
     }
@@ -202,6 +245,12 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
     if (!iniciado) throw normalizarError(e);
     razon = `puente_${normalizarError(e).codigo}`;
   } finally {
+    // Cierre de la presentacion ANTES de cerrar el escenario: tarjeta final, y la camara y la interfaz vuelven a como estaban.
+    if (iniciado) {
+      if (zooms) await enfocar(ultimaActiva ?? participantes[0].id, zooms.lejos);
+      await avisar({ fase: 'fin', turno: terminados });
+      if (pres) { await pausar(pres.finMs); await retocar('camara', { liberar: true }); await retocar('interfaz', { visible: true }); }
+    }
     try { await conTiempo(() => adaptador.cerrar(), tMs); }
     catch { if (iniciado) await log.registrar({ tipo: 'cierre_error', codigo: 'cierre_fallido' }); }
   }

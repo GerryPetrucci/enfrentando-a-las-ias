@@ -77,6 +77,13 @@ aparece con `completo=false`. Un arranque fallido (configuración inválida, pue
 inalcanzable, token incorrecto) no deja carpeta de corrida. No se genera voz ni paquete de
 video para bots.
 
+### Grabar la partida en video
+
+`--grabacion` (con `--adaptador=http` o el simulador) pone el ritmo de video: cuenta atrás, velocidad `x1`, pausa de lectura tras cada
+decisión (o un Enter por decisión con `--manual`), cámara e interfaz del juego si el puente las anuncia, y el estado en vivo en
+`data/vivo/worldbox.json` para la fuente de navegador de OBS. Es solo presentación: reglas, prompt y puntuación no cambian. Pasos
+de OBS, comandos y el esquema del estado: `docs/worldbox-grabacion.md`.
+
 ## Reglas congeladas: Auge de reinos simulado 1.0.0
 
 `rules_version=auge-simulado-1.0.0`, `prompt_version=worldbox-1.2.0` (la 1.1.0 separó los puntos
