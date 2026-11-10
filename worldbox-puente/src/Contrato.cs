@@ -474,6 +474,46 @@ namespace PuenteWorldBox
         IDictionary<string, object> Interfaz(bool visible);
     }
 
+    /// <summary>
+    /// OPCIONAL (formato «era», E2): catalogo de lo que se puede fijar en un escenario, aplicacion de rasgos a una faccion, muro central
+    /// y depositos de mineral. Es de ESCENARIO/PRESENTACION: el modelo nunca lo ve ni lo pide; solo el orquestador, con token, por
+    /// /v1/era/*. Se anuncia en capacidades.era solo si EraVerificada. Mismas reglas de hilo que IMundo (solo desde Bombear()).
+    /// </summary>
+    public interface IEra
+    {
+        bool EraVerificada { get; }
+        /// <summary>Sin tipo: resumen (ids por tipo). Con tipo (reino|cultura|idioma|clan|subespecie|religion|minerales|biomas|leyes|edades|especies): lista completa.</summary>
+        IDictionary<string, object> EraCatalogo(string tipo);
+        /// <summary>Estado de la era: civilizaciones (suma de reinos derivados), muro, edad, leyes y lista de eventos desde el indice dado.</summary>
+        IDictionary<string, object> EraEstado(int desdeEvento);
+        /// <summary>Agrega/quita rasgos de un tipo a una faccion. Valida ids contra el catalogo ofrecido y los topes; atomico salvo parcial=true.</summary>
+        IDictionary<string, object> EraRasgos(string faccion, string tipo, IList<string> agregar, IList<string> quitar, bool reemplazar, bool parcial);
+        /// <summary>operacion: "quitar" restaura el terreno bajo el muro; "poner" lo levanta (ancho opcional) en el centro del mapa.</summary>
+        IDictionary<string, object> EraMuro(string operacion, int ancho);
+        /// <summary>Coloca depositos de mineral cerca de la capital de la faccion (y, con espejo, los espejados junto a la otra).</summary>
+        IDictionary<string, object> EraMinerales(string faccion, string mineral, int cantidad, int radio, bool espejo);
+    }
+
+    /// <summary>
+    /// OPCIONAL (formato «era», E4, aditivo): cambia la velocidad del juego (x1..x40) entre dos avances, para que el orquestador use una velocidad
+    /// por fase (desarrollo rapido, guerra lenta). Se anuncia en capacidades.era_velocidad. Es de ESCENARIO: el modelo nunca lo ve ni lo pide.
+    /// </summary>
+    public interface IEraVelocidad
+    {
+        IDictionary<string, object> EraVelocidad(string velocidad);
+    }
+
+    /// <summary>
+    /// OPCIONAL (formato «era», E5, aditivo): rasgos que el puente MANTIENE. El juego reemplaza por su cuenta los objetos cultura, idioma y religion de un reino
+    /// (los rasgos aplicados se pierden en pocos anios, o el juego los rechaza si el reino aun no tiene el objeto). Con mantener, lo aplicado queda como
+    /// «deseado»: el puente lo reaplica cuando el objeto cambia y aplica lo pendiente en cuanto el objeto existe. `soltar` deja de mantener un rasgo sin quitarlo.
+    /// Se anuncia en capacidades.era_mantener. Es de ESCENARIO: el modelo nunca lo ve ni lo pide.
+    /// </summary>
+    public interface IEraMantenimiento
+    {
+        IDictionary<string, object> EraRasgosMantenidos(string faccion, string tipo, IList<string> agregar, IList<string> quitar, IList<string> soltar, bool reemplazar, bool parcial);
+    }
+
     public interface IMundo
     {
         InfoJuego Info { get; }

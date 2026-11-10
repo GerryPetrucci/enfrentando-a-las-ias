@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -14,7 +14,7 @@ namespace PuenteWorldBox.Anfitrion
     /// mundo.tamano_mapa/libres) para que el cliente Node funcione igual contra ambos.
     /// Verifica en cada llamada que corre en el hilo que lo construyo (el "hilo principal" del anfitrion).
     /// </summary>
-    public sealed class MundoSimulado : IMundo
+    public sealed partial class MundoSimulado : IMundo
     {
         private sealed class Faccion
         {

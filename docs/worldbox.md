@@ -8,6 +8,8 @@ probado en vivo) y se juega con el reglamento versionado [`docs/worldbox-reglas.
 (`rules_version=auge-real-1.1.0`). Este documento describe el motor y el simulador; el reglamento del
 juego real, sus cifras medidas y su puntuación viven en el otro.
 
+**Formato «era» (E4, 8-11-2026):** segundo reglamento, `era-1.0`, con borrador por etapas, muro central que cae en el año 500 y guerra por regla; vive en `src/worldbox/era/` y se activa con `--formato=era`. No cambia nada de lo que sigue: `auge-real-1.1.0` sigue siendo el reglamento por omisión. Reglas completas, costos, comandos y costos de API: [`docs/worldbox-era.md`](worldbox-era.md). **Práctica y grabación manual** (respuestas pegadas de tus chats, repetir partidas, tamaños de mapa, comentar en vivo): [`docs/worldbox-era-practica.md`](worldbox-era-practica.md).
+
 Qué hay: `correr.js` (CLI), `orquestador.js` (ciclo de turnos), `reglas.js` (perfiles `simulado`, `real` y
 `generico`), `contrato-acciones.js` (validador), `adaptador*.js`, `pasarela.js` (modelos), `bots.js`,
 `puntuacion.js`, `telemetria.js`, `reporte.js`, `auditar.js` (auditoría y replay desde el log) y
@@ -360,7 +362,7 @@ inválidas/rechazadas, reintentos, tokens, costo y puntos por dólar.
 node --test src/pruebas/worldbox/
 ```
 
-`index.js` permite ese comando de directorio (en Node 22+ un directorio se resuelve a su
+`index.js` (que importa también `era-reglas.test.js`, `era-orquestador.test.js` y `era-cortes.test.js` del formato era) permite ese comando de directorio (en Node 22+ un directorio se resuelve a su
 `index.js`); la suite global descubre los `*.test.js` sin repetir el índice. No incluye
 `ensamblado.test.js`, `puente-csharp.test.js` ni `puente-vivo.test.js` (otros lotes; la última se
 salta salvo con `WORLDBOX_VIVO=1` y el juego abierto). Las pruebas usan bots, funciones falsas y

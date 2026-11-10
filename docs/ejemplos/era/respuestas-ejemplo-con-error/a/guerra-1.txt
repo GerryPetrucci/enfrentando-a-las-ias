@@ -1,0 +1,7 @@
+{
+  "actions": [
+    { "action": "maldecir", "parameters": { "objetivo": "f2", "gotas": 3 } },
+    { "action": "incendiar", "parameters": { "objetivo": "f2", "gotas": 3 } }
+  ],
+  "reasoning_summary": "Ejemplo: castigo al rival en cuanto cae el muro."
+}

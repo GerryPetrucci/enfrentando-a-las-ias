@@ -287,4 +287,146 @@ describe('puente dentro de WorldBox (WORLDBOX_VIVO=1)', { skip: !VIVO && 'se eje
       assert.equal(sinToken.status, 401);
     });
   });
+
+  // --- E1 (fase 0 del formato era): cualquier especie civilizada del juego (ActorAsset.civ), no solo las 4 clasicas ----------
+  describe('E1: especies civilizadas', () => {
+    let n = 0;
+    async function reiniciar(especies, opciones = {}) {
+      const cuerpo = JSON.stringify({ protocolo: 1, id_solicitud: `e1-${++n}-${Date.now()}`, semilla: 1, tamano_mapa: 192,
+        facciones: especies.map((especie, i) => ({ id: `f${i + 1}`, especie })), opciones: { velocidad: 'x20', ...opciones } });
+      const res = await fetch(URL_BASE + '/v1/escenario/reiniciar', { method: 'POST', body: cuerpo, signal: AbortSignal.timeout(120000),
+        headers: { 'X-Puente-Token': token, 'Content-Type': 'application/json' } });
+      const texto = await res.text();
+      let json; try { json = JSON.parse(texto); } catch { /* no es JSON */ }
+      return { estado: res.status, json, texto };
+    }
+
+    it('acepta especies civ_* y funda su reino', async () => {
+      for (const especie of ['civ_cat', 'civ_crab', 'orc']) {
+        const r = await reiniciar([especie, 'human']);
+        assert.equal(r.estado, 200, `${especie}: ${r.texto}`);
+        assert.equal(r.json.facciones[0].especie, especie);
+        const o = await a.observar('f1');
+        assert.ok(o.faccion.vivo && o.faccion.ciudades >= 1 && o.faccion.poblacion >= 1, especie);
+        assert.equal(o.faccion.especie, especie);
+      }
+    });
+
+    const carpetaMapa = nombre => join(process.env.USERPROFILE ?? '', 'AppData', 'LocalLow', 'mkarpenko', 'WorldBox', 'era-mapas', nombre);
+
+    it('opciones.mapa: rechaza nombres con forma invalida o inexistentes (400)', async () => {
+      for (const mapa of ['../x', 'A B', 'slot0', 'slot999', 'no-existe-e1']) {
+        const cuerpo = JSON.stringify({ protocolo: 1, id_solicitud: `e1m-${++n}-${Date.now()}`, semilla: 1, tamano_mapa: 192, facciones: [{ id: 'f1' }, { id: 'f2' }], opciones: { mapa } });
+        const res = await fetch(URL_BASE + '/v1/escenario/reiniciar', { method: 'POST', body: cuerpo, headers: { 'X-Puente-Token': token, 'Content-Type': 'application/json' } });
+        assert.equal(res.status, 400, mapa);
+      }
+    });
+
+    // Necesita un mapa guardado a mano en <datos del juego>\era-mapas\prueba-fase0\ (map.wbox); se salta si no esta.
+    it('opciones.mapa: el mismo mapa guardado da el mismo mundo en cada reinicio', { skip: !existsSync(join(carpetaMapa('prueba-fase0'), 'map.wbox')) && 'falta era-mapas\\prueba-fase0' }, async () => {
+      const hashes = [], sitios = [];
+      for (let i = 0; i < 2; i++) {
+        const r = await reiniciar(['human', 'orc'], { mapa: 'prueba-fase0' });
+        assert.equal(r.estado, 200, r.texto);
+        assert.equal(r.json.mundo.mapa, 'prueba-fase0');
+        hashes.push(r.json.hash_mundo); sitios.push(JSON.stringify(r.json.facciones.map(f => [f.sitio_x, f.sitio_y])));
+        const o = await a.observar('f1');
+        assert.ok(o.faccion.vivo && o.faccion.ciudades === 1, 'una sola ciudad: el guardado no deja civilizaciones');
+      }
+      assert.equal(hashes[0], hashes[1]);
+      assert.equal(sitios[0], sitios[1]);
+    });
+
+    it('rechaza una especie que no existe o no es civilizada (400, sin tocar el mundo)', async () => {
+      for (const especie of ['zzz', 'sheep', 'dragon', '']) {
+        const r = await reiniciar([especie, 'human']);
+        assert.equal(r.estado, 400, `${especie}: ${r.texto}`);
+      }
+    });
+  });
+
+  // --- E2 (formato era): mapa espejo, muro, biomas, depositos, rasgos y linaje de reinos ----------------------------------
+  describe('E2: formato era', () => {
+    let n = 0;
+    const llamar = async (metodo, ruta, datos) => {
+      const init = { method: metodo, headers: { 'X-Puente-Token': token, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120000) };
+      if (metodo === 'POST') init.body = JSON.stringify({ protocolo: 1, id_solicitud: `e2-${++n}-${Date.now()}`, ...datos });
+      const res = await fetch(URL_BASE + ruta, init);
+      const texto = await res.text();
+      let json; try { json = JSON.parse(texto); } catch { /* no es JSON */ }
+      return { estado: res.status, json, texto };
+    };
+    const reiniciarEra = (era, especies = ['human', 'orc']) => llamar('POST', '/v1/escenario/reiniciar', { semilla: 1, tamano_mapa: 'small',
+      facciones: especies.map((especie, i) => ({ id: `f${i + 1}`, especie })), opciones: { velocidad: 'x20', era } });
+
+    it('/v1/info anuncia capacidades.era y el catalogo trae los tipos, minerales y biomas', async () => {
+      const info = await llamar('GET', '/v1/info');
+      assert.equal(info.json.capacidades.era, true);
+      const c = await llamar('GET', '/v1/era/catalogo');
+      assert.equal(c.estado, 200, c.texto);
+      assert.deepEqual(Object.keys(c.json.rasgos).sort(), ['clan', 'cultura', 'idioma', 'reino', 'religion', 'subespecie']);
+      assert.equal(c.json.minerales.length, 8);
+      assert.ok(c.json.biomas.length >= 20);
+    });
+
+    it('espejo: mismas casillas en las dos mitades, sitios en espejo con la misma calidad y muro en el centro', async () => {
+      const r = await reiniciarEra({ espejo: true, muro: { ancho: 4 } });
+      assert.equal(r.estado, 200, r.texto);
+      assert.equal(r.json.era.preparacion.espejo.diferencias_restantes, 0);
+      const [f1, f2] = r.json.facciones;
+      assert.equal(f1.sitio_x + f2.sitio_x, r.json.mundo.ancho - 1);
+      assert.equal(f1.sitio_y, f2.sitio_y);
+      assert.equal(f1.calidad_sitio, f2.calidad_sitio);
+      assert.deepEqual([r.json.era.preparacion.muro.x0, r.json.era.preparacion.muro.x1], [94, 97]);
+      const e = await llamar('GET', '/v1/era/estado');
+      assert.equal(e.json.muro.puesto, true);
+    });
+
+    it('quitar el muro lo deja registrado y no cambia nada mas; rasgos: aplicar, medir y quitar', async () => {
+      const r = await reiniciarEra({ espejo: true, muro: { ancho: 4 }, leyes: { world_law_rebellions: false }, edad: 'age_hope', pausar_edades: true });
+      assert.equal(r.estado, 200, r.texto);
+      const a = await llamar('POST', '/v1/era/rasgos', { faccion: 'f1', tipo: 'clan', agregar: ['stonefists'] });
+      assert.equal(a.json.resultado, 'ejecutada', a.texto);
+      const rechazo = await llamar('POST', '/v1/era/rasgos', { faccion: 'f1', tipo: 'clan', agregar: ['no_existe_xyz'] });
+      assert.equal(rechazo.json.resultado, 'rechazada');
+      assert.equal(rechazo.json.rechazados[0].codigo, 'rasgo_desconocido');
+      const q = await llamar('POST', '/v1/era/rasgos', { faccion: 'f1', tipo: 'clan', quitar: ['stonefists'] });
+      assert.deepEqual(q.json.quitados, ['stonefists']);
+      const m = await llamar('POST', '/v1/era/muro', { operacion: 'quitar' });
+      assert.equal(m.json.muro_puesto, false);
+      assert.equal(m.json.casillas_restauradas, 768);
+      const e = await llamar('GET', '/v1/era/estado');
+      assert.ok(e.json.eventos.some(x => x.tipo === 'muro_quitado'));
+      assert.equal(e.json.edad.id, 'age_hope');
+      assert.equal(e.json.edad.pausada, true);
+      assert.equal(e.json.leyes.world_law_rebellions, false);
+      // el siguiente reinicio sin era devuelve las leyes y las edades a como estaban
+      const r2 = await reiniciarEra(undefined);
+      assert.equal(r2.estado, 200, r2.texto);
+      const e2 = await llamar('GET', '/v1/era/estado');
+      assert.equal(e2.json.hay_era, false);
+      assert.equal(e2.json.leyes.world_law_rebellions, true, 'la ley se restauro');
+      assert.equal(e2.json.edad.pausada, false, 'las edades se reanudaron');
+    });
+
+    it('depositos de mineral: se colocan simetricos y la ciudad con deposito los explota (uno solo uso)', async () => {
+      const r = await reiniciarEra({ espejo: true, muro: { ancho: 4 }, minerales: [{ faccion: 'f1', mineral: 'mineral_mythril', cantidad: 6, radio: 14 }], leyes: { world_law_rebellions: false } });
+      assert.equal(r.estado, 200, r.texto);
+      const dep = r.json.era.resultado.depositos;
+      assert.equal(dep.length, 6);
+      assert.ok(dep.every(d => d.colocado && d.faccion === 'f1'));
+      for (let i = 0; i < 8; i++) await llamar('POST', '/v1/avanzar', { segundos_juego: 60 });
+      const e = await llamar('GET', '/v1/era/estado');
+      assert.ok(e.json.civilizaciones[0].almacen.mythril >= 1, 'f1 obtuvo mythril de sus depositos');
+      assert.equal(e.json.civilizaciones[1].almacen.mythril, 0, 'f2 no tenia depositos');
+    });
+
+    it('opciones.era invalidas son 400 sin tocar el mundo', async () => {
+      for (const era of [{ espejo: true, biomas: { f1: 'biome_singularity' } }, { biomas: { f1: 'biome_grass' } }, { espejo: true, muro: { ancho: 99 } },
+        { espejo: true, minerales: [{ faccion: 'f1', mineral: 'oro', cantidad: 1 }] }, { leyes: { world_law_inventada: true } }, { edad: 'age_x' }, 'texto']) {
+        const r = await reiniciarEra(era);
+        assert.equal(r.estado, 400, JSON.stringify(era) + ' ' + r.texto);
+      }
+    });
+  });
 });

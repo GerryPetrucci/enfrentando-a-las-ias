@@ -1,0 +1,4 @@
+```json
+{ "actions": [ { "action": "bendecir", "parameters": { "gotas": 2 } }, { "action": "rasgo_extra", "parameters": { "id": "gaia_shield" } } ],
+  "reasoning_summary": "Ejemplo: bendición y un escudo extra de la reserva." }
+```

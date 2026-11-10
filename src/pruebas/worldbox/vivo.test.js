@@ -209,8 +209,8 @@ test('con el puente que anuncia camara e interfaz: oculta la interfaz, enfoca a 
   assert.ok(eventos[0].config.adaptador.capacidades.camara && eventos[0].config.adaptador.capacidades.interfaz, 'las capacidades anunciadas quedan en el log');
   const r = rutas(puente);
   assert.equal(r.map(x => /^camara:f[12]@80$/.test(x) ? 'C' : x === 'camara:liberar' ? 'L' : x === 'interfaz:false' ? 'I0' : x === 'interfaz:true' ? 'I1' : x).join(' '),
-    'escenario/reiniciar I0 C C avanzar L C C avanzar L C C avanzar L L I1 cerrar', 'orden exacto de las llamadas de presentacion');
-  assert.equal(r.filter(x => x.startsWith('camara:f')).length, 6, 'una vez por decision');
+    'I0 escenario/reiniciar I1 I0 C C C avanzar L C C avanzar L C C avanzar L L I1 cerrar', 'orden exacto de las llamadas de presentacion');
+  assert.equal(r.filter(x => x.startsWith('camara:f')).length, 7, 'una vez en la preparacion y una por decision');
   assert.deepEqual(r.slice(-3), ['camara:liberar', 'interfaz:true', 'cerrar']);
   assert.equal(r.filter(x => x === 'camara:liberar').length, 4, 'al cerrar cada turno (3) y al final');
   // Ni la camara ni la interfaz salen en la telemetria de decisiones.
@@ -272,7 +272,7 @@ test('CLI --grabacion con el simulador: cuenta atras, pausas de lectura y estado
     const [r] = await main(['--grabacion', '--cuenta=3', '--lectura-ms=1000', '--fin-ms=500', '--turnos=3', `--vivo=${ruta}`, `--salida=${join(c, 's')}`], deps);
     assert.equal(r.completo, true); assert.equal(r.turnos, 3);
     assert.equal(dichos[0], 'Listo para grabar: pulsa grabar en OBS'); assert.equal(dichos.filter(x => /empieza en/.test(x)).length, 3);
-    assert.deepEqual(dormidas, [1000, 1000, 1000, ...Array(6).fill(1000), 500]);
+    assert.deepEqual(dormidas, [6000, 1000, 1000, 1000, ...Array(6).fill(1000), 500], 'primero la espera del aviso del juego, luego la cuenta atras');
     const vivo = JSON.parse(await readFile(ruta, 'utf8'));
     assert.deepEqual(Object.keys(vivo).sort(), CLAVES);
     assert.deepEqual([vivo.fase, vivo.version, vivo.turno, vivo.turnos], ['fin', 1, 3, 3]);
@@ -297,7 +297,7 @@ test('CLI --grabacion contra el puente: velocidad x1 por omision, la que se pida
     assert.equal(r.completo, true); assert.equal(r.reglas, 'real');
     const reinicio = puente.peticiones.find(p => p.url === '/v1/escenario/reiniciar').cuerpo;
     assert.equal(reinicio.opciones.velocidad, 'x1');
-    assert.deepEqual(rutas(puente).filter(x => x.startsWith('interfaz')), ['interfaz:false', 'interfaz:true']);
+    assert.deepEqual(rutas(puente).filter(x => x.startsWith('interfaz')), ['interfaz:false', 'interfaz:true', 'interfaz:false', 'interfaz:true']);
     assert.ok(puente.peticiones.filter(p => p.url === '/v1/avanzar').every(p => p.cuerpo.segundos_juego === 50), 'el ritmo de video no cambia los segundos del turno');
     const vivo = JSON.parse(await readFile(join(c, 'v.json'), 'utf8'));
     assert.deepEqual([vivo.fase, vivo.turnos, vivo.facciones.map(f => f.nombre)], ['fin', 2, ['Bot Expansionista', 'Bot Voraz']]);

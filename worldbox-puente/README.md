@@ -96,3 +96,11 @@ Un modelo nunca habla con este puente: solo lo hace el orquestador, despues de v
 
 Ver `privado/revisiones/W5-entrega.md` (pendientes: acciones sin verificar, equilibrio de especies, terreno
 simetrico) y `privado/revisiones/X2-entrega.md`.
+
+## Formato «era» (E2, aditivo)
+
+Rutas extra, solo de escenario/presentacion (el modelo nunca las ve): `GET /v1/era/catalogo`, `GET /v1/era/estado`, `POST /v1/era/rasgos`,
+`POST /v1/era/muro`, `POST /v1/era/minerales`, `POST /v1/era/velocidad` (E4: cambia la velocidad entre avances; `capacidades.era_velocidad`, interfaz opcional `IEraVelocidad`), `mantener`/`soltar` en `POST /v1/era/rasgos` (E5: el puente mantiene los rasgos de cultura, idioma, religion y clan que el juego reemplaza; `capacidades.era_mantener`, interfaz opcional `IEraMantenimiento`, logica en `src/MantenerRasgos.cs`), y la opcion `opciones.era` de `POST /v1/escenario/reiniciar` (mapa espejo, muro, biomas por mitad,
+depositos de mineral, leyes, edad). Se anuncian en `capacidades.era`. Contrato en `docs/worldbox-protocolo.md` (seccion «Formato era»).
+La validacion de rasgos (`ReglasEra`, `src/ReglasEra.cs`) no depende del juego y se prueba con `Anfitrion.exe --autoprueba` y
+`src/pruebas/worldbox/puente-csharp.test.js`; lo que toca el juego (`integracion/Era.cs`, `integracion/MundoWorldBoxEra.cs`) se prueba en vivo.

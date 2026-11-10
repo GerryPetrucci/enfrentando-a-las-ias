@@ -1,0 +1,9 @@
+```json
+{
+  "actions": [
+    { "action": "crear_unidades", "parameters": { "cantidad": 3 } },
+    { "action": "donar_recursos", "parameters": { "recurso": "wood", "cantidad": 10 } }
+  ],
+  "reasoning_summary": "Ejemplo: refuerzo con tres aldeanos y madera para construir."
+}
+```

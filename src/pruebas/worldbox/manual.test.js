@@ -61,7 +61,7 @@ test('CLI --grabacion --manual en consola interactiva: avisa turno y modelo, exp
       dichos.push(t);
       if (/Pulsa Enter/.test(t)) (async () => { await dormirReal(60); estados.push(JSON.parse(await readFile(ruta, 'utf8'))); entrada.write('\n'); })();
     } };
-    const [r] = await main(['--grabacion', '--manual', '--cuenta=0', '--fin-ms=0', '--turnos=2', `--vivo=${ruta}`, `--salida=${join(c, 's')}`], deps);
+    const [r] = await main(['--grabacion', '--manual', '--cuenta=0', '--aviso-ms=0', '--fin-ms=0', '--turnos=2', `--vivo=${ruta}`, `--salida=${join(c, 's')}`], deps);
     assert.equal(r.completo, true);
     const pulsa = dichos.filter(x => /Pulsa Enter para continuar/.test(x));
     assert.equal(pulsa.length, 4, 'una espera por decision (2 turnos x 2)');
@@ -77,7 +77,7 @@ test('CLI --grabacion --manual en consola interactiva: avisa turno y modelo, exp
 test('CLI --grabacion --manual sin consola interactiva: se ignora con aviso y se usa la pausa de lectura', async () => {
   await conCarpeta(async c => {
     const dichos = [], dormidas = [];
-    const [r] = await main(['--grabacion', '--manual', '--cuenta=0', '--lectura-ms=700', '--fin-ms=0', '--turnos=2', `--vivo=${join(c, 'v.json')}`, `--salida=${join(c, 's')}`], { entrada: new PassThrough(), dormir: async ms => { dormidas.push(ms); }, avisar: t => dichos.push(t) });
+    const [r] = await main(['--grabacion', '--manual', '--cuenta=0', '--aviso-ms=0', '--lectura-ms=700', '--fin-ms=0', '--turnos=2', `--vivo=${join(c, 'v.json')}`, `--salida=${join(c, 's')}`], { entrada: new PassThrough(), dormir: async ms => { dormidas.push(ms); }, avisar: t => dichos.push(t) });
     assert.equal(r.completo, true);
     assert.equal(dichos.filter(x => /^Aviso: --manual necesita una consola interactiva/.test(x)).length, 1);
     assert.deepEqual(dormidas, Array(4).fill(700));

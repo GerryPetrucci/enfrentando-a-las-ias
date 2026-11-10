@@ -13,14 +13,16 @@ import { crearTelemetria } from './telemetria.js';
 import { escribirReporte } from './reporte.js';
 import { entero, exigir } from './util.js';
 import { crearEstadoVivo } from './vivo.js';
+import { correrEraCli, OPCIONES_ERA, NUMERICAS_ERA, BOOLEANAS_ERA, SOLO_GRABACION_ERA } from './era/correr-era.js';
+import { BOTS_ERA } from './era/bots-era.js';
 
 const PERMITIDAS = new Set(['adaptador', 'reglas', 'participantes', 'modelos', 'modo', 'semilla', 'turnos', 'presupuesto', 'presupuesto-modelo', 'partidas', 'salida', 'acciones', 'puntos-turno', 'segundos-turno', 'mapa', 'velocidad', 'plantilla', 'unidades-iniciales', 'especie', 'umbral-sitio', 'intentos-mapa',
-  'max-tokens', 'tiempo-ms', 'timeout-ms', 'timeout-puente-ms', 'tarifa-entrada', 'tarifa-salida', 'grabacion', 'manual', 'cuenta', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos', 'vivo']);
+  'max-tokens', 'tiempo-ms', 'timeout-ms', 'timeout-puente-ms', 'tarifa-entrada', 'tarifa-salida', 'grabacion', 'manual', 'cuenta', 'aviso-ms', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos', 'vivo', ...OPCIONES_ERA]);
 // Modo grabacion (docs/worldbox-grabacion.md): `--grabacion` va sin valor; el resto de sus opciones solo valen con ella.
-const BOOLEANAS = new Set(['grabacion', 'manual']), SOLO_GRABACION = ['manual', 'cuenta', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos', 'vivo'];
+const BOOLEANAS = new Set(['grabacion', 'manual', 'sin-renovar-guerra', ...BOOLEANAS_ERA]), SOLO_GRABACION = ['manual', 'cuenta', 'aviso-ms', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos', 'vivo', ...SOLO_GRABACION_ERA];
 // Zoom del juego: 10 (muy cerca) a 211 (todo el mapa). Por fase: cerca sobre quien decide, medio mientras avanza el turno, lejos al preparar y en la tarjeta final.
 export const ZOOM_POR_OMISION = Object.freeze({ cerca: 60, medio: 110, lejos: 211 });
-const NUMERICAS = ['semilla', 'turnos', 'presupuesto', 'presupuesto-modelo', 'acciones', 'puntos-turno', 'segundos-turno', 'mapa', 'unidades-iniciales', 'umbral-sitio', 'intentos-mapa', 'max-tokens', 'tiempo-ms', 'timeout-ms', 'timeout-puente-ms', 'tarifa-entrada', 'tarifa-salida', 'cuenta', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos'];
+const NUMERICAS = ['semilla', 'turnos', 'presupuesto', 'presupuesto-modelo', 'acciones', 'puntos-turno', 'segundos-turno', 'mapa', 'unidades-iniciales', 'umbral-sitio', 'intentos-mapa', 'max-tokens', 'tiempo-ms', 'timeout-ms', 'timeout-puente-ms', 'tarifa-entrada', 'tarifa-salida', 'cuenta', 'aviso-ms', 'lectura-ms', 'fin-ms', 'zoom', 'zoom-cerca', 'zoom-medio', 'zoom-lejos', ...NUMERICAS_ERA];
 export function opcionesCli(args) {
   const opciones = {};
   for (const arg of args) {
@@ -35,12 +37,21 @@ export function opcionesCli(args) {
   exigir(!opciones.modelos || !opciones.participantes, 'participantes_ambiguos');
   exigir(['simulado', 'http'].includes(opciones.adaptador ?? 'simulado'), 'adaptador_invalido');
   exigir(opciones.reglas === undefined || NOMBRES_PERFIL.includes(opciones.reglas), 'argumento_invalido');
+  // Formato era (docs/worldbox-era.md): sus opciones solo valen con --formato=era, que no admite los parametros por turno de las demas reglas (--manual si: un Enter por decision).
+  exigir(opciones.formato === undefined || opciones.formato === 'era', 'argumento_invalido');
+  exigir(opciones.formato === 'era' || OPCIONES_ERA.every(k => k === 'formato' || opciones[k] === undefined), 'argumento_invalido');
+  exigir(opciones.formato !== 'era' || (opciones.reglas === undefined && ['turnos', 'acciones', 'puntos-turno', 'segundos-turno', 'velocidad', 'especie', 'umbral-sitio', 'intentos-mapa'].every(k => opciones[k] === undefined)), 'argumento_invalido');
+  // Respuestas pegadas a mano: no se mezclan con participantes ni modelos; --asistido y las opciones de participante solo valen con --respuestas.
+  exigir(opciones.respuestas === undefined || (opciones.formato === 'era' && !opciones.participantes && !opciones.modelos), 'argumento_invalido');
+  exigir(opciones.respuestas !== undefined || ['asistido', 'modelo-a', 'modelo-b', 'nombre-a', 'nombre-b', 'canal', 'ignorar-invalidas', 'prompt-completo'].every(k => opciones[k] === undefined), 'argumento_invalido');
+  for (const k of ['modelo-a', 'modelo-b']) exigir(opciones[k] === undefined || /^[\w./:-]{1,60}$/.test(opciones[k]), 'argumento_invalido');
   for (const k of NUMERICAS) exigir(opciones[k] === undefined || (opciones[k].trim() !== '' && Number.isFinite(Number(opciones[k]))), 'argumento_invalido');
   exigir(opciones.especie === undefined || /^[a-z_]{1,20}$/.test(opciones.especie), 'argumento_invalido');
   exigir(opciones.velocidad === undefined || /^[a-z0-9_]{1,10}$/.test(opciones.velocidad), 'argumento_invalido');
   exigir(opciones.plantilla === undefined || /^[a-z0-9_]{1,30}$/.test(opciones.plantilla), 'argumento_invalido');
   exigir(opciones.grabacion === true || SOLO_GRABACION.every(k => opciones[k] === undefined), 'argumento_invalido');
   exigir(opciones.cuenta === undefined || entero(Number(opciones.cuenta), 0, 600), 'argumento_invalido');
+  exigir(opciones['aviso-ms'] === undefined || entero(Number(opciones['aviso-ms']), 0, 60000), 'argumento_invalido');
   exigir(opciones['lectura-ms'] === undefined || entero(Number(opciones['lectura-ms']), 0, 60000), 'argumento_invalido');
   exigir(opciones['fin-ms'] === undefined || entero(Number(opciones['fin-ms']), 0, 120000), 'argumento_invalido');
   for (const k of ['zoom-cerca', 'zoom-medio', 'zoom-lejos']) exigir(opciones[k] === undefined || (Number(opciones[k]) >= 10 && Number(opciones[k]) <= 211), 'argumento_invalido');
@@ -75,19 +86,27 @@ export function crearEsperaEnter(entrada) {
   return { esperar: () => cerrado ? Promise.resolve() : new Promise(r => esperando.push(r)), cerrar: () => rl.close() };
 }
 // `deps` permite inyectar la llamada al modelo y el entorno en pruebas; en uso normal queda vacio.
+// AAAAMMDD-HHMM en hora LOCAL (el nombre de la carpeta de una partida con respuestas pegadas a mano).
+const fechaLocal = (d = new Date()) => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
 export async function main(args = process.argv.slice(2), deps = {}) {
   const o = opcionesCli(args), modelos = o.modelos?.split(','), env = deps.env ?? process.env;
   if (o.adaptador === 'http' || modelos) await cargarVariablesWorldbox(env, deps.envRuta ?? '.env');
-  const nombres = modelos ?? (o.participantes ?? 'bot-voraz,bot-aleatorio').split(',');
-  exigir(entero(nombres.length, 2, 4) && nombres.every(n => modelos ? /^[\w./:-]+$/.test(n) : BOTS.includes(n)), 'participantes_invalidos');
+  const nombres = modelos ?? (o.participantes ?? (o.formato === 'era' ? 'bot-era-militar,bot-era-economico' : 'bot-voraz,bot-aleatorio')).split(',');
+  exigir(o.formato === 'era' ? nombres.length === 2 : entero(nombres.length, 2, 4), 'participantes_invalidos');
+  exigir(o.respuestas !== undefined || nombres.every(n => modelos ? /^[\w./:-]+$/.test(n) : (o.formato === 'era' ? BOTS_ERA : BOTS).includes(n)), 'participantes_invalidos');
   const presupuesto = Number(o.presupuesto ?? env.WORLDBOX_PRESUPUESTO_USD ?? 0);
   exigir(Number.isFinite(presupuesto) && presupuesto >= 0);
   const tarifas = Object.fromEntries(nombres.map(n => [n, { entrada: Number(o['tarifa-entrada']), salida: Number(o['tarifa-salida']) }]));
   if (modelos) exigir(presupuesto > 0 && Object.values(tarifas).every(t => [t.entrada, t.salida].every(v => Number.isFinite(v) && v >= 0)), 'presupuesto_y_tarifas_requeridos');
-  const salida = resolve(o.salida ?? 'data/pruebas/worldbox');
-  const competitionId = randomUUID();
+  // Con respuestas pegadas a mano la partida y su evidencia van a data/era/partidas/ (ignorada por git), con la fecha en el nombre; las demas, como siempre.
+  const salida = resolve(o.salida ?? (o.respuestas !== undefined ? 'data/era/partidas' : 'data/pruebas/worldbox'));
+  const competitionId = o.respuestas !== undefined ? `${fechaLocal()}-${randomUUID().slice(0, 8)}` : randomUUID();
   // Reglamento: el del juego real por omision con el puente HTTP, el del simulador en los demas casos. Lo que no se pasa por
   // argumento sale del perfil (turnos, segundos por turno, puntos, mapa, velocidad, especie...); lo pasado manda.
+  if (o.formato === 'era') {
+    exigir(o.partidas === 1, 'partidas_invalidas'); // una sola partida era por corrida
+    return correrEraCli({ o, env, deps, nombres, modelos, presupuesto, tarifas, salida, competitionId, zoomPorOmision: ZOOM_POR_OMISION, cuentaAtras });
+  }
   const reglas = o.reglas ?? (o.adaptador === 'http' ? 'real' : 'simulado'), perfil = PERFILES[reglas];
   const pasarela = modelos ? crearPasarela({ modo: o.modo, llamar: deps.llamar ?? llamarReal, presupuesto, presupuestoModelo: Number(o['presupuesto-modelo'] ?? presupuesto / nombres.length), tarifas, timeoutMs: Number(o['timeout-ms'] ?? perfil.partida.timeoutMs), limitador: deps.limitador }) : null;
   const numero = k => o[k] === undefined ? undefined : Number(o[k]);
@@ -112,9 +131,12 @@ export async function main(args = process.argv.slice(2), deps = {}) {
     if (grabacion) {
       vivo = crearEstadoVivo({ ruta: resolve(o.vivo ?? 'data/vivo/worldbox.json'), participantes, turnos: resolverConfig(config, perfil).turnos, supervivencia: perfil.victoriaSupervivencia === true, especie: o.especie ?? perfil.partida.especie ?? 'human' });
       await vivo.emitir({ fase: 'preparando', turno: 0 }); // la fuente de navegador de OBS ya muestra «preparando» durante la cuenta atras
-      if (partida === 0) await cuentaAtras(Number(o.cuenta ?? 10), deps);
       config.observador = vivo.emitir;
-      config.presentacion = { lecturaMs: Number(o['lectura-ms'] ?? 4000), finMs: Number(o['fin-ms'] ?? 8000), dormir: deps.dormir,
+      // Preludio, DESPUES de generar el mundo y con la camara lejos: espera a que se apague el aviso del juego («Experimental mode is enabled»),
+      // y solo entonces dice «Listo para grabar» y cuenta atras. Asi se graba un mundo ya generado y limpio.
+      const esperaReal = ms => new Promise(r => setTimeout(r, ms)), dormirCon = deps.dormir ?? esperaReal;
+      const preludio = async () => { const aviso = Number(o['aviso-ms'] ?? 6000); if (aviso > 0) await dormirCon(aviso); if (partida === 0) await cuentaAtras(Number(o.cuenta ?? 15), deps); };
+      config.presentacion = { preludio, lecturaMs: Number(o['lectura-ms'] ?? 4000), finMs: Number(o['fin-ms'] ?? 8000), dormir: deps.dormir,
         // --zoom=N es un zoom unico y desactiva el automatico por fase.
         ...(o.zoom ? { zoom: Number(o.zoom) } : { zooms: Object.fromEntries(Object.entries(ZOOM_POR_OMISION).map(([k, v]) => [k, Number(o[`zoom-${k}`] ?? v)])) }) };
       if (o.manual === true) {

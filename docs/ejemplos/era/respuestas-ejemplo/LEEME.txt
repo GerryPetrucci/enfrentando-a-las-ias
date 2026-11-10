@@ -1,0 +1,13 @@
+EJEMPLO ESCRITO A MANO. NO son respuestas de ningún modelo: sirven para probar el flujo sin usar chats.
+
+  a/  etapa1.txt, etapa2.txt, etapa3.txt, desarrollo-1.txt, guerra-1.txt   (una respuesta por llamada, con texto alrededor y ```json como la pegaría un chat)
+  b/  borrador.txt (las tres etapas en un solo JSON), desarrollo-1.txt, guerra-2.txt
+  participantes.json   modelos declarados y "ejemplo": true
+
+Probarlas sin juego (revisión previa):
+  node herramientas/worldbox-era-verificar.mjs --respuestas=docs/ejemplos/era/respuestas-ejemplo
+
+Jugarlas (ensayo corto con el simulador, sin el juego):
+  node src/worldbox/correr.js --formato=era --respuestas=docs/ejemplos/era/respuestas-ejemplo --adaptador=simulado --partidas=1 --anio-muro=60 --anio-limite=90 --intervenciones=20,35,50 --intervenciones-guerra=1,3 --anios-espera-rasgos=5
+
+La carpeta respuestas-ejemplo-con-error/ trae lo mismo con un error a propósito en b/borrador.txt y su corrección en b/borrador.correccion.txt, para ver cómo se informa y se corrige.

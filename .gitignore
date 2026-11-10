@@ -40,3 +40,8 @@ privado/
 .claude/settings.local.json
 worldbox-puente/salida/
 data/vivo/
+
+# Practica y grabacion de la era con respuestas pegadas a mano (docs/worldbox-era-practica.md): evidencia COMPLETA (prompts, respuestas crudas) y tus carpetas de respuestas.
+# No se publican sin revision (AGENTS.md). Lo publicable es resumen-publico.json, que se copia a mano a data/publicas/ cuando el dueno lo apruebe.
+data/era/
+respuestas-era/

@@ -1,0 +1,2356 @@
+{
+ "catalogo_version": "era-1.0.catalogo-2",
+ "fuente": {
+  "juego": "WorldBox 0.51.2 (build 719)",
+  "evidencia": [
+   "privado/revisiones/E1-entrega.md",
+   "privado/revisiones/E2-entrega.md",
+   "privado/revisiones/E3-entrega.md",
+   "privado/revisiones/E5-entrega.md"
+  ],
+  "e3": {
+   "archivo": "privado/worldbox/era-fase0/e3/rasgos-efecto.json",
+   "entradas": 301,
+   "quitados": [],
+   "acotados": [
+    "hyper_intelligence",
+    "gods_chosen",
+    "stonefists",
+    "high_fecundity",
+    "enhanced_strength",
+    "hive_society"
+   ],
+   "sin_fila": [],
+   "candidatos": [
+    "cultura/expertise_exchange:ofrecer"
+   ]
+  }
+ },
+ "nota": "Generado por herramientas/worldbox-era-catalogo.mjs. Cambiar una opcion, un costo o un presupuesto es cambiar el reglamento: sube rules_version y prompt_version. catalogo-2 (E5, 8-11-2026) reemplaza a catalogo-1 antes de la primera partida con modelos.",
+ "razas": [
+  {
+   "id": "human",
+   "nombre": "Humano",
+   "ofrecible": true
+  },
+  {
+   "id": "elf",
+   "nombre": "Elfo",
+   "ofrecible": true
+  },
+  {
+   "id": "orc",
+   "nombre": "Orco",
+   "ofrecible": true
+  },
+  {
+   "id": "dwarf",
+   "nombre": "Enano",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_cat",
+   "nombre": "Gato",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_dog",
+   "nombre": "Perro",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_chicken",
+   "nombre": "Gallina",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_rabbit",
+   "nombre": "Conejo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_monkey",
+   "nombre": "Mono",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_fox",
+   "nombre": "Zorro",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_sheep",
+   "nombre": "Oveja",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_cow",
+   "nombre": "Vaca",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_armadillo",
+   "nombre": "Armadillo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_wolf",
+   "nombre": "Lobo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_bear",
+   "nombre": "Oso",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_rhino",
+   "nombre": "Rinoceronte",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_buffalo",
+   "nombre": "Búfalo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_hyena",
+   "nombre": "Hiena",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_rat",
+   "nombre": "Rata",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_alpaca",
+   "nombre": "Alpaca",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_capybara",
+   "nombre": "Capibara",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_goat",
+   "nombre": "Cabra",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_scorpion",
+   "nombre": "Escorpión",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_crab",
+   "nombre": "Cangrejo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_penguin",
+   "nombre": "Pingüino",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_turtle",
+   "nombre": "Tortuga",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_crocodile",
+   "nombre": "Cocodrilo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_snake",
+   "nombre": "Serpiente",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_frog",
+   "nombre": "Rana",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_piranha",
+   "nombre": "Piraña",
+   "ofrecible": false,
+   "motivo": "E6: 1 de 16 guerras contra humano; población 35 a 55 % menor que la del humano a los 40 y a los 120 años de desarrollo"
+  },
+  {
+   "id": "civ_liliar",
+   "nombre": "Liliar",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_garlic_man",
+   "nombre": "Hombre ajo",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_lemon_man",
+   "nombre": "Hombre limón",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_acid_gentleman",
+   "nombre": "Caballero ácido",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_crystal_golem",
+   "nombre": "Gólem de cristal",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_candy_man",
+   "nombre": "Hombre caramelo",
+   "ofrecible": false,
+   "motivo": "E6: 1 de 16 guerras contra humano, con población parecida a la del humano a los 120 años (esperadas ≈ 6)"
+  },
+  {
+   "id": "civ_beetle",
+   "nombre": "Escarabajo",
+   "ofrecible": false,
+   "motivo": "E6: 0 de 14 guerras contra humano (40 y 120 años de desarrollo) y se extinguió sola antes de la guerra en 3 de 16 partidas (el humano, 1 de 308)"
+  },
+  {
+   "id": "civ_seal",
+   "nombre": "Foca",
+   "ofrecible": true
+  },
+  {
+   "id": "civ_unicorn",
+   "nombre": "Unicornio",
+   "ofrecible": true
+  }
+ ],
+ "biomas": [
+  {
+   "id": "biome_grass",
+   "nombre": "Pastizal",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_savanna",
+   "nombre": "Sabana",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_jungle",
+   "nombre": "Jungla",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_silver",
+    "mineral_metals",
+    "mineral_gems"
+   ]
+  },
+  {
+   "id": "biome_desert",
+   "nombre": "Desierto",
+   "costo": 0,
+   "paso": 0.7,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals",
+    "mineral_gems",
+    "mineral_silver"
+   ]
+  },
+  {
+   "id": "biome_lemon",
+   "nombre": "Limonar",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_permafrost",
+   "nombre": "Permafrost",
+   "costo": 0,
+   "paso": 0.8,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_swamp",
+   "nombre": "Pantano",
+   "costo": 0,
+   "paso": 0.6,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_crystal",
+   "nombre": "Cristal",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": []
+  },
+  {
+   "id": "biome_enchanted",
+   "nombre": "Encantado",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_silver",
+    "mineral_metals",
+    "mineral_gems"
+   ]
+  },
+  {
+   "id": "biome_corrupted",
+   "nombre": "Corrupto",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_bones"
+   ]
+  },
+  {
+   "id": "biome_infernal",
+   "nombre": "Infernal",
+   "costo": 1,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_metals",
+    "mineral_adamantine"
+   ]
+  },
+  {
+   "id": "biome_candy",
+   "nombre": "Caramelo",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_mushroom",
+   "nombre": "Hongos",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_silver",
+    "mineral_stone",
+    "mineral_metals",
+    "mineral_gems"
+   ]
+  },
+  {
+   "id": "biome_wasteland",
+   "nombre": "Yermo",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_birch",
+   "nombre": "Abedul",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_maple",
+   "nombre": "Arce",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_rocklands",
+   "nombre": "Rocas",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals",
+    "mineral_gems"
+   ]
+  },
+  {
+   "id": "biome_garlic",
+   "nombre": "Ajo",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_flower",
+   "nombre": "Flores",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals"
+   ]
+  },
+  {
+   "id": "biome_celestial",
+   "nombre": "Celestial",
+   "costo": 1,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals",
+    "mineral_mythril"
+   ]
+  },
+  {
+   "id": "biome_clover",
+   "nombre": "Trébol",
+   "costo": 0,
+   "paso": 1,
+   "comida": null,
+   "minerales_naturales": [
+    "mineral_stone",
+    "mineral_metals",
+    "mineral_gems"
+   ]
+  }
+ ],
+ "compatibilidad": {
+  "biomas_seguros": [
+   "biome_grass",
+   "biome_savanna",
+   "biome_jungle",
+   "biome_lemon",
+   "biome_crystal",
+   "biome_enchanted",
+   "biome_candy",
+   "biome_mushroom",
+   "biome_birch",
+   "biome_maple",
+   "biome_rocklands",
+   "biome_garlic",
+   "biome_flower",
+   "biome_celestial",
+   "biome_clover"
+  ],
+  "excepciones": {
+   "civ_bear": [
+    "biome_permafrost"
+   ],
+   "civ_scorpion": [
+    "biome_desert"
+   ],
+   "civ_penguin": [
+    "biome_permafrost"
+   ],
+   "civ_turtle": [
+    "biome_swamp"
+   ],
+   "civ_crocodile": [
+    "biome_swamp"
+   ],
+   "civ_snake": [
+    "biome_swamp"
+   ],
+   "civ_frog": [
+    "biome_swamp"
+   ],
+   "civ_acid_gentleman": [
+    "biome_wasteland"
+   ],
+   "civ_crystal_golem": [
+    "biome_permafrost",
+    "biome_infernal"
+   ],
+   "civ_seal": [
+    "biome_desert",
+    "biome_permafrost",
+    "biome_swamp",
+    "biome_corrupted",
+    "biome_infernal",
+    "biome_wasteland"
+   ]
+  },
+  "nota": "Una raza solo funda ciudad en los biomas seguros y en los de su lista de excepciones."
+ },
+ "minerales": [
+  {
+   "id": "mineral_stone",
+   "nombre": "Piedra",
+   "costo": 0,
+   "efecto_es": "cada depósito da 3 de piedra"
+  },
+  {
+   "id": "mineral_gems",
+   "nombre": "Gemas",
+   "costo": 0,
+   "efecto_es": "cada depósito da 1 gema y 1 de piedra (sin equipo asociado)"
+  },
+  {
+   "id": "mineral_metals",
+   "nombre": "Metales comunes",
+   "costo": 1,
+   "efecto_es": "cada depósito da 2 metales comunes y 1 de piedra (hierro, bronce, acero: 3 a 4 por pieza de equipo)"
+  },
+  {
+   "id": "mineral_gold",
+   "nombre": "Oro",
+   "costo": 1,
+   "efecto_es": "cada depósito da 20 de oro y 20 de piedra"
+  },
+  {
+   "id": "mineral_silver",
+   "nombre": "Plata",
+   "costo": 2,
+   "efecto_es": "cada depósito da 1 de plata (1 pieza de equipo: armadura 5, arma 5)"
+  },
+  {
+   "id": "mineral_bones",
+   "nombre": "Huesos",
+   "costo": 2,
+   "efecto_es": "cada depósito da 3 de huesos (anillos y amuletos de crítico +2 %)"
+  },
+  {
+   "id": "mineral_mythril",
+   "nombre": "Mythril",
+   "costo": 3,
+   "efecto_es": "cada depósito da 1 de mythril (1 pieza de equipo: armadura 8, arma 8)"
+  },
+  {
+   "id": "mineral_adamantine",
+   "nombre": "Adamantino",
+   "costo": 4,
+   "efecto_es": "cada depósito da 1 de adamantino (1 pieza de equipo: armadura 10, arma 10, +15 % crítico)"
+  }
+ ],
+ "slots": [
+  {
+   "id": "cognitivo",
+   "etapa": 2,
+   "nombre": "Cognitivo",
+   "descripcion": "Dones de la subespecie (talentos)."
+  },
+  {
+   "id": "mente",
+   "etapa": 2,
+   "nombre": "Mente",
+   "descripcion": "Rasgos de mente del clan, de la subespecie o del idioma."
+  },
+  {
+   "id": "espiritu",
+   "etapa": 2,
+   "nombre": "Espíritu",
+   "descripcion": "Rasgos de espíritu del idioma o del clan, o la religión."
+  },
+  {
+   "id": "fisico",
+   "etapa": 2,
+   "nombre": "Físico",
+   "descripcion": "Rasgos de cuerpo del clan o de la subespecie."
+  },
+  {
+   "id": "apariencia",
+   "etapa": 2,
+   "nombre": "Apariencia",
+   "descripcion": "Fenotipo: color de piel o pelaje de la subespecie."
+  },
+  {
+   "id": "arquitectura",
+   "etapa": 3,
+   "nombre": "Arquitectura",
+   "descripcion": "Cultura: arquitectura."
+  },
+  {
+   "id": "plano",
+   "etapa": 3,
+   "nombre": "Plano de ciudad",
+   "descripcion": "Cultura: cómo se ordenan los edificios."
+  },
+  {
+   "id": "edificios",
+   "etapa": 3,
+   "nombre": "Edificios",
+   "descripcion": "Cultura: gustos de construcción y límite de viviendas."
+  },
+  {
+   "id": "politica",
+   "etapa": 3,
+   "nombre": "Política del reino",
+   "descripcion": "Cultura: expansión, ejército, armas y aprendizaje."
+  },
+  {
+   "id": "sucesion",
+   "etapa": 3,
+   "nombre": "Sucesión",
+   "descripcion": "Cultura: quién hereda el trono."
+  },
+  {
+   "id": "impuestos",
+   "etapa": 3,
+   "nombre": "Impuestos",
+   "descripcion": "Rasgos del reino: tasas de impuesto y tributo."
+  }
+ ],
+ "rasgos": [
+  {
+   "id": "gift_of_water",
+   "tipo": "subespecie",
+   "slot": "cognitivo",
+   "nombre": "Don del agua",
+   "grupo": "talents",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Todos los individuos de tu subespecie pueden lanzar en combate un escudo-burbuja propio (20 % por acción de combate, 5 de maná). Medido en 24 duelos pareados (E6): ganó 14 de 24 frente a 12 de 24 sin rasgo: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver arena de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "gift_of_life",
+   "tipo": "subespecie",
+   "slot": "cognitivo",
+   "nombre": "Don de la vida",
+   "grupo": "talents",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Todos los individuos pueden lanzar hechizos que crean hierba y plantas (no son de combate). Medido en 24 duelos pareados (E6): ganó 15 de 24 frente a 12 de 24 sin rasgo: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver arena de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "gift_of_harmony",
+   "tipo": "subespecie",
+   "slot": "cognitivo",
+   "nombre": "Don de la armonía",
+   "grupo": "talents",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Todos los individuos pueden lanzar hechizos de curación (curar, y lluvia de sangre al bajar su salud del 90 %). Medido en 12 duelos pareados (E6): ganó 5 de 12 frente a 12 de 24 sin rasgo: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver arena de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "gift_of_air",
+   "tipo": "subespecie",
+   "slot": "cognitivo",
+   "nombre": "Don del aire",
+   "grupo": "talents",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Todos los individuos pueden lanzar en combate un tornado sobre el enemigo (10 % por acción de combate, 10 de maná). Medido en 24 duelos pareados (E6): ganó 14 de 24 frente a 12 de 24 sin rasgo: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver arena de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "silver_tongues",
+   "tipo": "clan",
+   "slot": "mente",
+   "nombre": "Lenguas de plata",
+   "grupo": "mind",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Diplomacia +5 y opinión +20 de otros reinos hacia los miembros (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+5 / +20"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "iron_will",
+   "tipo": "clan",
+   "slot": "mente",
+   "nombre": "Voluntad de hierro",
+   "grupo": "mind",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Inteligencia +5 (3 → 8) e inmunidad a los efectos que afectan a la mente (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+5"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "combat_instincts",
+   "tipo": "clan",
+   "slot": "mente",
+   "nombre": "Instintos de combate",
+   "grupo": "mind",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 5,
+   "efecto_es": "Guerra +10 (5 → 15): si el líder es del clan puede conducir ejércitos más grandes (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+10"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "hyper_intelligence",
+   "tipo": "subespecie",
+   "slot": "mente",
+   "nombre": "Hiperinteligencia",
+   "grupo": "mind",
+   "rareza": "R0_Normal",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 3,
+   "efecto_es": "Inteligencia +30 (medido 7 → 37) en TODOS los individuos de tu subespecie. Valor muy grande.",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+30 (medido 7→37)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "telepathic_link",
+   "tipo": "subespecie",
+   "slot": "mente",
+   "nombre": "Vínculo telepático",
+   "grupo": "mind",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Se comunican con otros a larga distancia y socializan con aliados lejanos. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "cualitativo"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "inquisitive_nature",
+   "tipo": "subespecie",
+   "slot": "mente",
+   "nombre": "Naturaleza inquisitiva",
+   "grupo": "mind",
+   "rareza": "R0_Normal",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Muy curiosos: exploran y se acercan a cosas desconocidas. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "cualitativo"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "fast_builders",
+   "tipo": "subespecie",
+   "slot": "mente",
+   "nombre": "Constructores rápidos",
+   "grupo": "mind",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 4,
+   "efecto_es": "Velocidad de construcción +2 en todos los individuos (valor leído del juego; no se midió cuánto acelera las ciudades).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+2 (stats_meta construction_speed)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "masters_of_propaganda",
+   "tipo": "clan",
+   "slot": "mente",
+   "nombre": "Maestros de la propaganda",
+   "grupo": "mind",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Lealtad de las ciudades +20 (valor del juego, no medido): menos rebeliones, y las rebeliones están apagadas en esta partida (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "+20"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "strict_spelling",
+   "tipo": "idioma",
+   "slot": "mente",
+   "nombre": "Ortografía estricta",
+   "grupo": "knowledge",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Idioma: guerra +10 (5 → 15) a quienes lo hablan: más tamaño del ejército que puede liderar un jefe.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+10 warfare (medido 5→15)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "enlightening_script",
+   "tipo": "idioma",
+   "slot": "mente",
+   "nombre": "Escritura iluminadora",
+   "grupo": "knowledge",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Idioma: inteligencia +10 (3 → 13) a quienes lo hablan.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+10 (medido 3→13)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "elegant_words",
+   "tipo": "idioma",
+   "slot": "espiritu",
+   "nombre": "Palabras elegantes",
+   "grupo": "spirit",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Idioma: descendencia máxima +4 (5 → 9) de quienes lo hablan: más hijos por embarazo.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+4 (medido 5→9)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "gods_chosen",
+   "tipo": "clan",
+   "slot": "espiritu",
+   "nombre": "Hijos de lo divino",
+   "grupo": "spirit",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 4,
+   "efecto_es": "Armadura +20, administración +10 y diplomacia +5 para los miembros. Valor muy grande (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "acotar",
+   "e3": {
+    "recomendacion": "acotar",
+    "confianza": "alta",
+    "magnitud": "+10/+5/+20"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "deathbound",
+   "tipo": "clan",
+   "slot": "espiritu",
+   "nombre": "Ligados a la muerte",
+   "grupo": "spirit",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Guerra +5 (5 → 10); traicionar al jefe del clan da muerte instantánea. Opuesto a blood_pact (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+5"
+   },
+   "opuestos": [
+    "blood_pact"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "blood_pact",
+   "tipo": "clan",
+   "slot": "espiritu",
+   "nombre": "Pacto de sangre",
+   "grupo": "spirit",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Guerra +1; traicionar al jefe del clan significa exilio permanente. Opuesto a deathbound (solo afecta a los miembros del clan del rey: 3 a 20 individuos). Efecto en la partida no medido.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "alta",
+    "magnitud": "+1"
+   },
+   "opuestos": [
+    "deathbound"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "magic_blood",
+   "tipo": "clan",
+   "slot": "espiritu",
+   "nombre": "Sangre mágica",
+   "grupo": "spirit",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 4,
+   "efecto_es": "Maná ×3 para los miembros (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "×3"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "spawn_vegetation",
+   "tipo": "religion",
+   "slot": "espiritu",
+   "nombre": "Conjurar vegetación",
+   "grupo": "creation",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Religión: los seguidores pueden lanzar «Crear vegetación» fuera de combate (gasta maná). Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver mediciones de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "cast_shield",
+   "tipo": "religion",
+   "slot": "espiritu",
+   "nombre": "Escudo burbuja",
+   "grupo": "protection",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Religión: los seguidores pueden lanzar «Escudo» (burbuja protectora temporal) en combate, gastando maná y con cierta probabilidad. En la arena ganó 2 de 3: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver mediciones de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "cast_cure",
+   "tipo": "religion",
+   "slot": "espiritu",
+   "nombre": "Conjurar cura",
+   "grupo": "restoration",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Religión: los seguidores pueden lanzar «Curar» fuera de combate (quita enfermedades y maldiciones). En la arena ganó 0 de 3: no se distinguió del azar.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver mediciones de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "cast_grass_seeds",
+   "tipo": "religion",
+   "slot": "espiritu",
+   "nombre": "Crear hierba",
+   "grupo": "creation",
+   "rareza": "R2_Epic",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Religión: los seguidores pueden lanzar «Semillas de hierba» fuera de combate (cubre de hierba la tierra estéril). Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "ver mediciones de guerra"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "stonefists",
+   "tipo": "clan",
+   "slot": "fisico",
+   "nombre": "Puños de piedra",
+   "grupo": "body",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 4,
+   "efecto_es": "Daño +30 a los miembros (≈ ×3,6 en el rey). Valor muy grande (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "acotar",
+   "e3": {
+    "recomendacion": "acotar",
+    "confianza": "alta",
+    "magnitud": "+30 (≈×3,6 en el rey)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "gaia_shield",
+   "tipo": "clan",
+   "slot": "fisico",
+   "nombre": "Escudo de Gaia",
+   "grupo": "body",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Armadura +10 y salud +10 % para los miembros (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+10 arm, ×1,1 salud"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "bonebreakers",
+   "tipo": "clan",
+   "slot": "fisico",
+   "nombre": "Rompehuesos",
+   "grupo": "body",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 5,
+   "efecto_es": "Daño +5 (×1,4 en el rey); los golpes pueden paralizar al oponente (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+5"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "flesh_weavers",
+   "tipo": "clan",
+   "slot": "fisico",
+   "nombre": "Tejecarnes",
+   "grupo": "body",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Salud +20 % y regeneración para los miembros (solo afecta a los miembros del clan del rey: 3 a 20 individuos).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "×1,2"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "blood_of_sea",
+   "tipo": "clan",
+   "slot": "fisico",
+   "nombre": "Sangre del mar",
+   "grupo": "body",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Aguante (stamina) +20: nadan rápido y no se cansan (solo afecta a los miembros del clan del rey: 3 a 20 individuos). Efecto en la partida no medido.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "alta",
+    "magnitud": "+20"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "long_lifespan",
+   "tipo": "subespecie",
+   "slot": "fisico",
+   "nombre": "Larga vida",
+   "grupo": "body",
+   "rareza": "R0_Normal",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 2,
+   "efecto_es": "Vida +100 años (medido 70 → 170) en todos los individuos de tu subespecie.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+100 (medido 70→170)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "high_fecundity",
+   "tipo": "subespecie",
+   "slot": "fisico",
+   "nombre": "Alta fecundidad",
+   "grupo": "body",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 6,
+   "efecto_es": "Natalidad +5 (medido 3 → 8) en todos los individuos: más bebés por embarazo. Valor muy grande.",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "acotar",
+   "e3": {
+    "recomendacion": "acotar",
+    "confianza": "alta",
+    "magnitud": "+5"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "exoskeleton",
+   "tipo": "subespecie",
+   "slot": "fisico",
+   "nombre": "Exoesqueleto",
+   "grupo": "body",
+   "rareza": "R0_Normal",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 2,
+   "efecto_es": "Armadura +10 (medido 1 → 11) en todos los individuos de tu subespecie.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+10 (medido 1→11)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "enhanced_strength",
+   "tipo": "subespecie",
+   "slot": "fisico",
+   "nombre": "Fuerza mejorada",
+   "grupo": "body",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 6,
+   "efecto_es": "Daño +50 (≈ ×3) en todos los individuos. En 12 duelos pareados de guerra (E6) ganó 11 frente a 12 de 24 sin rasgo (cuota de bajas causadas 0,76): es el único rasgo medido con efecto de combate claro. Valor muy grande.",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "acotar",
+   "e3": {
+    "recomendacion": "acotar",
+    "confianza": "alta",
+    "magnitud": "+50 (≈×3)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "accelerated_healing",
+   "tipo": "subespecie",
+   "slot": "fisico",
+   "nombre": "Curación acelerada",
+   "grupo": "body",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Se curan solos de heridas y enfermedades curables con el tiempo. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "cualitativo"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_toxic_green",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel verde tóxico",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_skin_blue",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel azul",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_skin_purple",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel violeta",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_skin_pink",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel rosada",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_magical",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel mágica",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "phenotype_skin_infernal",
+   "tipo": "subespecie",
+   "slot": "apariencia",
+   "nombre": "Piel infernal",
+   "grupo": "phenotypes",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Solo cambia el color de piel o pelaje (3 corridas con fenotipo: sin diferencia).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "roads",
+   "tipo": "cultura",
+   "slot": "arquitectura",
+   "nombre": "Caminos",
+   "grupo": "architecture",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: la ciudad construye caminos entre edificios, que aceleran el paso de las unidades dentro de la ciudad. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "caminos sí/no; los caminos aceleran el paso de las unidades por la ciudad"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_rings",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Anillos",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_cross",
+    "city_layout_pebbles",
+    "city_layout_stone_garden",
+    "city_layout_diamond",
+    "city_layout_parallels"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_parallels",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Paralelos",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_cross",
+    "city_layout_pebbles",
+    "city_layout_stone_garden",
+    "city_layout_diamond",
+    "city_layout_rings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_cross",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Cruz",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_pebbles",
+    "city_layout_stone_garden",
+    "city_layout_diamond",
+    "city_layout_parallels",
+    "city_layout_rings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_stone_garden",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Jardín de piedras",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_cross",
+    "city_layout_pebbles",
+    "city_layout_diamond",
+    "city_layout_parallels",
+    "city_layout_rings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_diamond",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Diamante",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_cross",
+    "city_layout_pebbles",
+    "city_layout_stone_garden",
+    "city_layout_parallels",
+    "city_layout_rings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "city_layout_pebbles",
+   "tipo": "cultura",
+   "slot": "plano",
+   "nombre": "Plano: Cuadrícula compacta",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: fija en qué zonas de 8×8 casillas se pueden levantar edificios (la forma de la ciudad). En 22 corridas de 30 años ningún plano se distinguió del ruido en población o edificios.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [
+    "city_layout_cross",
+    "city_layout_stone_garden",
+    "city_layout_diamond",
+    "city_layout_parallels",
+    "city_layout_rings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "tower_lovers",
+   "tipo": "cultura",
+   "slot": "edificios",
+   "nombre": "Amantes de las torres",
+   "grupo": "buildings",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: +4 al límite de torres de vigilancia de cada ciudad. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "+4 al límite"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "statue_lovers",
+   "tipo": "cultura",
+   "slot": "edificios",
+   "nombre": "Amantes de las estatuas",
+   "grupo": "buildings",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: +4 al límite de estatuas de cada ciudad (decoración).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "+4 al límite"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "buildings_spread",
+   "tipo": "cultura",
+   "slot": "edificios",
+   "nombre": "Edificios dispersos",
+   "grupo": "town_plan",
+   "rareza": "R1_Rare",
+   "clase": "cosmetico",
+   "etiqueta": "sabor",
+   "intensidad": 0,
+   "costo": 0,
+   "efecto_es": "Cultura: sin plan urbano, los edificios se levantan dispersos (equivale al comportamiento normal).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "estético / equivale al comportamiento por defecto"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "dense_dwellings",
+   "tipo": "cultura",
+   "slot": "edificios",
+   "nombre": "Viviendas densas",
+   "grupo": "harmony",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Cultura: el límite de casas por zona se multiplica por ×2 (medido 9 → 18). El límite de casas no es lo que frena la población en 100 años. Opuesto a hive_society.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "límite de casas ×2 (medido 9→18)"
+   },
+   "opuestos": [
+    "hive_society"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "hive_society",
+   "tipo": "cultura",
+   "slot": "edificios",
+   "nombre": "Sociedad de colmena",
+   "grupo": "harmony",
+   "rareza": "R3_Legendary",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 2,
+   "costo": 6,
+   "efecto_es": "Cultura: el límite de casas por zona se multiplica por ×3 (medido 9 → 27): la mayor palanca de población del catálogo (aunque el límite de casas no frena la población en 100 años). Opuesto a dense_dwellings.",
+   "fuerte": true,
+   "confianza": "E3: alta",
+   "recomendacion": "acotar",
+   "e3": {
+    "recomendacion": "acotar",
+    "confianza": "alta",
+    "magnitud": "límite de casas ×3 (medido 9→27)"
+   },
+   "opuestos": [
+    "dense_dwellings"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "expansionists",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Expansionistas",
+   "grupo": "kingdom",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: los ciudadanos del borde de la ciudad reclaman zonas vecinas con más frecuencia. Efecto en la partida no medido (en 50 años sin efecto claro, n=2).",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "ver mediciones"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "tiny_legends",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Pequeñas leyendas",
+   "grupo": "kingdom",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: los niños empiezan a trabajar desde pequeños. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "más trabajadores pronto"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "conscription_male_only",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Conscripción masculina",
+   "grupo": "kingdom",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: solo los varones adultos pueden ser reclutados como soldados; reduce a casi la mitad el grupo de posibles reclutas. Efecto en la guerra no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "reduce a ~la mitad el reservorio de reclutas"
+   },
+   "opuestos": [
+    "conscription_female_only"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "conscription_female_only",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Conscripción femenina",
+   "grupo": "kingdom",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: solo las mujeres adultas pueden ser reclutadas como soldados; reduce a casi la mitad el grupo de posibles reclutas. Efecto en la guerra no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "reduce a ~la mitad el reservorio de reclutas"
+   },
+   "opuestos": [
+    "conscription_male_only"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "weaponsmith_mastery",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Maestría armera",
+   "grupo": "warfare",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura: +5 a la habilidad de fabricación de los herreros: más probabilidad de forjar armas legendarias. Efecto en la guerra no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "+5 habilidad de fabricación"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "fast_learners",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Aprendices rápidos",
+   "grupo": "knowledge",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Cultura: la experiencia que ganan las unidades se multiplica por ×2 (medido 10 → 20).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "experiencia ×2 (medido 10→20)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "training_potential",
+   "tipo": "cultura",
+   "slot": "politica",
+   "nombre": "Potencial de entrenamiento",
+   "grupo": "knowledge",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 1,
+   "costo": 3,
+   "efecto_es": "Cultura: al subir de nivel una unidad avanza un nivel extra (medido: 1 → 3 niveles tras dos subidas).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "+1 nivel extra por subida (medido 1→3 niveles tras dos subidas)"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "warriors_ascension",
+   "tipo": "cultura",
+   "slot": "sucesion",
+   "nombre": "Ascenso de guerreros",
+   "grupo": "succession",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura, sucesión: hereda el trono el mejor guerrero (mayor guerra). Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "determinista por stat"
+   },
+   "opuestos": [
+    "diplomatic_ascension",
+    "fames_crown",
+    "golden_rule"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "diplomatic_ascension",
+   "tipo": "cultura",
+   "slot": "sucesion",
+   "nombre": "Ascenso diplomático",
+   "grupo": "succession",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura, sucesión: hereda el trono el más diplomático. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "determinista por stat"
+   },
+   "opuestos": [
+    "warriors_ascension",
+    "fames_crown",
+    "golden_rule"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "golden_rule",
+   "tipo": "cultura",
+   "slot": "sucesion",
+   "nombre": "Regla de oro",
+   "grupo": "succession",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura, sucesión: hereda el trono el heredero más rico. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "determinista por dinero"
+   },
+   "opuestos": [
+    "warriors_ascension",
+    "fames_crown",
+    "diplomatic_ascension"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "fames_crown",
+   "tipo": "cultura",
+   "slot": "sucesion",
+   "nombre": "Corona de la fama",
+   "grupo": "succession",
+   "rareza": "R1_Rare",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura, sucesión: hereda el trono el heredero más renombrado. Efecto en la partida no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer_sabor",
+   "e3": {
+    "recomendacion": "ofrecer_sabor",
+    "confianza": "media",
+    "magnitud": "determinista por renombre"
+   },
+   "opuestos": [
+    "warriors_ascension",
+    "diplomatic_ascension",
+    "golden_rule"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "unbroken_chain",
+   "tipo": "cultura",
+   "slot": "sucesion",
+   "nombre": "La cadena intacta",
+   "grupo": "succession",
+   "rareza": "R3_Legendary",
+   "clase": "conducta",
+   "etiqueta": "conducta (efecto no medido)",
+   "intensidad": 0,
+   "costo": 1,
+   "efecto_es": "Cultura, sucesión: si no quedan herederos se nombra un nuevo clan real y el reino no se parte (la ley de rebeliones está apagada en esta partida). Efecto no medido.",
+   "confianza": "E3: media",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "media",
+    "magnitud": "evita escisión"
+   },
+   "opuestos": [],
+   "ofrecible": true
+  },
+  {
+   "id": "tax_rate_local_low",
+   "tipo": "reino",
+   "slot": "impuestos",
+   "nombre": "Impuesto local bajo",
+   "grupo": "local_tax",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Reino: tasa de impuesto local 0,5 → 0,2 (medido): ciudadanos más felices, menos oro.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "0,5 → 0,2 (medido)"
+   },
+   "opuestos": [
+    "tax_rate_local_high"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "tax_rate_local_high",
+   "tipo": "reino",
+   "slot": "impuestos",
+   "nombre": "Impuesto local alto",
+   "grupo": "local_tax",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Reino: tasa de impuesto local 0,5 → 0,7 (medido): más oro de las ciudades, ciudadanos menos felices.",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "0,5 → 0,7 (medido)"
+   },
+   "opuestos": [
+    "tax_rate_local_low"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "tax_rate_tribute_low",
+   "tipo": "reino",
+   "slot": "impuestos",
+   "nombre": "Tributo bajo",
+   "grupo": "tribute",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Reino: tasa de tributo a la corona 0,5 → 0,2 (medido).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "0,5 → 0,2 (medido)"
+   },
+   "opuestos": [
+    "tax_rate_tribute_high"
+   ],
+   "ofrecible": true
+  },
+  {
+   "id": "tax_rate_tribute_high",
+   "tipo": "reino",
+   "slot": "impuestos",
+   "nombre": "Tributo alto",
+   "grupo": "tribute",
+   "rareza": "R1_Rare",
+   "clase": "medido",
+   "etiqueta": "efecto medido",
+   "intensidad": 0,
+   "costo": 2,
+   "efecto_es": "Reino: tasa de tributo a la corona 0,5 → 0,7 (medido).",
+   "confianza": "E3: alta",
+   "recomendacion": "ofrecer",
+   "e3": {
+    "recomendacion": "ofrecer",
+    "confianza": "alta",
+    "magnitud": "0,5 → 0,7 (medido)"
+   },
+   "opuestos": [
+    "tax_rate_tribute_low"
+   ],
+   "ofrecible": true
+  }
+ ],
+ "excluidos": [
+  {
+   "id": "blood_of_eons",
+   "motivo": "clan: vida +1 000 000 000 años (valor absurdo)"
+  },
+  {
+   "id": "eternal_text",
+   "motivo": "idioma: vida +500 años (medido 123 → 623; valor absurdo)"
+  },
+  {
+   "id": "endurance_of_titans",
+   "motivo": "clan: aguante ×3 (E2: ×4; desproporcionado)"
+  },
+  {
+   "id": "foolish_glyphs",
+   "motivo": "idioma: inteligencia −5 (rasgo trampa)"
+  },
+  {
+   "id": "shattered_crown",
+   "motivo": "cultura: parte el reino entre herederos"
+  },
+  {
+   "id": "unmoving",
+   "motivo": "subespecie: población −90 % a los 30 años (replicado; letal)"
+  },
+  {
+   "id": "population_minimal",
+   "motivo": "subespecie: tope de 50 habitantes"
+  },
+  {
+   "id": "population_small",
+   "motivo": "subespecie: tope de 100 habitantes (medido 99 a los 100 años)"
+  },
+  {
+   "id": "population_moderate",
+   "motivo": "subespecie: tope de 500 habitantes"
+  },
+  {
+   "id": "population_large",
+   "motivo": "subespecie: tope de 1000 habitantes"
+  },
+  {
+   "id": "population_expansive",
+   "motivo": "subespecie: tope de 3000 habitantes"
+  },
+  {
+   "id": "rapid_aging",
+   "motivo": "subespecie: reduce la vida"
+  },
+  {
+   "id": "hydrophobia",
+   "motivo": "subespecie: daño por lluvia"
+  },
+  {
+   "id": "genetic_psychosis",
+   "motivo": "subespecie: los ancianos enloquecen (0 de 2 victorias en la arena)"
+  },
+  {
+   "id": "voracious",
+   "motivo": "subespecie: metabolismo +10"
+  },
+  {
+   "id": "slow_builders",
+   "motivo": "subespecie: velocidad de construcción −1"
+  },
+  {
+   "id": "prolonged_rest",
+   "motivo": "subespecie: reduce el trabajo"
+  },
+  {
+   "id": "scribble",
+   "motivo": "idioma: ×0,5 (rasgo trampa)"
+  },
+  {
+   "id": "diet_cannibalism",
+   "motivo": "subespecie: dieta autodestructiva"
+  },
+  {
+   "id": "solitude_seekers",
+   "motivo": "cultura: límite de casas ÷3 (medido 9 → 3)"
+  },
+  {
+   "id": "patriarchy",
+   "motivo": "cultura: lealtad −50 si el rey es mujer (trampa a ciegas)"
+  },
+  {
+   "id": "matriarchy",
+   "motivo": "cultura: lealtad −50 si el rey es varón (trampa a ciegas)"
+  },
+  {
+   "id": "hovering",
+   "motivo": "subespecie: flotan; cruzar el muro NO se verificó"
+  },
+  {
+   "id": "bioproduct_gold",
+   "motivo": "subespecie: oro ×4 a ×14 en 30 años (replicado; valor absurdo)"
+  },
+  {
+   "id": "repeated_sentences",
+   "motivo": "idioma: leer puede clonar al lector (población gratis; no medido)"
+  },
+  {
+   "id": "death_grow_mythril",
+   "motivo": "subespecie: cada muerte puede dejar un depósito de mithril (no medido)"
+  },
+  {
+   "id": "dreamweavers",
+   "motivo": "subespecie: convierten cultura, idioma o religión a distancia (no medido)"
+  },
+  {
+   "id": "join_or_die",
+   "motivo": "cultura: los enemigos casi muertos cambian de bando"
+  },
+  {
+   "id": "gift_of_fire",
+   "motivo": "subespecie: don de combate (cast_fire). Medido en E6 (24 duelos pareados): ganó 13 de 24 frente a 12 de 24 sin rasgo; sin efecto detectable. Fuera hasta que el usuario decida (propuesta: costo 1, conducta)"
+  },
+  {
+   "id": "gift_of_thunder",
+   "motivo": "subespecie: don de combate (rayo). Medido en E6 (24 duelos pareados): ganó 13 de 24 frente a 12 de 24 sin rasgo; sin efecto detectable. Fuera hasta que el usuario decida (propuesta: costo 1, conducta)"
+  },
+  {
+   "id": "gift_of_death",
+   "motivo": "subespecie: don de combate. Medido en E6: ganó 10 de 12 duelos pareados (12 de 24 sin rasgo), pero porque invoca esqueletos que el juego cuenta como población y soldados del reino (a los 30 años 21 de 50 unidades; +40 % de población, que pesa el 40 % del puntaje): infla el puntaje. Fuera"
+  },
+  {
+   "id": "gift_of_void",
+   "motivo": "subespecie: don de combate (teletransporte). Medido en E6 (12 duelos pareados): ganó 6 de 12 frente a 12 de 24 sin rasgo; sin efecto detectable. Fuera hasta que el usuario decida (propuesta: costo 1, conducta)"
+  },
+  {
+   "id": "gift_of_blood",
+   "motivo": "subespecie: don de combate (lluvia de sangre). Medido en E6 (24 duelos pareados): ganó 13 de 24 frente a 12 de 24 sin rasgo; sin efecto detectable. Fuera hasta que el usuario decida (propuesta: costo 1, conducta)"
+  },
+  {
+   "id": "zeal_of_conquest",
+   "motivo": "religión: promete +10 de guerra pero ningún método del juego lee las estadísticas de una religión (inerte; E3)"
+  },
+  {
+   "id": "path_of_unity",
+   "motivo": "religión: promete +10 de diplomacia; inerte (E3)"
+  },
+  {
+   "id": "minds_awakening",
+   "motivo": "religión: promete +10 de inteligencia; inerte (E3)"
+  },
+  {
+   "id": "hand_of_order",
+   "motivo": "religión: promete +10 de administración; inerte (E3)"
+  },
+  {
+   "id": "cast_curse",
+   "motivo": "religión: hechizo de combate (maldición); fuera hasta medirlo, como los dones de combate"
+  },
+  {
+   "id": "cast_blood_rain",
+   "motivo": "religión: hechizo de combate (lluvia de sangre); fuera hasta medirlo, como los dones de combate"
+  }
+ ]
+}

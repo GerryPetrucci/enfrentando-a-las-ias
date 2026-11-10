@@ -343,7 +343,7 @@ describe('puente C# (worldbox-puente)', { skip: OMITIR, timeout: 240000 }, () =>
       assert.deepEqual(Object.keys(j.juego), ['nombre', 'version', 'build_steam', 'unity']);
       assert.equal(j.origen, 'simulado');
       assert.equal(j.estado, 'listo');
-      assert.deepEqual(j.capacidades, { reiniciar: true, semilla: true, avanzar: true, terminal: true, multi_faccion: true, camara: false, interfaz: false }); // V1: el simulado no controla camara ni interfaz
+      assert.deepEqual(j.capacidades, { reiniciar: true, semilla: true, avanzar: true, terminal: true, multi_faccion: true, camara: false, interfaz: false, era: true, era_velocidad: true, era_mantener: true }); // V1: el simulado no controla camara ni interfaz; E2: si anuncia el formato era
       assert.deepEqual(j.limites, { max_segundos_avance: 600, max_acciones_por_turno: 10 });
       assert.deepEqual(j.acciones.map(a => a.nombre), ['esperar', 'crear_unidad', 'fundar_ciudad', 'dormir', 'atacar']);
       for (const a of j.acciones) {
@@ -873,6 +873,124 @@ describe('puente C# (worldbox-puente)', { skip: OMITIR, timeout: 240000 }, () =>
       assert.equal(ocupado.status, 2);
       assert.match(ocupado.stderr, /No se pudo abrir 127\.0\.0\.1/);
       assert.equal((await GET(A, '/v1/info')).estado, 200, 'el servidor original no se vio afectado');
+    });
+  });
+
+  // ------------------------------------------------------------------------------------------
+  describe('formato era (E2): /v1/era/* contra el anfitrion C#', () => {
+    it('requiere token y el catalogo se pide por tipo', async () => {
+      error(await GET(A, '/v1/era/catalogo', { token: null }), 401, 'no_autorizado');
+      const resumen = await GET(A, '/v1/era/catalogo');
+      assert.equal(resumen.estado, 200, resumen.texto);
+      assert.equal(resumen.json.version, 1);
+      assert.deepEqual(Object.keys(resumen.json.rasgos).sort(), ['clan', 'cultura', 'idioma', 'reino', 'religion', 'subespecie']);
+      const clan = await GET(A, '/v1/era/catalogo?tipo=clan');
+      assert.deepEqual(clan.json.rasgos.map(r => r.id), ['stonefists', 'iron_will', 'magic_blood', 'cursed_blood']);
+      assert.equal(clan.json.rasgos.find(r => r.id === 'cursed_blood').ofrecible, false);
+      error(await GET(A, '/v1/era/catalogo?tipo=planeta'), 400, 'solicitud_invalida');
+      error(await GET(A, '/v1/era/catalogo?tipo=CLAN'), 400, 'solicitud_invalida');
+    });
+
+    it('rasgos: rechaza ids desconocidos y no ofrecidos sin aplicar nada (atomico) y respeta el tope', async () => {
+      await reiniciar(A);
+      let r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['stonefists', 'no_existe'] });
+      assert.equal(r.estado, 200, r.texto);
+      assert.equal(r.json.resultado, 'rechazada');
+      assert.deepEqual(r.json.aplicados, []);
+      assert.deepEqual(r.json.rechazados.map(x => x.codigo), ['rasgo_desconocido']);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['cursed_blood'] });
+      assert.deepEqual(r.json.rechazados.map(x => x.codigo), ['rasgo_no_ofrecido']);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['stonefists', 'no_existe'], parcial: true });
+      assert.equal(r.json.resultado, 'parcial');
+      assert.deepEqual(r.json.aplicados, ['stonefists']);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['iron_will', 'magic_blood'] });
+      assert.equal(r.json.resultado, 'ejecutada');
+      assert.deepEqual(r.json.rasgos_actuales.sort(), ['iron_will', 'magic_blood', 'stonefists']);
+      assert.equal(r.json.tope, 3);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', agregar: ['elegant_words'] });
+      assert.equal(r.json.resultado, 'ejecutada', 'el tope es por tipo y faccion');
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', quitar: ['stonefists'] });
+      assert.deepEqual(r.json.quitados, ['stonefists']);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', agregar: ['foolish_glyphs', 'enlightening_script'] });
+      assert.deepEqual(r.json.rechazados.map(x => x.codigo), ['rasgo_opuesto']);
+    });
+
+    it('rasgos: forma invalida es 400 y faccion inexistente tambien', async () => {
+      await reiniciar(A);
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: 'stonefists' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'zz', tipo: 'clan', agregar: ['stonefists'] }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'planeta', agregar: ['x'] }), 400, 'solicitud_invalida');
+    });
+
+    it('rasgos: una solicitud repetida (mismo id_solicitud) no se ejecuta dos veces', async () => {
+      await reiniciar(A);
+      const cuerpo = { protocolo: 1, id_solicitud: 'era-rep-1', faccion: 'a', tipo: 'clan', agregar: ['magic_blood'] };
+      const a = await pedir(A, 'POST', '/v1/era/rasgos', { cuerpo });
+      const b = await pedir(A, 'POST', '/v1/era/rasgos', { cuerpo });
+      assert.equal(b.cab.get('x-puente-idempotente'), 'repetida');
+      assert.deepEqual(a.json, b.json);
+      const c = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['magic_blood'] });
+      assert.deepEqual(c.json.rechazados.map(x => x.codigo), ['ya_presente'], 'el rasgo quedo una sola vez');
+    });
+
+    it('muro y estado: quitar el muro queda en la lista de eventos y el estado lleva el indice siguiente', async () => {
+      await reiniciar(A);
+      let e = await GET(A, '/v1/era/estado');
+      assert.equal(e.estado, 200, e.texto);
+      assert.equal(e.json.hay_era, true);
+      const n0 = e.json.siguiente_evento;
+      const m = await POST(A, '/v1/era/muro', { operacion: 'quitar' });
+      assert.equal(m.json.muro_puesto, false);
+      e = await GET(A, '/v1/era/estado?desde=' + n0);
+      assert.deepEqual(e.json.eventos.map(x => x.tipo), ['muro_quitado']);
+      error(await POST(A, '/v1/era/muro', { operacion: 'derribar' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/muro', { operacion: 'poner', ancho: 99 }), 400, 'solicitud_invalida');
+      error(await GET(A, '/v1/era/estado?desde=-3'), 400, 'solicitud_invalida');
+    });
+
+    it('minerales: valida mineral, faccion y cantidad', async () => {
+      await reiniciar(A);
+      const ok = await POST(A, '/v1/era/minerales', { faccion: 'a', mineral: 'mineral_gold', cantidad: 3, espejo: true });
+      assert.equal(ok.estado, 200, ok.texto);
+      assert.equal(ok.json.colocados, 3);
+      error(await POST(A, '/v1/era/minerales', { faccion: 'a', mineral: 'mineral_gold', cantidad: 0 }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/minerales', { faccion: 'a', mineral: 'oro', cantidad: 1 }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/minerales', { faccion: 'zz', mineral: 'mineral_gold', cantidad: 1 }), 400, 'solicitud_invalida');
+    });
+
+    it('mantener (E5): mantener/soltar por HTTP contra el anfitrion C#; el estado informa rasgos_mantenidos y el costo; la ruta antigua no cambia', async () => {
+      await reiniciar(A);
+      const info = await GET(A, '/v1/info');
+      assert.equal(info.json.capacidades.era_mantener, true);
+      let r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', agregar: ['elegant_words', 'powerful_words'], mantener: true });
+      assert.equal(r.estado, 200, r.texto);
+      assert.equal(r.json.resultado, 'ejecutada'); assert.equal(r.json.mantener, true); assert.deepEqual(r.json.pendientes, []); assert.deepEqual(r.json.aplicados.sort(), ['elegant_words', 'powerful_words']);
+      let e = await GET(A, '/v1/era/estado');
+      assert.equal(e.json.mantenimiento.deseados_activos, 2); assert.equal(e.json.mantenimiento.deseados_pendientes, 0);
+      assert.ok('ms_total' in e.json.mantenimiento && 'ms_medio' in e.json.mantenimiento && 'opuestos_quitados' in e.json.mantenimiento);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', soltar: ['elegant_words', 'no_estaba'] });
+      assert.equal(r.estado, 200, r.texto); assert.deepEqual(r.json.soltados, ['elegant_words']);
+      e = await GET(A, '/v1/era/estado');
+      assert.equal(e.json.mantenimiento.deseados_activos, 1);
+      r = await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'clan', agregar: ['stonefists'] });
+      assert.equal(r.json.mantener, undefined, 'sin mantener ni soltar, la respuesta es la de siempre');
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', agregar: ['elegant_words'], mantener: 'si' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/rasgos', { faccion: 'a', tipo: 'idioma', soltar: [7] }), 400, 'solicitud_invalida');
+    });
+
+    it('velocidad (E4): cambia entre avances, valida la forma y el valor, y la repeticion no se ejecuta dos veces', async () => {
+      await reiniciar(A);
+      const ok = await POST(A, '/v1/era/velocidad', { velocidad: 'x40', id_solicitud: 'vel-1' });
+      assert.equal(ok.estado, 200, ok.texto);
+      assert.equal(ok.json.velocidad, 'x40');
+      const repetida = await POST(A, '/v1/era/velocidad', { velocidad: 'x40', id_solicitud: 'vel-1' });
+      assert.equal(repetida.estado, 200); assert.deepEqual(repetida.json, ok.json);
+      error(await POST(A, '/v1/era/velocidad', { velocidad: 'rapido' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/velocidad', { velocidad: 'x7' }), 400, 'solicitud_invalida');
+      error(await POST(A, '/v1/era/velocidad', {}), 400, 'solicitud_invalida');
+      const estado = await GET(A, '/v1/era/estado?desde=0');
+      assert.ok(estado.json.eventos.some(e => e.tipo === 'velocidad_cambiada'));
     });
   });
 

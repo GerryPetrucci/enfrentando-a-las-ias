@@ -1,0 +1,6 @@
+EJEMPLO ESCRITO A MANO con errores A PROPÓSITO en b/borrador.txt (presupuesto de la etapa 1 excedido; un rasgo en la casilla equivocada; un rasgo con la ortografía mal)
+y su corrección en b/borrador.correccion.txt. Sirve para ver cómo se informa un error y cómo se acepta la corrección.
+
+  node herramientas/worldbox-era-verificar.mjs --respuestas=docs/ejemplos/era/respuestas-ejemplo-con-error
+
+Borra b/borrador.correccion.txt para ver el bloqueo: la partida no arranca mientras haya una respuesta inválida sin corrección (salvo con --ignorar-invalidas).

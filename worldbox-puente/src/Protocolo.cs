@@ -147,6 +147,12 @@ namespace PuenteWorldBox
             Agregar("POST", "/v1/cerrar", false, new string[0], ManejarCerrar);
             Agregar("POST", "/v1/camara", true, new string[0], ManejarCamara);
             Agregar("POST", "/v1/interfaz", true, new string[0], ManejarInterfaz);
+            Agregar("GET", "/v1/era/catalogo", false, new string[] { "tipo" }, ManejarEraCatalogo);
+            Agregar("GET", "/v1/era/estado", false, new string[] { "desde" }, ManejarEraEstado);
+            Agregar("POST", "/v1/era/rasgos", true, new string[0], ManejarEraRasgos);
+            Agregar("POST", "/v1/era/muro", true, new string[0], ManejarEraMuro);
+            Agregar("POST", "/v1/era/minerales", true, new string[0], ManejarEraMinerales);
+            Agregar("POST", "/v1/era/velocidad", true, new string[0], ManejarEraVelocidad);
         }
 
         private void Agregar(string metodo, string camino, bool cuerpoObligatorio, string[] consulta, Manejador m)
@@ -351,6 +357,10 @@ namespace PuenteWorldBox
                     .Con("terminal", cap.Terminal).Con("multi_faccion", cap.MultiFaccion);
                 IPresentacion pres = m as IPresentacion;
                 capacidades.Con("camara", pres != null && pres.CamaraVerificada).Con("interfaz", pres != null && pres.InterfazVerificada);
+                IEra era = m as IEra;
+                capacidades.Con("era", era != null && era.EraVerificada);
+                capacidades.Con("era_velocidad", era != null && era.EraVerificada && m is IEraVelocidad);
+                capacidades.Con("era_mantener", era != null && era.EraVerificada && m is IEraMantenimiento);
                 d["capacidades"] = capacidades;
                 List<object> acciones = new List<object>();
                 foreach (DescripcionAccion a in m.Acciones.Todas) acciones.Add(Anunciar(a));
@@ -564,6 +574,157 @@ namespace PuenteWorldBox
             return Correr("interfaz|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
             {
                 t.Completar(((IPresentacion)mu).Interfaz(visible));
+            });
+        }
+
+        // Formato «era» (E2): catalogo, estado, rasgos, muro y minerales. No son acciones del juego ni pasan por la lista blanca.
+        private IEra ExigirEra(out IMundo m)
+        {
+            m = ExigirMundo();
+            IEra era = m as IEra;
+            if (era == null || !era.EraVerificada) throw new ErrorPuente(Codigos.NoSoportado, "El mundo no admite el formato era.");
+            return era;
+        }
+
+        private static readonly Regex PatronTipoCatalogo = new Regex("^[a-z_]{1,20}$", RegexOptions.CultureInvariant);
+
+        private RespuestaHttp ManejarEraCatalogo(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            IMundo m;
+            ExigirEra(out m);
+            string tipo;
+            if (!s.Consulta.TryGetValue("tipo", out tipo)) tipo = null;
+            if (tipo != null && !PatronTipoCatalogo.IsMatch(tipo)) throw Campos.Invalido("'tipo' debe ser texto [a-z_] de 1 a 20 caracteres.");
+            return Correr(null, null, cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(Contrato(((IEra)mu).EraCatalogo(tipo), "era-catalogo", "version"));
+            });
+        }
+
+        private RespuestaHttp ManejarEraEstado(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            IMundo m;
+            ExigirEra(out m);
+            int desde = 0;
+            string d;
+            if (s.Consulta.TryGetValue("desde", out d))
+            {
+                if (!int.TryParse(d, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out desde) || desde < 0 || desde > 100000000)
+                    throw Campos.Invalido("'desde' debe ser un entero no negativo.");
+            }
+            return Correr(null, null, cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(Contrato(((IEra)mu).EraEstado(desde), "era-estado", "hay_era"));
+            });
+        }
+
+        private static List<string> ListaIds(Dictionary<string, object> c, string campo, int max)
+        {
+            object v;
+            List<string> r = new List<string>();
+            if (!c.TryGetValue(campo, out v) || v == null) return r;
+            List<object> l = v as List<object>;
+            if (l == null || l.Count > max) throw Campos.Invalido("'" + campo + "' debe ser un arreglo de 0 a " + max + " ids.");
+            foreach (object o in l)
+            {
+                string t = o as string;
+                if (t == null || t.Length == 0 || t.Length > 60) throw Campos.Invalido("Cada elemento de '" + campo + "' debe ser texto de 1 a 60 caracteres.");
+                for (int i = 0; i < t.Length; i++) { if (t[i] < 0x20 || t[i] == 0x7f) throw Campos.Invalido("'" + campo + "' contiene caracteres de control."); }
+                r.Add(t);
+            }
+            return r;
+        }
+
+        private static bool Booleano(Dictionary<string, object> c, string campo, bool porDefecto)
+        {
+            object v;
+            if (!c.TryGetValue(campo, out v) || v == null) return porDefecto;
+            if (!(v is bool)) throw Campos.Invalido("'" + campo + "' debe ser booleano.");
+            return (bool)v;
+        }
+
+        private RespuestaHttp ManejarEraRasgos(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            string faccion = Campos.Id(c, "faccion");
+            string tipo = Campos.Cadena(c, "tipo", 20, true);
+            List<string> agregar = ListaIds(c, "agregar", 32);
+            List<string> quitar = ListaIds(c, "quitar", 32);
+            bool reemplazar = Booleano(c, "reemplazar", false);
+            bool parcial = Booleano(c, "parcial", false);
+            bool mantener = Booleano(c, "mantener", false);
+            List<string> soltar = ListaIds(c, "soltar", 32);
+            if (agregar.Count == 0 && quitar.Count == 0 && !reemplazar && soltar.Count == 0) throw Campos.Invalido("Falta 'agregar' o 'quitar' (o reemplazar:true o 'soltar').");
+            if (agregar.Count + quitar.Count + soltar.Count > 32) throw Campos.Invalido("Demasiados ids entre 'agregar', 'quitar' y 'soltar' (maximo 32).");
+            IMundo m;
+            ExigirEra(out m);
+            bool usaMantenimiento = mantener || soltar.Count > 0;
+            if (usaMantenimiento && !(m is IEraMantenimiento)) throw new ErrorPuente(Codigos.NoSoportado, "El mundo no mantiene rasgos (mantener / soltar).");
+            RespuestaHttp previa = Repetida("era_rasgos", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("era_rasgos|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                IDictionary<string, object> res = usaMantenimiento
+                    ? ((IEraMantenimiento)mu).EraRasgosMantenidos(faccion, tipo, agregar, quitar, soltar, reemplazar, parcial)
+                    : ((IEra)mu).EraRasgos(faccion, tipo, agregar, quitar, reemplazar, parcial);
+                t.Completar(Contrato(res, "era-rasgos", "resultado", "tipo", "faccion"));
+            });
+        }
+
+        private RespuestaHttp ManejarEraMuro(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            string operacion = Campos.Cadena(c, "operacion", 10, true);
+            if (operacion != "quitar" && operacion != "poner") throw Campos.Invalido("'operacion' debe ser \"quitar\" o \"poner\".");
+            int ancho = 0;
+            object v;
+            if (c.TryGetValue("ancho", out v) && v != null) ancho = (int)Campos.Entero(c, "ancho", 2, 16);
+            IMundo m;
+            ExigirEra(out m);
+            RespuestaHttp previa = Repetida("era_muro", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("era_muro|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(Contrato(((IEra)mu).EraMuro(operacion, ancho), "era-muro", "muro_puesto"));
+            });
+        }
+
+        private RespuestaHttp ManejarEraMinerales(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            string faccion = Campos.Id(c, "faccion");
+            string mineral = Campos.Cadena(c, "mineral", 40, true);
+            int cantidad = (int)Campos.Entero(c, "cantidad", 1, 24);
+            int radio = 12;
+            object v;
+            if (c.TryGetValue("radio", out v) && v != null) radio = (int)Campos.Entero(c, "radio", 4, 30);
+            bool espejo = Booleano(c, "espejo", false);
+            IMundo m;
+            ExigirEra(out m);
+            RespuestaHttp previa = Repetida("era_minerales", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("era_minerales|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(Contrato(((IEra)mu).EraMinerales(faccion, mineral, cantidad, radio, espejo), "era-minerales", "colocados"));
+            });
+        }
+
+        private static readonly Regex PatronVelocidad = new Regex("^x[0-9]{1,2}$", RegexOptions.CultureInvariant);
+
+        // E4 (aditivo): velocidad del juego por fase. Solo entre avances; la lista de velocidades validas la decide el mundo.
+        private RespuestaHttp ManejarEraVelocidad(SolicitudHttp s, Dictionary<string, object> c)
+        {
+            string id = Campos.IdSolicitud(c, true);
+            string velocidad = Campos.Cadena(c, "velocidad", 10, true);
+            if (!PatronVelocidad.IsMatch(velocidad)) throw Campos.Invalido("'velocidad' debe tener la forma x5, x20, x40...");
+            IMundo m;
+            ExigirEra(out m);
+            if (!(m is IEraVelocidad)) throw new ErrorPuente(Codigos.NoSoportado, "El mundo no cambia de velocidad.");
+            RespuestaHttp previa = Repetida("era_velocidad", id, s.Cuerpo);
+            if (previa != null) return previa;
+            return Correr("era_velocidad|" + id, Huella(s.Cuerpo), cfg.TiempoOperacionMs, delegate(IMundo mu, TareaPrincipal t)
+            {
+                t.Completar(Contrato(((IEraVelocidad)mu).EraVelocidad(velocidad), "era-velocidad", "velocidad"));
             });
         }
 

@@ -1,0 +1,18 @@
+(EJEMPLO) Tienes razón, aquí está corregido:
+
+```json
+{
+  "etapa1": {
+    "actions": [ { "action": "elegir_inicio", "parameters": { "raza": "elf", "mineral": "mineral_silver", "bioma": "biome_enchanted" } } ],
+    "reasoning_summary": "Ejemplo: elfos en un bosque encantado con plata."
+  },
+  "etapa2": {
+    "actions": [ { "action": "elegir_rasgos_etapa2", "parameters": { "cognitivo": "gift_of_air", "mente": "iron_will", "espiritu": "cast_shield", "fisico": "stonefists", "apariencia": "phenotype_skin_infernal" } } ],
+    "reasoning_summary": "Ejemplo: voluntad de hierro y puños de piedra."
+  },
+  "etapa3": {
+    "actions": [ { "action": "elegir_rasgos_etapa3", "parameters": { "arquitectura": "roads", "plano": "city_layout_diamond", "edificios": "tower_lovers", "politica": "tiny_legends", "sucesion": "warriors_ascension", "impuestos": "ninguno" } } ],
+    "reasoning_summary": "Ejemplo: torres y guerreros al mando."
+  }
+}
+```

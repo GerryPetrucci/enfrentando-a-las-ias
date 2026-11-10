@@ -30,7 +30,7 @@ export function normalizarInfo(x) {
   exigir(new Set(acciones.map(a => a.nombre)).size === acciones.length, 'respuesta_invalida');
   const capacidades = Object.fromEntries(['reiniciar', 'semilla', 'avanzar', 'terminal', 'multi_faccion'].map(k => [k, x.capacidades[k] === true]));
   // Presentacion para grabar (opcionales): solo se conservan si el puente las anuncia verificadas; sin ellas la forma no cambia.
-  for (const k of ['camara', 'interfaz']) if (x.capacidades[k] === true) capacidades[k] = true;
+  for (const k of ['camara', 'interfaz', 'era', 'era_velocidad', 'era_mantener']) if (x.capacidades[k] === true) capacidades[k] = true; // era / era_velocidad: formato «era» (docs/worldbox-era.md)
   const version = v => ({ nombre: String(v?.nombre ?? '').slice(0, 100), version: String(v?.version ?? '').slice(0, 100) });
   // Del juego se conservan tambien el build de Steam y la version de Unity (trazabilidad de la ejecucion).
   const juego = v => ({ ...version(v), ...(typeof v?.build_steam === 'string' ? { build_steam: v.build_steam.slice(0, 100) } : {}), ...(typeof v?.unity === 'string' ? { unity: v.unity.slice(0, 100) } : {}) });
@@ -64,6 +64,8 @@ export function normalizarReinicio(x) {
     for (const k of ['plantilla', 'tamano', 'velocidad']) if (x.mundo[k] !== undefined) { exigir(typeof x.mundo[k] === 'string' && /^[A-Za-z0-9_.-]{1,30}$/.test(x.mundo[k]), 'respuesta_invalida'); mundo[k] = x.mundo[k]; }
     salida.mundo = mundo;
   }
+  // Formato «era»: lo que el puente informa de la preparacion (espejo, biomas, depositos...). Solo para la traza; acotado.
+  if (objeto(x.era)) { const texto = JSON.stringify(x.era); if (texto.length <= 30000) salida.era = JSON.parse(texto); }
   const id = idSolicitud(x); if (id) salida.id_solicitud = id;
   return salida;
 }

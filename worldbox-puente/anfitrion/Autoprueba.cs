@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -65,6 +66,7 @@ namespace PuenteWorldBox.Anfitrion
             PruebasServidor();
             PruebasReglasAccion();
             PruebasServidorX2();
+            PruebasEra();
             Console.WriteLine("AUTOPRUEBA total=" + total + " fallos=" + fallos);
             return fallos == 0 ? 0 : 1;
         }
@@ -427,8 +429,32 @@ namespace PuenteWorldBox.Anfitrion
         // Servidor con mundos defectuosos
         // ---------------------------------------------------------------------------------
 
-        private sealed class MundoFalso : IMundo, IPresentacion
+        private sealed class MundoFalso : IMundo, IPresentacion, IEra, IEraVelocidad, IEraMantenimiento
         {
+            public IDictionary<string, object> EraVelocidad(string velocidad) { UltimaEra = "velocidad|" + velocidad; return Json.Objeto("velocidad", velocidad); }
+            public IDictionary<string, object> EraRasgosMantenidos(string faccion, string tipo, IList<string> agregar, IList<string> quitar, IList<string> soltar, bool reemplazar, bool parcial)
+            {
+                UltimaEra = "mantener|" + faccion + "|" + tipo + "|" + string.Join(",", agregar) + "|" + string.Join(",", quitar) + "|" + string.Join(",", soltar) + "|" + reemplazar + "|" + parcial;
+                return Json.Objeto("resultado", "ejecutada", "tipo", tipo, "faccion", faccion, "mantener", true);
+            }
+            // --- IEra (formato era): registra lo que recibe para comprobar que solo llega lo valido
+            public bool EraActiva;
+            public string UltimaEra = "";
+            public bool EraVerificada { get { return EraActiva; } }
+            public IDictionary<string, object> EraCatalogo(string tipo) { UltimaEra = "catalogo|" + (tipo ?? "-"); return Json.Objeto("version", 1, "tipo", tipo); }
+            public IDictionary<string, object> EraEstado(int desde) { UltimaEra = "estado|" + desde; return Json.Objeto("hay_era", true, "eventos", new List<object>()); }
+            public IDictionary<string, object> EraRasgos(string faccion, string tipo, IList<string> agregar, IList<string> quitar, bool reemplazar, bool parcial)
+            {
+                UltimaEra = "rasgos|" + faccion + "|" + tipo + "|" + string.Join(",", agregar) + "|" + string.Join(",", quitar) + "|" + reemplazar + "|" + parcial;
+                return Json.Objeto("resultado", "ejecutada", "tipo", tipo, "faccion", faccion);
+            }
+            public IDictionary<string, object> EraMuro(string operacion, int ancho) { UltimaEra = "muro|" + operacion + "|" + ancho; return Json.Objeto("muro_puesto", operacion == "poner"); }
+            public IDictionary<string, object> EraMinerales(string faccion, string mineral, int cantidad, int radio, bool espejo)
+            {
+                UltimaEra = "minerales|" + faccion + "|" + mineral + "|" + cantidad + "|" + radio + "|" + espejo;
+                return Json.Objeto("colocados", cantidad);
+            }
+
             public bool PresentacionActiva;
             public string UltimaCamara = "";
             public bool UltimaInterfaz;
@@ -1060,5 +1086,470 @@ namespace PuenteWorldBox.Anfitrion
                 }
                 finally { s.Detener(); Directory.Delete(carpeta, true); }
             });
+        }
+
+        // ---------------------------------------------------------------------------------
+        // Formato Â«eraÂ» (E2): reglas de rasgos y rutas /v1/era/*
+        // ---------------------------------------------------------------------------------
+
+        private static Dictionary<string, RasgoInfo> CatalogoDePrueba()
+        {
+            Dictionary<string, RasgoInfo> c = new Dictionary<string, RasgoInfo>();
+            RasgoInfo a = new RasgoInfo(); a.Ofrecible = true; a.Opuestos = new string[] { "b" }; c["a"] = a;
+            RasgoInfo b = new RasgoInfo(); b.Ofrecible = true; b.Opuestos = new string[] { "a" }; c["b"] = b;
+            RasgoInfo cc = new RasgoInfo(); cc.Ofrecible = true; c["c"] = cc;
+            RasgoInfo dd = new RasgoInfo(); dd.Ofrecible = true; c["d"] = dd;
+            RasgoInfo no = new RasgoInfo(); no.Ofrecible = false; c["no_ofrecido"] = no;
+            RasgoInfo fijo = new RasgoInfo(); fijo.Ofrecible = true; fijo.SePuedeQuitar = false; c["fijo"] = fijo;
+            return c;
+        }
+
+        private static string[] Ids(params string[] ids) { return ids; }
+
+        private static void PruebasEra()
+        {
+            Prueba("era: ReglasEra rechaza ids desconocidos, no ofrecidos, repetidos y ya presentes", delegate()
+            {
+                PlanRasgos p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "c" }, new string[0], 6, Ids("zzz", "no_ofrecido", "a", "a", "c"), new string[0], false);
+                Igual("a", string.Join(",", p.Agregar), "solo a es valido");
+                string[] codigos = new string[p.Rechazados.Count];
+                for (int i = 0; i < codigos.Length; i++) codigos[i] = p.Rechazados[i].Id + ":" + p.Rechazados[i].Codigo;
+                Igual("zzz:rasgo_desconocido,no_ofrecido:rasgo_no_ofrecido,a:repetido,c:ya_presente", string.Join(",", codigos), "codigos estables");
+                Verdad(!p.SeAplica(false), "atomico: con rechazos no se aplica nada");
+                Verdad(p.SeAplica(true), "parcial: se aplica lo valido");
+            });
+            Prueba("era: ReglasEra respeta el tope por tipo, los opuestos y reemplazar", delegate()
+            {
+                PlanRasgos p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "c", "d" }, Ids("c", "d"), 2, Ids("a"), new string[0], false);
+                Igual("tope_rasgos", p.Rechazados[0].Codigo, "el tercero propio supera el tope de 2");
+                p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "c", "d" }, Ids("c", "d"), 2, Ids("a"), new string[0], true);
+                Igual(0, p.Rechazados.Count, "reemplazar libera el cupo");
+                Igual("c,d", string.Join(",", p.Quitar), "quita los propios");
+                p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "a" }, new string[0], 6, Ids("b"), new string[0], false);
+                Igual("rasgo_opuesto", p.Rechazados[0].Codigo, "b es opuesto a a");
+                p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "a" }, new string[0], 6, Ids("b"), Ids("a"), false);
+                Igual(0, p.Rechazados.Count, "quitar a en la misma solicitud deja agregar b");
+                p = ReglasEra.Planear(CatalogoDePrueba(), new string[] { "a", "fijo" }, new string[0], 6, new string[0], Ids("fijo", "c"), false);
+                Igual("no_se_puede_quitar,no_presente", p.Rechazados[0].Codigo + "," + p.Rechazados[1].Codigo, "quitar fijo y quitar ausente");
+                p = ReglasEra.Planear(CatalogoDePrueba(), new string[0], new string[0], 6, Ids("a", "b"), new string[0], false);
+                Igual("rasgo_opuesto", p.Rechazados[0].Codigo, "dos opuestos en la misma solicitud");
+            });
+            Prueba("era: sin soporte las rutas /v1/era/* responden 501 y /v1/info anuncia era:false", delegate()
+            {
+                string carpeta;
+                MundoFalso m = new MundoFalso();
+                ServidorPuente s = Levantar(m, null, out carpeta);
+                try
+                {
+                    string tk = File.ReadAllText(s.RutaArchivoToken);
+                    int p = s.Puerto;
+                    Resp r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/info", null); });
+                    Verdad(r.Cuerpo.Contains("\"era\":false"), "era false: " + r.Cuerpo);
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/catalogo", null); });
+                    Igual(501, r.Estado, "catalogo sin soporte");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/muro", Cuerpo("", "\"operacion\":\"quitar\"")); });
+                    Igual(501, r.Estado, "muro sin soporte");
+                    Igual("", m.UltimaEra, "nada llego al mundo");
+                }
+                finally { s.Detener(); Directory.Delete(carpeta, true); }
+            });
+            Prueba("era: las rutas validan la forma (400), exigen token y entregan al mundo solo lo valido", delegate()
+            {
+                string carpeta;
+                MundoFalso m = new MundoFalso();
+                m.EraActiva = true;
+                ServidorPuente s = Levantar(m, null, out carpeta);
+                try
+                {
+                    string tk = File.ReadAllText(s.RutaArchivoToken);
+                    int p = s.Puerto;
+                    Resp r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/info", null); });
+                    Verdad(r.Cuerpo.Contains("\"era\":true"), "era true: " + r.Cuerpo);
+                    r = Bombeando(s, delegate() { return Http(p, "malo", "GET", "/v1/era/catalogo", null); });
+                    Igual(401, r.Estado, "sin token valido");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/catalogo?tipo=clan", null); });
+                    Igual(200, r.Estado, "catalogo: " + r.Cuerpo);
+                    Igual("catalogo|clan", m.UltimaEra, "tipo entregado");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/catalogo?tipo=CLAN%20x", null); });
+                    Igual(400, r.Estado, "tipo con mayusculas y espacio");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/catalogo?otro=1", null); });
+                    Igual(400, r.Estado, "parametro de consulta no admitido");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/estado?desde=7", null); });
+                    Igual(200, r.Estado, "estado: " + r.Cuerpo);
+                    Igual("estado|7", m.UltimaEra, "desde entregado");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/estado?desde=-1", null); });
+                    Igual(400, r.Estado, "desde negativo");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/era/estado?desde=abc", null); });
+                    Igual(400, r.Estado, "desde no numerico");
+                    m.UltimaEra = "";
+                    string[] malosRasgos = new string[] { "", "\"faccion\":\"a\",\"tipo\":\"clan\"", "\"faccion\":\"a b\",\"tipo\":\"clan\",\"agregar\":[\"x\"]",
+                        "\"faccion\":\"a\",\"agregar\":[\"x\"]", "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":\"x\"", "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[7]",
+                        "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[\"x\"],\"parcial\":\"si\"", "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[\"\"]" };
+                    foreach (string mal in malosRasgos)
+                    {
+                        string malo = mal;
+                        r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", malo)); });
+                        Igual(400, r.Estado, "rasgos invalidos <" + malo + ">");
+                    }
+                    StringBuilder mucho = new StringBuilder("\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[");
+                    for (int i = 0; i < 33; i++) mucho.Append(i > 0 ? "," : "").Append("\"r").Append(i).Append("\"");
+                    mucho.Append("]");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", mucho.ToString())); });
+                    Igual(400, r.Estado, "mas de 32 ids");
+                    Igual("", m.UltimaEra, "nada invalido llego al mundo");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[\"stonefists\"],\"quitar\":[\"iron_will\"],\"reemplazar\":true,\"parcial\":true")); });
+                    Igual(200, r.Estado, "rasgos validos: " + r.Cuerpo);
+                    Igual("rasgos|a|clan|stonefists|iron_will|True|True", m.UltimaEra, "parametros entregados");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/muro", Cuerpo("", "\"operacion\":\"destruir\"")); });
+                    Igual(400, r.Estado, "operacion de muro invalida");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/muro", Cuerpo("", "\"operacion\":\"poner\",\"ancho\":99")); });
+                    Igual(400, r.Estado, "ancho fuera de rango");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/muro", Cuerpo("", "\"operacion\":\"quitar\"")); });
+                    Igual(200, r.Estado, "muro quitar: " + r.Cuerpo);
+                    Igual("muro|quitar|0", m.UltimaEra, "muro entregado");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/minerales", Cuerpo("", "\"faccion\":\"a\",\"mineral\":\"mineral_gold\",\"cantidad\":0")); });
+                    Igual(400, r.Estado, "cantidad 0");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/minerales", Cuerpo("", "\"faccion\":\"a\",\"mineral\":\"mineral_gold\",\"cantidad\":3,\"espejo\":true")); });
+                    Igual(200, r.Estado, "minerales: " + r.Cuerpo);
+                    Igual("minerales|a|mineral_gold|3|12|True", m.UltimaEra, "minerales entregados con radio por defecto");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/velocidad", Cuerpo("", "\"velocidad\":\"rapido\"")); });
+                    Igual(400, r.Estado, "velocidad con forma invalida");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/velocidad", Cuerpo("", "\"velocidad\":\"x40\"")); });
+                    Igual(200, r.Estado, "velocidad: " + r.Cuerpo);
+                    Igual("velocidad|x40", m.UltimaEra, "velocidad entregada");
+                    // idempotencia: la misma solicitud no se ejecuta dos veces
+                    string cuerpo = Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"clan\",\"agregar\":[\"magic_blood\"]");
+                    Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", cuerpo); });
+                    m.UltimaEra = "";
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", cuerpo); });
+                    Verdad(r.Cabecera.Contains("X-Puente-Idempotente: repetida") && m.UltimaEra == "", "la repeticion devuelve lo guardado sin volver a ejecutar");
+                }
+                finally { s.Detener(); Directory.Delete(carpeta, true); }
+            });
+            Prueba("era: el mundo simulado valida rasgos con ReglasEra y lleva el muro y los eventos", delegate()
+            {
+                MundoSimulado w = new MundoSimulado(0);
+                SolicitudReinicio sol = new SolicitudReinicio();
+                sol.Semilla = 1; sol.TamanoMapa = (long)64; sol.Opciones = new Dictionary<string, object>();
+                sol.Facciones = new List<FaccionSolicitada>();
+                FaccionSolicitada f1 = new FaccionSolicitada(); f1.Id = "a"; sol.Facciones.Add(f1);
+                FaccionSolicitada f2 = new FaccionSolicitada(); f2.Id = "b"; sol.Facciones.Add(f2);
+                w.Reiniciar(sol);
+                IDictionary<string, object> r = w.EraRasgos("a", "clan", Ids("stonefists", "cursed_blood"), new string[0], false, false);
+                Igual("rechazada", r["resultado"], "atomico por rasgo no ofrecido");
+                r = w.EraRasgos("a", "clan", Ids("stonefists", "iron_will", "magic_blood"), new string[0], false, false);
+                Igual("ejecutada", r["resultado"], "tres rasgos entran");
+                r = w.EraRasgos("a", "clan", Ids("cursed_blood"), new string[0], false, true);
+                Igual("rechazada", r["resultado"], "parcial sin nada valido es rechazada");
+                r = w.EraRasgos("a", "idioma", Ids("foolish_glyphs", "enlightening_script"), new string[0], false, false);
+                Igual("rechazada", r["resultado"], "opuestos en la misma solicitud");
+                Lanza<ErrorPuente>(delegate() { w.EraRasgos("zz", "clan", Ids("stonefists"), new string[0], false, false); }, "faccion inexistente");
+                IDictionary<string, object> e = w.EraMuro("quitar", 0);
+                Igual(false, e["muro_puesto"], "muro quitado");
+                IDictionary<string, object> est = w.EraEstado(0);
+                Verdad(((List<object>)est["eventos"]).Count >= 2, "eventos registrados");
+                Igual(0, ((List<object>)w.EraEstado(100)["eventos"]).Count, "desde un indice futuro no hay eventos");
+            });
+            Prueba("era: la velocidad se cambia entre avances, solo con valores validos, y deja un evento", delegate()
+            {
+                MundoSimulado w = new MundoSimulado(0);
+                SolicitudReinicio sol = new SolicitudReinicio();
+                sol.Semilla = 1; sol.TamanoMapa = (long)64; sol.Opciones = new Dictionary<string, object>();
+                sol.Facciones = new List<FaccionSolicitada>();
+                FaccionSolicitada f1 = new FaccionSolicitada(); f1.Id = "a"; sol.Facciones.Add(f1);
+                FaccionSolicitada f2 = new FaccionSolicitada(); f2.Id = "b"; sol.Facciones.Add(f2);
+                w.Reiniciar(sol);
+                IDictionary<string, object> r = w.EraVelocidad("x40");
+                Igual("x40", r["velocidad"], "velocidad nueva");
+                Igual("x5", r["anterior"], "velocidad anterior");
+                Lanza<ErrorPuente>(delegate() { w.EraVelocidad("x7"); }, "velocidad no ofrecida");
+                Verdad(((List<object>)w.EraEstado(0)["eventos"]).Count >= 1, "evento registrado");
+                Verdad(w is IEraVelocidad, "el mundo anuncia el cambio de velocidad");
+            });
+            PruebasEraMantenimiento();
+            PruebasEraControl();
+        }
+
+        /// <summary>Mundo falso para el mantenimiento: objetos que existen o no, y rasgos que el «juego» puede reemplazar.</summary>
+        private sealed class RasgosFalsos : IRasgosMundo
+        {
+            public readonly HashSet<string> Ausentes = new HashSet<string>();
+            public readonly Dictionary<string, HashSet<string>> Tiene = new Dictionary<string, HashSet<string>>();
+            public int Agregados;
+            public bool ObjetoExiste(string f, string t) { return !Ausentes.Contains(f + "|" + t); }
+            public ICollection<string> Actuales(string f, string t) { HashSet<string> h; return Tiene.TryGetValue(f + "|" + t, out h) ? new List<string>(h) : new List<string>(); }
+            public bool Agregar(string f, string t, string id, out bool creo)
+            {
+                creo = false;
+                if (!ObjetoExiste(f, t)) return false;
+                HashSet<string> h; if (!Tiene.TryGetValue(f + "|" + t, out h)) { h = new HashSet<string>(); Tiene[f + "|" + t] = h; }
+                h.Add(id); Agregados++;
+                return true;
+            }
+            public int Quitados;
+            public bool Quitar(string f, string t, string id) { HashSet<string> h; if (Tiene.TryGetValue(f + "|" + t, out h)) h.Remove(id); Quitados++; return true; }
+            public IDictionary<string, RasgoInfo> Catalogo(string t) { return CatalogoDePrueba(); }
+            public int Tope { get { return 3; } }
+            public void Reemplazar(string f, string t) { HashSet<string> h; if (Tiene.TryGetValue(f + "|" + t, out h)) h.Clear(); }
+            public void Poner(string f, string t, string id) { bool c; Agregar(f, t, id, out c); Agregados--; }
+        }
+
+        private static string Tipos(List<CambioMantenimiento> l)
+        {
+            string[] s = new string[l.Count];
+            for (int i = 0; i < s.Length; i++) s[i] = l[i].Tipo + ":" + l[i].Id;
+            return string.Join(",", s);
+        }
+
+        private static void PruebasEraControl()
+        {
+            Prueba("era (E9): control del 1 vs 1 activo por omision; vigilante y unico_reino se leen, se validan y se apagan", delegate()
+            {
+                ControlEraConfig c = ControlEraConfig.Leer(new Dictionary<string, object>());
+                Verdad(c.UnicoReino && c.Vigilante, "ambos activos por omision");
+                Igual("devolver", c.Modo, "modo por omision"); Igual(0.25f, c.Intervalo, "intervalo por omision");
+                Dictionary<string, object> d = new Dictionary<string, object>(); d["unico_reino"] = false; d["vigilante"] = false;
+                c = ControlEraConfig.Leer(d);
+                Verdad(!c.UnicoReino && !c.Vigilante, "se apagan con false");
+                Dictionary<string, object> vd = new Dictionary<string, object>(); vd["modo"] = "observar"; vd["intervalo_s"] = 2L;
+                d = new Dictionary<string, object>(); d["vigilante"] = vd;
+                c = ControlEraConfig.Leer(d);
+                Verdad(c.Vigilante, "objeto: activo salvo que diga lo contrario"); Igual("observar", c.Modo, "modo observar"); Igual(2.0f, c.Intervalo, "intervalo 2 s");
+                vd["modo"] = "destruir";
+                Lanza<ErrorPuente>(delegate() { ControlEraConfig.Leer(d); }, "modo desconocido");
+                vd["modo"] = "devolver"; vd["intervalo_s"] = 0.01;
+                Lanza<ErrorPuente>(delegate() { ControlEraConfig.Leer(d); }, "intervalo fuera de rango");
+                d = new Dictionary<string, object>(); d["unico_reino"] = "si";
+                Lanza<ErrorPuente>(delegate() { ControlEraConfig.Leer(d); }, "unico_reino debe ser booleano");
+                d = new Dictionary<string, object>(); d["vigilante"] = 3L;
+                Lanza<ErrorPuente>(delegate() { ControlEraConfig.Leer(d); }, "vigilante debe ser booleano u objeto");
+            });
+            Prueba("era (E10): color y nombre del reino (opciones.era.facciones) se leen, se normalizan y se validan", delegate()
+            {
+                List<string> ids = new List<string>(new string[] { "f1", "f2" });
+                Verdad(PresentacionEra.EsHex("#D97757") && PresentacionEra.EsHex("#f4f4f2"), "hex valido en mayusculas y minusculas");
+                Verdad(!PresentacionEra.EsHex("D97757") && !PresentacionEra.EsHex("#D9775") && !PresentacionEra.EsHex("#GG7757") && !PresentacionEra.EsHex(null), "hex invalido");
+                Verdad(PresentacionEra.EsNombreSeguro("Reino de Claude") && PresentacionEra.EsNombreSeguro("Tierra-Sol 2") && PresentacionEra.EsNombreSeguro("N'Dar"), "nombres seguros");
+                Verdad(!PresentacionEra.EsNombreSeguro("") && !PresentacionEra.EsNombreSeguro(" Reino") && !PresentacionEra.EsNombreSeguro("Dos  espacios") && !PresentacionEra.EsNombreSeguro("<b>x</b>") && !PresentacionEra.EsNombreSeguro(new string('a', 25)), "nombres inseguros");
+                Verdad(PresentacionEra.EsNombreSeguro(new string('a', 24)), "24 caracteres caben");
+                List<object> l = new List<object>();
+                Dictionary<string, object> a = new Dictionary<string, object>(); a["faccion"] = "f1"; a["color"] = "#d97757"; a["nombre_reino"] = "Claude";
+                Dictionary<string, object> b = new Dictionary<string, object>(); b["faccion"] = "f2"; b["color"] = "#F4F4F2"; b["nombre_reino"] = "GPT";
+                l.Add(a); l.Add(b);
+                Dictionary<string, PresentacionFaccion> r = PresentacionEra.Leer(l, ids);
+                Igual(2, r.Count, "dos pedidos");
+                Igual("#D97757", r["f1"].Color, "el color se normaliza a mayusculas");
+                Igual("GPT", r["f2"].NombreReino, "nombre del reino");
+                Igual(0, PresentacionEra.Leer(new List<object>(), ids).Count, "lista vacia: nada que hacer");
+                b["faccion"] = "f3";
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "faccion desconocida");
+                b["faccion"] = "f1";
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "faccion repetida");
+                b["faccion"] = "f2"; b["color"] = "#D97757";
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "colores iguales");
+                b["color"] = "rojo";
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "color mal escrito");
+                b["color"] = "#F4F4F2"; b["nombre_reino"] = "claude";
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "nombres iguales sin distinguir mayusculas");
+                b["nombre_reino"] = new string('x', 30);
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer(l, ids); }, "nombre demasiado largo");
+                Lanza<ErrorPuente>(delegate() { PresentacionEra.Leer("f1", ids); }, "debe ser un arreglo");
+            });
+            Prueba("era (E9): el vigilante distingue el lado correcto, el muro y el lado contrario, y decide devolver, eliminar u observar", delegate()
+            {
+                Igual(LadoMuro.Correcto, VigilanteMuro.Evaluar(0, 10, 94, 97), "faccion izquierda a la izquierda");
+                Igual(LadoMuro.Correcto, VigilanteMuro.Evaluar(1, 150, 94, 97), "faccion derecha a la derecha");
+                Igual(LadoMuro.LadoContrario, VigilanteMuro.Evaluar(0, 98, 94, 97), "izquierda al otro lado");
+                Igual(LadoMuro.LadoContrario, VigilanteMuro.Evaluar(1, 93, 94, 97), "derecha al otro lado");
+                Igual(LadoMuro.SobreElMuro, VigilanteMuro.Evaluar(0, 94, 94, 97), "borde izquierdo del muro");
+                Igual(LadoMuro.SobreElMuro, VigilanteMuro.Evaluar(1, 97, 94, 97), "borde derecho del muro");
+                Igual("barco", VigilanteMuro.Causa(true, true, true, true), "el barco manda");
+                Igual("volador", VigilanteMuro.Causa(false, true, true, true), "volador antes que muro");
+                Igual("sobre_el_muro", VigilanteMuro.Causa(false, false, true, true), "muro antes que agua");
+                Igual("agua", VigilanteMuro.Causa(false, false, false, true), "agua");
+                Igual("tierra", VigilanteMuro.Causa(false, false, false, false), "tierra");
+                Igual("observar", VigilanteMuro.Accion("observar", false, true), "observar solo cuenta");
+                Igual("devolver", VigilanteMuro.Accion("devolver", false, true), "devolver con destino");
+                Igual("eliminar", VigilanteMuro.Accion("devolver", false, false), "sin destino se elimina");
+                Igual("eliminar", VigilanteMuro.Accion("devolver", true, true), "un barco no se deja en tierra: se elimina");
+                Igual("eliminar", VigilanteMuro.Accion("eliminar", false, true), "modo eliminar");
+            });
+            Prueba("era (E9): la unidad de reino elige el fundador, o el primer derivado vivo si cayo, y reune a los demas", delegate()
+            {
+                Igual(0, UnicoReino.Principal(new bool[] { true, true, true }), "el fundador vivo es el principal");
+                Igual("1,2", string.Join(",", UnicoReino.ARecoger(new bool[] { true, true, true }).ConvertAll(delegate(int i) { return i.ToString(); }).ToArray()), "los derivados se reunen al fundador");
+                Igual(1, UnicoReino.Principal(new bool[] { false, true, true }), "fundador muerto: sobrevive el primer derivado");
+                Igual("2", string.Join(",", UnicoReino.ARecoger(new bool[] { false, true, true }).ConvertAll(delegate(int i) { return i.ToString(); }).ToArray()), "el otro derivado se reune al primero");
+                Igual(-1, UnicoReino.Principal(new bool[] { false, false }), "ninguno vive");
+                Igual(0, UnicoReino.ARecoger(new bool[] { false, false }).Count, "nada que reunir");
+                Igual(0, UnicoReino.ARecoger(new bool[] { true, false, false }).Count, "un solo reino vivo: nada que reunir");
+            });
+        }
+
+        private static void PruebasEraMantenimiento()
+        {
+            Prueba("era (E5): el mantenimiento reaplica un rasgo cuando el juego reemplaza el objeto, y cuenta perdidas y reaplicaciones", delegate()
+            {
+                RasgosFalsos w = new RasgosFalsos();
+                MantenimientoRasgos m = new MantenimientoRasgos();
+                w.Poner("a", "cultura", "c"); m.Desear("a", "cultura", "c", true, null);
+                w.Poner("a", "cultura", "d"); m.Desear("a", "cultura", "d", true, null);
+                Igual("", Tipos(m.Revisar(w, 0.0)), "nada falta: nada cambia");
+                Igual(1L, m.Comprobaciones, "una comprobacion");
+                w.Reemplazar("a", "cultura");
+                Igual("rasgo_perdido:c,rasgo_perdido:d,rasgo_reaplicado:c,rasgo_reaplicado:d", Tipos(m.Revisar(w, 1.0)), "se detecta la perdida y se reaplica en la misma pasada");
+                Igual("c,d", string.Join(",", SinOrden(w.Actuales("a", "cultura"))), "los dos rasgos estan de nuevo");
+                Igual(2L, m.Perdidas, "dos perdidas");
+                Igual(2L, m.Reaplicados, "dos reaplicaciones");
+                RasgoDeseado d = m.Buscar("a", "cultura", "c");
+                Igual(RasgoDeseado.Activo, d.Estado, "activo otra vez");
+                Igual(1, d.Perdidas, "perdidas del rasgo"); Igual(1, d.Reaplicaciones, "reaplicaciones del rasgo");
+                w.Reemplazar("a", "cultura");
+                m.Revisar(w, 2.0);
+                Igual(2, m.Buscar("a", "cultura", "c").Reaplicaciones, "una segunda perdida se reaplica tambien");
+            });
+            Prueba("era (E5): lo pendiente espera a que exista el objeto y se aplica «tarde»; religion/idioma ausentes no fallan", delegate()
+            {
+                RasgosFalsos w = new RasgosFalsos();
+                MantenimientoRasgos m = new MantenimientoRasgos();
+                w.Ausentes.Add("a|idioma");
+                m.Desear("a", "idioma", "c", false, "objeto_ausente");
+                Igual("", Tipos(m.Revisar(w, 0.0)), "sin objeto: sigue pendiente, sin eventos");
+                Igual(RasgoDeseado.Pendiente, m.Buscar("a", "idioma", "c").Estado, "pendiente");
+                Igual("objeto_ausente", m.Buscar("a", "idioma", "c").Motivo, "motivo");
+                w.Ausentes.Remove("a|idioma");
+                Igual("rasgo_aplicado_tarde:c", Tipos(m.Revisar(w, 1.0)), "en cuanto el objeto existe se aplica");
+                Igual(RasgoDeseado.Activo, m.Buscar("a", "idioma", "c").Estado, "activo");
+                Igual(0L, m.Perdidas, "no cuenta como perdida"); Igual(1L, m.AplicadosTarde, "cuenta como aplicado tarde");
+                // si el objeto desaparece un momento (ausente) no se sabe nada del rasgo: no se da por perdido; al volver, si el objeto lo perdio, se reaplica
+                w.Reemplazar("a", "idioma"); w.Ausentes.Add("a|idioma");
+                Igual("", Tipos(m.Revisar(w, 2.0)), "sin objeto no hay veredicto");
+                Igual(RasgoDeseado.Activo, m.Buscar("a", "idioma", "c").Estado, "sigue activo mientras el objeto falta");
+                w.Ausentes.Remove("a|idioma");
+                Igual("rasgo_perdido:c,rasgo_reaplicado:c", Tipos(m.Revisar(w, 3.0)), "al volver el objeto sin el rasgo: perdido y reaplicado");
+                w.Ausentes.Add("a|idioma"); w.Ausentes.Remove("a|idioma");
+                Igual("", Tipos(m.Revisar(w, 4.0)), "si el objeto vuelve conservando el rasgo no pasa nada");
+            });
+            Prueba("era (E5): un opuesto DESEADO bloquea la reaplicacion (con espera entre intentos) y soltar deja de mantener", delegate()
+            {
+                RasgosFalsos w = new RasgosFalsos();
+                MantenimientoRasgos m = new MantenimientoRasgos();
+                m.Desear("a", "cultura", "b", true, null);                // b y a son opuestos y los dos son deseados
+                m.Desear("a", "cultura", "a", false, "objeto_ausente");
+                w.Poner("a", "cultura", "b");
+                Igual("", Tipos(m.Revisar(w, 0.0)), "no se puede: opuesto deseado");
+                Igual("rasgo_opuesto", m.Buscar("a", "cultura", "a").Motivo, "motivo estable");
+                int antes = w.Agregados;
+                m.Revisar(w, 0.5);
+                Igual(antes, w.Agregados, "dentro de la espera no se reintenta");
+                Verdad(m.Soltar("a", "cultura", "b"), "soltar devuelve true");
+                Verdad(!m.Soltar("a", "cultura", "b"), "soltar dos veces: false");
+                Igual("rasgo_opuesto_quitado:b,rasgo_aplicado_tarde:a", Tipos(m.Revisar(w, 5.0)), "soltado b, ya no es deseado: el juego lo tenia y se quita para dejar sitio a a");
+                Verdad(m.Soltar("a", "cultura", "a"), "soltar a");
+                w.Reemplazar("a", "cultura");
+                Igual("", Tipos(m.Revisar(w, 9.0)), "soltado: ya no se reaplica");
+                Igual(0, m.Cuenta("a", "cultura"), "no queda nada deseado en cultura");
+            });
+            Prueba("era (E5): un opuesto que el juego puso por azar se quita para que gane la eleccion; si el opuesto es otro deseado, no se toca", delegate()
+            {
+                RasgosFalsos w = new RasgosFalsos();
+                MantenimientoRasgos m = new MantenimientoRasgos();
+                m.Desear("a", "cultura", "a", false, "objeto_ausente");   // a es opuesto a b en el catalogo de prueba
+                w.Poner("a", "cultura", "b");                                // el juego lo puso por azar
+                Igual("rasgo_opuesto_quitado:b,rasgo_aplicado_tarde:a", Tipos(m.Revisar(w, 0.0)), "se quita el opuesto y se aplica la eleccion");
+                Igual(1L, m.OpuestosQuitados, "contado"); Igual("a", string.Join(",", SinOrden(w.Actuales("a", "cultura"))), "queda solo la eleccion");
+                RasgosFalsos w2 = new RasgosFalsos();
+                MantenimientoRasgos m2 = new MantenimientoRasgos();
+                m2.Desear("a", "cultura", "a", false, "x"); m2.Desear("a", "cultura", "b", true, null);
+                w2.Poner("a", "cultura", "b");
+                m2.Revisar(w2, 0.0);
+                Igual(0, w2.Quitados, "b es deseado: no se quita");
+                Igual("rasgo_opuesto", m2.Buscar("a", "cultura", "a").Motivo, "a queda pendiente");
+            });
+            Prueba("era (E5): el estado y el costo del mantenimiento se pueden leer, y 10 000 comprobaciones sin cambios son baratas", delegate()
+            {
+                RasgosFalsos w = new RasgosFalsos();
+                MantenimientoRasgos m = new MantenimientoRasgos();
+                foreach (string f in new string[] { "a", "b" })
+                    foreach (string t in new string[] { "cultura", "idioma", "religion" })
+                    { w.Poner(f, t, "c"); m.Desear(f, t, "c", true, null); w.Poner(f, t, "d"); m.Desear(f, t, "d", true, null); }
+                Stopwatch cr = Stopwatch.StartNew();
+                for (int i = 0; i < 10000; i++) m.Revisar(w, i * 0.25);
+                cr.Stop();
+                Verdad(cr.ElapsedMilliseconds < 2000, "10 000 comprobaciones en " + cr.ElapsedMilliseconds + " ms");
+                Igual(10000L, m.Comprobaciones, "contadas");
+                Dictionary<string, object> r = m.Resumen();
+                Igual(12, r["deseados_activos"], "12 deseados activos"); Igual(0, r["deseados_pendientes"], "ninguno pendiente");
+                Verdad(r.ContainsKey("ms_medio") && r.ContainsKey("ms_max"), "trae el costo");
+                Verdad(m.EstadoDe("a").ContainsKey("religion") && !m.EstadoDe("zz").ContainsKey("religion"), "estado por faccion");
+            });
+            Prueba("era (E5): el mundo simulado mantiene rasgos (pendientes, reemplazo, soltar) y lo informa en /v1/era/estado", delegate()
+            {
+                MundoSimulado w = new MundoSimulado(0);
+                SolicitudReinicio sol = new SolicitudReinicio();
+                sol.Semilla = 1; sol.TamanoMapa = (long)64; sol.Opciones = new Dictionary<string, object>();
+                sol.Facciones = new List<FaccionSolicitada>();
+                FaccionSolicitada f1 = new FaccionSolicitada(); f1.Id = "a"; sol.Facciones.Add(f1);
+                FaccionSolicitada f2 = new FaccionSolicitada(); f2.Id = "b"; sol.Facciones.Add(f2);
+                w.Reiniciar(sol);
+                w.SimularObjetoAusente("a", "cultura", true);
+                IDictionary<string, object> r = w.EraRasgosMantenidos("a", "cultura", Ids("roads", "tiny_legends"), new string[0], new string[0], false, true);
+                Igual("parcial", r["resultado"], "todo pendiente: parcial");
+                Igual(2, ((List<object>)r["pendientes"]).Count, "dos pendientes");
+                Igual(0, ((List<object>)r["aplicados"]).Count, "ninguno aplicado");
+                r = w.EraRasgos("a", "cultura", Ids("roads"), new string[0], false, true);
+                Igual("rechazada", r["resultado"], "sin mantener y sin objeto: el juego lo rechaza (no_aplicado)");
+                w.SimularObjetoAusente("a", "cultura", false);
+                w.MantenerSim(0.0);
+                Igual(2, w.MantenimientoSim.De("a", "cultura").Count, "dos deseados");
+                Igual(RasgoDeseado.Activo, w.MantenimientoSim.Buscar("a", "cultura", "roads").Estado, "aplicado al existir el objeto");
+                w.SimularReemplazo("a", "cultura");
+                w.MantenerSim(1.0);
+                Igual(1, w.MantenimientoSim.Buscar("a", "cultura", "roads").Reaplicaciones, "reaplicado tras el reemplazo");
+                IDictionary<string, object> est = w.EraEstado(0);
+                Verdad(est.ContainsKey("mantenimiento") && est.ContainsKey("rasgos_mantenidos"), "el estado informa el mantenimiento");
+                r = w.EraRasgosMantenidos("a", "cultura", new string[0], new string[0], Ids("tiny_legends"), false, false);
+                Igual(1, ((List<object>)r["soltados"]).Count, "soltado");
+                Igual(1, w.MantenimientoSim.De("a", "cultura").Count, "queda uno");
+                r = w.EraRasgosMantenidos("a", "cultura", Ids("roads"), new string[0], new string[0], false, true);
+                Igual("ejecutada", r["resultado"], "ya presente con mantener: cuenta como aplicado");
+                Igual(1, ((List<object>)r["aplicados"]).Count, "queda en aplicados"); Igual("roads", ((List<object>)r["aplicados"])[0], "es roads");
+            });
+            Prueba("era (E5): POST /v1/era/rasgos con mantener / soltar llega al mundo por EraRasgosMantenidos y valida su forma", delegate()
+            {
+                string carpeta;
+                MundoFalso m = new MundoFalso();
+                m.EraActiva = true;
+                ServidorPuente s = Levantar(m, null, out carpeta);
+                try
+                {
+                    string tk = File.ReadAllText(s.RutaArchivoToken);
+                    int p = s.Puerto;
+                    Resp r = Bombeando(s, delegate() { return Http(p, tk, "GET", "/v1/info", null); });
+                    Verdad(r.Cuerpo.Contains("\"era_mantener\":true"), "anuncia era_mantener: " + r.Cuerpo);
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"cultura\",\"agregar\":[\"roads\"],\"mantener\":true,\"parcial\":true")); });
+                    Igual(200, r.Estado, "mantener: " + r.Cuerpo);
+                    Igual("mantener|a|cultura|roads|||False|True", m.UltimaEra, "entregado al mundo con mantenimiento");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"cultura\",\"soltar\":[\"roads\"]")); });
+                    Igual(200, r.Estado, "soltar solo: " + r.Cuerpo);
+                    Igual("mantener|a|cultura|||roads|False|False", m.UltimaEra, "soltar llega sin agregar");
+                    m.UltimaEra = "";
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"cultura\",\"agregar\":[\"roads\"],\"mantener\":\"si\"")); });
+                    Igual(400, r.Estado, "mantener no booleano");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"cultura\",\"soltar\":[7]")); });
+                    Igual(400, r.Estado, "soltar invalido");
+                    Igual("", m.UltimaEra, "nada invalido llego al mundo");
+                    r = Bombeando(s, delegate() { return Http(p, tk, "POST", "/v1/era/rasgos", Cuerpo("", "\"faccion\":\"a\",\"tipo\":\"cultura\",\"agregar\":[\"roads\"]")); });
+                    Igual(200, r.Estado, "sin mantener sigue igual: " + r.Cuerpo);
+                    Igual("rasgos|a|cultura|roads||False|False", m.UltimaEra, "la ruta antigua no cambia");
+                }
+                finally { s.Detener(); Directory.Delete(carpeta, true); }
+            });
+        }
+
+        private static string[] SinOrden(ICollection<string> c)
+        {
+            List<string> l = new List<string>(c); l.Sort(StringComparer.Ordinal);
+            return l.ToArray();
         }    }
 }

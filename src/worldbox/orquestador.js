@@ -43,7 +43,7 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
   const log = telemetria ?? await crearTelemetria();
   const inicio = ahora(), pausas = { ms: 0 }, penalizaciones = Object.fromEntries(participantes.map(p => [p.id, 0]));
   const usos = Object.fromEntries(participantes.map(p => [p.id, {}])), cooldownsLocal = Object.fromEntries(participantes.map(p => [p.id, {}]));
-  let info, snapshot, terminados = 0, completo = false, razon = 'turnos', costo = 0, tokens = 0, iniciado = false, rulesVersion, perfil, cfg;
+  let interfazOculta = false, info, snapshot, terminados = 0, completo = false, razon = 'turnos', costo = 0, tokens = 0, iniciado = false, rulesVersion, perfil, cfg;
   // Los limites de tiempo salen del perfil elegido tras conocer el adaptador; hasta entonces valen los del perfil previo.
   let maxMs = resolverConfig(base, PERFILES[reglas ?? 'simulado']).maxTiempoMs, tMs = resolverConfig(base, PERFILES[reglas ?? 'simulado']).timeoutMs;
   // La pausa de lectura del modo grabacion es presentacion: no cuenta contra el tiempo maximo de la partida.
@@ -87,6 +87,10 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
     rulesVersion = perfil.rules_version;
     const acciones = accionesHabilitadas(info, CATALOGO, perfil); comprobarCatalogo(acciones);
     exigir(cfg.maxAcciones <= info.limites.max_acciones_por_turno && cfg.segundosPorTurno <= info.limites.max_segundos_avance, 'no_soportado');
+    // Modo grabacion, orden de preparacion: 1) interfaz oculta ANTES de generar (el mundo viejo no se ve con la barra de poderes), 2) generar el mundo
+    // y fundar las facciones, 3) camara lejos, 4) preludio (espera del aviso del juego, «Listo para grabar», cuenta atras), 5) turno 1.
+    // Nada de esto cuenta contra el tiempo de la partida ni los plazos del puente.
+    interfazOculta = true; await retocar('interfaz', { visible: false });
     const simulado = info.origen === 'simulado';
     const opciones = { max_acciones: cfg.maxAcciones, ...(simulado ? { puntos_por_turno: cfg.puntosPorTurno } : Object.fromEntries(Object.entries(cfg.opcionesEscenario).filter(([, v]) => v !== null && v !== undefined))) };
     const generar = async () => {
@@ -130,9 +134,16 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
         maxTiempoMs: cfg.maxTiempoMs, timeoutMs: cfg.timeoutMs, indicePartida, prompt_version: PROMPT_VERSION, rules_version: rulesVersion, reglas: perfil.nombre, pesos: perfil.pesos, victoria_supervivencia: perfil.victoriaSupervivencia === true, efectiva,
         adaptador: info, acciones_habilitadas: acciones.map(a => a.nombre), parametros_modelo: pasarela?.configuracion ?? null } });
     iniciado = true;
+    // Generar un mundo reinicia la interfaz del juego pero deja puesta la bandera «oculta»: sin un CAMBIO de estado el juego no la vuelve a ocultar
+    // (visto en vivo: la barra de poderes quedaba a la vista). Por eso se muestra y se oculta de nuevo, con una pausa corta para que el juego vea el cambio.
+    if (pres && info?.capacidades?.interfaz === true && typeof adaptador.interfaz === 'function') {
+      await retocar('interfaz', { visible: true });
+      await new Promise(r => setTimeout(r, pres.pausaInterfazMs ?? 300));
+    }
     await retocar('interfaz', { visible: false });
-    if (zooms) await enfocar(participantes[0].id, zooms.lejos);
+    if (zooms) await enfocar(participantes[0].id, zooms.lejos); else if (pres?.zoom) await retocar('camara', { faccion: participantes[0].id, zoom: pres.zoom });
     await avisar({ fase: 'preparando', turno: 0 });
+    if (pres?.preludio) { try { await sinContar(() => pres.preludio()); } catch { /* sin preludio se graba igual */ } }
     bucle: for (let turno = 1; turno <= cfg.turnos; turno++) {
       if (transcurrido() >= maxMs) { razon = 'limite_tiempo'; break; }
       const orden = ordenRotado(participantes, indicePartida, turno).filter(p => snapshot.find(f => f.id === p.id).vivo);
@@ -251,6 +262,7 @@ export async function correrCompetencia({ adaptador, participantes, pasarela, re
       await avisar({ fase: 'fin', turno: terminados });
       if (pres) { await pausar(pres.finMs); await retocar('camara', { liberar: true }); await retocar('interfaz', { visible: true }); }
     }
+    if (!iniciado && interfazOculta) await retocar('interfaz', { visible: true }); // la preparacion fallo: la interfaz no se queda oculta
     try { await conTiempo(() => adaptador.cerrar(), tMs); }
     catch { if (iniciado) await log.registrar({ tipo: 'cierre_error', codigo: 'cierre_fallido' }); }
   }

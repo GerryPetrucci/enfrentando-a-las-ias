@@ -29,14 +29,14 @@ test('zoom por fase: lejos al preparar, cerca en cada decision, medio al avanzar
   const { puente, config } = await real(t);
   const { reporte } = await correrCompetencia({ ...config, observador: () => {}, presentacion: { lecturaMs: 0, finMs: 0, zooms: ZOOMS } });
   assert.equal(reporte.completo, true);
-  assert.equal(secuencia(puente), 'escenario/reiniciar I0 L211:f1 C60:f1 C60:f2 M110:f2 avanzar C60:f2 C60:f1 M110:f1 avanzar C60:f1 C60:f2 M110:f2 avanzar L211:f2 liberar I1 cerrar',
+  assert.equal(secuencia(puente), 'I0 escenario/reiniciar I1 I0 L211:f1 C60:f1 C60:f2 M110:f2 avanzar C60:f2 C60:f1 M110:f1 avanzar C60:f1 C60:f2 M110:f2 avanzar L211:f2 liberar I1 cerrar',
     'el medio sigue a la ultima faccion activa del turno; solo se suelta la camara al final');
 });
 
 test('con zoom unico (sin zooms) rige el comportamiento de siempre: el mismo zoom en cada decision y la camara se suelta al cerrar cada turno', async t => {
   const { puente, config } = await real(t);
   await correrCompetencia({ ...config, observador: () => {}, presentacion: { lecturaMs: 0, finMs: 0, zoom: 80 } });
-  assert.equal(secuencia(puente, z => `Z`), 'escenario/reiniciar I0 Z80:f1 Z80:f2 avanzar liberar Z80:f2 Z80:f1 avanzar liberar Z80:f1 Z80:f2 avanzar liberar liberar I1 cerrar');
+  assert.equal(secuencia(puente, z => `Z`), 'I0 escenario/reiniciar I1 I0 Z80:f1 Z80:f1 Z80:f2 avanzar liberar Z80:f2 Z80:f1 avanzar liberar Z80:f1 Z80:f2 avanzar liberar liberar I1 cerrar');
 });
 
 test('el zoom por fase elige una faccion VIVA y un fallo de camara no detiene la partida', async t => {

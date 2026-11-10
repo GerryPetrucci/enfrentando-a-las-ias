@@ -39,3 +39,13 @@ $env:WORLDBOX_VIVO = '1'; node --test src/pruebas/worldbox/puente-vivo.test.js  
 Sin abrir el juego, el protocolo se ejerce contra `Anfitrion.exe` (`node --test src/pruebas/worldbox/puente-csharp.test.js`).
 Opciones de `reiniciar` propias de este mundo: `tamano_mapa`, `facciones[].especie`, `opciones.plantilla|velocidad|unidades_iniciales|radio_creacion`
 y, para pruebas, `opciones.tope_poderes|tope_donado` (solo pueden BAJAR los topes).
+## Formato «era» (E2)
+
+| Archivo | Contenido |
+|---|---|
+| `Era.cs` | `EraConfig` (valida `opciones.era`), `EraJuego` (espejo, biomas, muro, flora, depositos, rasgos, leyes, edades, compatibilidad especie x bioma) y `R` (reflexion: varios miembros del juego no son publicos). |
+| `MundoWorldBoxEra.cs` | `IEra` del mundo real: catalogo, estado con seguimiento de linaje de reinos y eventos, `EraRasgos`, `EraMuro`, `EraMinerales`; y `IEraVelocidad.EraVelocidad` (E4, aditivo: `Config.setWorldSpeed` entre avances); `IEraMantenimiento.EraRasgosMantenidos` y `EraMantener()` (E5, aditivo: reaplica cada 0,25 s los rasgos que el juego pierde al reemplazar cultura, idioma o religion). |
+| `MundoWorldBoxEraVigilancia.cs` | E9: vigilante del muro (devuelve a su lado o elimina las unidades del otro lado / sobre el muro; repara el muro) y unidad de reino (reune los reinos derivados al principal con `City.joinAnotherKingdom`); ambos activos por omision en era, bloques `vigilante` y `unico_reino` del estado. La logica pura vive en `src/ControlEra.cs` (autoprueba). |
+
+Reglas propias: nada se anuncia sin probarlo en vivo (`privado/worldbox/era-fase0/e2/`); las leyes y la edad que fija una era se restauran en el
+siguiente `reiniciar` y en `cerrar`; el muro guarda el tipo principal y superior de cada casilla y los restaura.

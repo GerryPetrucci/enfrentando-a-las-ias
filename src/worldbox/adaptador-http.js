@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { normalizarInfo, normalizarTerminal, normalizarEjecucion, normalizarReinicio, normalizarAvance } from './adaptador.js';
 import { construirObservacion } from './observacion.js';
+import { normalizarEstadoEra, normalizarRespuestaRasgos } from './era/observacion-era.js';
 import { ErrorArena, exigir, entero, conTiempo, PROTOCOLO } from './util.js';
 
 export function crearAdaptadorHttp({ url = 'http://127.0.0.1:47600', token, timeoutMs = 5000, reintentos = 1, umbralCircuito = 3, recuperacionMs = 30000, ahora = Date.now } = {}) {
@@ -56,5 +57,12 @@ export function crearAdaptadorHttp({ url = 'http://127.0.0.1:47600', token, time
     async camara(datos) { await pedir('/v1/camara', datos?.liberar ? datos : { modo: 'limpio', ...datos }, { presentacion: true }); return { hecho: true }; },
     async interfaz(datos) { await pedir('/v1/interfaz', datos, { presentacion: true }); return { hecho: true }; },
     async cerrar() { try { await pedir('/v1/cerrar', {}); return { cerrado: true }; } catch (e) { if (e.codigo === 'no_soportado') return { cerrado: false }; throw e; } },
+    // Formato «era» (docs/worldbox-era.md, docs/worldbox-protocolo.md «Formato era»): controles de ESCENARIO; el modelo nunca los pide. Solo con info.capacidades.era.
+    era: {
+      async estado(desde = 0) { return normalizarEstadoEra(await pedir(`/v1/era/estado?desde=${Math.max(0, Math.floor(desde))}`)); },
+      async rasgos(datos) { return normalizarRespuestaRasgos(await pedir('/v1/era/rasgos', datos)); },
+      async muro(datos) { const x = await pedir('/v1/era/muro', datos); return { muro_puesto: x.muro_puesto === true }; },
+      async velocidad(datos) { const x = await pedir('/v1/era/velocidad', datos); return { velocidad: String(x.velocidad ?? '').slice(0, 10) }; },
+    },
   };
 }

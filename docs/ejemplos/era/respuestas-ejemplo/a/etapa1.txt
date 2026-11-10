@@ -1,0 +1,14 @@
+(EJEMPLO escrito a mano, no es una respuesta de un modelo)
+
+Claro. Elijo una civilización de enanos con oro cerca y un terreno rocoso:
+
+```json
+{
+  "actions": [
+    { "action": "elegir_inicio", "parameters": { "raza": "dwarf", "mineral": "mineral_gold", "bioma": "biome_rocklands" } }
+  ],
+  "reasoning_summary": "Ejemplo: enanos sobre roca con oro; construyen bien y aguantan la guerra."
+}
+```
+
+Espero que sirva.

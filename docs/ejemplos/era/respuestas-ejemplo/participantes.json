@@ -1,0 +1,5 @@
+{
+  "ejemplo": true,
+  "a": { "modelo": "anthropic/claude-sonnet-5.5", "nombre": "Claude Sonnet (EJEMPLO)", "canal": "chat" },
+  "b": { "modelo": "openai/gpt-6.1-sol", "nombre": "GPT Sol (EJEMPLO)", "canal": "chat" }
+}

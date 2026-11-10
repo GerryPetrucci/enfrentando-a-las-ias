@@ -1,0 +1,6 @@
+{
+  "actions": [
+    { "action": "elegir_rasgos_etapa3", "parameters": { "arquitectura": "roads", "plano": "city_layout_rings", "edificios": "statue_lovers", "politica": "expansionists", "sucesion": "golden_rule", "impuestos": "ninguno" } }
+  ],
+  "reasoning_summary": "Ejemplo: caminos y expansión, sin gastar en impuestos."
+}

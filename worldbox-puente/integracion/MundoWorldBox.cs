@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace PuenteWorldBox
 {
-    public sealed class MundoWorldBox : IMundo, IPresentacion
+    public sealed partial class MundoWorldBox : IMundo, IPresentacion, IEra, IEraVelocidad, IEraMantenimiento
     {
         // ---------------------------------------------------------------- tipos internos
         private sealed class Faccion
@@ -22,6 +22,8 @@ namespace PuenteWorldBox
             public int UnidadesCreadas;
             public int PoderesUsados;
             public int Donado;
+            public int Indice;                                   // formato era: posicion de la faccion
+            public List<Kingdom> Reinos = new List<Kingdom>();   // formato era: el reino fundador y los derivados (escisiones, rebeliones)
         }
 
         private sealed class AvanceEnCurso
@@ -54,7 +56,7 @@ namespace PuenteWorldBox
         public const int MaxUnidadesCreadasPorFaccion = 10;
         public const int MaxCrearPorAccion = 5;
         public const int RadioCreacionPorDefecto = 6;
-        private static readonly string[] Velocidades = new string[] { "x1", "x2", "x3", "x4", "x5", "x10", "x15", "x20" };
+        private static readonly string[] Velocidades = new string[] { "x1", "x2", "x3", "x4", "x5", "x10", "x15", "x20", "x40" };
         private static readonly string[] Plantillas = new string[] { "continent", "boring_plains", "pancake" };
 
         // ---------------------------------------------------------------- estado
@@ -198,18 +200,34 @@ namespace PuenteWorldBox
             for (int i = 0; i < n; i++)
             {
                 string e = s.Facciones[i].Especie ?? "human";
-                if (!Juego.EspecieValida(e)) throw new ErrorPuente(Codigos.SolicitudInvalida, "especie debe ser human, elf, orc o dwarf.");
+                if (!Juego.EspecieValida(e)) throw new ErrorPuente(Codigos.SolicitudInvalida, "especie debe ser una especie civilizada del juego (human, elf, orc, dwarf, civ_cat...).");
                 especies[i] = e;
             }
             string tam = ResolverTamano(s.TamanoMapa);
             string plant = OpcionTexto(s, "plantilla", "continent");
             if (Array.IndexOf(Plantillas, plant) < 0) throw new ErrorPuente(Codigos.SolicitudInvalida, "opciones.plantilla debe ser continent, boring_plains o pancake.");
             string vel = OpcionTexto(s, "velocidad", "x5");
-            if (Array.IndexOf(Velocidades, vel) < 0) throw new ErrorPuente(Codigos.SolicitudInvalida, "opciones.velocidad debe ser x1, x2, x3, x4, x5, x10, x15 o x20.");
+            if (Array.IndexOf(Velocidades, vel) < 0) throw new ErrorPuente(Codigos.SolicitudInvalida, "opciones.velocidad debe ser x1, x2, x3, x4, x5, x10, x15, x20 o x40.");
             int inicial = (int)OpcionEntero(s, "unidades_iniciales", 4, 1, 8);
             int radio = (int)OpcionEntero(s, "radio_creacion", RadioCreacionPorDefecto, 0, 8);
             int tPoderes = (int)OpcionEntero(s, "tope_poderes", MaxPoderesPorFaccion, 0, MaxPoderesPorFaccion);
             int tDonado = (int)OpcionEntero(s, "tope_donado", MaxDonadoPorFaccion, 0, MaxDonadoPorFaccion);
+            // opciones.era (aditivo, formato era): mundo simetrico con muro, biomas, minerales, leyes y edad. Sin ella todo sigue igual.
+            EraConfig era = null;
+            List<string> idsEra = new List<string>();
+            foreach (FaccionSolicitada fsol in s.Facciones) idsEra.Add(fsol.Id);
+            object eraCruda;
+            if (s.Opciones != null && s.Opciones.TryGetValue("era", out eraCruda) && eraCruda != null)
+            {
+                Dictionary<string, object> eraObj = eraCruda as Dictionary<string, object>;
+                if (eraObj == null) throw new ErrorPuente(Codigos.SolicitudInvalida, "'opciones.era' debe ser un objeto.");
+                era = EraConfig.Leer(eraObj, idsEra);
+            }
+            Dictionary<string, object> eraPrep = null, eraPost = null;
+            EraReiniciarEstado();
+            EraJuego.RestaurarLeyes();
+            EraJuego.ReanudarEdades();
+            EraJuego.OlvidarMuro();
 
             Stopwatch total = Stopwatch.StartNew();
             hayEscenario = false;
@@ -224,29 +242,52 @@ namespace PuenteWorldBox
             Sitio[] sitios = null;
             int vueltas = 0, intentosMapa = 0;
             long msGenerar = 0;
-            while (sitios == null && intentosMapa < 4)
+            // opciones.mapa (aditivo, fase 0 del formato era): en vez de generar un mundo, carga un mapa guardado (misma geografia en
+            // cada reinicio: es el UNICO camino medido para repetir terreno) y le quita las civilizaciones que traiga.
+            string mapa = OpcionTexto(s, "mapa", null);
+            string rutaMapa = null;
+            if (mapa != null)
+            {
+                rutaMapa = Juego.RutaMapa(mapa);
+                if (rutaMapa == null) throw new ErrorPuente(Codigos.SolicitudInvalida, "opciones.mapa debe ser 'slotN' o un nombre [a-z0-9_-] de 1 a 40 caracteres.");
+                if (!Juego.MapaExiste(rutaMapa)) throw new ErrorPuente(Codigos.SolicitudInvalida, "No existe el mapa guardado '" + mapa + "' (falta map.wbox o map.wbax en " + rutaMapa + ").");
+            }
+            int maxIntentosMapa = mapa != null ? 1 : 4;
+            while (sitios == null && intentosMapa < maxIntentosMapa)
             {
                 intentosMapa++;
-                Config.customMapSize = tam;
-                Config.current_map_template = plant;
-                World.world.generateNewMap();
                 int v = 0;
-                while (SmoothLoader.isLoading() && v < 50000) { SmoothLoader.update(0.5f); v++; }
+                if (mapa != null)
+                {
+                    try { v = Juego.CargarMapa(rutaMapa); }
+                    catch (InvalidOperationException e) { throw new ErrorPuente(Codigos.ErrorInterno, e.Message); }
+                    Juego.LimpiarCivilizaciones();
+                }
+                else
+                {
+                    Config.customMapSize = tam;
+                    Config.current_map_template = plant;
+                    World.world.generateNewMap();
+                    while (SmoothLoader.isLoading() && v < 50000) { SmoothLoader.update(0.5f); v++; }
+                    if (SmoothLoader.isLoading() || Config.worldLoading)
+                        throw new ErrorPuente(Codigos.ErrorInterno, "La generacion del mapa no termino tras " + v + " pasos del cargador.");
+                }
                 vueltas += v;
-                if (SmoothLoader.isLoading() || Config.worldLoading)
-                    throw new ErrorPuente(Codigos.ErrorInterno, "La generacion del mapa no termino tras " + v + " pasos del cargador.");
                 Juego.Pausar(true); // generar el mapa deja el juego sin pausa
                 msGenerar = total.ElapsedMilliseconds;
+
+                if (era != null) eraPrep = EraPreparar(era, idsEra);
+                int margenMuro = era != null ? (era.MuroAncho + 7) / 8 + 1 : 0;
 
                 Actor[] muestras = new Actor[n];
                 WorldTile centroMapa = World.world.GetTile(MapBox.width / 2, MapBox.height / 2);
                 for (int i = 0; i < n; i++) muestras[i] = Juego.Crear(especies[i], centroMapa);
-                Sitio[] cand = Juego.ElegirSitios(muestras, 400);
+                Sitio[] cand = era != null && era.Espejo ? ElegirSitiosEspejo(muestras, 400, margenMuro) : Juego.ElegirSitios(muestras, 400);
                 bool completo = true;
                 foreach (Sitio st in cand) { if (st == null) completo = false; }
                 if (!completo)
                 {
-                    cand = Juego.ElegirSitios(muestras, 250);
+                    cand = era != null && era.Espejo ? ElegirSitiosEspejo(muestras, 250, margenMuro) : Juego.ElegirSitios(muestras, 250);
                     completo = true;
                     foreach (Sitio st in cand) { if (st == null) completo = false; }
                 }
@@ -269,6 +310,7 @@ namespace PuenteWorldBox
                 if (!fundador.buildCityAndStartCivilization())
                     throw new ErrorPuente(Codigos.ErrorInterno, "El juego rechazo fundar la ciudad de " + f.Id + " en (" + f.SitioX + "," + f.SitioY + ").");
                 f.Reino = fundador.kingdom;
+                f.Indice = i; f.Reinos.Add(f.Reino);
                 f.CiudadInicial = fundador.city;
                 List<WorldTile> libres = Juego.TilesLibresAlrededor(sitios[i].Centro, inicial - 1, 4);
                 foreach (WorldTile t in libres)
@@ -290,10 +332,11 @@ namespace PuenteWorldBox
             hayEscenario = true;
             contadorEscenarios++;
             zonasTotales = Juego.ZonasX * Juego.ZonasY;
+            if (era != null) eraPost = EraDespues(era, facciones, sitios);
             long msTotal = total.ElapsedMilliseconds;
 
             StringBuilder huella = new StringBuilder();
-            huella.Append(tam).Append('|').Append(plant).Append('|').Append(MapBox.width).Append('x').Append(MapBox.height).Append('|').Append(inicial);
+            huella.Append(mapa ?? tam).Append('|').Append(plant).Append('|').Append(MapBox.width).Append('x').Append(MapBox.height).Append('|').Append(inicial);
             for (int y = 0; y < MapBox.height; y += 4)
                 for (int x = 0; x < MapBox.width; x += 4) huella.Append(World.world.GetTile(x, y).Type.index_id).Append(',');
             foreach (Faccion f in facciones) huella.Append('|').Append(f.Id).Append(':').Append(f.Especie).Append(':').Append(f.SitioX).Append(':').Append(f.SitioY);
@@ -307,32 +350,42 @@ namespace PuenteWorldBox
             r["hash_mundo"] = hash;
             r["semilla_controlada"] = false;
             r["mundo"] = Json.Objeto("ancho", MapBox.width, "alto", MapBox.height, "plantilla", plant, "tamano", tam, "velocidad", vel, "unidades_iniciales", inicial, "radio_creacion", radio,
-                "ms_generar", msGenerar, "ms_total", msTotal, "intentos_mapa", intentosMapa);
+                "ms_generar", msGenerar, "ms_total", msTotal, "intentos_mapa", intentosMapa, "mapa", mapa);
             List<object> lista = new List<object>();
             foreach (Faccion f in facciones)
                 lista.Add(Json.Objeto("id", f.Id, "especie", f.Especie, "nombre", f.Reino.name, "sitio_x", f.SitioX, "sitio_y", f.SitioY, "calidad_sitio", f.CalidadSitio));
             r["facciones"] = lista;
+            if (era != null) r["era"] = Json.Objeto("preparacion", eraPrep, "resultado", eraPost, "espejo", era.Espejo);
             return r;
         }
 
         // ---------------------------------------------------------------- observacion
         private Dictionary<string, object> Vista(Faccion f, bool propia)
         {
-            bool vivo = Juego.Vivo(f.Reino);
-            Kingdom k = f.Reino;
+            // En la era la "faccion" es una civilizacion: suma el reino fundador y todos los derivados vivos (ReinosVivos); sin era es solo f.Reino.
+            List<Kingdom> rs = ReinosVivos(f);
+            bool vivo = FaccionViva(f);
+            Kingdom k = rs.Count > 0 ? rs[0] : f.Reino;
             Dictionary<string, object> d = new Dictionary<string, object>();
             d["id"] = f.Id;
             d["vivo"] = vivo;
             d["especie"] = f.Especie;
-            d["poblacion"] = vivo ? k.getPopulationPeople() : 0;
-            d["ciudades"] = vivo ? k.countCities() : 0;
-            d["territorio"] = vivo ? k.countZones() : 0;
-            d["recursos"] = vivo ? Juego.Recursos(k) : 0;
-            d["objetivos"] = vivo ? k.countCities() : 0;
-            d["ejercito"] = vivo ? k.countTotalWarriors() : 0;
-            d["edificios"] = vivo ? k.countBuildings() : 0;
-            d["comida"] = vivo ? k.countTotalFood() : 0;
-            d["salud_media_pct"] = vivo ? Juego.SaludMediaPct(k) : 0;
+            int sPob = 0, sCiu = 0, sTer = 0, sRec = 0, sEj = 0, sEdi = 0, sCom = 0; double sSalud = 0;
+            foreach (Kingdom kk in rs)
+            {
+                int p = kk.getPopulationPeople();
+                sPob += p; sCiu += kk.countCities(); sTer += kk.countZones(); sRec += Juego.Recursos(kk); sEj += kk.countTotalWarriors();
+                sEdi += kk.countBuildings(); sCom += kk.countTotalFood(); sSalud += Juego.SaludMediaPct(kk) * (double)p;
+            }
+            d["poblacion"] = sPob;
+            d["ciudades"] = sCiu;
+            d["territorio"] = sTer;
+            d["recursos"] = sRec;
+            d["objetivos"] = sCiu;
+            d["ejercito"] = sEj;
+            d["edificios"] = sEdi;
+            d["comida"] = sCom;
+            d["salud_media_pct"] = sPob > 0 ? (int)Math.Round(sSalud / sPob) : 0;
             d["rey_vivo"] = vivo && k.king != null && k.king.isAlive();
             d["cooldowns"] = new Dictionary<string, object>();
             if (propia)
@@ -381,7 +434,7 @@ namespace PuenteWorldBox
             if (!defs.TryGetValue(accion, out d) || !acciones.Contiene(accion))
                 return ResultadoAccion.De(ResultadoAccion.Rechazada, "accion_desconocida", "La accion no esta disponible.", null);
             if (EsTerminal()) return ResultadoAccion.De(ResultadoAccion.Rechazada, "partida_terminada", "La partida ya termino.", null);
-            if (!Juego.Vivo(f.Reino)) return ResultadoAccion.De(ResultadoAccion.Rechazada, "eliminado", "La faccion esta eliminada.", null);
+            if (!Juego.Vivo(ReinoActivo(f))) return ResultadoAccion.De(ResultadoAccion.Rechazada, "eliminado", "La faccion esta eliminada.", null);
             return d.Ejecuta(f, parametros);
         }
 
@@ -450,7 +503,8 @@ namespace PuenteWorldBox
             {
                 ResultadoAccion no = ResolverObjetivo(f, objetivo, out blanco);
                 if (no != null) return no;
-                if (!Juego.Vivo(blanco.Reino)) return Rechazo("objetivo_eliminado", "El rival ya esta eliminado.");
+                Kingdom kb = ReinoActivo(blanco);
+                if (kb == null || !Juego.Vivo(kb)) return Rechazo("objetivo_eliminado", "El rival ya esta eliminado.");
             }
             if (f.PoderesUsados + 1 > topePoderes) return Rechazo("tope_poderes", "Se alcanzo el tope de " + topePoderes + " poderes por faccion.");
             Juego.Estabilizar();
@@ -459,12 +513,12 @@ namespace PuenteWorldBox
             for (int i = 0; i < todas.Count && objetivos.Count < gotas; i++)
             {
                 Actor a = todas[i];
-                if (a.kingdom != blanco.Reino || !a.isAlive() || a.current_tile == null) continue;
+                if (!EsDeFaccion(a.kingdom, blanco) || !a.isAlive() || a.current_tile == null) continue;
                 if (dropId == "blessing" ? a.hasTrait(marca) : Juego.TieneEstado(a, marca)) continue;
                 objetivos.Add(a);
             }
             if (objetivos.Count == 0) return ResultadoAccion.De(ResultadoAccion.SinEfecto, "sin_objetivos", "No hay unidades a las que afecte.", Json.Objeto("objetivo", blanco.Id));
-            int saludAntes = Juego.SaludMediaPct(blanco.Reino);
+            int saludAntes = Juego.SaludMediaPct(ReinoActivo(blanco));
             int soltadas = 0;
             foreach (Actor a in objetivos)
             {
@@ -501,17 +555,26 @@ namespace PuenteWorldBox
             return string.CompareOrdinal(a.Id, b.Id) < 0 ? a.Id + "|" + b.Id : b.Id + "|" + a.Id;
         }
 
+        /// <summary>E5: el reino con el que una faccion actua. Fuera de la era es el fundador de siempre; en la era (civilizacion = suma de reinos derivados) es el fundador si vive
+        /// o, si cayo, el primer derivado vivo: asi la guerra, la paz y los poderes siguen funcionando cuando solo quedan derivados.</summary>
+        private Kingdom ReinoActivo(Faccion f)
+        {
+            return eraActiva && eraCfg != null && eraCfg.ContarDerivados ? ReinoPrincipal(f) : f.Reino;
+        }
+
         private ResultadoAccion DeclararGuerra(Faccion f, IDictionary<string, object> p)
         {
             Faccion d;
             ResultadoAccion no = ResolverObjetivo(f, (string)p["objetivo"], out d);
             if (no != null) return no;
-            if (!Juego.Vivo(d.Reino)) return Rechazo("objetivo_eliminado", "El rival ya esta eliminado.");
-            if (World.world.wars.isInWarWith(f.Reino, d.Reino)) return Rechazo("ya_en_guerra", "Ya estas en guerra con ese rival.");
+            Kingdom kf = ReinoActivo(f), kd = ReinoActivo(d);
+            if (kf == null || !Juego.Vivo(kf)) return Rechazo("faccion_eliminada", "Tu faccion ya esta eliminada.");
+            if (kd == null || !Juego.Vivo(kd)) return Rechazo("objetivo_eliminado", "El rival ya esta eliminado.");
+            if (World.world.wars.isInWarWith(kf, kd)) return Rechazo("ya_en_guerra", "Ya estas en guerra con ese rival.");
             WarTypeAsset tipo = AssetManager.war_types_library.get("normal");
-            War guerra = World.world.wars.newWar(f.Reino, d.Reino, tipo);
+            War guerra = World.world.wars.newWar(kf, kd, tipo);
             Juego.Estabilizar();
-            bool en = World.world.wars.isInWarWith(f.Reino, d.Reino);
+            bool en = World.world.wars.isInWarWith(kf, kd);
             Dictionary<string, object> efecto = Json.Objeto("objetivo", d.Id, "en_guerra_antes", false, "en_guerra_despues", en);
             if (guerra == null || !en) return ResultadoAccion.De(ResultadoAccion.SinEfecto, "sin_efecto", "El juego no abrio la guerra.", efecto);
             inicioGuerra[ClaveGuerra(f, d)] = Juego.TiempoMundo();
@@ -523,14 +586,16 @@ namespace PuenteWorldBox
             Faccion d;
             ResultadoAccion no = ResolverObjetivo(f, (string)p["objetivo"], out d);
             if (no != null) return no;
-            War guerra = World.world.wars.getWar(f.Reino, d.Reino, false) ?? World.world.wars.getWar(d.Reino, f.Reino, false);
-            if (guerra == null || !World.world.wars.isInWarWith(f.Reino, d.Reino)) return Rechazo("sin_guerra", "No estas en guerra con ese rival.");
+            Kingdom kf = ReinoActivo(f), kd = ReinoActivo(d);
+            if (kf == null || kd == null) return Rechazo("sin_guerra", "No estas en guerra con ese rival.");
+            War guerra = World.world.wars.getWar(kf, kd, false) ?? World.world.wars.getWar(kd, kf, false);
+            if (guerra == null || !World.world.wars.isInWarWith(kf, kd)) return Rechazo("sin_guerra", "No estas en guerra con ese rival.");
             double inicio;
             if (inicioGuerra.TryGetValue(ClaveGuerra(f, d), out inicio) && Juego.TiempoMundo() - inicio < MinSegundosGuerra)
                 return Rechazo("guerra_reciente", "La guerra lleva menos de " + MinSegundosGuerra + " s de juego.");
             World.world.wars.endWar(guerra, WarWinner.Peace);
             Juego.Estabilizar();
-            bool en = World.world.wars.isInWarWith(f.Reino, d.Reino);
+            bool en = World.world.wars.isInWarWith(kf, kd);
             Dictionary<string, object> efecto = Json.Objeto("objetivo", d.Id, "en_guerra_antes", true, "en_guerra_despues", en);
             if (en) return ResultadoAccion.De(ResultadoAccion.SinEfecto, "sin_efecto", "La guerra sigue abierta.", efecto);
             return ResultadoAccion.De(ResultadoAccion.Ejecutada, "ok", "Paz firmada.", efecto);
@@ -550,7 +615,8 @@ namespace PuenteWorldBox
             ResultadoAccion no = ReglasAccion.ValidarCreacion(cantidad, libres.Count, f.UnidadesCreadas, MaxUnidadesCreadasPorFaccion);
             if (no != null) return no;
             Juego.Estabilizar();
-            int antes = f.Reino.getPopulationPeople();
+            Kingdom kr = ReinoActivo(f);
+            int antes = kr.getPopulationPeople();
             int creadas = 0;
             foreach (WorldTile t in libres)
             {
@@ -560,7 +626,7 @@ namespace PuenteWorldBox
                 creadas++;
             }
             Juego.Estabilizar();
-            int despues = f.Reino.getPopulationPeople();
+            int despues = kr.getPopulationPeople();
             f.UnidadesCreadas += creadas; // se cuenta lo REALMENTE creado, nunca lo pedido
             Dictionary<string, object> efecto = Json.Objeto("pedidas", cantidad, "creadas", creadas, "poblacion_antes", antes, "poblacion_despues", despues,
                 "unidades_creadas_total", f.UnidadesCreadas);
@@ -571,10 +637,19 @@ namespace PuenteWorldBox
         }
         private City CiudadDe(Faccion f)
         {
-            if (f.Reino == null) return null;
-            if (f.CiudadInicial != null && f.CiudadInicial.isAlive() && f.Reino.cities.Contains(f.CiudadInicial)) return f.CiudadInicial;
-            foreach (City c in f.Reino.cities) { if (c != null && c.isAlive()) return c; }
+            Kingdom k = ReinoActivo(f);
+            if (k == null) return null;
+            if (f.CiudadInicial != null && f.CiudadInicial.isAlive() && k.cities.Contains(f.CiudadInicial)) return f.CiudadInicial;
+            foreach (City c in k.cities) { if (c != null && c.isAlive()) return c; }
             return null;
+        }
+
+        /// <summary>E5: true si el reino pertenece a la faccion (su fundador o, en la era, uno de sus derivados).</summary>
+        private bool EsDeFaccion(Kingdom k, Faccion f)
+        {
+            if (k == null) return false;
+            if (k == f.Reino) return true;
+            return eraActiva && eraCfg != null && eraCfg.ContarDerivados && f.Reinos.Contains(k);
         }
 
         // ---------------------------------------------------------------- avanzar
@@ -599,6 +674,7 @@ namespace PuenteWorldBox
         public void Tick()
         {
             if (!hayEscenario || !Juego.Cargado) return;
+            EraTick();
             AvanceEnCurso a = avance;
             if (a == null)
             {
@@ -722,7 +798,7 @@ namespace PuenteWorldBox
         private int VivasCount()
         {
             int vivas = 0;
-            foreach (Faccion f in facciones) { if (Juego.Vivo(f.Reino)) vivas++; }
+            foreach (Faccion f in facciones) { if (FaccionViva(f)) vivas++; }
             return vivas;
         }
 
@@ -740,7 +816,7 @@ namespace PuenteWorldBox
             foreach (Faccion f in facciones)
             {
                 resumen.Add(Vista(f, false));
-                if (Juego.Vivo(f.Reino)) ganador = f.Id;
+                if (FaccionViva(f)) ganador = f.Id;
             }
             Dictionary<string, object> r = new Dictionary<string, object>();
             r["terminal"] = terminal;
@@ -765,6 +841,9 @@ namespace PuenteWorldBox
             hayEscenario = false;
             inicioGuerra.Clear();
             facciones = new List<Faccion>();
+            EraReiniciarEstado();
+            EraJuego.RestaurarLeyes();
+            EraJuego.ReanudarEdades();
         }
     }
 }

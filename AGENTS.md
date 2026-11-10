@@ -12,6 +12,8 @@ verificarlo en el binario (`herramientas/worldbox-ensamblado.mjs`) o en vivo; un
 repo); modelos reales solo con `--modo=pago` explícito y tope de gasto, jamás sin orden; cambiar reglas o prompt
 sube `rules_version`/`prompt_version`; el juego apaga el modo experimental tras cada actualización.
 
+Formato «era» (E4): segundo reglamento `era-1.0` (`--formato=era`, `docs/worldbox-era.md`); no cambia `auge-real-1.1.0`. Práctica manual con respuestas de chats guardadas y guía de parámetros: `docs/worldbox-era-practica.md` (evidencia en `data/era/`, ignorada por git: no se publica sin orden).
+
 ## Contrato
 
 - Respetar la instruccion actual del usuario y los cambios ajenos (`git status`).

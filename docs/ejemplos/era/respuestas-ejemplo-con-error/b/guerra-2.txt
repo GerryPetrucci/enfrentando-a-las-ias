@@ -1,0 +1,2 @@
+{ "actions": [ { "action": "crear_unidades", "parameters": { "cantidad": 5 } }, { "action": "bendecir", "parameters": { "gotas": 3 } } ],
+  "reasoning_summary": "Ejemplo: refuerzo y bendición en plena guerra." }

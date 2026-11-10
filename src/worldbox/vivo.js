@@ -12,7 +12,7 @@ export const FASES = Object.freeze(['preparando', 'pensando', 'decidio', 'espera
 export const MAX_RAZON = 160;
 
 // id de proveedor (el de CONTENDIENTES) -> clave de web/paleta.js, que trae el nombre corto y el color.
-const MODELO_A_PALETA = Object.freeze({
+export const MODELO_A_PALETA = Object.freeze({
   'anthropic/claude-sonnet-5.5': 'claude', 'openai/gpt-6.1-sol': 'gpt', 'google/gemini-3.8-flash': 'gemini', 'meta-llama/llama-4-maverick': 'llama', 'deepseek/deepseek-v3.2': 'deepseek',
   'nvidia/nemotron-3-ultra-550b-a55b:free': 'nemotron-ultra', 'nvidia/nemotron-3-super-120b-a12b:free': 'nemotron-super', 'poolside/laguna-s-2.1:free': 'laguna', 'inclusionai/ling-3.1-flash': 'ling',
   'anthropic/claude-haiku-5.5': 'haiku', 'openai/gpt-6-luna': 'luna', 'google/gemini-3.5-flash-lite': 'flash-lite', 'mistralai/mistral-medium-3-5': 'mistral', 'x-ai/grok-4.3': 'grok',
@@ -49,13 +49,14 @@ export function variarColor(color, indice) {
 }
 // participantes: [{id, modelo}] en orden de asiento. Devuelve Map id -> {id, nombre, color, bot}. Si un nombre se repite lleva letra A, B... por orden.
 export function identidades(participantes) {
-  const base = participantes.map(p => ({ id: p.id, ...identidadBase(p.modelo) }));
+  // E10: `nombre` y `color` del participante (hex) mandan sobre los de la tabla: la presentación del reino se decide una sola vez (era/presentacion-era.js).
+  const base = participantes.map(p => { const i = identidadBase(p.modelo); return { id: p.id, ...i, ...(p.nombre ? { nombre: p.nombre } : {}), ...(p.reino ? { reino: p.reino } : {}), ...(/^#[0-9a-f]{6}$/i.test(p.color ?? '') ? { color: p.color, fijo: true } : {}) }; });
   const veces = new Map(); for (const b of base) veces.set(b.nombre, (veces.get(b.nombre) ?? 0) + 1);
   const visto = new Map();
   return new Map(base.map(b => {
     if (veces.get(b.nombre) === 1) return [b.id, b];
     const i = visto.get(b.nombre) ?? 0; visto.set(b.nombre, i + 1);
-    return [b.id, { ...b, nombre: `${b.nombre} ${String.fromCharCode(65 + i)}`, color: variarColor(b.color, i) }];
+    return [b.id, { ...b, nombre: `${b.nombre} ${String.fromCharCode(65 + i)}`, color: b.fijo ? b.color : variarColor(b.color, i) }];
   }));
 }
 

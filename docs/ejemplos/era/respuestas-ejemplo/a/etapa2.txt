@@ -1,0 +1,8 @@
+```json
+{
+  "actions": [
+    { "action": "elegir_rasgos_etapa2", "parameters": { "cognitivo": "gift_of_life", "mente": "fast_builders", "espiritu": "blood_pact", "fisico": "exoskeleton", "apariencia": "phenotype_skin_magical" } }
+  ],
+  "reasoning_summary": "Ejemplo: constructores rápidos y cuerpos resistentes."
+}
+```

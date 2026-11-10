@@ -67,6 +67,60 @@ namespace PuenteWorldBox
             actualizarContenedores.Invoke(World.world, null);
         }
 
+        // ------------------------------------------------------------------ mapas guardados (fase 0 del formato era)
+
+        /// <summary>
+        /// Carpeta de un mapa guardado. Solo dos formas, sin rutas libres: "slotN" (la ranura N de la interfaz del juego,
+        /// saves\saveN\) o un nombre [a-z0-9_-]{1,40} (carpeta era-mapas\NOMBRE\ junto a los datos del juego).
+        /// Devuelve null si el nombre no tiene esa forma.
+        /// </summary>
+        public static string RutaMapa(string nombre)
+        {
+            if (string.IsNullOrEmpty(nombre) || nombre.Length > 40) return null;
+            foreach (char c in nombre) { if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' || c == '-')) return null; }
+            string raiz = Application.persistentDataPath;
+            if (nombre.StartsWith("slot") && nombre.Length > 4)
+            {
+                int n;
+                if (!int.TryParse(nombre.Substring(4), out n) || n < 1 || n > 9999) return null;
+                return System.IO.Path.Combine(System.IO.Path.Combine(raiz, "saves"), "save" + n) + "/";
+            }
+            return System.IO.Path.Combine(System.IO.Path.Combine(raiz, "era-mapas"), nombre) + "/";
+        }
+
+        public static bool MapaExiste(string ruta)
+        {
+            return System.IO.File.Exists(ruta + "map.wbox") || System.IO.File.Exists(ruta + "map.wbax");
+        }
+
+        /// <summary>Carga un mapa guardado con el cargador del propio juego y lo avanza (como Reiniciar con generateNewMap) hasta terminar.</summary>
+        public static int CargarMapa(string ruta)
+        {
+            // MapBox.save_manager es internal: se lee por reflexion; SaveManager.loadWorld(string, bool) es publico.
+            FieldInfo campo = typeof(MapBox).GetField("save_manager", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            SaveManager sm = campo == null ? null : campo.GetValue(World.world) as SaveManager;
+            if (sm == null) throw new NotSupportedException("MapBox.save_manager no existe en esta version del juego.");
+            MethodInfo cargar = typeof(SaveManager).GetMethod("loadWorld", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new Type[] { typeof(string), typeof(bool) }, null);
+            if (cargar == null) throw new NotSupportedException("SaveManager.loadWorld(string,bool) no existe en esta version del juego.");
+            try { cargar.Invoke(sm, new object[] { ruta, false }); }
+            catch (TargetInvocationException e) { throw new InvalidOperationException("loadWorld fallo: " + (e.InnerException == null ? e.Message : e.InnerException.Message)); }
+            int v = 0;
+            while ((SmoothLoader.isLoading() || Config.worldLoading) && v < 50000) { SmoothLoader.update(0.5f); v++; }
+            if (SmoothLoader.isLoading() || Config.worldLoading) throw new InvalidOperationException("La carga del mapa no termino tras " + v + " pasos del cargador.");
+            return v;
+        }
+
+        /// <summary>Un mapa guardado puede traer reinos, ciudades y sus habitantes: se quitan para fundar las facciones en terreno limpio.</summary>
+        public static void LimpiarCivilizaciones()
+        {
+            foreach (Kingdom k in new List<Kingdom>(World.world.kingdoms.list))
+            {
+                foreach (Actor a in new List<Actor>(World.world.units.units_only_alive)) { if (a.kingdom == k) a.dieSimpleNone(); }
+                foreach (City c in new List<City>(k.cities)) c.destroyCity();
+            }
+            Estabilizar();
+        }
+
         public static string Sha256Hex(string texto)
         {
             using (SHA256 h = SHA256.Create())
@@ -80,7 +134,10 @@ namespace PuenteWorldBox
 
         public static bool EspecieValida(string id)
         {
-            return id == "human" || id == "elf" || id == "orc" || id == "dwarf";
+            // Fase 0 del formato era: cualquier especie civilizada del juego (ActorAsset.civ, 39 en 0.51.2), no solo las cuatro clasicas.
+            if (string.IsNullOrEmpty(id)) return false;
+            ActorAsset a = AssetManager.actor_library.dict.ContainsKey(id) ? AssetManager.actor_library.get(id) : null;
+            return a != null && a.civ;
         }
 
         public static Actor Crear(string especie, WorldTile tile)
